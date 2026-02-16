@@ -1,0 +1,241 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/db2/trie__storage__backend__impl_8cpp" kind="file" language="C++">
+    <compoundname>trie_storage_backend_impl.cpp</compoundname>
+    <includes refid="d4/d72/trie__storage__backend__impl_8hpp" local="yes">storage/trie/impl/trie_storage_backend_impl.hpp</includes>
+    <includes local="no">utility</includes>
+    <includes refid="dc/d83/trie__storage__backend__batch_8hpp" local="yes">storage/trie/impl/trie_storage_backend_batch.hpp</includes>
+    <incdepgraph>
+      <node id="3">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>storage/buffer_map_types.hpp</label>
+        <link refid="d8/dcc/buffer__map__types_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>storage/face/batchable.hpp</label>
+        <link refid="de/d87/batchable_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>storage/face/generic_maps.hpp</label>
+        <link refid="d9/daa/generic__maps_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>storage/face/generic_storage.hpp</label>
+        <link refid="d6/d4e/generic__storage_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>storage/face/iterable.hpp</label>
+        <link refid="db/d3e/iterable_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>storage/face/map_cursor.hpp</label>
+        <link refid="d9/d4b/map__cursor_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>storage/face/readable.hpp</label>
+        <link refid="d5/dd2/readable_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>storage/face/write_batch.hpp</label>
+        <link refid="d2/d76/write__batch_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>storage/face/writeable.hpp</label>
+        <link refid="dc/da4/writeable_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>storage/trie/impl/trie_storage_backend_batch.hpp</label>
+        <link refid="dc/d83/trie__storage__backend__batch_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/storage/trie/impl/trie_storage_backend_impl.cpp</label>
+        <link refid="de/db2/trie__storage__backend__impl_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>storage/trie/impl/trie_storage_backend_impl.hpp</label>
+        <link refid="d4/d72/trie__storage__backend__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>storage/trie/trie_storage_backend.hpp</label>
+        <link refid="d3/dec/trie__storage__backend_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="7">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="8">
+        <label>gsl/span</label>
+      </node>
+      <node id="10">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="16">
+        <label>memory</label>
+      </node>
+      <node id="23">
+        <label>string</label>
+      </node>
+      <node id="4">
+        <label>string_view</label>
+      </node>
+      <node id="24">
+        <label>utility</label>
+      </node>
+      <node id="5">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d0/dbf/namespacesgns_1_1storage">sgns::storage</innernamespace>
+    <innernamespace refid="d2/db5/namespacesgns_1_1storage_1_1trie">sgns::storage::trie</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d4/d72/trie__storage__backend__impl_8hpp" kindref="compound">storage/trie/impl/trie_storage_backend_impl.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;utility&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dc/d83/trie__storage__backend__batch_8hpp" kindref="compound">storage/trie/impl/trie_storage_backend_batch.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/db5/namespacesgns_1_1storage_1_1trie" kindref="compound">sgns::storage::trie</ref><sp/>{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11" refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a74f97467a8b0836648b55341fff41ee5" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a74f97467a8b0836648b55341fff41ee5" kindref="member">TrieStorageBackendImpl::TrieStorageBackendImpl</ref>(std::shared_ptr&lt;BufferStorage&gt;<sp/><ref refid="d0/dbf/namespacesgns_1_1storage" kindref="compound">storage</ref>,</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>node_prefix)</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ad8296bbe11b927820aa37e67d27c2c3d" kindref="member">storage_</ref>{<ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(<ref refid="d0/dbf/namespacesgns_1_1storage" kindref="compound">storage</ref>)},<sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a8546ad0a56a1d6eaaea8d3293d2d1b1d" kindref="member">node_prefix_</ref>{<ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(node_prefix)}<sp/>{</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_ASSERT(<ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ad8296bbe11b927820aa37e67d27c2c3d" kindref="member">storage_</ref><sp/>!=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17" refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ace5586a67e2226a078d2df1df4787b7d" refkind="member"><highlight class="normal"><sp/><sp/>std::unique_ptr&lt;face::MapCursor&lt;Buffer,<sp/>Buffer&gt;&gt;<sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ace5586a67e2226a078d2df1df4787b7d" kindref="member">TrieStorageBackendImpl::cursor</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ad8296bbe11b927820aa37e67d27c2c3d" kindref="member">storage_</ref></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>-&gt;cursor();<sp/><sp/></highlight><highlight class="comment">//<sp/>TODO(Harrm):<sp/>perhaps<sp/>should<sp/>iterate<sp/>over<sp/>trie<sp/>nodes<sp/>only</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22" refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a3112c8f70d3ab0fb4bed2b77198491e7" refkind="member"><highlight class="normal"><sp/><sp/>std::unique_ptr&lt;face::WriteBatch&lt;Buffer,<sp/>Buffer&gt;&gt;<sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a3112c8f70d3ab0fb4bed2b77198491e7" kindref="member">TrieStorageBackendImpl::batch</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::make_unique&lt;TrieStorageBackendBatch&gt;(<ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ad8296bbe11b927820aa37e67d27c2c3d" kindref="member">storage_</ref>-&gt;batch(),</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a8546ad0a56a1d6eaaea8d3293d2d1b1d" kindref="member">node_prefix_</ref>);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27" refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a869b6d570c450cbc3c1feae108c61266" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;Buffer&gt;<sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a869b6d570c450cbc3c1feae108c61266" kindref="member">TrieStorageBackendImpl::get</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ad8296bbe11b927820aa37e67d27c2c3d" kindref="member">storage_</ref>-&gt;get(<ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a16dc038ed0e103f0cbeda546be37ad41" kindref="member">prefixKey</ref>(key));</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31" refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a76386048022218fe096bf7c1dd7f2b9c" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a76386048022218fe096bf7c1dd7f2b9c" kindref="member">TrieStorageBackendImpl::contains</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ad8296bbe11b927820aa37e67d27c2c3d" kindref="member">storage_</ref>-&gt;contains(<ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a16dc038ed0e103f0cbeda546be37ad41" kindref="member">prefixKey</ref>(key));</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="35" refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ac5022d2d3f4a01ddc95370d802b033e6" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ac5022d2d3f4a01ddc95370d802b033e6" kindref="member">TrieStorageBackendImpl::empty</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ad8296bbe11b927820aa37e67d27c2c3d" kindref="member">storage_</ref>-&gt;empty();</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="39" refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a2304080c0e2458a255c49c554ca8c414" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a2304080c0e2458a255c49c554ca8c414" kindref="member">TrieStorageBackendImpl::put</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key,</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;value)<sp/>{</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ad8296bbe11b927820aa37e67d27c2c3d" kindref="member">storage_</ref>-&gt;put(<ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a16dc038ed0e103f0cbeda546be37ad41" kindref="member">prefixKey</ref>(key),<sp/>value);</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44" refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a040cb008ce6bd9e4295f9109d26aceef" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a2304080c0e2458a255c49c554ca8c414" kindref="member">TrieStorageBackendImpl::put</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key,</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;&amp;value)<sp/>{</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ad8296bbe11b927820aa37e67d27c2c3d" kindref="member">storage_</ref>-&gt;put(<ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a16dc038ed0e103f0cbeda546be37ad41" kindref="member">prefixKey</ref>(key),<sp/>std::move(value));</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"></highlight></codeline>
+<codeline lineno="49" refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ae4492690d22d99f6060724128990e076" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ae4492690d22d99f6060724128990e076" kindref="member">TrieStorageBackendImpl::remove</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key)<sp/>{</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ad8296bbe11b927820aa37e67d27c2c3d" kindref="member">storage_</ref>-&gt;remove(<ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a16dc038ed0e103f0cbeda546be37ad41" kindref="member">prefixKey</ref>(key));</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"></highlight></codeline>
+<codeline lineno="53" refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a16dc038ed0e103f0cbeda546be37ad41" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/><ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a16dc038ed0e103f0cbeda546be37ad41" kindref="member">TrieStorageBackendImpl::prefixKey</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;key)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref>{<ref refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a8546ad0a56a1d6eaaea8d3293d2d1b1d" kindref="member">node_prefix_</ref>}.<ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1aa14bc6509f455ff998bf71083e665b01" kindref="member">put</ref>(key);</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"></highlight></codeline>
+<codeline lineno="57"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::storage::trie</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/storage/trie/impl/trie_storage_backend_impl.cpp"/>
+  </compounddef>
+</doxygen>

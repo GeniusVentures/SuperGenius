@@ -1,0 +1,177 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/db5/namespacesgns_1_1storage_1_1trie" kind="namespace" language="C++">
+    <compoundname>sgns::storage::trie</compoundname>
+    <innerclass refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec" prot="public">sgns::storage::trie::Codec</innerclass>
+    <innerclass refid="d7/d40/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch_impl" prot="public">sgns::storage::trie::EphemeralTrieBatchImpl</innerclass>
+    <innerclass refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl" prot="public">sgns::storage::trie::PersistentTrieBatchImpl</innerclass>
+    <innerclass refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl" prot="public">sgns::storage::trie::TopperTrieBatchImpl</innerclass>
+    <innerclass refid="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch" prot="public">sgns::storage::trie::TrieStorageBackendBatch</innerclass>
+    <innerclass refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl" prot="public">sgns::storage::trie::TrieStorageBackendImpl</innerclass>
+    <innerclass refid="d5/ddf/classsgns_1_1storage_1_1trie_1_1_trie_storage_impl" prot="public">sgns::storage::trie::TrieStorageImpl</innerclass>
+    <innerclass refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node" prot="public">sgns::storage::trie::Node</innerclass>
+    <innerclass refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream" prot="public">sgns::storage::trie::BufferStream</innerclass>
+    <innerclass refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec" prot="public">sgns::storage::trie::SuperGeniusCodec</innerclass>
+    <innerclass refid="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer" prot="public">sgns::storage::trie::TrieSerializer</innerclass>
+    <innerclass refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl" prot="public">sgns::storage::trie::TrieSerializerImpl</innerclass>
+    <innerclass refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles" prot="public">sgns::storage::trie::KeyNibbles</innerclass>
+    <innerclass refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node" prot="public">sgns::storage::trie::SuperGeniusNode</innerclass>
+    <innerclass refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node" prot="public">sgns::storage::trie::BranchNode</innerclass>
+    <innerclass refid="dc/d4d/structsgns_1_1storage_1_1trie_1_1_leaf_node" prot="public">sgns::storage::trie::LeafNode</innerclass>
+    <innerclass refid="de/d6d/structsgns_1_1storage_1_1trie_1_1_dummy_node" prot="public">sgns::storage::trie::DummyNode</innerclass>
+    <innerclass refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie" prot="public">sgns::storage::trie::SuperGeniusTrie</innerclass>
+    <innerclass refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor" prot="public">sgns::storage::trie::SuperGeniusTrieCursor</innerclass>
+    <innerclass refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory" prot="public">sgns::storage::trie::SuperGeniusTrieFactory</innerclass>
+    <innerclass refid="d7/dba/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_impl" prot="public">sgns::storage::trie::SuperGeniusTrieFactoryImpl</innerclass>
+    <innerclass refid="df/dfd/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_impl" prot="public">sgns::storage::trie::SuperGeniusTrieImpl</innerclass>
+    <innerclass refid="dc/d88/classsgns_1_1storage_1_1trie_1_1_trie_batch" prot="public">sgns::storage::trie::TrieBatch</innerclass>
+    <innerclass refid="db/d71/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch" prot="public">sgns::storage::trie::PersistentTrieBatch</innerclass>
+    <innerclass refid="de/d05/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch" prot="public">sgns::storage::trie::EphemeralTrieBatch</innerclass>
+    <innerclass refid="d2/d7a/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch" prot="public">sgns::storage::trie::TopperTrieBatch</innerclass>
+    <innerclass refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage" prot="public">sgns::storage::trie::TrieStorage</innerclass>
+    <innerclass refid="dd/d95/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend" prot="public">sgns::storage::trie::TrieStorageBackend</innerclass>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="d2/db5/namespacesgns_1_1storage_1_1trie_1a963b1f72427405d39ceed948b9edb550" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>TrieError</name>
+        <qualifiedname>sgns::storage::trie::TrieError</qualifiedname>
+        <enumvalue id="d2/db5/namespacesgns_1_1storage_1_1trie_1a963b1f72427405d39ceed948b9edb550a40e006699bb0f012104a8bd7110a9dc9" prot="public">
+          <name>NO_VALUE</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>TrieDbError enum provides error codes for TrieDb methods. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/trie_error.hpp" line="12" column="3" bodyfile="src/storage/trie/supergenius_trie/trie_error.hpp" bodystart="12" bodyend="14"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="var">
+      <memberdef kind="variable" id="d2/db5/namespacesgns_1_1storage_1_1trie_1a527a3a628618373c5ec0c95bc07caaee" prot="public" static="no" mutable="no">
+        <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>const base::Buffer sgns::storage::trie::EXTRINSIC_INDEX_KEY</definition>
+        <argsstring></argsstring>
+        <name>EXTRINSIC_INDEX_KEY</name>
+        <qualifiedname>sgns::storage::trie::EXTRINSIC_INDEX_KEY</qualifiedname>
+        <initializer>                                   =
+<ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref>{}.put(&quot;:extrinsic_index&quot;)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.cpp" line="12" column="22" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.cpp" bodystart="12" bodyend="13"/>
+      </memberdef>
+      <memberdef kind="variable" id="d2/db5/namespacesgns_1_1storage_1_1trie_1a90bf025d4e418cd2399699bd13f4b49f" prot="public" static="no" mutable="no">
+        <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>const base::Buffer sgns::storage::trie::NO_EXTRINSIC_INDEX_VALUE</definition>
+        <argsstring></argsstring>
+        <name>NO_EXTRINSIC_INDEX_VALUE</name>
+        <qualifiedname>sgns::storage::trie::NO_EXTRINSIC_INDEX_VALUE</qualifiedname>
+        <initializer>{
+      <ref refid="d1/d56/namespacesgns_1_1scale_1abb9671741457166ff4d8e2174d9d6388" kindref="member">scale::encode</ref>(0xffffffff).value()}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.cpp" line="16" column="22" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.cpp" bodystart="16" bodyend="17"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d2/db5/namespacesgns_1_1storage_1_1trie_1af20de9d62c16ed608c2d4da1776ab79b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename It</type>
+          </param>
+        </templateparamlist>
+        <type>outcome::result&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; base::Buffer &gt; sgns::storage::trie::calculateOrderedTrieHash</definition>
+        <argsstring>(const It &amp;begin, const It &amp;end)</argsstring>
+        <name>calculateOrderedTrieHash</name>
+        <qualifiedname>sgns::storage::trie::calculateOrderedTrieHash</qualifiedname>
+        <param>
+          <type>const It &amp;</type>
+          <declname>begin</declname>
+        </param>
+        <param>
+          <type>const It &amp;</type>
+          <declname>end</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Calculates the hash of a Merkle tree containing the items from the provided range [begin; end) as values and compact-encoded indices of those values(starting from 0) as keys <parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>It</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>an iterator type of a container of base::Buffers </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>the Merkle tree root hash of the tree containing provided values </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/ordered_trie_hash.hpp" line="21" column="19" bodyfile="src/storage/trie/serialization/ordered_trie_hash.hpp" bodystart="21" bodyend="43"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/db5/namespacesgns_1_1storage_1_1trie_1a42d9e2d79b3e3b5eb14a8076b97982dd" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>uint8_t</type>
+        <definition>uint8_t sgns::storage::trie::byteFromNibbles</definition>
+        <argsstring>(uint8_t high, uint8_t low)</argsstring>
+        <name>byteFromNibbles</name>
+        <qualifiedname>sgns::storage::trie::byteFromNibbles</qualifiedname>
+        <param>
+          <type>uint8_t</type>
+          <declname>high</declname>
+        </param>
+        <param>
+          <type>uint8_t</type>
+          <declname>low</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/supergenius_codec.cpp" line="31" column="18" bodyfile="src/storage/trie/serialization/supergenius_codec.cpp" bodystart="31" bodyend="34"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/db5/namespacesgns_1_1storage_1_1trie_1a2d2fc284acc083288410a911b4e98e1e" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>base::Buffer sgns::storage::trie::ushortToBytes</definition>
+        <argsstring>(uint16_t b)</argsstring>
+        <name>ushortToBytes</name>
+        <qualifiedname>sgns::storage::trie::ushortToBytes</qualifiedname>
+        <param>
+          <type>uint16_t</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/supergenius_codec.cpp" line="36" column="23" bodyfile="src/storage/trie/serialization/supergenius_codec.cpp" bodystart="36" bodyend="41"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/runtime/binaryen/runtime_environment.hpp" line="15" column="1"/>
+  </compounddef>
+</doxygen>

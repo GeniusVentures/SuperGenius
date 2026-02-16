@@ -1,0 +1,409 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie" kind="class" language="C++" prot="public">
+    <compoundname>sgns::storage::changes_trie::ChangesTrie</compoundname>
+    <includes refid="d1/dfb/changes__trie_8hpp" local="no">changes_trie.hpp</includes>
+    <innerclass refid="dd/d2f/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1_1_key_index" prot="private">sgns::storage::changes_trie::ChangesTrie::KeyIndex</innerclass>
+    <innerclass refid="dc/d7b/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1_1_extrinsics_changes_key" prot="private">sgns::storage::changes_trie::ChangesTrie::ExtrinsicsChangesKey</innerclass>
+    <innerclass refid="dd/d6e/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1_1_blocks_changes_key" prot="private">sgns::storage::changes_trie::ChangesTrie::BlocksChangesKey</innerclass>
+    <innerclass refid="de/d8d/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1_1_child_changes_key" prot="private">sgns::storage::changes_trie::ChangesTrie::ChildChangesKey</innerclass>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1a4c8663041d7e4cb90287b2e20b3b0467" prot="public" static="no">
+        <type>std::map&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref>, std::vector&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1abd2964ee5c750201a675543e026ad732" kindref="member">primitives::ExtrinsicIndex</ref> &gt; &gt;</type>
+        <definition>using sgns::storage::changes_trie::ChangesTrie::ExtrinsicsChanges = 
+std::map&lt;base::Buffer, std::vector&lt;primitives::ExtrinsicIndex&gt;&gt;</definition>
+        <argsstring></argsstring>
+        <name>ExtrinsicsChanges</name>
+        <qualifiedname>sgns::storage::changes_trie::ChangesTrie::ExtrinsicsChanges</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/changes_trie.hpp" line="22" column="5" bodyfile="src/storage/changes_trie/impl/changes_trie.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-type">
+      <memberdef kind="typedef" id="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1a48bad6e5880930dc0613dfc56c19ba87" prot="private" static="no">
+        <type>boost::variant&lt; <ref refid="da/dac/structsgns_1_1_unused" kindref="compound">Unused</ref>&lt; 0 &gt;, <ref refid="dc/d7b/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1_1_extrinsics_changes_key" kindref="compound">ExtrinsicsChangesKey</ref>, <ref refid="dd/d6e/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1_1_blocks_changes_key" kindref="compound">BlocksChangesKey</ref>, <ref refid="de/d8d/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1_1_child_changes_key" kindref="compound">ChildChangesKey</ref> &gt;</type>
+        <definition>using sgns::storage::changes_trie::ChangesTrie::KeyIndexVariant = boost::variant&lt;Unused&lt;0&gt;,
+                                          ExtrinsicsChangesKey,
+                                          BlocksChangesKey,
+                                          ChildChangesKey&gt;</definition>
+        <argsstring></argsstring>
+        <name>KeyIndexVariant</name>
+        <qualifiedname>sgns::storage::changes_trie::ChangesTrie::KeyIndexVariant</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/changes_trie.hpp" line="56" column="5" bodyfile="src/storage/changes_trie/impl/changes_trie.hpp" bodystart="56" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1a3e1a5e6a1a83d854fe87bf12c7135769" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; <ref refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie" kindref="compound">trie::SuperGeniusTrie</ref> &gt;</type>
+        <definition>std::unique_ptr&lt;trie::SuperGeniusTrie&gt; sgns::storage::changes_trie::ChangesTrie::changes_trie_</definition>
+        <argsstring></argsstring>
+        <name>changes_trie_</name>
+        <qualifiedname>sgns::storage::changes_trie::ChangesTrie::changes_trie_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/changes_trie.hpp" line="72" column="21" bodyfile="src/storage/changes_trie/impl/changes_trie.hpp" bodystart="72" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1a08ea0ff815714c4978e14e181a79a6d4" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec" kindref="compound">trie::Codec</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;trie::Codec&gt; sgns::storage::changes_trie::ChangesTrie::codec_</definition>
+        <argsstring></argsstring>
+        <name>codec_</name>
+        <qualifiedname>sgns::storage::changes_trie::ChangesTrie::codec_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/changes_trie.hpp" line="73" column="21" bodyfile="src/storage/changes_trie/impl/changes_trie.hpp" bodystart="73" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1a4dee708370e368a7bee91e069d35218a" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::storage::changes_trie::ChangesTrie::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::storage::changes_trie::ChangesTrie::logger_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/changes_trie.hpp" line="74" column="18" bodyfile="src/storage/changes_trie/impl/changes_trie.hpp" bodystart="74" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1ac53e272248d2cd6fa3f2a9167ca5e757" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::unique_ptr&lt; <ref refid="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1a1f99f73e718c57fbbe1d0f3b6a89e74e" kindref="member">ChangesTrie</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::unique_ptr&lt; ChangesTrie &gt; &gt; sgns::storage::changes_trie::ChangesTrie::buildFromChanges</definition>
+        <argsstring>(const primitives::BlockNumber &amp;parent_block, const std::shared_ptr&lt; storage::trie::SuperGeniusTrieFactory &gt; &amp;trie_factory, std::shared_ptr&lt; trie::Codec &gt; codec, const ExtrinsicsChanges &amp;extinsics_changes, const ChangesTrieConfig &amp;config)</argsstring>
+        <name>buildFromChanges</name>
+        <qualifiedname>sgns::storage::changes_trie::ChangesTrie::buildFromChanges</qualifiedname>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref> &amp;</type>
+          <declname>parent_block</declname>
+        </param>
+        <param>
+          <type>const std::shared_ptr&lt; <ref refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory" kindref="compound">storage::trie::SuperGeniusTrieFactory</ref> &gt; &amp;</type>
+          <declname>trie_factory</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec" kindref="compound">trie::Codec</ref> &gt;</type>
+          <declname>codec</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1a4c8663041d7e4cb90287b2e20b3b0467" kindref="member">ExtrinsicsChanges</ref> &amp;</type>
+          <declname>extinsics_changes</declname>
+        </param>
+        <param>
+          <type>const <ref refid="da/d4a/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_config" kindref="compound">ChangesTrieConfig</ref> &amp;</type>
+          <declname>config</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/changes_trie.hpp" line="25" column="28" bodyfile="src/storage/changes_trie/impl/changes_trie.cpp" bodystart="9" bodyend="32"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1a0f86f525ec181937bcd3965624687247" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+        <definition>base::Hash256 sgns::storage::changes_trie::ChangesTrie::getHash</definition>
+        <argsstring>() const</argsstring>
+        <name>getHash</name>
+        <qualifiedname>sgns::storage::changes_trie::ChangesTrie::getHash</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/changes_trie.hpp" line="32" column="19" bodyfile="src/storage/changes_trie/impl/changes_trie.cpp" bodystart="43" bodyend="61"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1a1f99f73e718c57fbbe1d0f3b6a89e74e" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::changes_trie::ChangesTrie::ChangesTrie</definition>
+        <argsstring>(std::unique_ptr&lt; trie::SuperGeniusTrie &gt; trie, std::shared_ptr&lt; trie::Codec &gt; codec)</argsstring>
+        <name>ChangesTrie</name>
+        <qualifiedname>sgns::storage::changes_trie::ChangesTrie::ChangesTrie</qualifiedname>
+        <param>
+          <type>std::unique_ptr&lt; <ref refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie" kindref="compound">trie::SuperGeniusTrie</ref> &gt;</type>
+          <declname>trie</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec" kindref="compound">trie::Codec</ref> &gt;</type>
+          <declname>codec</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/changes_trie.hpp" line="35" column="5" bodyfile="src/storage/changes_trie/impl/changes_trie.cpp" bodystart="34" bodyend="41"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="friend">
+      <memberdef kind="friend" id="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1a9e1f71e38eb46c8c377338d843fb459a" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const KeyIndex &amp;b)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::storage::changes_trie::ChangesTrie::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/d2f/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1_1_key_index" kindref="compound">KeyIndex</ref> &amp;</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/changes_trie.hpp" line="63" column="12" bodyfile="src/storage/changes_trie/impl/changes_trie.hpp" bodystart="63" bodyend="65"/>
+      </memberdef>
+      <memberdef kind="friend" id="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1af1a91db05f0f0a679597429ac4b75b3a" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, KeyIndex &amp;b)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::storage::changes_trie::ChangesTrie::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="dd/d2f/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1_1_key_index" kindref="compound">KeyIndex</ref> &amp;</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/changes_trie.hpp" line="68" column="19" bodyfile="src/storage/changes_trie/impl/changes_trie.hpp" bodystart="68" bodyend="70"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="22">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="19">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::storage::changes_trie::ChangesTrie</label>
+        <link refid="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-changes_trie_</edgelabel>
+        </childnode>
+        <childnode refid="20" relation="usage">
+          <edgelabel>-codec_</edgelabel>
+        </childnode>
+        <childnode refid="24" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="15">
+        <label>sgns::storage::face::GenericMap&lt; K, V &gt;</label>
+        <link refid="d4/d01/structsgns_1_1storage_1_1face_1_1_generic_map"/>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::storage::face::GenericMap&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d4/d01/structsgns_1_1storage_1_1face_1_1_generic_map"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+        <childnode refid="13" relation="public-inheritance">
+        </childnode>
+        <childnode refid="15" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="11">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="6">
+        <label>sgns::storage::face::Iterable&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::face::ReadOnlyMap&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="8" relation="public-inheritance">
+        </childnode>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="12">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="8">
+        <label>sgns::storage::face::Readable&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="9" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="14">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="17">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="13">
+        <label>sgns::storage::face::Writeable&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>sgns::storage::trie::Codec</label>
+        <link refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec"/>
+        <childnode refid="22" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::trie::SuperGeniusTrie</label>
+        <link refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="19" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="20">
+        <label>std::shared_ptr&lt; sgns::storage::trie::Codec &gt;</label>
+        <childnode refid="21" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="23" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::trie::Codec &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="24">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="23" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="18">
+        <label>std::unique_ptr&lt; T &gt;</label>
+        <childnode refid="19" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::unique_ptr&lt; sgns::storage::trie::SuperGeniusTrie &gt;</label>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="18" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::trie::SuperGeniusTrie &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/changes_trie/impl/changes_trie.hpp" line="20" column="3" bodyfile="src/storage/changes_trie/impl/changes_trie.hpp" bodystart="20" bodyend="75"/>
+    <listofallmembers>
+      <member refid="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1ac53e272248d2cd6fa3f2a9167ca5e757" prot="public" virt="non-virtual"><scope>sgns::storage::changes_trie::ChangesTrie</scope><name>buildFromChanges</name></member>
+      <member refid="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1a3e1a5e6a1a83d854fe87bf12c7135769" prot="private" virt="non-virtual"><scope>sgns::storage::changes_trie::ChangesTrie</scope><name>changes_trie_</name></member>
+      <member refid="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1a1f99f73e718c57fbbe1d0f3b6a89e74e" prot="private" virt="non-virtual"><scope>sgns::storage::changes_trie::ChangesTrie</scope><name>ChangesTrie</name></member>
+      <member refid="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1a08ea0ff815714c4978e14e181a79a6d4" prot="private" virt="non-virtual"><scope>sgns::storage::changes_trie::ChangesTrie</scope><name>codec_</name></member>
+      <member refid="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1a4c8663041d7e4cb90287b2e20b3b0467" prot="public" virt="non-virtual"><scope>sgns::storage::changes_trie::ChangesTrie</scope><name>ExtrinsicsChanges</name></member>
+      <member refid="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1a0f86f525ec181937bcd3965624687247" prot="public" virt="non-virtual"><scope>sgns::storage::changes_trie::ChangesTrie</scope><name>getHash</name></member>
+      <member refid="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1a48bad6e5880930dc0613dfc56c19ba87" prot="private" virt="non-virtual"><scope>sgns::storage::changes_trie::ChangesTrie</scope><name>KeyIndexVariant</name></member>
+      <member refid="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1a4dee708370e368a7bee91e069d35218a" prot="private" virt="non-virtual"><scope>sgns::storage::changes_trie::ChangesTrie</scope><name>logger_</name></member>
+      <member refid="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1a9e1f71e38eb46c8c377338d843fb459a" prot="private" virt="non-virtual"><scope>sgns::storage::changes_trie::ChangesTrie</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d8/d3b/classsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1af1a91db05f0f0a679597429ac4b75b3a" prot="private" virt="non-virtual"><scope>sgns::storage::changes_trie::ChangesTrie</scope><name>operator&gt;&gt;</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

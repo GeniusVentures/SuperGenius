@@ -1,0 +1,70 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/d31/classsgns_1_1runtime_1_1_production_api" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::runtime::ProductionApi</compoundname>
+    <derivedcompoundref refid="d5/dd6/classsgns_1_1runtime_1_1binaryen_1_1_production_api_impl" prot="public" virt="non-virtual">sgns::runtime::binaryen::ProductionApiImpl</derivedcompoundref>
+    <includes refid="d8/dec/production__api_8hpp" local="no">production_api.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="df/d31/classsgns_1_1runtime_1_1_production_api_1af7c8474ca58c9392f294c4ad42110a78" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::runtime::ProductionApi::~ProductionApi</definition>
+        <argsstring>()=default</argsstring>
+        <name>~ProductionApi</name>
+        <qualifiedname>sgns::runtime::ProductionApi::~ProductionApi</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/production_api.hpp" line="18" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d31/classsgns_1_1runtime_1_1_production_api_1aefad438c1d3face2950ec30316a9f5b7" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="d4/dbe/structsgns_1_1primitives_1_1_production_configuration" kindref="compound">primitives::ProductionConfiguration</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; primitives::ProductionConfiguration &gt; sgns::runtime::ProductionApi::configuration</definition>
+        <argsstring>()=0</argsstring>
+        <name>configuration</name>
+        <qualifiedname>sgns::runtime::ProductionApi::configuration</qualifiedname>
+        <reimplementedby refid="d5/dd6/classsgns_1_1runtime_1_1binaryen_1_1_production_api_impl_1a7b5e7bbd75dcb00194c852e6fb7bb86e">configuration</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get configuration for the production <simplesect kind="return"><para>Production configuration </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/production_api.hpp" line="24" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Api to invoke runtime entries related for Production algorithm </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::runtime::ProductionApi</label>
+        <link refid="df/d31/classsgns_1_1runtime_1_1_production_api"/>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::binaryen::ProductionApiImpl</label>
+        <link refid="d5/dd6/classsgns_1_1runtime_1_1binaryen_1_1_production_api_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::runtime::ProductionApi</label>
+        <link refid="df/d31/classsgns_1_1runtime_1_1_production_api"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/production_api.hpp" line="16" column="3" bodyfile="src/runtime/production_api.hpp" bodystart="16" bodyend="25"/>
+    <listofallmembers>
+      <member refid="df/d31/classsgns_1_1runtime_1_1_production_api_1aefad438c1d3face2950ec30316a9f5b7" prot="public" virt="pure-virtual"><scope>sgns::runtime::ProductionApi</scope><name>configuration</name></member>
+      <member refid="df/d31/classsgns_1_1runtime_1_1_production_api_1af7c8474ca58c9392f294c4ad42110a78" prot="public" virt="virtual"><scope>sgns::runtime::ProductionApi</scope><name>~ProductionApi</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,144 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/db4/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance_impl" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::runtime::binaryen::WasmModuleInstanceImpl</compoundname>
+    <basecompoundref refid="dc/dbb/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance" prot="public" virt="non-virtual">sgns::runtime::binaryen::WasmModuleInstance</basecompoundref>
+    <includes refid="da/d86/wasm__module__instance__impl_8hpp" local="no">wasm_module_instance_impl.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="df/db4/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance_impl_1a5228554af5a9d89bb545d3e51a29acc9" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; wasm::ModuleInstance &gt;</type>
+        <definition>std::unique_ptr&lt;wasm::ModuleInstance&gt; sgns::runtime::binaryen::WasmModuleInstanceImpl::module_instance_</definition>
+        <argsstring></argsstring>
+        <name>module_instance_</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmModuleInstanceImpl::module_instance_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/module/wasm_module_instance_impl.hpp" line="26" column="21" bodyfile="src/runtime/binaryen/module/wasm_module_instance_impl.hpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="df/db4/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance_impl_1ad9574620a1b6683c499957b6739dd9bf" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::binaryen::WasmModuleInstanceImpl::WasmModuleInstanceImpl</definition>
+        <argsstring>(wasm::Module &amp;module, const std::shared_ptr&lt; RuntimeExternalInterface &gt; &amp;rei)</argsstring>
+        <name>WasmModuleInstanceImpl</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmModuleInstanceImpl::WasmModuleInstanceImpl</qualifiedname>
+        <param>
+          <type>wasm::Module &amp;</type>
+          <declname>module</declname>
+        </param>
+        <param>
+          <type>const std::shared_ptr&lt; <ref refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface" kindref="compound">RuntimeExternalInterface</ref> &gt; &amp;</type>
+          <declname>rei</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/module/wasm_module_instance_impl.hpp" line="18" column="5" bodyfile="src/runtime/binaryen/module/wasm_module_instance_impl.cpp" bodystart="8" bodyend="14"/>
+      </memberdef>
+      <memberdef kind="function" id="df/db4/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance_impl_1a3c9a496b2d66ac18b7204eee826ec038" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>wasm::Literal</type>
+        <definition>wasm::Literal sgns::runtime::binaryen::WasmModuleInstanceImpl::callExport</definition>
+        <argsstring>(wasm::Name name, const std::vector&lt; wasm::Literal &gt; &amp;arguments) override</argsstring>
+        <name>callExport</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmModuleInstanceImpl::callExport</qualifiedname>
+        <reimplements refid="dc/dbb/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance_1a338015b1d9212620aaf28c19ff5a927e">callExport</reimplements>
+        <param>
+          <type>wasm::Name</type>
+          <declname>name</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; wasm::Literal &gt; &amp;</type>
+          <declname>arguments</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>name</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the name of a wasm function to call </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>arguments</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the list of arguments to pass to the function </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>whatever the export function returns </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/module/wasm_module_instance_impl.hpp" line="22" column="19" bodyfile="src/runtime/binaryen/module/wasm_module_instance_impl.cpp" bodystart="16" bodyend="19"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::runtime::binaryen::WasmModuleInstance</label>
+        <link refid="dc/dbb/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance"/>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::binaryen::WasmModuleInstanceImpl</label>
+        <link refid="df/db4/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="5">
+        <label>T</label>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::binaryen::WasmModuleInstance</label>
+        <link refid="dc/dbb/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance"/>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::binaryen::WasmModuleInstanceImpl</label>
+        <link refid="df/db4/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-module_instance_</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::unique_ptr&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::unique_ptr&lt; wasm::ModuleInstance &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; wasm::ModuleInstance &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/binaryen/module/wasm_module_instance_impl.hpp" line="16" column="3" bodyfile="src/runtime/binaryen/module/wasm_module_instance_impl.hpp" bodystart="16" bodyend="27"/>
+    <listofallmembers>
+      <member refid="df/db4/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance_impl_1a3c9a496b2d66ac18b7204eee826ec038" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmModuleInstanceImpl</scope><name>callExport</name></member>
+      <member refid="df/db4/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance_impl_1a5228554af5a9d89bb545d3e51a29acc9" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmModuleInstanceImpl</scope><name>module_instance_</name></member>
+      <member refid="df/db4/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance_impl_1ad9574620a1b6683c499957b6739dd9bf" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmModuleInstanceImpl</scope><name>WasmModuleInstanceImpl</name></member>
+      <member refid="dc/dbb/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance_1a2d4853cf52bdda20746155ac102d57f5" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmModuleInstanceImpl</scope><name>~WasmModuleInstance</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,267 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/df0/visitor_8hpp" kind="file" language="C++">
+    <compoundname>visitor.hpp</compoundname>
+    <includes local="no">type_traits</includes>
+    <includes local="no">utility</includes>
+    <includes local="no">boost/variant/apply_visitor.hpp</includes>
+    <includedby refid="df/d2c/block__header__repository_8cpp" local="yes">src/blockchain/impl/block_header_repository.cpp</includedby>
+    <includedby refid="da/ddf/types_8cpp" local="yes">src/blockchain/impl/types.cpp</includedby>
+    <includedby refid="d9/d7a/variant_8hpp" local="yes">src/scale/detail/variant.hpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/base/visitor.hpp</label>
+        <link refid="d2/df0/visitor_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>boost/variant/apply_visitor.hpp</label>
+      </node>
+      <node id="2">
+        <label>type_traits</label>
+      </node>
+      <node id="3">
+        <label>utility</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="1">
+        <label>src/base/visitor.hpp</label>
+        <link refid="d2/df0/visitor_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>src/blockchain/impl/block_header_repository.cpp</label>
+        <link refid="df/d2c/block__header__repository_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/blockchain/impl/types.cpp</label>
+        <link refid="da/ddf/types_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/scale/detail/variant.hpp</label>
+        <link refid="d9/d7a/variant_8hpp"/>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d2/d5d/structsgns_1_1lambda__visitor_3_01_lambda_00_01_lambdas_8_8_8_01_4" prot="public">sgns::lambda_visitor&lt; Lambda, Lambdas... &gt;</innerclass>
+    <innerclass refid="dc/d78/structsgns_1_1lambda__visitor_3_01_lambda_01_4" prot="public">sgns::lambda_visitor&lt; Lambda &gt;</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a25791948257a71d3df8cfda2aba14b80" prot="public" static="no" constexpr="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class...</type>
+            <declname>Fs</declname>
+            <defname>Fs</defname>
+          </param>
+        </templateparamlist>
+        <type>auto</type>
+        <definition>auto sgns::make_visitor</definition>
+        <argsstring>(Fs &amp;&amp;...fs)</argsstring>
+        <name>make_visitor</name>
+        <qualifiedname>sgns::make_visitor</qualifiedname>
+        <param>
+          <type>Fs &amp;&amp;...</type>
+          <declname>fs</declname>
+        </param>
+        <briefdescription>
+<para>Creates a compile-time visitor from a set of lambdas. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Example: <programlisting filename=".cpp"><codeline><highlight class="normal"><ref refid="d2/d2b/namespacesgns_1a25791948257a71d3df8cfda2aba14b80" kindref="member">make_visitor</ref>([](</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>a){<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>1;<sp/>},</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[](std::string<sp/>b)<sp/>{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>2;<sp/>});</highlight></codeline>
+</programlisting></para>
+<para>This is essentially the same as: <programlisting filename=".cpp"><codeline><highlight class="keyword">struct<sp/></highlight><highlight class="normal">visitor<sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>boost::static_visitor&lt;int&gt;<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>operator()(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>a)<sp/>{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>1;<sp/>}</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>operator()(std::string<sp/>b)<sp/>{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>2;<sp/>}</highlight></codeline>
+<codeline><highlight class="normal">};</highlight></codeline>
+</programlisting></para>
+<para><simplesect kind="return"><para>Visitor instance that dispatches to the provided lambdas. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/visitor.hpp" line="52" column="32" bodyfile="src/base/visitor.hpp" bodystart="52" bodyend="56"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a58be2814fca70c5ba6a8bbbb59d41fc2" prot="public" static="no" constexpr="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename TVariant</type>
+          </param>
+          <param>
+            <type>typename...</type>
+            <declname>TVisitors</declname>
+            <defname>TVisitors</defname>
+          </param>
+        </templateparamlist>
+        <type>decltype(auto)</type>
+        <definition>decltype(auto) sgns::visit_in_place</definition>
+        <argsstring>(TVariant &amp;&amp;variant, TVisitors &amp;&amp;...visitors)</argsstring>
+        <name>visit_in_place</name>
+        <qualifiedname>sgns::visit_in_place</qualifiedname>
+        <param>
+          <type>TVariant &amp;&amp;</type>
+          <declname>variant</declname>
+        </param>
+        <param>
+          <type>TVisitors &amp;&amp;...</type>
+          <declname>visitors</declname>
+        </param>
+        <briefdescription>
+<para>Applies an in-place visitor to a boost::variant. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Example: <programlisting filename=".cpp"><codeline><highlight class="normal">boost::variant&lt;int,<sp/>std::string&gt;<sp/>value<sp/>=<sp/></highlight><highlight class="stringliteral">&quot;1234&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal"><ref refid="d2/d2b/namespacesgns_1a58be2814fca70c5ba6a8bbbb59d41fc2" kindref="member">visit_in_place</ref>(value,</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[](</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>v)<sp/>{<sp/>std::cout<sp/>&lt;&lt;<sp/></highlight><highlight class="stringliteral">&quot;(int)&quot;</highlight><highlight class="normal"><sp/>&lt;&lt;<sp/>v;<sp/>},</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[](std::string<sp/>v)<sp/>{<sp/>std::cout<sp/>&lt;&lt;<sp/></highlight><highlight class="stringliteral">&quot;(string)&quot;</highlight><highlight class="normal"><sp/>&lt;&lt;<sp/>v;<sp/>});</highlight></codeline>
+</programlisting> </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/visitor.hpp" line="71" column="24" bodyfile="src/base/visitor.hpp" bodystart="71" bodyend="75"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a4326877e1a1b3658874a3c0cd678f9ec" prot="public" static="no" constexpr="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+          <param>
+            <type>typename Matcher</type>
+          </param>
+        </templateparamlist>
+        <type>decltype(auto)</type>
+        <definition>decltype(auto) sgns::match</definition>
+        <argsstring>(T &amp;&amp;t, Matcher &amp;&amp;m)</argsstring>
+        <name>match</name>
+        <qualifiedname>sgns::match</qualifiedname>
+        <param>
+          <type>T &amp;&amp;</type>
+          <declname>t</declname>
+        </param>
+        <param>
+          <type>Matcher &amp;&amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+<para>apply Matcher to optional T </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/visitor.hpp" line="78" column="38" bodyfile="src/base/visitor.hpp" bodystart="78" bodyend="82"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1afa587bc6c120780075eb731e7307baf1" prot="public" static="no" constexpr="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+          <param>
+            <type>typename...</type>
+            <declname>Fs</declname>
+            <defname>Fs</defname>
+          </param>
+        </templateparamlist>
+        <type>decltype(auto)</type>
+        <definition>decltype(auto) sgns::match_in_place</definition>
+        <argsstring>(T &amp;&amp;t, Fs &amp;&amp;...fs)</argsstring>
+        <name>match_in_place</name>
+        <qualifiedname>sgns::match_in_place</qualifiedname>
+        <param>
+          <type>T &amp;&amp;</type>
+          <declname>t</declname>
+        </param>
+        <param>
+          <type>Fs &amp;&amp;...</type>
+          <declname>fs</declname>
+        </param>
+        <briefdescription>
+<para>construct visitor from Fs and apply it to optional T </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/visitor.hpp" line="85" column="38" bodyfile="src/base/visitor.hpp" bodystart="85" bodyend="88"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_VISITOR_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_VISITOR_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;type_traits&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;utility&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/variant/apply_visitor.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="10"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="11" refid="d2/db4/structsgns_1_1lambda__visitor" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/>Lambdas&gt;<sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="d2/db4/structsgns_1_1lambda__visitor" kindref="compound">lambda_visitor</ref>;</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>Lambda,<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/>Lambdas&gt;</highlight></codeline>
+<codeline lineno="14" refid="d2/d5d/structsgns_1_1lambda__visitor_3_01_lambda_00_01_lambdas_8_8_8_01_4" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="d2/d5d/structsgns_1_1lambda__visitor_3_01_lambda_00_01_lambdas_8_8_8_01_4_1aec6c27b247a3c70f8ece8651dd449e40" kindref="member">lambda_visitor</ref>&lt;Lambda,<sp/>Lambdas...&gt;<sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>Lambda,<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d2/d5d/structsgns_1_1lambda__visitor_3_01_lambda_00_01_lambdas_8_8_8_01_4_1aec6c27b247a3c70f8ece8651dd449e40" kindref="member">lambda_visitor</ref>&lt;Lambdas...&gt;</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">Lambda::operator();</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d2/d5d/structsgns_1_1lambda__visitor_3_01_lambda_00_01_lambdas_8_8_8_01_4_1aec6c27b247a3c70f8ece8651dd449e40" kindref="member">lambda_visitor</ref>&lt;Lambdas...&gt;::operator();</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19" refid="d2/d5d/structsgns_1_1lambda__visitor_3_01_lambda_00_01_lambdas_8_8_8_01_4_1aec6c27b247a3c70f8ece8651dd449e40" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d5d/structsgns_1_1lambda__visitor_3_01_lambda_00_01_lambdas_8_8_8_01_4_1aec6c27b247a3c70f8ece8651dd449e40" kindref="member">lambda_visitor</ref>(<sp/>Lambda<sp/>lambda,<sp/>Lambdas...<sp/>lambdas<sp/>)<sp/>:<sp/>Lambda(<sp/>lambda<sp/>),<sp/><ref refid="d2/d5d/structsgns_1_1lambda__visitor_3_01_lambda_00_01_lambdas_8_8_8_01_4_1aec6c27b247a3c70f8ece8651dd449e40" kindref="member">lambda_visitor</ref>&lt;Lambdas...&gt;(<sp/>lambdas...<sp/>)</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24" refid="dc/d78/structsgns_1_1lambda__visitor_3_01_lambda_01_4" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>Lambda&gt;<sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="dc/d78/structsgns_1_1lambda__visitor_3_01_lambda_01_4_1a2fad3813390d8069d257116577b55923" kindref="member">lambda_visitor</ref>&lt;Lambda&gt;<sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>Lambda</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">Lambda::operator();</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28" refid="dc/d78/structsgns_1_1lambda__visitor_3_01_lambda_01_4_1a2fad3813390d8069d257116577b55923" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dc/d78/structsgns_1_1lambda__visitor_3_01_lambda_01_4_1a2fad3813390d8069d257116577b55923" kindref="member">lambda_visitor</ref>(<sp/>Lambda<sp/>lambda<sp/>)<sp/>:<sp/>Lambda(<sp/>lambda<sp/>)</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="52" refid="d2/d2b/namespacesgns_1a25791948257a71d3df8cfda2aba14b80" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal">...<sp/>Fs&gt;<sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/><ref refid="d2/d2b/namespacesgns_1a25791948257a71d3df8cfda2aba14b80" kindref="member">make_visitor</ref>(<sp/>Fs<sp/>&amp;&amp;...fs<sp/>)</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">visitor_type<sp/>=<sp/><ref refid="d2/db4/structsgns_1_1lambda__visitor" kindref="compound">lambda_visitor&lt;std::decay_t&lt;Fs&gt;</ref>...&gt;;</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>visitor_type(<sp/>std::forward&lt;Fs&gt;(<sp/>fs<sp/>)...<sp/>);</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>TVariant,<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/>TVisitors&gt;</highlight></codeline>
+<codeline lineno="71" refid="d2/d2b/namespacesgns_1a58be2814fca70c5ba6a8bbbb59d41fc2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">decltype</highlight><highlight class="normal">(<sp/>auto<sp/>)<sp/><ref refid="d2/d2b/namespacesgns_1a58be2814fca70c5ba6a8bbbb59d41fc2" kindref="member">visit_in_place</ref>(<sp/>TVariant<sp/>&amp;&amp;variant,<sp/>TVisitors<sp/>&amp;&amp;...visitors<sp/>)</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>boost::apply_visitor(<sp/><ref refid="d2/d2b/namespacesgns_1a25791948257a71d3df8cfda2aba14b80" kindref="member">make_visitor</ref>(<sp/>std::forward&lt;TVisitors&gt;(<sp/>visitors<sp/>)...<sp/>),</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::forward&lt;TVariant&gt;(<sp/>variant<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"></highlight></codeline>
+<codeline lineno="78" refid="d2/d2b/namespacesgns_1a4326877e1a1b3658874a3c0cd678f9ec" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>T,<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>Matcher&gt;<sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">decltype</highlight><highlight class="normal">(<sp/>auto<sp/>)<sp/><ref refid="d2/d2b/namespacesgns_1a4326877e1a1b3658874a3c0cd678f9ec" kindref="member">match</ref>(<sp/>T<sp/>&amp;&amp;t,<sp/>Matcher<sp/>&amp;&amp;m<sp/>)</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::forward&lt;T&gt;(<sp/>t<sp/>)<sp/>?<sp/>std::forward&lt;Matcher&gt;(<sp/>m<sp/>)(<sp/>*std::forward&lt;T&gt;(<sp/>t<sp/>)<sp/>)</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/>std::forward&lt;Matcher&gt;(<sp/>m<sp/>)();</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"></highlight></codeline>
+<codeline lineno="85" refid="d2/d2b/namespacesgns_1afa587bc6c120780075eb731e7307baf1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>T,<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/>Fs&gt;<sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">decltype</highlight><highlight class="normal">(<sp/>auto<sp/>)<sp/><ref refid="d2/d2b/namespacesgns_1afa587bc6c120780075eb731e7307baf1" kindref="member">match_in_place</ref>(<sp/>T<sp/>&amp;&amp;t,<sp/>Fs<sp/>&amp;&amp;...fs<sp/>)</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d2/d2b/namespacesgns_1a4326877e1a1b3658874a3c0cd678f9ec" kindref="member">match</ref>(<sp/>std::forward&lt;T&gt;(<sp/>t<sp/>),<sp/><ref refid="d2/d2b/namespacesgns_1a25791948257a71d3df8cfda2aba14b80" kindref="member">make_visitor</ref>(<sp/>std::forward&lt;Fs&gt;(<sp/>fs<sp/>)...<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="89"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"></highlight></codeline>
+<codeline lineno="91"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/base/visitor.hpp"/>
+  </compounddef>
+</doxygen>

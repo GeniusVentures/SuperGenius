@@ -1,0 +1,275 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::crdt::DAGSyncer</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">ipfs_lite::ipfs::merkledag::MerkleDagService</basecompoundref>
+    <derivedcompoundref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer" prot="public" virt="non-virtual">sgns::crdt::GraphsyncDAGSyncer</derivedcompoundref>
+    <includes refid="d5/db5/dagsyncer_8hpp" local="no">dagsyncer.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1abc63bfd9bae5edca9de65f1485b26acf" prot="public" static="no">
+        <type>std::pair&lt; CID, std::string &gt;</type>
+        <definition>using sgns::crdt::DAGSyncer::LinkInfoPair = std::pair&lt;CID, std::string&gt;</definition>
+        <argsstring></argsstring>
+        <name>LinkInfoPair</name>
+        <qualifiedname>sgns::crdt::DAGSyncer::LinkInfoPair</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/dagsyncer.hpp" line="20" column="9" bodyfile="src/crdt/dagsyncer.hpp" bodystart="20" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a5cceea9780d3f0583664154383289d28" prot="public" static="no">
+        <type>std::set&lt; <ref refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1abc63bfd9bae5edca9de65f1485b26acf" kindref="member">LinkInfoPair</ref> &gt;</type>
+        <definition>using sgns::crdt::DAGSyncer::LinkInfoSet = std::set&lt;LinkInfoPair&gt;</definition>
+        <argsstring></argsstring>
+        <name>LinkInfoSet</name>
+        <qualifiedname>sgns::crdt::DAGSyncer::LinkInfoSet</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/dagsyncer.hpp" line="21" column="9" bodyfile="src/crdt/dagsyncer.hpp" bodystart="21" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a2ede6e4a67602274c52701f28d1f31f2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; bool &gt;</type>
+        <definition>virtual outcome::result&lt; bool &gt; sgns::crdt::DAGSyncer::HasBlock</definition>
+        <argsstring>(const CID &amp;cid) const =0</argsstring>
+        <name>HasBlock</name>
+        <qualifiedname>sgns::crdt::DAGSyncer::HasBlock</qualifiedname>
+        <reimplementedby refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a29f885542a74ac9db2bf9a34f1daee98">HasBlock</reimplementedby>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Check if the block with cid is locally available (therefore, it is considered processed). <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>cid</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Content identifier of the node </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if the block is locally available or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/dagsyncer.hpp" line="28" column="33"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1aaff676b17e35bb4ca2295eb4ceaecda0" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt;</type>
+        <definition>virtual outcome::result&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt; sgns::crdt::DAGSyncer::GetNodeWithoutRequest</definition>
+        <argsstring>(const CID &amp;cid) const =0</argsstring>
+        <name>GetNodeWithoutRequest</name>
+        <qualifiedname>sgns::crdt::DAGSyncer::GetNodeWithoutRequest</qualifiedname>
+        <reimplementedby refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a2da8bf74327f1f9963a2aabc46756039">GetNodeWithoutRequest</reimplementedby>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/dagsyncer.hpp" line="30" column="33"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a39758bd74c09d96bf66734ba608697af" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::pair&lt; <ref refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a5cceea9780d3f0583664154383289d28" kindref="member">LinkInfoSet</ref>, <ref refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a5cceea9780d3f0583664154383289d28" kindref="member">LinkInfoSet</ref> &gt;</type>
+        <definition>virtual std::pair&lt; LinkInfoSet, LinkInfoSet &gt; sgns::crdt::DAGSyncer::TraverseCIDsLinks</definition>
+        <argsstring>(ipfs_lite::ipld::IPLDNode &amp;node, std::string link_name, LinkInfoSet visited_links) const =0</argsstring>
+        <name>TraverseCIDsLinks</name>
+        <qualifiedname>sgns::crdt::DAGSyncer::TraverseCIDsLinks</qualifiedname>
+        <reimplementedby refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aad4d75a9a4bc22ff0a6b9806f9334208">TraverseCIDsLinks</reimplementedby>
+        <param>
+          <type>ipfs_lite::ipld::IPLDNode &amp;</type>
+          <declname>node</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>link_name</declname>
+        </param>
+        <param>
+          <type><ref refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a5cceea9780d3f0583664154383289d28" kindref="member">LinkInfoSet</ref></type>
+          <declname>visited_links</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/dagsyncer.hpp" line="32" column="27"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a93e2390ab06898ca46cc575bd7fcde7a" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::crdt::DAGSyncer::InitCIDBlock</definition>
+        <argsstring>(const CID &amp;cid)=0</argsstring>
+        <name>InitCIDBlock</name>
+        <qualifiedname>sgns::crdt::DAGSyncer::InitCIDBlock</qualifiedname>
+        <reimplementedby refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a68594bf54d1bec4d03359b18a81a400b">InitCIDBlock</reimplementedby>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/dagsyncer.hpp" line="36" column="45"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1ad3062c60a04f39bea4e4ddf8b3369014" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>bool</type>
+        <definition>virtual bool sgns::crdt::DAGSyncer::IsCIDInCache</definition>
+        <argsstring>(const CID &amp;cid) const =0</argsstring>
+        <name>IsCIDInCache</name>
+        <qualifiedname>sgns::crdt::DAGSyncer::IsCIDInCache</qualifiedname>
+        <reimplementedby refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aef4ae95fa09891531e7f1bb82c93b505">IsCIDInCache</reimplementedby>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/dagsyncer.hpp" line="37" column="45"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a2d449eb020778ff935db27bcfc6eff34" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::crdt::DAGSyncer::DeleteCIDBlock</definition>
+        <argsstring>(const CID &amp;cid)=0</argsstring>
+        <name>DeleteCIDBlock</name>
+        <qualifiedname>sgns::crdt::DAGSyncer::DeleteCIDBlock</qualifiedname>
+        <reimplementedby refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a3b7ceabd1f75a49272c962f3da9ef8b1">DeleteCIDBlock</reimplementedby>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/dagsyncer.hpp" line="38" column="39"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1ab4a1e22a4f97a9a4e8655cbbf3099797" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::crdt::DAGSyncer::Stop</definition>
+        <argsstring>()=0</argsstring>
+        <name>Stop</name>
+        <qualifiedname>sgns::crdt::DAGSyncer::Stop</qualifiedname>
+        <reimplementedby refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1af8fd05fdabdb73645a4ace7cdaef581a">Stop</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/dagsyncer.hpp" line="39" column="45"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a9130b1c77cb3eaf26d8c77bcbf8f80d0" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>IPFS::outcome::result&lt; void &gt;</type>
+        <definition>virtual IPFS::outcome::result&lt; void &gt; sgns::crdt::DAGSyncer::markResolved</definition>
+        <argsstring>(const CID &amp;cid)=0</argsstring>
+        <name>markResolved</name>
+        <qualifiedname>sgns::crdt::DAGSyncer::markResolved</qualifiedname>
+        <reimplementedby refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a67ee11d87847457d6a13b6f709988d5d">markResolved</reimplementedby>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/dagsyncer.hpp" line="40" column="39"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1aadd7552df6fc37e83fdcb4dd6d5529c2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>IPFS::outcome::result&lt; bool &gt;</type>
+        <definition>virtual IPFS::outcome::result&lt; bool &gt; sgns::crdt::DAGSyncer::isResolved</definition>
+        <argsstring>(const CID &amp;cid) const =0</argsstring>
+        <name>isResolved</name>
+        <qualifiedname>sgns::crdt::DAGSyncer::isResolved</qualifiedname>
+        <reimplementedby refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aed1004cb97713c48ac078eae4d28be27">isResolved</reimplementedby>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/dagsyncer.hpp" line="41" column="39"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A <ref refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer" kindref="compound">DAGSyncer</ref> is an abstraction to an IPLD-based p2p storage layer. A <ref refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer" kindref="compound">DAGSyncer</ref> is a DAGService with the ability to publish new ipld nodes to the network, and retrieving others from it. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>ipfs_lite::ipfs::merkledag::MerkleDagService</label>
+      </node>
+      <node id="1">
+        <label>sgns::crdt::DAGSyncer</label>
+        <link refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::crdt::GraphsyncDAGSyncer</label>
+        <link refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>ipfs_lite::ipfs::merkledag::MerkleDagService</label>
+      </node>
+      <node id="1">
+        <label>sgns::crdt::DAGSyncer</label>
+        <link refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crdt/dagsyncer.hpp" line="17" column="5" bodyfile="src/crdt/dagsyncer.hpp" bodystart="18" bodyend="42"/>
+    <listofallmembers>
+      <member refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a2d449eb020778ff935db27bcfc6eff34" prot="public" virt="pure-virtual"><scope>sgns::crdt::DAGSyncer</scope><name>DeleteCIDBlock</name></member>
+      <member refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1aaff676b17e35bb4ca2295eb4ceaecda0" prot="public" virt="pure-virtual"><scope>sgns::crdt::DAGSyncer</scope><name>GetNodeWithoutRequest</name></member>
+      <member refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a2ede6e4a67602274c52701f28d1f31f2" prot="public" virt="pure-virtual"><scope>sgns::crdt::DAGSyncer</scope><name>HasBlock</name></member>
+      <member refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a93e2390ab06898ca46cc575bd7fcde7a" prot="public" virt="pure-virtual"><scope>sgns::crdt::DAGSyncer</scope><name>InitCIDBlock</name></member>
+      <member refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1ad3062c60a04f39bea4e4ddf8b3369014" prot="public" virt="pure-virtual"><scope>sgns::crdt::DAGSyncer</scope><name>IsCIDInCache</name></member>
+      <member refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1aadd7552df6fc37e83fdcb4dd6d5529c2" prot="public" virt="pure-virtual"><scope>sgns::crdt::DAGSyncer</scope><name>isResolved</name></member>
+      <member refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1abc63bfd9bae5edca9de65f1485b26acf" prot="public" virt="non-virtual"><scope>sgns::crdt::DAGSyncer</scope><name>LinkInfoPair</name></member>
+      <member refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a5cceea9780d3f0583664154383289d28" prot="public" virt="non-virtual"><scope>sgns::crdt::DAGSyncer</scope><name>LinkInfoSet</name></member>
+      <member refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a9130b1c77cb3eaf26d8c77bcbf8f80d0" prot="public" virt="pure-virtual"><scope>sgns::crdt::DAGSyncer</scope><name>markResolved</name></member>
+      <member refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1ab4a1e22a4f97a9a4e8655cbbf3099797" prot="public" virt="pure-virtual"><scope>sgns::crdt::DAGSyncer</scope><name>Stop</name></member>
+      <member refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a39758bd74c09d96bf66734ba608697af" prot="public" virt="pure-virtual"><scope>sgns::crdt::DAGSyncer</scope><name>TraverseCIDsLinks</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,67 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/d1c/namespacesgns_1_1crypto_1_1constants_1_1sr25519" kind="namespace" language="C++">
+    <compoundname>sgns::crypto::constants::sr25519</compoundname>
+    <innernamespace refid="df/d05/namespacesgns_1_1crypto_1_1constants_1_1sr25519_1_1vrf">sgns::crypto::constants::sr25519::vrf</innernamespace>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="df/d1c/namespacesgns_1_1crypto_1_1constants_1_1sr25519_1a2bc5a05be7bb8b57c8d3b2abc9c18e36" prot="public" static="no" strong="no">
+        <type></type>
+        <name>@062351302067023307206141235337031057054102362257</name>
+        <qualifiedname>sgns::crypto::constants::sr25519::@062351302067023307206141235337031057054102362257</qualifiedname>
+        <enumvalue id="df/d1c/namespacesgns_1_1crypto_1_1constants_1_1sr25519_1a2bc5a05be7bb8b57c8d3b2abc9c18e36afd7a008a3f889f85d2c15bc879ed5f6b" prot="public">
+          <name>KEYPAIR_SIZE</name>
+          <initializer>= SR25519_KEYPAIR_SIZE</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d1c/namespacesgns_1_1crypto_1_1constants_1_1sr25519_1a2bc5a05be7bb8b57c8d3b2abc9c18e36a8665678820b9a286ab1ab556cc1f6782" prot="public">
+          <name>SECRET_SIZE</name>
+          <initializer>= SR25519_SECRET_SIZE</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d1c/namespacesgns_1_1crypto_1_1constants_1_1sr25519_1a2bc5a05be7bb8b57c8d3b2abc9c18e36a20a32a93173ee39a8a0113e5df0eaae4" prot="public">
+          <name>PUBLIC_SIZE</name>
+          <initializer>= SR25519_PUBLIC_SIZE</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d1c/namespacesgns_1_1crypto_1_1constants_1_1sr25519_1a2bc5a05be7bb8b57c8d3b2abc9c18e36a5632eb6fd738538c55a65bfa30dc7b02" prot="public">
+          <name>SIGNATURE_SIZE</name>
+          <initializer>= SR25519_SIGNATURE_SIZE</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d1c/namespacesgns_1_1crypto_1_1constants_1_1sr25519_1a2bc5a05be7bb8b57c8d3b2abc9c18e36a36c7bd6828a683083fd86d1a1303667d" prot="public">
+          <name>SEED_SIZE</name>
+          <initializer>= SR25519_SEED_SIZE</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Important constants to deal with <ref refid="df/d1c/namespacesgns_1_1crypto_1_1constants_1_1sr25519" kindref="compound">sr25519</ref> </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="18" column="5" bodyfile="src/crypto/sr25519_types.hpp" bodystart="18" bodyend="24"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/sr25519_types.hpp" line="14" column="3"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_da61e3e9a357748887e3ca8d7c5a0c16" kind="dir">
+    <compoundname>src/api</compoundname>
+    <innerdir refid="dir_78bd37cba0e1c6a29cf2fac11c4a9356">src/api/grpc</innerdir>
+    <innerdir refid="dir_c932be5467edd5e1d4bd27ec4a2b99ad">src/api/service</innerdir>
+    <innerdir refid="dir_32eed30060eeeeb45bf6b2929b506cca">src/api/transport</innerdir>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/api/"/>
+  </compounddef>
+</doxygen>

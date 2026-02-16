@@ -1,0 +1,175 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/d0b/buffer__stream_8hpp" kind="file" language="C++">
+    <compoundname>buffer_stream.hpp</compoundname>
+    <includes local="no">gsl/span</includes>
+    <includes refid="da/d1d/buffer_8hpp" local="yes">base/buffer.hpp</includes>
+    <includedby refid="d7/db4/supergenius__codec_8hpp" local="yes">src/storage/trie/serialization/supergenius_codec.hpp</includedby>
+    <incdepgraph>
+      <node id="3">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/storage/trie/serialization/buffer_stream.hpp</label>
+        <link refid="dc/d0b/buffer__stream_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="7">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="2">
+        <label>gsl/span</label>
+      </node>
+      <node id="9">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="4">
+        <label>string_view</label>
+      </node>
+      <node id="5">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="3">
+        <label>src/application/impl/validating_node_application.cpp</label>
+        <link refid="d3/d34/validating__node__application_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/blockchain/impl/types.cpp</label>
+        <link refid="da/ddf/types_8cpp"/>
+      </node>
+      <node id="9">
+        <label>src/storage/trie/impl/ephemeral_trie_batch_impl.cpp</label>
+        <link refid="db/d7d/ephemeral__trie__batch__impl_8cpp"/>
+      </node>
+      <node id="10">
+        <label>src/storage/trie/impl/persistent_trie_batch_impl.cpp</label>
+        <link refid="dd/dda/persistent__trie__batch__impl_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/storage/trie/serialization/buffer_stream.hpp</label>
+        <link refid="dc/d0b/buffer__stream_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>src/storage/trie/serialization/ordered_trie_hash.hpp</label>
+        <link refid="d9/dcb/ordered__trie__hash_8hpp"/>
+      </node>
+      <node id="6">
+        <label>src/storage/trie/serialization/supergenius_codec.cpp</label>
+        <link refid="d1/dc3/supergenius__codec_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/storage/trie/serialization/supergenius_codec.hpp</label>
+        <link refid="d7/db4/supergenius__codec_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>src/storage/trie/supergenius_trie/supergenius_trie_cursor.cpp</label>
+        <link refid="d9/d0e/supergenius__trie__cursor_8cpp"/>
+      </node>
+      <node id="8">
+        <label>src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp</label>
+        <link refid="db/dd4/supergenius__trie__cursor_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>src/storage/trie/supergenius_trie/supergenius_trie_impl.cpp</label>
+        <link refid="db/df1/supergenius__trie__impl_8cpp"/>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream" prot="public">sgns::storage::trie::BufferStream</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d0/dbf/namespacesgns_1_1storage">sgns::storage</innernamespace>
+    <innernamespace refid="d2/db5/namespacesgns_1_1storage_1_1trie">sgns::storage::trie</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_STORAGE_TRIE_BUFFER_STREAM</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_STORAGE_TRIE_BUFFER_STREAM</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;gsl/span&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="da/d1d/buffer_8hpp" kindref="compound">base/buffer.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/db5/namespacesgns_1_1storage_1_1trie" kindref="compound">sgns::storage::trie</ref><sp/>{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16" refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1ac3afdac236f7aa688630c7ab96b861ad" kindref="member">BufferStream</ref><sp/>{</highlight></codeline>
+<codeline lineno="17" refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a95a89653d87db800007489113422fef7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a95a89653d87db800007489113422fef7" kindref="member">index_type</ref><sp/>=<sp/>gsl::span&lt;const<sp/>uint8_t&gt;::index_type;</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="20" refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1ac3afdac236f7aa688630c7ab96b861ad" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">explicit</highlight><highlight class="normal"><sp/><ref refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1ac3afdac236f7aa688630c7ab96b861ad" kindref="member">BufferStream</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;buf)<sp/>:<sp/><ref refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a819de17444bebc0404d69136f2e9b9fb" kindref="member">data_</ref>{buf.toVector()}<sp/>{}</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22" refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a3dcf72f11968f678e543217e2f12b3b8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a3dcf72f11968f678e543217e2f12b3b8" kindref="member">hasMore</ref>(<ref refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a95a89653d87db800007489113422fef7" kindref="member">index_type</ref><sp/>num_bytes)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a819de17444bebc0404d69136f2e9b9fb" kindref="member">data_</ref>.size()<sp/>&gt;=<sp/>num_bytes;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26" refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a9ab25a2030618b71a6f8f0a86c57f82c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>uint8_t<sp/><ref refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a9ab25a2030618b71a6f8f0a86c57f82c" kindref="member">next</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">byte</highlight><highlight class="normal"><sp/>=<sp/><ref refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a819de17444bebc0404d69136f2e9b9fb" kindref="member">data_</ref>.at(0);</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a819de17444bebc0404d69136f2e9b9fb" kindref="member">data_</ref><sp/>=<sp/><ref refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a819de17444bebc0404d69136f2e9b9fb" kindref="member">data_</ref>.last(<ref refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a819de17444bebc0404d69136f2e9b9fb" kindref="member">data_</ref>.size()<sp/>-<sp/>1);</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>byte;</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32" refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a58731f8799d502505f742c7252858de1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/><ref refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a58731f8799d502505f742c7252858de1" kindref="member">leftBytes</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a819de17444bebc0404d69136f2e9b9fb" kindref="member">data_</ref>;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="37" refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a819de17444bebc0404d69136f2e9b9fb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/><ref refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a819de17444bebc0404d69136f2e9b9fb" kindref="member">data_</ref>;</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="39"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::storage::trie</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_SRC_STORAGE_TRIE_BUFFER_STREAM</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/storage/trie/serialization/buffer_stream.hpp"/>
+  </compounddef>
+</doxygen>

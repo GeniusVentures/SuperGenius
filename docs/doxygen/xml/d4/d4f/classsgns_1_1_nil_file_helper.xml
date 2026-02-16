@@ -1,0 +1,200 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/d4f/classsgns_1_1_nil_file_helper" kind="class" language="C++" prot="public">
+    <compoundname>sgns::NilFileHelper</compoundname>
+    <includes refid="d2/d6c/_nil_file_helper_8hpp" local="no">NilFileHelper.hpp</includes>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d4/d4f/classsgns_1_1_nil_file_helper_1a4b772d2309bc56c08c067c237c5da51a" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename MarshalledData</type>
+          </param>
+        </templateparamlist>
+        <type>bool</type>
+        <definition>static bool sgns::NilFileHelper::PrintMarshalledData</definition>
+        <argsstring>(const MarshalledData &amp;output, std::ostream &amp;out=std::cout, bool binary=true)</argsstring>
+        <name>PrintMarshalledData</name>
+        <qualifiedname>sgns::NilFileHelper::PrintMarshalledData</qualifiedname>
+        <param>
+          <type>const MarshalledData &amp;</type>
+          <declname>output</declname>
+        </param>
+        <param>
+          <type>std::ostream &amp;</type>
+          <declname>out</declname>
+          <defval>std::cout</defval>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>binary</declname>
+          <defval>true</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/NilFileHelper.hpp" line="25" column="21" bodyfile="src/proof/NilFileHelper.hpp" bodystart="25" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d4f/classsgns_1_1_nil_file_helper_1afcfe8b32e6e99e4eca32733ffc2336a6" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename MarshalledData</type>
+          </param>
+        </templateparamlist>
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>static std::vector&lt; uint8_t &gt; sgns::NilFileHelper::GetMarshalledData</definition>
+        <argsstring>(const MarshalledData &amp;output, bool binary=true)</argsstring>
+        <name>GetMarshalledData</name>
+        <qualifiedname>sgns::NilFileHelper::GetMarshalledData</qualifiedname>
+        <param>
+          <type>const MarshalledData &amp;</type>
+          <declname>output</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>binary</declname>
+          <defval>true</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/NilFileHelper.hpp" line="38" column="28" bodyfile="src/proof/NilFileHelper.hpp" bodystart="38" bodyend="46"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d4f/classsgns_1_1_nil_file_helper_1a0317daf326db770adb0a80eed1373b0d" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename MarshalledData</type>
+          </param>
+        </templateparamlist>
+        <type>outcome::result&lt; MarshalledData &gt;</type>
+        <definition>static outcome::result&lt; MarshalledData &gt; sgns::NilFileHelper::DecodeMarshalledData</definition>
+        <argsstring>(std::ifstream &amp;in, bool binary=true)</argsstring>
+        <name>DecodeMarshalledData</name>
+        <qualifiedname>sgns::NilFileHelper::DecodeMarshalledData</qualifiedname>
+        <param>
+          <type>std::ifstream &amp;</type>
+          <declname>in</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>binary</declname>
+          <defval>true</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/NilFileHelper.hpp" line="49" column="32" bodyfile="src/proof/NilFileHelper.hpp" bodystart="49" bodyend="72"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="d4/d4f/classsgns_1_1_nil_file_helper_1a5b6f6f2b4f8a49d8fa7f8a06f3672175" prot="private" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>static bool sgns::NilFileHelper::WriteAsHex</definition>
+        <argsstring>(const std::vector&lt; std::uint8_t &gt; &amp;vector, std::ostream &amp;out)</argsstring>
+        <name>WriteAsHex</name>
+        <qualifiedname>sgns::NilFileHelper::WriteAsHex</qualifiedname>
+        <param>
+          <type>const std::vector&lt; std::uint8_t &gt; &amp;</type>
+          <declname>vector</declname>
+        </param>
+        <param>
+          <type>std::ostream &amp;</type>
+          <declname>out</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/NilFileHelper.hpp" line="75" column="21" bodyfile="src/proof/NilFileHelper.hpp" bodystart="75" bodyend="91"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d4f/classsgns_1_1_nil_file_helper_1aeeca59dcaf9b087eff627eac6db7e59f" prot="private" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>static bool sgns::NilFileHelper::WriteAsBin</definition>
+        <argsstring>(const std::vector&lt; std::uint8_t &gt; &amp;vector, std::ostream &amp;out)</argsstring>
+        <name>WriteAsBin</name>
+        <qualifiedname>sgns::NilFileHelper::WriteAsBin</qualifiedname>
+        <param>
+          <type>const std::vector&lt; std::uint8_t &gt; &amp;</type>
+          <declname>vector</declname>
+        </param>
+        <param>
+          <type>std::ostream &amp;</type>
+          <declname>out</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/NilFileHelper.hpp" line="93" column="21" bodyfile="src/proof/NilFileHelper.hpp" bodystart="93" bodyend="104"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d4f/classsgns_1_1_nil_file_helper_1ac1289d518fd7bb652dec181f18ca7503" prot="private" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>outcome::result&lt; std::vector&lt; std::uint8_t &gt; &gt;</type>
+        <definition>static outcome::result&lt; std::vector&lt; std::uint8_t &gt; &gt; sgns::NilFileHelper::ReadFromHex</definition>
+        <argsstring>(std::ifstream &amp;in)</argsstring>
+        <name>ReadFromHex</name>
+        <qualifiedname>sgns::NilFileHelper::ReadFromHex</qualifiedname>
+        <param>
+          <type>std::ifstream &amp;</type>
+          <declname>in</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/NilFileHelper.hpp" line="106" column="32" bodyfile="src/proof/NilFileHelper.hpp" bodystart="106" bodyend="128"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d4f/classsgns_1_1_nil_file_helper_1a16242e524e84faa63f74dbb5aac9f02e" prot="private" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>outcome::result&lt; std::vector&lt; std::uint8_t &gt; &gt;</type>
+        <definition>static outcome::result&lt; std::vector&lt; std::uint8_t &gt; &gt; sgns::NilFileHelper::ReadFromBin</definition>
+        <argsstring>(std::ifstream &amp;in)</argsstring>
+        <name>ReadFromBin</name>
+        <qualifiedname>sgns::NilFileHelper::ReadFromBin</qualifiedname>
+        <param>
+          <type>std::ifstream &amp;</type>
+          <declname>in</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/NilFileHelper.hpp" line="130" column="32" bodyfile="src/proof/NilFileHelper.hpp" bodystart="130" bodyend="144"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::NilFileHelper</label>
+        <link refid="d4/d4f/classsgns_1_1_nil_file_helper"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/proof/NilFileHelper.hpp" line="21" column="5" bodyfile="src/proof/NilFileHelper.hpp" bodystart="22" bodyend="145"/>
+    <listofallmembers>
+      <member refid="d4/d4f/classsgns_1_1_nil_file_helper_1a0317daf326db770adb0a80eed1373b0d" prot="public" virt="non-virtual"><scope>sgns::NilFileHelper</scope><name>DecodeMarshalledData</name></member>
+      <member refid="d4/d4f/classsgns_1_1_nil_file_helper_1afcfe8b32e6e99e4eca32733ffc2336a6" prot="public" virt="non-virtual"><scope>sgns::NilFileHelper</scope><name>GetMarshalledData</name></member>
+      <member refid="d4/d4f/classsgns_1_1_nil_file_helper_1a4b772d2309bc56c08c067c237c5da51a" prot="public" virt="non-virtual"><scope>sgns::NilFileHelper</scope><name>PrintMarshalledData</name></member>
+      <member refid="d4/d4f/classsgns_1_1_nil_file_helper_1a16242e524e84faa63f74dbb5aac9f02e" prot="private" virt="non-virtual"><scope>sgns::NilFileHelper</scope><name>ReadFromBin</name></member>
+      <member refid="d4/d4f/classsgns_1_1_nil_file_helper_1ac1289d518fd7bb652dec181f18ca7503" prot="private" virt="non-virtual"><scope>sgns::NilFileHelper</scope><name>ReadFromHex</name></member>
+      <member refid="d4/d4f/classsgns_1_1_nil_file_helper_1aeeca59dcaf9b087eff627eac6db7e59f" prot="private" virt="non-virtual"><scope>sgns::NilFileHelper</scope><name>WriteAsBin</name></member>
+      <member refid="d4/d4f/classsgns_1_1_nil_file_helper_1a5b6f6f2b4f8a49d8fa7f8a06f3672175" prot="private" virt="non-virtual"><scope>sgns::NilFileHelper</scope><name>WriteAsHex</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

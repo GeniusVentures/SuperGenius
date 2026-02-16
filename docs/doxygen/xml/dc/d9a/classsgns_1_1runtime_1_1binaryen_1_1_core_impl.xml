@@ -1,0 +1,534 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl" kind="class" language="C++" prot="public">
+    <compoundname>sgns::runtime::binaryen::CoreImpl</compoundname>
+    <basecompoundref refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api" prot="public" virt="non-virtual">sgns::runtime::binaryen::RuntimeApi</basecompoundref>
+    <basecompoundref refid="d4/df1/classsgns_1_1runtime_1_1_core" prot="public" virt="non-virtual">sgns::runtime::Core</basecompoundref>
+    <includes refid="d7/dbc/core__impl_8hpp" local="no">core_impl.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1a2c52c7d320879641ab3fbb7ceebdfa7f" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker" kindref="compound">storage::changes_trie::ChangesTracker</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;storage::changes_trie::ChangesTracker&gt; sgns::runtime::binaryen::CoreImpl::changes_tracker_</definition>
+        <argsstring></argsstring>
+        <name>changes_tracker_</name>
+        <qualifiedname>sgns::runtime::binaryen::CoreImpl::changes_tracker_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/core_impl.hpp" line="36" column="21" bodyfile="src/runtime/binaryen/runtime_api/core_impl.hpp" bodystart="36" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1ad5fa1369bb9fc416b81adeebccf46815" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository" kindref="compound">blockchain::BlockHeaderRepository</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;blockchain::BlockHeaderRepository&gt; sgns::runtime::binaryen::CoreImpl::header_repo_</definition>
+        <argsstring></argsstring>
+        <name>header_repo_</name>
+        <qualifiedname>sgns::runtime::binaryen::CoreImpl::header_repo_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/core_impl.hpp" line="37" column="21" bodyfile="src/runtime/binaryen/runtime_api/core_impl.hpp" bodystart="37" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1a6bb6c71f7193a77cb03d69ff8e1eb543" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::runtime::binaryen::CoreImpl::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::runtime::binaryen::CoreImpl::logger_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/core_impl.hpp" line="38" column="14" bodyfile="src/runtime/binaryen/runtime_api/core_impl.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1a60e86307ac02474e5feb043b603a1eed" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::binaryen::CoreImpl::CoreImpl</definition>
+        <argsstring>(const std::shared_ptr&lt; WasmProvider &gt; &amp;wasm_provider, const std::shared_ptr&lt; RuntimeManager &gt; &amp;runtime_manager, std::shared_ptr&lt; storage::changes_trie::ChangesTracker &gt; changes_tracker, std::shared_ptr&lt; blockchain::BlockHeaderRepository &gt; header_repo)</argsstring>
+        <name>CoreImpl</name>
+        <qualifiedname>sgns::runtime::binaryen::CoreImpl::CoreImpl</qualifiedname>
+        <param>
+          <type>const std::shared_ptr&lt; <ref refid="d2/d00/classsgns_1_1runtime_1_1_wasm_provider" kindref="compound">WasmProvider</ref> &gt; &amp;</type>
+          <declname>wasm_provider</declname>
+        </param>
+        <param>
+          <type>const std::shared_ptr&lt; <ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager" kindref="compound">RuntimeManager</ref> &gt; &amp;</type>
+          <declname>runtime_manager</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker" kindref="compound">storage::changes_trie::ChangesTracker</ref> &gt;</type>
+          <declname>changes_tracker</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository" kindref="compound">blockchain::BlockHeaderRepository</ref> &gt;</type>
+          <declname>header_repo</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/core_impl.hpp" line="15" column="14" bodyfile="src/runtime/binaryen/runtime_api/core_impl.cpp" bodystart="13" bodyend="24"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1a7ea3f95fc37b746ab11447d96b2da935" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::binaryen::CoreImpl::~CoreImpl</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~CoreImpl</name>
+        <qualifiedname>sgns::runtime::binaryen::CoreImpl::~CoreImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/core_impl.hpp" line="21" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1ad95c2c91f80f3f088defd164517f5860" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="de/d6d/structsgns_1_1primitives_1_1_version" kindref="compound">primitives::Version</ref> &gt;</type>
+        <definition>outcome::result&lt; Version &gt; sgns::runtime::binaryen::CoreImpl::version</definition>
+        <argsstring>(const boost::optional&lt; primitives::BlockHash &gt; &amp;block_hash) override</argsstring>
+        <name>version</name>
+        <qualifiedname>sgns::runtime::binaryen::CoreImpl::version</qualifiedname>
+        <reimplements refid="d4/df1/classsgns_1_1runtime_1_1_core_1a4446a2872b230da459fc300b499a5329">version</reimplements>
+        <param>
+          <type>const boost::optional&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &gt; &amp;</type>
+          <declname>block_hash</declname>
+        </param>
+        <briefdescription>
+<para>Returns the version of the runtime. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>runtime version </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/core_impl.hpp" line="23" column="21" bodyfile="src/runtime/binaryen/runtime_api/core_impl.cpp" bodystart="26" bodyend="34"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1a238290489c71d5c01ec8f882456ec94b" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::runtime::binaryen::CoreImpl::execute_block</definition>
+        <argsstring>(const primitives::Block &amp;block) override</argsstring>
+        <name>execute_block</name>
+        <qualifiedname>sgns::runtime::binaryen::CoreImpl::execute_block</qualifiedname>
+        <reimplements refid="d4/df1/classsgns_1_1runtime_1_1_core_1abf9b51aebbc6e51f771833bdddbfa1fa">execute_block</reimplements>
+        <param>
+          <type>const <ref refid="da/dcc/structsgns_1_1primitives_1_1_block" kindref="compound">primitives::Block</ref> &amp;</type>
+          <declname>block</declname>
+        </param>
+        <briefdescription>
+<para>Executes the given block. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>block</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>block to execute </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/core_impl.hpp" line="26" column="21" bodyfile="src/runtime/binaryen/runtime_api/core_impl.cpp" bodystart="36" bodyend="47"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1a2fbcb52af57e42f9ee4cc7752fdf160c" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::runtime::binaryen::CoreImpl::initialise_block</definition>
+        <argsstring>(const sgns::primitives::BlockHeader &amp;header) override</argsstring>
+        <name>initialise_block</name>
+        <qualifiedname>sgns::runtime::binaryen::CoreImpl::initialise_block</qualifiedname>
+        <reimplements refid="d4/df1/classsgns_1_1runtime_1_1_core_1aed43dd94de2d91e8c11e9c313ca5710a">initialise_block</reimplements>
+        <param>
+          <type>const <ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">sgns::primitives::BlockHeader</ref> &amp;</type>
+          <declname>header</declname>
+        </param>
+        <briefdescription>
+<para>Initialize a block with the given header. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>header</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>header used for block initialization </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/core_impl.hpp" line="29" column="21" bodyfile="src/runtime/binaryen/runtime_api/core_impl.cpp" bodystart="49" bodyend="59"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1a06d804a151f60b237f68edcb4234cad7" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; std::vector&lt; <ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">primitives::AuthorityId</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::vector&lt; AuthorityId &gt; &gt; sgns::runtime::binaryen::CoreImpl::authorities</definition>
+        <argsstring>(const primitives::BlockId &amp;block_id) override</argsstring>
+        <name>authorities</name>
+        <qualifiedname>sgns::runtime::binaryen::CoreImpl::authorities</qualifiedname>
+        <reimplements refid="d4/df1/classsgns_1_1runtime_1_1_core_1a61c0d3b0f660dcd09020c2b73c262b8b">authorities</reimplements>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>block_id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get current authorities <simplesect kind="return"><para>collection of authorities </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/core_impl.hpp" line="32" column="21" bodyfile="src/runtime/binaryen/runtime_api/core_impl.cpp" bodystart="61" bodyend="66"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>sgns::runtime::Core</label>
+        <link refid="d4/df1/classsgns_1_1runtime_1_1_core"/>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::binaryen::CoreImpl</label>
+        <link refid="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::binaryen::RuntimeApi</label>
+        <link refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="15">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="24">
+        <label>K</label>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="20">
+        <label>sgns::base::Blob&lt; size_ &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>sgns::base::Blob&lt; 32 &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+        <childnode refid="20" relation="template-instance">
+          <edgelabel>&lt; 32 &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="37">
+        <label>sgns::blockchain::BlockHeaderRepository</label>
+        <link refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository"/>
+        <childnode refid="15" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>sgns::crypto::Hasher</label>
+        <link refid="dd/d14/classsgns_1_1crypto_1_1_hasher"/>
+        <childnode refid="15" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>sgns::runtime::Core</label>
+        <link refid="d4/df1/classsgns_1_1runtime_1_1_core"/>
+      </node>
+      <node id="9">
+        <label>sgns::runtime::TrieStorageProvider</label>
+        <link refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider"/>
+      </node>
+      <node id="31">
+        <label>sgns::runtime::WasmProvider</label>
+        <link refid="d2/d00/classsgns_1_1runtime_1_1_wasm_provider"/>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::binaryen::CoreImpl</label>
+        <link refid="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="33" relation="public-inheritance">
+        </childnode>
+        <childnode refid="34" relation="usage">
+          <edgelabel>-changes_tracker_</edgelabel>
+        </childnode>
+        <childnode refid="36" relation="usage">
+          <edgelabel>-header_repo_</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::binaryen::RuntimeApi</label>
+        <link refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-runtime_manager_</edgelabel>
+        </childnode>
+        <childnode refid="30" relation="usage">
+          <edgelabel>-wasm_provider_</edgelabel>
+        </childnode>
+        <childnode refid="32" relation="usage">
+          <edgelabel>-executor_</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="26">
+        <label>sgns::runtime::binaryen::RuntimeExternalInterface</label>
+        <link refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface"/>
+        <childnode refid="27" relation="public-inheritance">
+        </childnode>
+        <childnode refid="28" relation="usage">
+          <edgelabel>-extension_</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::runtime::binaryen::RuntimeManager</label>
+        <link refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager"/>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-storage_provider_</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>-extension_factory_</edgelabel>
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>-module_factory_</edgelabel>
+        </childnode>
+        <childnode refid="13" relation="usage">
+          <edgelabel>-hasher_</edgelabel>
+        </childnode>
+        <childnode refid="16" relation="usage">
+          <edgelabel>-modules_mutex_</edgelabel>
+        </childnode>
+        <childnode refid="17" relation="usage">
+          <edgelabel>-modules_</edgelabel>
+        </childnode>
+        <childnode refid="25" relation="usage">
+          <edgelabel>-external_interface_</edgelabel>
+        </childnode>
+      </node>
+      <node id="32">
+        <label>sgns::runtime::binaryen::WasmExecutor</label>
+        <link refid="dc/dac/classsgns_1_1runtime_1_1binaryen_1_1_wasm_executor"/>
+      </node>
+      <node id="22">
+        <label>sgns::runtime::binaryen::WasmModule</label>
+        <link refid="d9/d10/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module"/>
+      </node>
+      <node id="12">
+        <label>sgns::runtime::binaryen::WasmModuleFactory</label>
+        <link refid="df/dd7/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_factory"/>
+      </node>
+      <node id="35">
+        <label>sgns::storage::changes_trie::ChangesTracker</label>
+        <link refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker"/>
+        <childnode refid="15" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="23">
+        <label>std::map&lt; K, T &gt;</label>
+        <childnode refid="24" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>std::map&lt; sgns::base::Blob&lt; 32 &gt;, std::shared_ptr&lt; sgns::runtime::binaryen::WasmModule &gt; &gt;</label>
+        <childnode refid="18" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="21" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="23" relation="template-instance">
+          <edgelabel>&lt; sgns::base::Blob&lt; 32 &gt;, std::shared_ptr&lt; sgns::runtime::binaryen::WasmModule &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>std::mutex</label>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::shared_ptr&lt; extensions::ExtensionFactory &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; extensions::ExtensionFactory &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="36">
+        <label>std::shared_ptr&lt; sgns::blockchain::BlockHeaderRepository &gt;</label>
+        <childnode refid="37" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::blockchain::BlockHeaderRepository &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="13">
+        <label>std::shared_ptr&lt; sgns::crypto::Hasher &gt;</label>
+        <childnode refid="14" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::crypto::Hasher &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; sgns::runtime::TrieStorageProvider &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::TrieStorageProvider &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="30">
+        <label>std::shared_ptr&lt; sgns::runtime::WasmProvider &gt;</label>
+        <childnode refid="31" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::WasmProvider &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="25">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::RuntimeExternalInterface &gt;</label>
+        <childnode refid="26" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::RuntimeExternalInterface &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::RuntimeManager &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::RuntimeManager &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::WasmModule &gt;</label>
+        <childnode refid="22" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::WasmModule &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::WasmModuleFactory &gt;</label>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::WasmModuleFactory &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="34">
+        <label>std::shared_ptr&lt; sgns::storage::changes_trie::ChangesTracker &gt;</label>
+        <childnode refid="35" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::changes_trie::ChangesTracker &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="29">
+        <label>std::unique_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="28">
+        <label>std::unique_ptr&lt; extensions::Extension &gt;</label>
+        <childnode refid="29" relation="template-instance">
+          <edgelabel>&lt; extensions::Extension &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="27">
+        <label>wasm::ShellExternalInterface</label>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/binaryen/runtime_api/core_impl.hpp" line="13" column="3" bodyfile="src/runtime/binaryen/runtime_api/core_impl.hpp" bodystart="13" bodyend="39"/>
+    <listofallmembers>
+      <member refid="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1a06d804a151f60b237f68edcb4234cad7" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::CoreImpl</scope><name>authorities</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1a6a085102349cc88fbd0099b70bf7e094" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::CoreImpl</scope><name>CallPersistency</name></member>
+      <member refid="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1a2c52c7d320879641ab3fbb7ceebdfa7f" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::CoreImpl</scope><name>changes_tracker_</name></member>
+      <member refid="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1a60e86307ac02474e5feb043b603a1eed" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::CoreImpl</scope><name>CoreImpl</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1acfbd16edc772cd082596bed9e6566588" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::CoreImpl</scope><name>createRuntimeEnvironment</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1af9734bde832439b75009b3c3b8d19f3d" prot="protected" virt="non-virtual"><scope>sgns::runtime::binaryen::CoreImpl</scope><name>execute</name></member>
+      <member refid="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1a238290489c71d5c01ec8f882456ec94b" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::CoreImpl</scope><name>execute_block</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1ad69effae3d32855dd3ed8d72beb346e5" prot="protected" virt="non-virtual"><scope>sgns::runtime::binaryen::CoreImpl</scope><name>executeAt</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1aef8cd1c4cdd70ce1c52099eef6bd5573" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::CoreImpl</scope><name>executeMaybeAt</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1a1b44a491f5ffd5a2b6a38383e00bce0e" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::CoreImpl</scope><name>executor_</name></member>
+      <member refid="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1ad5fa1369bb9fc416b81adeebccf46815" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::CoreImpl</scope><name>header_repo_</name></member>
+      <member refid="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1a2fbcb52af57e42f9ee4cc7752fdf160c" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::CoreImpl</scope><name>initialise_block</name></member>
+      <member refid="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1a6bb6c71f7193a77cb03d69ff8e1eb543" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::CoreImpl</scope><name>logger_</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1a206146e3ce08b0f7707b28c15892f4a5" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::CoreImpl</scope><name>runtime_manager_</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1a54231e096e02eb06de8d3764468e3624" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::CoreImpl</scope><name>RuntimeApi</name></member>
+      <member refid="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1ad95c2c91f80f3f088defd164517f5860" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::CoreImpl</scope><name>version</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1ae5923b27dda9129f8ab8c4fdb011452d" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::CoreImpl</scope><name>wasm_provider_</name></member>
+      <member refid="d4/df1/classsgns_1_1runtime_1_1_core_1a2841054146a6a0c9bcb76e56c5a4a503" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::CoreImpl</scope><name>~Core</name></member>
+      <member refid="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1a7ea3f95fc37b746ab11447d96b2da935" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::CoreImpl</scope><name>~CoreImpl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

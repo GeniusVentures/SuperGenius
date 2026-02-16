@@ -1,0 +1,262 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/da6/wasm__module__instance_8hpp" kind="file" language="C++">
+    <compoundname>wasm_module_instance.hpp</compoundname>
+    <includes local="no">binaryen/literal.h</includes>
+    <includes local="no">binaryen/support/name.h</includes>
+    <includedby refid="dd/dbc/wasm__module_8hpp" local="yes">src/runtime/binaryen/module/wasm_module.hpp</includedby>
+    <includedby refid="da/d86/wasm__module__instance__impl_8hpp" local="yes">src/runtime/binaryen/module/wasm_module_instance_impl.hpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/runtime/binaryen/module/wasm_module_instance.hpp</label>
+        <link refid="d9/da6/wasm__module__instance_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>binaryen/literal.h</label>
+      </node>
+      <node id="3">
+        <label>binaryen/support/name.h</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/runtime/binaryen/module/wasm_module.hpp</label>
+        <link refid="dd/dbc/wasm__module_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>src/runtime/binaryen/module/wasm_module_factory.hpp</label>
+        <link refid="d4/dc9/wasm__module__factory_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>src/runtime/binaryen/module/wasm_module_factory_impl.cpp</label>
+        <link refid="d5/def/wasm__module__factory__impl_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/runtime/binaryen/module/wasm_module_factory_impl.hpp</label>
+        <link refid="d8/d01/wasm__module__factory__impl_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>src/runtime/binaryen/module/wasm_module_impl.cpp</label>
+        <link refid="d9/df2/wasm__module__impl_8cpp"/>
+      </node>
+      <node id="27">
+        <label>src/runtime/binaryen/module/wasm_module_impl.hpp</label>
+        <link refid="d5/d13/wasm__module__impl_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/runtime/binaryen/module/wasm_module_instance.hpp</label>
+        <link refid="d9/da6/wasm__module__instance_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>src/runtime/binaryen/module/wasm_module_instance_impl.cpp</label>
+        <link refid="d7/d13/wasm__module__instance__impl_8cpp"/>
+      </node>
+      <node id="32">
+        <label>src/runtime/binaryen/module/wasm_module_instance_impl.hpp</label>
+        <link refid="da/d86/wasm__module__instance__impl_8hpp"/>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.cpp</label>
+        <link refid="d7/d6b/block__builder__impl_8cpp"/>
+      </node>
+      <node id="10">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.hpp</label>
+        <link refid="d3/d95/block__builder__impl_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.cpp</label>
+        <link refid="de/d5e/core__factory__impl_8cpp"/>
+      </node>
+      <node id="7">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.hpp</label>
+        <link refid="d7/de4/core__factory__impl_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>src/runtime/binaryen/runtime_api/core_impl.cpp</label>
+        <link refid="dc/d7c/core__impl_8cpp"/>
+      </node>
+      <node id="12">
+        <label>src/runtime/binaryen/runtime_api/core_impl.hpp</label>
+        <link refid="d7/dbc/core__impl_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.cpp</label>
+        <link refid="dc/def/finality__api__impl_8cpp"/>
+      </node>
+      <node id="14">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.hpp</label>
+        <link refid="db/dad/finality__api__impl_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>src/runtime/binaryen/runtime_api/metadata_impl.cpp</label>
+        <link refid="d0/dfc/metadata__impl_8cpp"/>
+      </node>
+      <node id="16">
+        <label>src/runtime/binaryen/runtime_api/metadata_impl.hpp</label>
+        <link refid="dc/dcf/metadata__impl_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>src/runtime/binaryen/runtime_api/offchain_worker_impl.cpp</label>
+        <link refid="d3/d58/offchain__worker__impl_8cpp"/>
+      </node>
+      <node id="18">
+        <label>src/runtime/binaryen/runtime_api/offchain_worker_impl.hpp</label>
+        <link refid="dd/d03/offchain__worker__impl_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.cpp</label>
+        <link refid="db/dae/parachain__host__impl_8cpp"/>
+      </node>
+      <node id="20">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.hpp</label>
+        <link refid="d6/d15/parachain__host__impl_8hpp"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.cpp</label>
+        <link refid="d3/d02/production__api__impl_8cpp"/>
+      </node>
+      <node id="22">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.hpp</label>
+        <link refid="d1/d6a/production__api__impl_8hpp"/>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>src/runtime/binaryen/runtime_api/runtime_api.hpp</label>
+        <link refid="dd/d87/runtime__api_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.cpp</label>
+        <link refid="db/d63/tagged__transaction__queue__impl_8cpp"/>
+      </node>
+      <node id="24">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.hpp</label>
+        <link refid="d4/d66/tagged__transaction__queue__impl_8hpp"/>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>src/runtime/binaryen/runtime_environment.cpp</label>
+        <link refid="d1/d6f/runtime__environment_8cpp"/>
+      </node>
+      <node id="26">
+        <label>src/runtime/binaryen/runtime_manager.cpp</label>
+        <link refid="da/dc5/runtime__manager_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/runtime/binaryen/runtime_manager.hpp</label>
+        <link refid="d3/d10/runtime__manager_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>src/runtime/binaryen/wasm_executor.cpp</label>
+        <link refid="d9/db1/wasm__executor_8cpp"/>
+      </node>
+      <node id="30">
+        <label>src/runtime/binaryen/wasm_executor.hpp</label>
+        <link refid="d4/d2e/wasm__executor_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="dc/dbb/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance" prot="public">sgns::runtime::binaryen::WasmModuleInstance</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="dd/da6/namespacesgns_1_1runtime">sgns::runtime</innernamespace>
+    <innernamespace refid="d5/d54/namespacesgns_1_1runtime_1_1binaryen">sgns::runtime::binaryen</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_RUNTIME_BINARYEN_MODULE_WASM_MODULE_INSTANCE</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_RUNTIME_BINARYEN_MODULE_WASM_MODULE_INSTANCE</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;binaryen/literal.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;binaryen/support/name.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d5/d54/namespacesgns_1_1runtime_1_1binaryen" kindref="compound">sgns::runtime::binaryen</ref><sp/>{</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13" refid="dc/dbb/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="dc/dbb/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance" kindref="compound">WasmModuleInstance</ref><sp/>{</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="15" refid="dc/dbb/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance_1a2d4853cf52bdda20746155ac102d57f5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="dc/dbb/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance_1a2d4853cf52bdda20746155ac102d57f5" kindref="member">~WasmModuleInstance</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22" refid="dc/dbb/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance_1a338015b1d9212620aaf28c19ff5a927e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>wasm::Literal<sp/><ref refid="dc/dbb/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance_1a338015b1d9212620aaf28c19ff5a927e" kindref="member">callExport</ref>(</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>wasm::Name<sp/>name,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;wasm::Literal&gt;<sp/>&amp;arguments)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="25"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::runtime::binaryen</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_SRC_RUNTIME_BINARYEN_MODULE_WASM_MODULE_INSTANCE</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/runtime/binaryen/module/wasm_module_instance.hpp"/>
+  </compounddef>
+</doxygen>

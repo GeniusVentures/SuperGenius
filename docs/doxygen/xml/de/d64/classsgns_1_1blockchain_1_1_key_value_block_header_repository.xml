@@ -1,0 +1,1413 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository" kind="class" language="C++" prot="public">
+    <compoundname>sgns::blockchain::KeyValueBlockHeaderRepository</compoundname>
+    <basecompoundref refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository" prot="public" virt="non-virtual">sgns::blockchain::BlockHeaderRepository</basecompoundref>
+    <includes refid="dd/dc6/key__value__block__header__repository_8hpp" local="no">key_value_block_header_repository.hpp</includes>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a793c0aa4dc7755cca884048b70700025" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>std::string_view</type>
+        <definition>std::string_view sgns::blockchain::KeyValueBlockHeaderRepository::BLOCKCHAIN_PATH</definition>
+        <argsstring></argsstring>
+        <name>BLOCKCHAIN_PATH</name>
+        <qualifiedname>sgns::blockchain::KeyValueBlockHeaderRepository::BLOCKCHAIN_PATH</qualifiedname>
+        <initializer>= &quot;blockchain/&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/key_value_block_header_repository.hpp" line="44" column="43" bodyfile="src/blockchain/impl/key_value_block_header_repository.hpp" bodystart="44" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1ae692cc64059778601418cb497b870ca7" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b" kindref="compound">crdt::GlobalDB</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;crdt::GlobalDB&gt; sgns::blockchain::KeyValueBlockHeaderRepository::db_</definition>
+        <argsstring></argsstring>
+        <name>db_</name>
+        <qualifiedname>sgns::blockchain::KeyValueBlockHeaderRepository::db_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/key_value_block_header_repository.hpp" line="46" column="25" bodyfile="src/blockchain/impl/key_value_block_header_repository.hpp" bodystart="46" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a1ec1678a70b6d6fe06fde413cc8fbabe" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher" kindref="compound">crypto::Hasher</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;crypto::Hasher&gt; sgns::blockchain::KeyValueBlockHeaderRepository::hasher_</definition>
+        <argsstring></argsstring>
+        <name>hasher_</name>
+        <qualifiedname>sgns::blockchain::KeyValueBlockHeaderRepository::hasher_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/key_value_block_header_repository.hpp" line="47" column="25" bodyfile="src/blockchain/impl/key_value_block_header_repository.hpp" bodystart="47" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a8eb293c725c043634a41adcbafde9dc0" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::blockchain::KeyValueBlockHeaderRepository::block_header_key_prefix</definition>
+        <argsstring></argsstring>
+        <name>block_header_key_prefix</name>
+        <qualifiedname>sgns::blockchain::KeyValueBlockHeaderRepository::block_header_key_prefix</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/key_value_block_header_repository.hpp" line="49" column="21" bodyfile="src/blockchain/impl/key_value_block_header_repository.hpp" bodystart="49" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1ae482b5b2c18532f98874f1fb867c44e0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::blockchain::KeyValueBlockHeaderRepository::KeyValueBlockHeaderRepository</definition>
+        <argsstring>(std::shared_ptr&lt; crdt::GlobalDB &gt; db, std::shared_ptr&lt; crypto::Hasher &gt; hasher, const std::string &amp;net_id)</argsstring>
+        <name>KeyValueBlockHeaderRepository</name>
+        <qualifiedname>sgns::blockchain::KeyValueBlockHeaderRepository::KeyValueBlockHeaderRepository</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b" kindref="compound">crdt::GlobalDB</ref> &gt;</type>
+          <declname>db</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher" kindref="compound">crypto::Hasher</ref> &gt;</type>
+          <declname>hasher</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>net_id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/key_value_block_header_repository.hpp" line="15" column="9" bodyfile="src/blockchain/impl/key_value_block_header_repository.cpp" bodystart="16" bodyend="23"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a9ccc49d8c2b6a82106734bbbe8a99500" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::blockchain::KeyValueBlockHeaderRepository::~KeyValueBlockHeaderRepository</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~KeyValueBlockHeaderRepository</name>
+        <qualifiedname>sgns::blockchain::KeyValueBlockHeaderRepository::~KeyValueBlockHeaderRepository</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/key_value_block_header_repository.hpp" line="18" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a7692def0cda45326d2e29739e4edd780" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref> &gt;</type>
+        <definition>outcome::result&lt; BlockNumber &gt; sgns::blockchain::KeyValueBlockHeaderRepository::getNumberByHash</definition>
+        <argsstring>(const base::Hash256 &amp;hash) const override</argsstring>
+        <name>getNumberByHash</name>
+        <qualifiedname>sgns::blockchain::KeyValueBlockHeaderRepository::getNumberByHash</qualifiedname>
+        <reimplements refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1ae01d3ff3728f72830ed3fe1d4ed4a105">getNumberByHash</reimplements>
+        <param>
+          <type>const <ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref> &amp;</type>
+          <declname>hash</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>hash</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- a blake2_256 hash of an SCALE encoded block header </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>the number of the block with the provided hash in case one is in the storage or an error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/key_value_block_header_repository.hpp" line="20" column="14" bodyfile="src/blockchain/impl/key_value_block_header_repository.cpp" bodystart="25" bodyend="30"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a57556c732afa1bedbe8faebbcbb5cae3" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref> &gt;</type>
+        <definition>outcome::result&lt; base::Hash256 &gt; sgns::blockchain::KeyValueBlockHeaderRepository::getHashByNumber</definition>
+        <argsstring>(const primitives::BlockNumber &amp;number) const override</argsstring>
+        <name>getHashByNumber</name>
+        <qualifiedname>sgns::blockchain::KeyValueBlockHeaderRepository::getHashByNumber</qualifiedname>
+        <reimplements refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a2f1bd33a158b858790919435ea724287">getHashByNumber</reimplements>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref> &amp;</type>
+          <declname>number</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>number</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- the number of a block, contained in a block header </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>the hash of the block with the provided number in case one is in the storage or an error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/key_value_block_header_repository.hpp" line="22" column="14" bodyfile="src/blockchain/impl/key_value_block_header_repository.cpp" bodystart="32" bodyend="39"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1af28ae085a48ef46ef735a062941ac883" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">primitives::BlockHeader</ref> &gt;</type>
+        <definition>outcome::result&lt; primitives::BlockHeader &gt; sgns::blockchain::KeyValueBlockHeaderRepository::getBlockHeader</definition>
+        <argsstring>(const primitives::BlockId &amp;id) const override</argsstring>
+        <name>getBlockHeader</name>
+        <qualifiedname>sgns::blockchain::KeyValueBlockHeaderRepository::getBlockHeader</qualifiedname>
+        <reimplements refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1abdda56d42d916b4c4347d9c0218437e8">getBlockHeader</reimplements>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>block header with corresponding id or an error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/key_value_block_header_repository.hpp" line="24" column="14" bodyfile="src/blockchain/impl/key_value_block_header_repository.cpp" bodystart="41" bodyend="52"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1ab4ebee53692356fc27faed7d03018f7d" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &gt;</type>
+        <definition>outcome::result&lt; primitives::BlockHash &gt; sgns::blockchain::KeyValueBlockHeaderRepository::putBlockHeader</definition>
+        <argsstring>(const primitives::BlockHeader &amp;header) override</argsstring>
+        <name>putBlockHeader</name>
+        <qualifiedname>sgns::blockchain::KeyValueBlockHeaderRepository::putBlockHeader</qualifiedname>
+        <reimplements refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a715e15760cede3d29dab5151b90d2614">putBlockHeader</reimplements>
+        <param>
+          <type>const <ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">primitives::BlockHeader</ref> &amp;</type>
+          <declname>header</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/key_value_block_header_repository.hpp" line="26" column="14" bodyfile="src/blockchain/impl/key_value_block_header_repository.cpp" bodystart="54" bodyend="70"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a9396c88d4baf7605184519fe9bcc9f27" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::blockchain::KeyValueBlockHeaderRepository::removeBlockHeader</definition>
+        <argsstring>(const primitives::BlockId &amp;id) override</argsstring>
+        <name>removeBlockHeader</name>
+        <qualifiedname>sgns::blockchain::KeyValueBlockHeaderRepository::removeBlockHeader</qualifiedname>
+        <reimplements refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a51cf7179f72edbf1d685ed4ec6a8b1af">removeBlockHeader</reimplements>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/key_value_block_header_repository.hpp" line="28" column="14" bodyfile="src/blockchain/impl/key_value_block_header_repository.cpp" bodystart="72" bodyend="77"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a89b8739f45cf77533759f2c24c3369b7" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d9/df6/namespacesgns_1_1blockchain_1a3fc0313c5d47d95b48f02d1ebb6e0aea" kindref="member">blockchain::BlockStatus</ref> &gt;</type>
+        <definition>outcome::result&lt; BlockStatus &gt; sgns::blockchain::KeyValueBlockHeaderRepository::getBlockStatus</definition>
+        <argsstring>(const primitives::BlockId &amp;id) const override</argsstring>
+        <name>getBlockStatus</name>
+        <qualifiedname>sgns::blockchain::KeyValueBlockHeaderRepository::getBlockStatus</qualifiedname>
+        <reimplements refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a9b64699fae33ac63a0bf15136872d981">getBlockStatus</reimplements>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>of a block which status is returned </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>status of a block or a storage error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/key_value_block_header_repository.hpp" line="30" column="14" bodyfile="src/blockchain/impl/key_value_block_header_repository.cpp" bodystart="79" bodyend="82"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1aef7cda4d4b8206cb13ef74d0932e5b17" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::blockchain::KeyValueBlockHeaderRepository::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::blockchain::KeyValueBlockHeaderRepository::GetName</qualifiedname>
+        <reimplements refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/key_value_block_header_repository.hpp" line="32" column="21" bodyfile="src/blockchain/impl/key_value_block_header_repository.hpp" bodystart="32" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a87250c7bf06c107a77789b1739fe5306" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::blockchain::KeyValueBlockHeaderRepository::GetHeaderPath</definition>
+        <argsstring>() const</argsstring>
+        <name>GetHeaderPath</name>
+        <qualifiedname>sgns::blockchain::KeyValueBlockHeaderRepository::GetHeaderPath</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/key_value_block_header_repository.hpp" line="37" column="21" bodyfile="src/blockchain/impl/key_value_block_header_repository.cpp" bodystart="84" bodyend="87"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1abafc15eeb32a1311f2b8ff28ca0d5780" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>std::vector&lt; uint8_t &gt; sgns::blockchain::KeyValueBlockHeaderRepository::GetHeaderSerializedData</definition>
+        <argsstring>(const primitives::BlockHeader &amp;header)</argsstring>
+        <name>GetHeaderSerializedData</name>
+        <qualifiedname>sgns::blockchain::KeyValueBlockHeaderRepository::GetHeaderSerializedData</qualifiedname>
+        <param>
+          <type>const <ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">primitives::BlockHeader</ref> &amp;</type>
+          <declname>header</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/key_value_block_header_repository.hpp" line="39" column="28" bodyfile="src/blockchain/impl/key_value_block_header_repository.cpp" bodystart="89" bodyend="103"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a0eaa42f7d5a1167cfb3ebd7e84851454" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">primitives::BlockHeader</ref></type>
+        <definition>primitives::BlockHeader sgns::blockchain::KeyValueBlockHeaderRepository::GetBlockHeaderFromSerialized</definition>
+        <argsstring>(const std::vector&lt; uint8_t &gt; &amp;serialized_data)</argsstring>
+        <name>GetBlockHeaderFromSerialized</name>
+        <qualifiedname>sgns::blockchain::KeyValueBlockHeaderRepository::GetBlockHeaderFromSerialized</qualifiedname>
+        <param>
+          <type>const std::vector&lt; uint8_t &gt; &amp;</type>
+          <declname>serialized_data</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/key_value_block_header_repository.hpp" line="41" column="40" bodyfile="src/blockchain/impl/key_value_block_header_repository.cpp" bodystart="105" bodyend="122"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="2">
+        <label>sgns::blockchain::BlockHeaderRepository</label>
+        <link refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::blockchain::KeyValueBlockHeaderRepository</label>
+        <link refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="61">
+        <label>BufferStorage</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="62" relation="public-inheritance">
+        </childnode>
+        <childnode refid="70" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="77" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="21">
+        <label>K</label>
+      </node>
+      <node id="11">
+        <label>T</label>
+      </node>
+      <node id="38">
+        <label>T1</label>
+      </node>
+      <node id="39">
+        <label>T2</label>
+      </node>
+      <node id="25">
+        <label>ipfs_lite::ipfs::merkledag::MerkleDagService</label>
+      </node>
+      <node id="2">
+        <label>sgns::blockchain::BlockHeaderRepository</label>
+        <link refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::blockchain::KeyValueBlockHeaderRepository</label>
+        <link refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-BLOCKCHAIN_PATH</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>-db_</edgelabel>
+        </childnode>
+        <childnode refid="119" relation="usage">
+          <edgelabel>-hasher_</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>-block_header_key_prefix</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>sgns::crdt::Broadcaster</label>
+        <link refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster"/>
+      </node>
+      <node id="113">
+        <label>sgns::crdt::CRDTCallbackManager</label>
+        <link refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager"/>
+        <childnode refid="92" relation="usage">
+          <edgelabel>-deleted_data_callback_registry_mutex_</edgelabel>
+          <edgelabel>-new_data_callback_registry_mutex_</edgelabel>
+        </childnode>
+        <childnode refid="114" relation="usage">
+          <edgelabel>-new_data_callback_registry_</edgelabel>
+        </childnode>
+        <childnode refid="115" relation="usage">
+          <edgelabel>-deleted_data_callback_registry_</edgelabel>
+        </childnode>
+        <childnode refid="32" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="109">
+        <label>sgns::crdt::CRDTDataFilter</label>
+        <link refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter"/>
+        <childnode refid="92" relation="usage">
+          <edgelabel>-element_registry_mutex_</edgelabel>
+          <edgelabel>-tombstone_registry_mutex_</edgelabel>
+        </childnode>
+        <childnode refid="110" relation="usage">
+          <edgelabel>-element_registry_</edgelabel>
+          <edgelabel>-tombstone_registry_</edgelabel>
+        </childnode>
+      </node>
+      <node id="83">
+        <label>sgns::crdt::CrdtDatastore</label>
+        <link refid="db/dbb/classsgns_1_1crdt_1_1_crdt_datastore"/>
+        <childnode refid="84" relation="public-inheritance">
+        </childnode>
+        <childnode refid="59" relation="usage">
+          <edgelabel>-dataStore_</edgelabel>
+        </childnode>
+        <childnode refid="85" relation="usage">
+          <edgelabel>-options_</edgelabel>
+        </childnode>
+        <childnode refid="87" relation="usage">
+          <edgelabel>-namespaceKey_</edgelabel>
+        </childnode>
+        <childnode refid="88" relation="usage">
+          <edgelabel>-set_</edgelabel>
+        </childnode>
+        <childnode refid="90" relation="usage">
+          <edgelabel>-heads_</edgelabel>
+        </childnode>
+        <childnode refid="96" relation="usage">
+          <edgelabel>-broadcaster_</edgelabel>
+        </childnode>
+        <childnode refid="97" relation="usage">
+          <edgelabel>-dagSyncer_</edgelabel>
+        </childnode>
+        <childnode refid="32" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-headsNamespace_</edgelabel>
+          <edgelabel>-setsNamespace_</edgelabel>
+        </childnode>
+        <childnode refid="53" relation="usage">
+          <edgelabel>-dagWorkerJobListThreadRunning_</edgelabel>
+          <edgelabel>-handleNextThreadRunning_</edgelabel>
+          <edgelabel>-rebroadcastThreadRunning_</edgelabel>
+        </childnode>
+        <childnode refid="98" relation="usage">
+          <edgelabel>-dagWorkers_</edgelabel>
+        </childnode>
+        <childnode refid="29" relation="usage">
+          <edgelabel>-cid_string_cache_mutex_</edgelabel>
+          <edgelabel>-dagWorkerCvMutex_</edgelabel>
+          <edgelabel>-dagWorkerMutex_</edgelabel>
+          <edgelabel>-pendingBroadcastMutex_</edgelabel>
+          <edgelabel>-pendingHeadsMutex_</edgelabel>
+          <edgelabel>-rebroadcastMutex_</edgelabel>
+          <edgelabel>-topicNamesMutex_</edgelabel>
+        </childnode>
+        <childnode refid="102" relation="usage">
+          <edgelabel>-rootCIDJobList_</edgelabel>
+          <edgelabel>-selfCreatedJobList_</edgelabel>
+        </childnode>
+        <childnode refid="105" relation="usage">
+          <edgelabel>-pendingHeadsByRootCID_</edgelabel>
+        </childnode>
+        <childnode refid="108" relation="usage">
+          <edgelabel>-pendingRootQueue_</edgelabel>
+        </childnode>
+        <childnode refid="109" relation="usage">
+          <edgelabel>-crdt_filter_</edgelabel>
+        </childnode>
+        <childnode refid="111" relation="usage">
+          <edgelabel>-pendingBroadcastTopics_</edgelabel>
+          <edgelabel>-topicNames_</edgelabel>
+        </childnode>
+        <childnode refid="113" relation="usage">
+          <edgelabel>-crdt_cb_manager_</edgelabel>
+        </childnode>
+        <childnode refid="116" relation="usage">
+          <edgelabel>-pending_jobs_</edgelabel>
+        </childnode>
+        <childnode refid="117" relation="usage">
+          <edgelabel>-cid_string_cache_</edgelabel>
+        </childnode>
+      </node>
+      <node id="100">
+        <label>sgns::crdt::CrdtDatastore::DagWorker</label>
+        <link refid="db/d23/structsgns_1_1crdt_1_1_crdt_datastore_1_1_dag_worker"/>
+        <childnode refid="53" relation="usage">
+          <edgelabel>+dagWorkerThreadRunning_</edgelabel>
+        </childnode>
+      </node>
+      <node id="103">
+        <label>sgns::crdt::CrdtDatastore::RootCIDJob</label>
+        <link refid="d1/de1/structsgns_1_1crdt_1_1_crdt_datastore_1_1_root_c_i_d_job"/>
+        <childnode refid="104" relation="usage">
+          <edgelabel>+node_</edgelabel>
+          <edgelabel>+root_node_</edgelabel>
+        </childnode>
+      </node>
+      <node id="91">
+        <label>sgns::crdt::CrdtHeads</label>
+        <link refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads"/>
+        <childnode refid="92" relation="usage">
+          <edgelabel>-mutex_</edgelabel>
+        </childnode>
+        <childnode refid="59" relation="usage">
+          <edgelabel>-dataStore_</edgelabel>
+        </childnode>
+        <childnode refid="93" relation="usage">
+          <edgelabel>-cache_</edgelabel>
+        </childnode>
+        <childnode refid="87" relation="usage">
+          <edgelabel>-namespaceKey_</edgelabel>
+        </childnode>
+        <childnode refid="32" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="86">
+        <label>sgns::crdt::CrdtOptions</label>
+        <link refid="db/d77/structsgns_1_1crdt_1_1_crdt_options"/>
+        <childnode refid="32" relation="usage">
+          <edgelabel>+logger</edgelabel>
+        </childnode>
+      </node>
+      <node id="89">
+        <label>sgns::crdt::CrdtSet</label>
+        <link refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set"/>
+        <childnode refid="59" relation="usage">
+          <edgelabel>-dataStore_</edgelabel>
+        </childnode>
+        <childnode refid="87" relation="usage">
+          <edgelabel>-namespaceKey_</edgelabel>
+        </childnode>
+        <childnode refid="29" relation="usage">
+          <edgelabel>-mutex_</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-elemsNamespace_</edgelabel>
+          <edgelabel>-keysNamespace_</edgelabel>
+          <edgelabel>-prioritySuffix_</edgelabel>
+          <edgelabel>-tombsNamespace_</edgelabel>
+          <edgelabel>-valueSuffix_</edgelabel>
+        </childnode>
+      </node>
+      <node id="24">
+        <label>sgns::crdt::DAGSyncer</label>
+        <link refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer"/>
+        <childnode refid="25" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::crdt::GlobalDB</label>
+        <link refid="da/d32/classsgns_1_1crdt_1_1_global_d_b"/>
+        <childnode refid="8" relation="public-inheritance">
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-m_context</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>-m_databasePath</edgelabel>
+          <edgelabel>-m_graphSyncAddrs</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="usage">
+          <edgelabel>-m_pubsub</edgelabel>
+        </childnode>
+        <childnode refid="15" relation="usage">
+          <edgelabel>-m_broadcaster</edgelabel>
+        </childnode>
+        <childnode refid="59" relation="usage">
+          <edgelabel>-m_datastore</edgelabel>
+        </childnode>
+        <childnode refid="82" relation="usage">
+          <edgelabel>-m_crdtDatastore</edgelabel>
+        </childnode>
+        <childnode refid="118" relation="usage">
+          <edgelabel>-bootstrapAddresses_</edgelabel>
+        </childnode>
+        <childnode refid="32" relation="usage">
+          <edgelabel>-m_logger</edgelabel>
+        </childnode>
+      </node>
+      <node id="23">
+        <label>sgns::crdt::GraphsyncDAGSyncer</label>
+        <link refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer"/>
+        <childnode refid="24" relation="public-inheritance">
+        </childnode>
+        <childnode refid="26" relation="public-inheritance">
+        </childnode>
+        <childnode refid="27" relation="usage">
+          <edgelabel>-unexpected_blocks</edgelabel>
+        </childnode>
+        <childnode refid="29" relation="usage">
+          <edgelabel>-blacklist_mutex_</edgelabel>
+          <edgelabel>-cid_failures_mutex_</edgelabel>
+          <edgelabel>-dagMutex_</edgelabel>
+          <edgelabel>-registry_mutex_</edgelabel>
+          <edgelabel>-routing_mutex_</edgelabel>
+        </childnode>
+        <childnode refid="30" relation="usage">
+          <edgelabel>-graphsync_</edgelabel>
+        </childnode>
+        <childnode refid="31" relation="usage">
+          <edgelabel>-host_</edgelabel>
+        </childnode>
+        <childnode refid="32" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="33" relation="usage">
+          <edgelabel>-requests_</edgelabel>
+        </childnode>
+        <childnode refid="35" relation="usage">
+          <edgelabel>-peer_registry_</edgelabel>
+        </childnode>
+        <childnode refid="40" relation="usage">
+          <edgelabel>-peer_index_</edgelabel>
+        </childnode>
+        <childnode refid="41" relation="usage">
+          <edgelabel>-routing_</edgelabel>
+        </childnode>
+        <childnode refid="42" relation="usage">
+          <edgelabel>-blacklist_</edgelabel>
+        </childnode>
+        <childnode refid="44" relation="usage">
+          <edgelabel>-cid_failures_</edgelabel>
+        </childnode>
+        <childnode refid="46" relation="usage">
+          <edgelabel>-received_blocks_</edgelabel>
+        </childnode>
+        <childnode refid="48" relation="usage">
+          <edgelabel>-lru_cid_cache_</edgelabel>
+        </childnode>
+        <childnode refid="53" relation="usage">
+          <edgelabel>-is_stopped_</edgelabel>
+        </childnode>
+      </node>
+      <node id="43">
+        <label>sgns::crdt::GraphsyncDAGSyncer::BlacklistEntry</label>
+        <link refid="d8/dea/structsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_blacklist_entry"/>
+      </node>
+      <node id="48">
+        <label>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache</label>
+        <link refid="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache"/>
+        <childnode refid="49" relation="usage">
+          <edgelabel>+cache_map_</edgelabel>
+        </childnode>
+        <childnode refid="51" relation="usage">
+          <edgelabel>+lru_list_</edgelabel>
+        </childnode>
+        <childnode refid="29" relation="usage">
+          <edgelabel>+mutex_</edgelabel>
+        </childnode>
+      </node>
+      <node id="87">
+        <label>sgns::crdt::HierarchicalKey</label>
+        <link refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key"/>
+        <childnode refid="12" relation="usage">
+          <edgelabel>-key_</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>sgns::crdt::PubSubBroadcasterExt</label>
+        <link refid="da/d80/classsgns_1_1crdt_1_1_pub_sub_broadcaster_ext"/>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+        <childnode refid="19" relation="usage">
+          <edgelabel>-topicsToBroadcast_</edgelabel>
+          <edgelabel>-topicsToListen_</edgelabel>
+        </childnode>
+        <childnode refid="22" relation="usage">
+          <edgelabel>-dagSyncer_</edgelabel>
+        </childnode>
+        <childnode refid="55" relation="usage">
+          <edgelabel>-messageQueue_</edgelabel>
+        </childnode>
+        <childnode refid="57" relation="usage">
+          <edgelabel>-pubSub_</edgelabel>
+        </childnode>
+        <childnode refid="29" relation="usage">
+          <edgelabel>-broadcastTopicsMutex_</edgelabel>
+          <edgelabel>-listenTopicsMutex_</edgelabel>
+          <edgelabel>-queueMutex_</edgelabel>
+          <edgelabel>-subscriptionMutex_</edgelabel>
+        </childnode>
+        <childnode refid="32" relation="usage">
+          <edgelabel>-m_logger</edgelabel>
+        </childnode>
+        <childnode refid="58" relation="usage">
+          <edgelabel>-subscriptionFutures_</edgelabel>
+        </childnode>
+      </node>
+      <node id="120">
+        <label>sgns::crypto::Hasher</label>
+        <link refid="dd/d14/classsgns_1_1crypto_1_1_hasher"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="74">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="75" relation="public-inheritance">
+        </childnode>
+        <childnode refid="76" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="70">
+        <label>sgns::storage::face::BatchWriteMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="71" relation="public-inheritance">
+        </childnode>
+        <childnode refid="73" relation="public-inheritance">
+        </childnode>
+        <childnode refid="74" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="79">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="75" relation="public-inheritance">
+        </childnode>
+        <childnode refid="76" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="73">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="76">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="77">
+        <label>sgns::storage::face::GenericStorage&lt; K, V &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="78" relation="public-inheritance">
+        </childnode>
+        <childnode refid="79" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="64">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="63">
+        <label>sgns::storage::face::Iterable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="64" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="68">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="67">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="68" relation="public-inheritance">
+        </childnode>
+        <childnode refid="69" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="62">
+        <label>sgns::storage::face::ReadOnlyMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="63" relation="public-inheritance">
+        </childnode>
+        <childnode refid="65" relation="public-inheritance">
+        </childnode>
+        <childnode refid="67" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="78">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="68" relation="public-inheritance">
+        </childnode>
+        <childnode refid="69" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="66">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="65">
+        <label>sgns::storage::face::Readable&lt; Buffer, Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="66" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="69">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="72">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="71">
+        <label>sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="72" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="75">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="60">
+        <label>sgns::storage::rocksdb</label>
+        <link refid="d5/dbf/classsgns_1_1storage_1_1rocksdb"/>
+        <childnode refid="61" relation="public-inheritance">
+        </childnode>
+        <childnode refid="80" relation="usage">
+          <edgelabel>-db_</edgelabel>
+        </childnode>
+        <childnode refid="32" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="81" relation="usage">
+          <edgelabel>-options_</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>-path_</edgelabel>
+        </childnode>
+      </node>
+      <node id="54">
+        <label>std::atomic&lt; T &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="53">
+        <label>std::atomic&lt; bool &gt;</label>
+        <childnode refid="54" relation="template-instance">
+          <edgelabel>&lt; bool &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="13">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="5">
+        <label>std::basic_string_view&lt; Char &gt;</label>
+      </node>
+      <node id="84">
+        <label>std::enable_shared_from_this&lt; CrdtDatastore &gt;</label>
+      </node>
+      <node id="8">
+        <label>std::enable_shared_from_this&lt; GlobalDB &gt;</label>
+      </node>
+      <node id="26">
+        <label>std::enable_shared_from_this&lt; GraphsyncDAGSyncer &gt;</label>
+      </node>
+      <node id="18">
+        <label>std::enable_shared_from_this&lt; PubSubBroadcasterExt &gt;</label>
+      </node>
+      <node id="52">
+        <label>std::list&lt; T &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="51">
+        <label>std::list&lt; CID &gt;</label>
+        <childnode refid="52" relation="template-instance">
+          <edgelabel>&lt; CID &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="34">
+        <label>std::map&lt; K, T &gt;</label>
+        <childnode refid="21" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="116">
+        <label>std::map&lt; CID, JobStatus &gt;</label>
+        <childnode refid="34" relation="template-instance">
+          <edgelabel>&lt; CID, JobStatus &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="41">
+        <label>std::map&lt; CID, PeerKey &gt;</label>
+        <childnode refid="34" relation="template-instance">
+          <edgelabel>&lt; CID, PeerKey &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="49">
+        <label>std::map&lt; CID, std::pair&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;, std::list&lt; CID &gt;::iterator &gt; &gt;</label>
+        <childnode refid="50" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="34" relation="template-instance">
+          <edgelabel>&lt; CID, std::pair&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;, std::list&lt; CID &gt;::iterator &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="105">
+        <label>std::map&lt; CID, std::set&lt; std::pair&lt; CID, std::string &gt; &gt; &gt;</label>
+        <childnode refid="106" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="34" relation="template-instance">
+          <edgelabel>&lt; CID, std::set&lt; std::pair&lt; CID, std::string &gt; &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="46">
+        <label>std::map&lt; CID, std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt;</label>
+        <childnode refid="47" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="34" relation="template-instance">
+          <edgelabel>&lt; CID, std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="117">
+        <label>std::map&lt; CID, std::string &gt;</label>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="34" relation="template-instance">
+          <edgelabel>&lt; CID, std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="33">
+        <label>std::map&lt; CID, std::tuple&lt; std::shared_ptr&lt; Subscription &gt;, std::shared_ptr&lt; std::promise&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt; &gt; &gt; &gt;</label>
+        <childnode refid="34" relation="template-instance">
+          <edgelabel>&lt; CID, std::tuple&lt; std::shared_ptr&lt; Subscription &gt;, std::shared_ptr&lt; std::promise&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt; &gt; &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="94">
+        <label>std::map&lt; CID, uint64_t &gt;</label>
+        <childnode refid="34" relation="template-instance">
+          <edgelabel>&lt; CID, uint64_t &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="42">
+        <label>std::map&lt; Multihash, sgns::crdt::GraphsyncDAGSyncer::BlacklistEntry &gt;</label>
+        <childnode refid="43" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="34" relation="template-instance">
+          <edgelabel>&lt; Multihash, sgns::crdt::GraphsyncDAGSyncer::BlacklistEntry &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="40">
+        <label>std::map&lt; PeerId, PeerKey &gt;</label>
+        <childnode refid="34" relation="template-instance">
+          <edgelabel>&lt; PeerId, PeerKey &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="44">
+        <label>std::map&lt; std::pair&lt; Multihash, CID &gt;, uint64_t &gt;</label>
+        <childnode refid="45" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="34" relation="template-instance">
+          <edgelabel>&lt; std::pair&lt; Multihash, CID &gt;, uint64_t &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="29">
+        <label>std::mutex</label>
+      </node>
+      <node id="37">
+        <label>std::pair&lt; T1, T2 &gt;</label>
+        <childnode refid="38" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="39" relation="usage">
+          <edgelabel>+second_type</edgelabel>
+        </childnode>
+      </node>
+      <node id="107">
+        <label>std::pair&lt; CID, std::string &gt;</label>
+        <childnode refid="37" relation="template-instance">
+          <edgelabel>&lt; CID, std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="45">
+        <label>std::pair&lt; Multihash, CID &gt;</label>
+        <childnode refid="37" relation="template-instance">
+          <edgelabel>&lt; Multihash, CID &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="36">
+        <label>std::pair&lt; PeerId, std::vector&lt; Multiaddress &gt; &gt;</label>
+        <childnode refid="37" relation="template-instance">
+          <edgelabel>&lt; PeerId, std::vector&lt; Multiaddress &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="50">
+        <label>std::pair&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;, std::list&lt; CID &gt;::iterator &gt;</label>
+        <childnode refid="47" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="51" relation="usage">
+          <edgelabel>+second_type</edgelabel>
+        </childnode>
+        <childnode refid="37" relation="template-instance">
+          <edgelabel>&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;, std::list&lt; CID &gt;::iterator &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="56">
+        <label>std::queue&lt; T &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="108">
+        <label>std::queue&lt; CID &gt;</label>
+        <childnode refid="56" relation="template-instance">
+          <edgelabel>&lt; CID &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="102">
+        <label>std::queue&lt; sgns::crdt::CrdtDatastore::RootCIDJob &gt;</label>
+        <childnode refid="103" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="56" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::CrdtDatastore::RootCIDJob &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="55">
+        <label>std::queue&lt; std::tuple&lt; libp2p::peer::PeerId, std::string &gt; &gt;</label>
+        <childnode refid="56" relation="template-instance">
+          <edgelabel>&lt; std::tuple&lt; libp2p::peer::PeerId, std::string &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="20">
+        <label>std::set&lt; K &gt;</label>
+        <childnode refid="21" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+      </node>
+      <node id="106">
+        <label>std::set&lt; std::pair&lt; CID, std::string &gt; &gt;</label>
+        <childnode refid="107" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="20" relation="template-instance">
+          <edgelabel>&lt; std::pair&lt; CID, std::string &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="19">
+        <label>std::set&lt; std::string &gt;</label>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="20" relation="template-instance">
+          <edgelabel>&lt; std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="92">
+        <label>std::shared_mutex</label>
+      </node>
+      <node id="10">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="80">
+        <label>std::shared_ptr&lt; DB &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; DB &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="57">
+        <label>std::shared_ptr&lt; GossipPubSub &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; GossipPubSub &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="30">
+        <label>std::shared_ptr&lt; Graphsync &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; Graphsync &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="104">
+        <label>std::shared_ptr&lt; IPLDNode &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; IPLDNode &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="81">
+        <label>std::shared_ptr&lt; Options &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; Options &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::shared_ptr&lt; boost::asio::io_context &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; boost::asio::io_context &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="47">
+        <label>std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; ipfs_lite::ipld::IPLDNode &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="31">
+        <label>std::shared_ptr&lt; libp2p::Host &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; libp2p::Host &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="96">
+        <label>std::shared_ptr&lt; sgns::crdt::Broadcaster &gt;</label>
+        <childnode refid="17" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::Broadcaster &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="82">
+        <label>std::shared_ptr&lt; sgns::crdt::CrdtDatastore &gt;</label>
+        <childnode refid="83" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::CrdtDatastore &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="90">
+        <label>std::shared_ptr&lt; sgns::crdt::CrdtHeads &gt;</label>
+        <childnode refid="91" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::CrdtHeads &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="85">
+        <label>std::shared_ptr&lt; sgns::crdt::CrdtOptions &gt;</label>
+        <childnode refid="86" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::CrdtOptions &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="88">
+        <label>std::shared_ptr&lt; sgns::crdt::CrdtSet &gt;</label>
+        <childnode refid="89" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::CrdtSet &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="97">
+        <label>std::shared_ptr&lt; sgns::crdt::DAGSyncer &gt;</label>
+        <childnode refid="24" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::DAGSyncer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; sgns::crdt::GlobalDB &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::GlobalDB &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="22">
+        <label>std::shared_ptr&lt; sgns::crdt::GraphsyncDAGSyncer &gt;</label>
+        <childnode refid="23" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::GraphsyncDAGSyncer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="15">
+        <label>std::shared_ptr&lt; sgns::crdt::PubSubBroadcasterExt &gt;</label>
+        <childnode refid="16" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::PubSubBroadcasterExt &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="119">
+        <label>std::shared_ptr&lt; sgns::crypto::Hasher &gt;</label>
+        <childnode refid="120" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; sgns::crypto::Hasher &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="14">
+        <label>std::shared_ptr&lt; sgns::ipfs_pubsub::GossipPubSub &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; sgns::ipfs_pubsub::GossipPubSub &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="59">
+        <label>std::shared_ptr&lt; sgns::storage::rocksdb &gt;</label>
+        <childnode refid="60" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::rocksdb &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="32">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::string</label>
+        <childnode refid="13" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::string_view</label>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="101">
+        <label>std::unique_ptr&lt; T &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="99">
+        <label>std::unique_ptr&lt; sgns::crdt::CrdtDatastore::DagWorker &gt;</label>
+        <childnode refid="100" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="101" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::CrdtDatastore::DagWorker &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="95">
+        <label>std::unordered_map&lt; K, T &gt;</label>
+        <childnode refid="21" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="115">
+        <label>std::unordered_map&lt; std::string, DeletedDataCallback &gt;</label>
+        <childnode refid="95" relation="template-instance">
+          <edgelabel>&lt; std::string, DeletedDataCallback &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="110">
+        <label>std::unordered_map&lt; std::string, ElementFilterCallback &gt;</label>
+        <childnode refid="95" relation="template-instance">
+          <edgelabel>&lt; std::string, ElementFilterCallback &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="114">
+        <label>std::unordered_map&lt; std::string, NewDataCallback &gt;</label>
+        <childnode refid="95" relation="template-instance">
+          <edgelabel>&lt; std::string, NewDataCallback &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="93">
+        <label>std::unordered_map&lt; std::string, std::map&lt; CID, uint64_t &gt; &gt;</label>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="94" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="95" relation="template-instance">
+          <edgelabel>&lt; std::string, std::map&lt; CID, uint64_t &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="112">
+        <label>std::unordered_set&lt; K &gt;</label>
+        <childnode refid="21" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+      </node>
+      <node id="111">
+        <label>std::unordered_set&lt; std::string &gt;</label>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="112" relation="template-instance">
+          <edgelabel>&lt; std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="28">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="27">
+        <label>std::vector&lt; CID &gt;</label>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; CID &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="35">
+        <label>std::vector&lt; PeerEntry &gt;</label>
+        <childnode refid="36" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; PeerEntry &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="58">
+        <label>std::vector&lt; std::shared_future&lt; std::shared_ptr&lt; libp2p::protocol::Subscription &gt; &gt; &gt;</label>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; std::shared_future&lt; std::shared_ptr&lt; libp2p::protocol::Subscription &gt; &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="118">
+        <label>std::vector&lt; std::string &gt;</label>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="98">
+        <label>std::vector&lt; std::unique_ptr&lt; sgns::crdt::CrdtDatastore::DagWorker &gt; &gt;</label>
+        <childnode refid="99" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; std::unique_ptr&lt; sgns::crdt::CrdtDatastore::DagWorker &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/blockchain/impl/key_value_block_header_repository.hpp" line="12" column="5" bodyfile="src/blockchain/impl/key_value_block_header_repository.hpp" bodystart="13" bodyend="50"/>
+    <listofallmembers>
+      <member refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a8eb293c725c043634a41adcbafde9dc0" prot="private" virt="non-virtual"><scope>sgns::blockchain::KeyValueBlockHeaderRepository</scope><name>block_header_key_prefix</name></member>
+      <member refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a793c0aa4dc7755cca884048b70700025" prot="private" virt="non-virtual"><scope>sgns::blockchain::KeyValueBlockHeaderRepository</scope><name>BLOCKCHAIN_PATH</name></member>
+      <member refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1ae692cc64059778601418cb497b870ca7" prot="private" virt="non-virtual"><scope>sgns::blockchain::KeyValueBlockHeaderRepository</scope><name>db_</name></member>
+      <member refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1af28ae085a48ef46ef735a062941ac883" prot="public" virt="virtual"><scope>sgns::blockchain::KeyValueBlockHeaderRepository</scope><name>getBlockHeader</name></member>
+      <member refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a0eaa42f7d5a1167cfb3ebd7e84851454" prot="public" virt="non-virtual"><scope>sgns::blockchain::KeyValueBlockHeaderRepository</scope><name>GetBlockHeaderFromSerialized</name></member>
+      <member refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a89b8739f45cf77533759f2c24c3369b7" prot="public" virt="virtual"><scope>sgns::blockchain::KeyValueBlockHeaderRepository</scope><name>getBlockStatus</name></member>
+      <member refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a2d5c162b8cc3929937c060ea3bee1549" prot="public" virt="non-virtual"><scope>sgns::blockchain::KeyValueBlockHeaderRepository</scope><name>getHashById</name></member>
+      <member refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a57556c732afa1bedbe8faebbcbb5cae3" prot="public" virt="virtual"><scope>sgns::blockchain::KeyValueBlockHeaderRepository</scope><name>getHashByNumber</name></member>
+      <member refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a87250c7bf06c107a77789b1739fe5306" prot="public" virt="non-virtual"><scope>sgns::blockchain::KeyValueBlockHeaderRepository</scope><name>GetHeaderPath</name></member>
+      <member refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1abafc15eeb32a1311f2b8ff28ca0d5780" prot="public" virt="non-virtual"><scope>sgns::blockchain::KeyValueBlockHeaderRepository</scope><name>GetHeaderSerializedData</name></member>
+      <member refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1aef7cda4d4b8206cb13ef74d0932e5b17" prot="public" virt="virtual"><scope>sgns::blockchain::KeyValueBlockHeaderRepository</scope><name>GetName</name></member>
+      <member refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a7692def0cda45326d2e29739e4edd780" prot="public" virt="virtual"><scope>sgns::blockchain::KeyValueBlockHeaderRepository</scope><name>getNumberByHash</name></member>
+      <member refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1afd8c7ea054ae0a36b2e44f772e13c768" prot="public" virt="non-virtual"><scope>sgns::blockchain::KeyValueBlockHeaderRepository</scope><name>getNumberById</name></member>
+      <member refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a1ec1678a70b6d6fe06fde413cc8fbabe" prot="private" virt="non-virtual"><scope>sgns::blockchain::KeyValueBlockHeaderRepository</scope><name>hasher_</name></member>
+      <member refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1ae482b5b2c18532f98874f1fb867c44e0" prot="public" virt="non-virtual"><scope>sgns::blockchain::KeyValueBlockHeaderRepository</scope><name>KeyValueBlockHeaderRepository</name></member>
+      <member refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1ab4ebee53692356fc27faed7d03018f7d" prot="public" virt="virtual"><scope>sgns::blockchain::KeyValueBlockHeaderRepository</scope><name>putBlockHeader</name></member>
+      <member refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a9396c88d4baf7605184519fe9bcc9f27" prot="public" virt="virtual"><scope>sgns::blockchain::KeyValueBlockHeaderRepository</scope><name>removeBlockHeader</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::blockchain::KeyValueBlockHeaderRepository</scope><name>~IComponent</name></member>
+      <member refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a9ccc49d8c2b6a82106734bbbe8a99500" prot="public" virt="non-virtual"><scope>sgns::blockchain::KeyValueBlockHeaderRepository</scope><name>~KeyValueBlockHeaderRepository</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

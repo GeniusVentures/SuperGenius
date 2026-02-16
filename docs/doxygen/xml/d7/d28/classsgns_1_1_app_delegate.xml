@@ -1,0 +1,470 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/d28/classsgns_1_1_app_delegate" kind="class" language="C++" prot="public">
+    <compoundname>sgns::AppDelegate</compoundname>
+    <includes refid="d7/d49/app__delegate_8hpp" local="no">app_delegate.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d7/d28/classsgns_1_1_app_delegate_1a79070f6dcedfe3a1270139d7aed43339" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d8/dbd/classsgns_1_1application_1_1_block_producing_node_application" kindref="compound">application::BlockProducingNodeApplication</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;application::BlockProducingNodeApplication&gt; sgns::AppDelegate::app_production</definition>
+        <argsstring></argsstring>
+        <name>app_production</name>
+        <qualifiedname>sgns::AppDelegate::app_production</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/app_delegate.hpp" line="64" column="21" bodyfile="node/app_delegate.hpp" bodystart="64" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/d28/classsgns_1_1_app_delegate_1a8a74a26299d5c9c7822cfc8a15df00ac" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application" kindref="compound">application::ValidatingNodeApplication</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;application::ValidatingNodeApplication&gt; sgns::AppDelegate::app_validating</definition>
+        <argsstring></argsstring>
+        <name>app_validating</name>
+        <qualifiedname>sgns::AppDelegate::app_validating</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/app_delegate.hpp" line="65" column="21" bodyfile="node/app_delegate.hpp" bodystart="65" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/d28/classsgns_1_1_app_delegate_1a7fe8aec529f948b6163e0a19478baa62" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl" kindref="compound">application::AppConfigurationImpl</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;application::AppConfigurationImpl&gt; sgns::AppDelegate::configuration</definition>
+        <argsstring></argsstring>
+        <name>configuration</name>
+        <qualifiedname>sgns::AppDelegate::configuration</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/app_delegate.hpp" line="66" column="21" bodyfile="node/app_delegate.hpp" bodystart="66" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d7/d28/classsgns_1_1_app_delegate_1a17d6b461728504fc5a915c1c1446c8eb" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::AppDelegate::AppDelegate</definition>
+        <argsstring>()</argsstring>
+        <name>AppDelegate</name>
+        <qualifiedname>sgns::AppDelegate::AppDelegate</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/app_delegate.hpp" line="38" column="10" bodyfile="node/app_delegate.cpp" bodystart="26" bodyend="28"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d28/classsgns_1_1_app_delegate_1a72200dbd41609da403d95e5c078b0d9e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::AppDelegate::~AppDelegate</definition>
+        <argsstring>()</argsstring>
+        <name>~AppDelegate</name>
+        <qualifiedname>sgns::AppDelegate::~AppDelegate</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/app_delegate.hpp" line="39" column="1" bodyfile="node/app_delegate.cpp" bodystart="30" bodyend="32"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d28/classsgns_1_1_app_delegate_1a4455dea1b7e5c61c1eddf586bc07c208" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>int</type>
+        <definition>int sgns::AppDelegate::init</definition>
+        <argsstring>(int argc, char *const *argv)</argsstring>
+        <name>init</name>
+        <qualifiedname>sgns::AppDelegate::init</qualifiedname>
+        <param>
+          <type>int</type>
+          <declname>argc</declname>
+        </param>
+        <param>
+          <type>char *const *</type>
+          <declname>argv</declname>
+        </param>
+        <briefdescription>
+<para>Initializes the SuperGenius daemon node. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>argc</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Count of CLI arguments. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>argv</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Vector of CLI arguments. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Error code (0 on success). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/app_delegate.hpp" line="46" column="9" bodyfile="node/app_delegate.cpp" bodystart="34" bodyend="89"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d28/classsgns_1_1_app_delegate_1ac1136edb7fcbce497c1c4c59d37f75f9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::AppDelegate::run</definition>
+        <argsstring>()</argsstring>
+        <name>run</name>
+        <qualifiedname>sgns::AppDelegate::run</qualifiedname>
+        <briefdescription>
+<para>Runs the main loop of the SuperGenius daemon node. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/app_delegate.hpp" line="50" column="10" bodyfile="node/app_delegate.cpp" bodystart="91" bodyend="105"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d28/classsgns_1_1_app_delegate_1a1c5aa79f3baded505f0ce219f2636c85" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::AppDelegate::exit</definition>
+        <argsstring>()</argsstring>
+        <name>exit</name>
+        <qualifiedname>sgns::AppDelegate::exit</qualifiedname>
+        <briefdescription>
+<para>Signals the node to stop and exit the main loop. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/app_delegate.hpp" line="54" column="10" bodyfile="node/app_delegate.cpp" bodystart="107" bodyend="110"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d7/d28/classsgns_1_1_app_delegate_1a23054f15f822d5f2371e6b4abb3a3846" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::AppDelegate::init_node</definition>
+        <argsstring>(int argc, char *const *argv)</argsstring>
+        <name>init_node</name>
+        <qualifiedname>sgns::AppDelegate::init_node</qualifiedname>
+        <param>
+          <type>int</type>
+          <declname>argc</declname>
+        </param>
+        <param>
+          <type>char *const *</type>
+          <declname>argv</declname>
+        </param>
+        <briefdescription>
+<para>Initializes the node internals. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>argc</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Count of CLI arguments. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>argv</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Vector of CLI arguments. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/app_delegate.hpp" line="63" column="10" bodyfile="node/app_delegate.cpp" bodystart="112" bodyend="122"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>App delegate for the SuperGenius daemon node. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Coordinates lifecycle for the node across platforms (including Android and iOS). </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="11">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::AppDelegate</label>
+        <link refid="d7/d28/classsgns_1_1_app_delegate"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-app_production</edgelabel>
+        </childnode>
+        <childnode refid="13" relation="usage">
+          <edgelabel>-app_validating</edgelabel>
+        </childnode>
+        <childnode refid="25" relation="usage">
+          <edgelabel>-configuration</edgelabel>
+        </childnode>
+      </node>
+      <node id="27">
+        <label>sgns::application::AppConfiguration</label>
+        <link refid="d6/d85/classsgns_1_1application_1_1_app_configuration"/>
+      </node>
+      <node id="26">
+        <label>sgns::application::AppConfigurationImpl</label>
+        <link refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl"/>
+        <childnode refid="27" relation="public-inheritance">
+        </childnode>
+        <childnode refid="28" relation="usage">
+          <edgelabel>-handlers</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="31" relation="usage">
+          <edgelabel>-rpc_http_host_</edgelabel>
+          <edgelabel>-rpc_ws_host_</edgelabel>
+        </childnode>
+      </node>
+      <node id="29">
+        <label>sgns::application::AppConfigurationImpl::SegmentHandler</label>
+        <link refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler"/>
+      </node>
+      <node id="9">
+        <label>sgns::application::AppStateManager</label>
+        <link refid="d4/d75/classsgns_1_1application_1_1_app_state_manager"/>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::application::BlockProducingNodeApplication</label>
+        <link refid="d8/dbd/classsgns_1_1application_1_1_block_producing_node_application"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-injector_</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-app_state_manager_</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>sgns::application::ConfigurationStorage</label>
+        <link refid="d7/de2/classsgns_1_1application_1_1_configuration_storage"/>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>sgns::application::KeyStorage</label>
+        <link refid="d5/ddb/classsgns_1_1application_1_1_key_storage"/>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::application::SgnsApplication</label>
+        <link refid="da/d1d/classsgns_1_1application_1_1_sgns_application"/>
+      </node>
+      <node id="14">
+        <label>sgns::application::ValidatingNodeApplication</label>
+        <link refid="de/de2/classsgns_1_1application_1_1_validating_node_application"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-app_state_manager_</edgelabel>
+        </childnode>
+        <childnode refid="15" relation="usage">
+          <edgelabel>-io_context_</edgelabel>
+        </childnode>
+        <childnode refid="16" relation="usage">
+          <edgelabel>-config_storage_</edgelabel>
+        </childnode>
+        <childnode refid="18" relation="usage">
+          <edgelabel>-key_storage_</edgelabel>
+        </childnode>
+        <childnode refid="20" relation="usage">
+          <edgelabel>-clock_</edgelabel>
+        </childnode>
+        <childnode refid="21" relation="usage">
+          <edgelabel>-production_</edgelabel>
+        </childnode>
+        <childnode refid="22" relation="usage">
+          <edgelabel>-finality_</edgelabel>
+        </childnode>
+        <childnode refid="23" relation="usage">
+          <edgelabel>-router_</edgelabel>
+        </childnode>
+        <childnode refid="24" relation="usage">
+          <edgelabel>-jrpc_api_service_</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="30">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="28">
+        <label>std::array&lt; sgns::application::AppConfigurationImpl::SegmentHandler, 6 &gt;</label>
+        <childnode refid="29" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="30" relation="template-instance">
+          <edgelabel>&lt; sgns::application::AppConfigurationImpl::SegmentHandler, 6 &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="32">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="10">
+        <label>std::enable_shared_from_this&lt; AppStateManager &gt;</label>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::shared_ptr&lt; AppConfiguration &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; AppConfiguration &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="22">
+        <label>std::shared_ptr&lt; Finality &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; Finality &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>std::shared_ptr&lt; Production &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; Production &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="24">
+        <label>std::shared_ptr&lt; api::ApiService &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; api::ApiService &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="15">
+        <label>std::shared_ptr&lt; boost::asio::io_context &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; boost::asio::io_context &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="20">
+        <label>std::shared_ptr&lt; clock::SystemClock &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; clock::SystemClock &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="23">
+        <label>std::shared_ptr&lt; network::Router &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; network::Router &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="25">
+        <label>std::shared_ptr&lt; sgns::application::AppConfigurationImpl &gt;</label>
+        <childnode refid="26" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::application::AppConfigurationImpl &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; sgns::application::AppStateManager &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::application::AppStateManager &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::shared_ptr&lt; sgns::application::BlockProducingNodeApplication &gt;</label>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::application::BlockProducingNodeApplication &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>std::shared_ptr&lt; sgns::application::ConfigurationStorage &gt;</label>
+        <childnode refid="17" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::application::ConfigurationStorage &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="18">
+        <label>std::shared_ptr&lt; sgns::application::KeyStorage &gt;</label>
+        <childnode refid="19" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::application::KeyStorage &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="13">
+        <label>std::shared_ptr&lt; sgns::application::ValidatingNodeApplication &gt;</label>
+        <childnode refid="14" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::application::ValidatingNodeApplication &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="31">
+        <label>std::string</label>
+        <childnode refid="32" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="node/app_delegate.hpp" line="36" column="1" bodyfile="node/app_delegate.hpp" bodystart="36" bodyend="67"/>
+    <listofallmembers>
+      <member refid="d7/d28/classsgns_1_1_app_delegate_1a79070f6dcedfe3a1270139d7aed43339" prot="private" virt="non-virtual"><scope>sgns::AppDelegate</scope><name>app_production</name></member>
+      <member refid="d7/d28/classsgns_1_1_app_delegate_1a8a74a26299d5c9c7822cfc8a15df00ac" prot="private" virt="non-virtual"><scope>sgns::AppDelegate</scope><name>app_validating</name></member>
+      <member refid="d7/d28/classsgns_1_1_app_delegate_1a17d6b461728504fc5a915c1c1446c8eb" prot="public" virt="non-virtual"><scope>sgns::AppDelegate</scope><name>AppDelegate</name></member>
+      <member refid="d7/d28/classsgns_1_1_app_delegate_1a7fe8aec529f948b6163e0a19478baa62" prot="private" virt="non-virtual"><scope>sgns::AppDelegate</scope><name>configuration</name></member>
+      <member refid="d7/d28/classsgns_1_1_app_delegate_1a1c5aa79f3baded505f0ce219f2636c85" prot="public" virt="non-virtual"><scope>sgns::AppDelegate</scope><name>exit</name></member>
+      <member refid="d7/d28/classsgns_1_1_app_delegate_1a4455dea1b7e5c61c1eddf586bc07c208" prot="public" virt="non-virtual"><scope>sgns::AppDelegate</scope><name>init</name></member>
+      <member refid="d7/d28/classsgns_1_1_app_delegate_1a23054f15f822d5f2371e6b4abb3a3846" prot="private" virt="non-virtual"><scope>sgns::AppDelegate</scope><name>init_node</name></member>
+      <member refid="d7/d28/classsgns_1_1_app_delegate_1ac1136edb7fcbce497c1c4c59d37f75f9" prot="public" virt="non-virtual"><scope>sgns::AppDelegate</scope><name>run</name></member>
+      <member refid="d7/d28/classsgns_1_1_app_delegate_1a72200dbd41609da403d95e5c078b0d9e" prot="public" virt="non-virtual"><scope>sgns::AppDelegate</scope><name>~AppDelegate</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

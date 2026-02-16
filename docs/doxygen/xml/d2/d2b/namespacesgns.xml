@@ -1,0 +1,1467 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/d2b/namespacesgns" kind="namespace" language="C++">
+    <compoundname>sgns</compoundname>
+    <innerclass refid="d5/d74/classsgns_1_1_account_messenger" prot="public">sgns::AccountMessenger</innerclass>
+    <innerclass refid="d5/dd2/classsgns_1_1_escrow_release_transaction" prot="public">sgns::EscrowReleaseTransaction</innerclass>
+    <innerclass refid="db/d70/classsgns_1_1_escrow_transaction" prot="public">sgns::EscrowTransaction</innerclass>
+    <innerclass refid="dc/d64/classsgns_1_1_genius_account" prot="public">sgns::GeniusAccount</innerclass>
+    <innerclass refid="d1/d00/classsgns_1_1_genius_node" prot="public">sgns::GeniusNode</innerclass>
+    <innerclass refid="da/da7/classsgns_1_1_genius_u_t_x_o" prot="public">sgns::GeniusUTXO</innerclass>
+    <innerclass refid="d1/d07/classsgns_1_1_i_genius_transactions" prot="public">sgns::IGeniusTransactions</innerclass>
+    <innerclass refid="d5/d0d/classsgns_1_1_i_migration_step" prot="public">sgns::IMigrationStep</innerclass>
+    <innerclass refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0" prot="public">sgns::Migration0_2_0To1_0_0</innerclass>
+    <innerclass refid="d0/d09/classsgns_1_1_migration1__0__0_to3__4__0" prot="public">sgns::Migration1_0_0To3_4_0</innerclass>
+    <innerclass refid="d1/dd2/classsgns_1_1_migration3__4__0_to3__5__0" prot="public">sgns::Migration3_4_0To3_5_0</innerclass>
+    <innerclass refid="dc/dcf/classsgns_1_1_migration3__5__0_to3__5__1" prot="public">sgns::Migration3_5_0To3_5_1</innerclass>
+    <innerclass refid="df/da7/classsgns_1_1_migration3__5__1_to3__6__0" prot="public">sgns::Migration3_5_1To3_6_0</innerclass>
+    <innerclass refid="d6/d9a/classsgns_1_1_migration_manager" prot="public">sgns::MigrationManager</innerclass>
+    <innerclass refid="d7/d9c/classsgns_1_1_mint_transaction" prot="public">sgns::MintTransaction</innerclass>
+    <innerclass refid="d6/d7f/classsgns_1_1_processing_transaction" prot="public">sgns::ProcessingTransaction</innerclass>
+    <innerclass refid="dd/dd7/classsgns_1_1_token_amount" prot="public">sgns::TokenAmount</innerclass>
+    <innerclass refid="d9/dd1/classsgns_1_1_token_i_d" prot="public">sgns::TokenID</innerclass>
+    <innerclass refid="d2/d58/classsgns_1_1_transaction_manager" prot="public">sgns::TransactionManager</innerclass>
+    <innerclass refid="de/d98/classsgns_1_1_transfer_transaction" prot="public">sgns::TransferTransaction</innerclass>
+    <innerclass refid="d0/dac/classsgns_1_1_u_t_x_o_manager" prot="public">sgns::UTXOManager</innerclass>
+    <innerclass refid="d3/dbc/structsgns_1_1_input_u_t_x_o_info" prot="public">sgns::InputUTXOInfo</innerclass>
+    <innerclass refid="dc/dfd/structsgns_1_1_output_dest_info" prot="public">sgns::OutputDestInfo</innerclass>
+    <innerclass refid="d3/d10/classsgns_1_1_scaled_integer" prot="public">sgns::ScaledInteger</innerclass>
+    <innerclass refid="dc/d2a/structsgns_1_1is__shared__ptr" prot="public">sgns::is_shared_ptr</innerclass>
+    <innerclass refid="d9/d66/structsgns_1_1is__shared__ptr_3_01std_1_1shared__ptr_3_01_t_01_4_01_4" prot="public">sgns::is_shared_ptr&lt; std::shared_ptr&lt; T &gt; &gt;</innerclass>
+    <innerclass refid="d6/de6/structsgns_1_1is__unique__ptr" prot="public">sgns::is_unique_ptr</innerclass>
+    <innerclass refid="d5/d88/structsgns_1_1is__unique__ptr_3_01std_1_1unique__ptr_3_01_t_01_4_01_4" prot="public">sgns::is_unique_ptr&lt; std::unique_ptr&lt; T &gt; &gt;</innerclass>
+    <innerclass refid="db/dfd/structsgns_1_1is__smart__ptr" prot="public">sgns::is_smart_ptr</innerclass>
+    <innerclass refid="d8/db0/structsgns_1_1is__smart__ptr_3_01std_1_1unique__ptr_3_01_t_01_4_01_4" prot="public">sgns::is_smart_ptr&lt; std::unique_ptr&lt; T &gt; &gt;</innerclass>
+    <innerclass refid="df/d7a/structsgns_1_1is__smart__ptr_3_01std_1_1shared__ptr_3_01_t_01_4_01_4" prot="public">sgns::is_smart_ptr&lt; std::shared_ptr&lt; T &gt; &gt;</innerclass>
+    <innerclass refid="da/dac/structsgns_1_1_unused" prot="public">sgns::Unused</innerclass>
+    <innerclass refid="d2/db4/structsgns_1_1lambda__visitor" prot="public">sgns::lambda_visitor</innerclass>
+    <innerclass refid="d2/d5d/structsgns_1_1lambda__visitor_3_01_lambda_00_01_lambdas_8_8_8_01_4" prot="public">sgns::lambda_visitor&lt; Lambda, Lambdas... &gt;</innerclass>
+    <innerclass refid="dc/d78/structsgns_1_1lambda__visitor_3_01_lambda_01_4" prot="public">sgns::lambda_visitor&lt; Lambda &gt;</innerclass>
+    <innerclass refid="de/da2/classsgns_1_1_blockchain" prot="public">sgns::Blockchain</innerclass>
+    <innerclass refid="d9/da9/classsgns_1_1_coin_gecko_price_retriever" prot="public">sgns::CoinGeckoPriceRetriever</innerclass>
+    <innerclass refid="d5/d83/classsgns_1_1_android_secure_storage" prot="public">sgns::AndroidSecureStorage</innerclass>
+    <innerclass refid="d9/d1f/classsgns_1_1_apple_secure_storage" prot="public">sgns::AppleSecureStorage</innerclass>
+    <innerclass refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage" prot="public">sgns::JSONSecureStorage</innerclass>
+    <innerclass refid="d9/d71/classsgns_1_1_j_s_o_n_backend" prot="public">sgns::JSONBackend</innerclass>
+    <innerclass refid="dd/de8/classsgns_1_1_linux_secure_storage" prot="public">sgns::LinuxSecureStorage</innerclass>
+    <innerclass refid="db/d24/classsgns_1_1_windows_secure_storage" prot="public">sgns::WindowsSecureStorage</innerclass>
+    <innerclass refid="d5/db7/classsgns_1_1_i_secure_storage" prot="public">sgns::ISecureStorage</innerclass>
+    <innerclass refid="d6/d8b/classsgns_1_1_genius_assigner" prot="public">sgns::GeniusAssigner</innerclass>
+    <innerclass refid="da/da5/classsgns_1_1_genius_prover" prot="public">sgns::GeniusProver</innerclass>
+    <innerclass refid="d9/dbe/classsgns_1_1_i_basic_proof" prot="public">sgns::IBasicProof</innerclass>
+    <innerclass refid="d4/d4f/classsgns_1_1_nil_file_helper" prot="public">sgns::NilFileHelper</innerclass>
+    <innerclass refid="df/df1/classsgns_1_1_processing_proof" prot="public">sgns::ProcessingProof</innerclass>
+    <innerclass refid="d3/d2f/classsgns_1_1_recursive_transfer_proof" prot="public">sgns::RecursiveTransferProof</innerclass>
+    <innerclass refid="d5/d48/classsgns_1_1_transfer_proof" prot="public">sgns::TransferProof</innerclass>
+    <innerclass refid="d7/d28/classsgns_1_1_app_delegate" prot="public">sgns::AppDelegate</innerclass>
+    <innerclass refid="db/d30/classsgns_1_1error__cli__messages" prot="public">sgns::error_cli_messages</innerclass>
+    <innerclass refid="de/d6d/classsgns_1_1message__header" prot="public">sgns::message_header</innerclass>
+    <innerclass refid="db/da6/classsgns_1_1message" prot="public">sgns::message</innerclass>
+    <innerclass refid="dc/df5/classsgns_1_1message__parser" prot="public">sgns::message_parser</innerclass>
+    <innerclass refid="d2/d9f/classsgns_1_1keepalive" prot="public">sgns::keepalive</innerclass>
+    <innerclass refid="d6/db9/classsgns_1_1publish" prot="public">sgns::publish</innerclass>
+    <innerclass refid="d5/df9/classsgns_1_1confirm__req" prot="public">sgns::confirm_req</innerclass>
+    <innerclass refid="dd/d90/classsgns_1_1confirm__ack" prot="public">sgns::confirm_ack</innerclass>
+    <innerclass refid="d3/d01/classsgns_1_1frontier__req" prot="public">sgns::frontier_req</innerclass>
+    <innerclass refid="da/d52/classsgns_1_1telemetry__data" prot="public">sgns::telemetry_data</innerclass>
+    <innerclass refid="d8/dbd/classsgns_1_1telemetry__req" prot="public">sgns::telemetry_req</innerclass>
+    <innerclass refid="db/d21/classsgns_1_1telemetry__ack" prot="public">sgns::telemetry_ack</innerclass>
+    <innerclass refid="d1/de0/classsgns_1_1bulk__pull" prot="public">sgns::bulk_pull</innerclass>
+    <innerclass refid="d6/dcf/classsgns_1_1bulk__pull__account" prot="public">sgns::bulk_pull_account</innerclass>
+    <innerclass refid="de/d2e/classsgns_1_1bulk__push" prot="public">sgns::bulk_push</innerclass>
+    <innerclass refid="dc/db5/classsgns_1_1node__id__handshake" prot="public">sgns::node_id_handshake</innerclass>
+    <innerclass refid="dd/d84/classsgns_1_1message__visitor" prot="public">sgns::message_visitor</innerclass>
+    <innerclass refid="d8/d44/classsgns_1_1telemetry__cache__cutoffs" prot="public">sgns::telemetry_cache_cutoffs</innerclass>
+    <innerclass refid="d3/d64/classsgns_1_1daemon__config" prot="public">sgns::daemon_config</innerclass>
+    <innerclass refid="d4/de6/classsgns_1_1ipfs__lite__store" prot="public">sgns::ipfs_lite_store</innerclass>
+    <innerclass refid="dd/d29/classsgns_1_1logging" prot="public">sgns::logging</innerclass>
+    <innerclass refid="d6/d99/classsgns_1_1network" prot="public">sgns::network</innerclass>
+    <innerclass refid="de/ddf/classsgns_1_1node" prot="public">sgns::node</innerclass>
+    <innerclass refid="d6/d72/classsgns_1_1inactive__node" prot="public">sgns::inactive_node</innerclass>
+    <innerclass refid="d1/d27/classsgns_1_1node__config" prot="public">sgns::node_config</innerclass>
+    <innerclass refid="d0/d54/classsgns_1_1node__flags" prot="public">sgns::node_flags</innerclass>
+    <innerclass refid="d2/dab/classsgns_1_1node__rpc__config" prot="public">sgns::node_rpc_config</innerclass>
+    <innerclass refid="d2/d51/classsgns_1_1wallet__store" prot="public">sgns::wallet_store</innerclass>
+    <innerclass refid="d2/d21/classsgns_1_1wallet" prot="public">sgns::wallet</innerclass>
+    <innerclass refid="d1/d2f/classsgns_1_1wallets" prot="public">sgns::wallets</innerclass>
+    <innerclass refid="dd/d37/classsgns_1_1_app_configuration" prot="public">sgns::AppConfiguration</innerclass>
+    <innerclass refid="df/d08/classsgns_1_1_app_configuration_impl" prot="public">sgns::AppConfigurationImpl</innerclass>
+    <innernamespace refid="d4/d75/namespacesgns_1_1ipfs__pubsub">sgns::ipfs_pubsub</innernamespace>
+    <innernamespace refid="d4/dd0/namespacesgns_1_1crdt">sgns::crdt</innernamespace>
+    <innernamespace refid="df/d66/namespacesgns_1_1api">sgns::api</innernamespace>
+    <innernamespace refid="db/d40/namespacesgns_1_1application">sgns::application</innernamespace>
+    <innernamespace refid="d4/dcb/namespacesgns_1_1base">sgns::base</innernamespace>
+    <innernamespace refid="d8/d5b/namespacesgns_1_1version">sgns::version</innernamespace>
+    <innernamespace refid="d9/df6/namespacesgns_1_1blockchain">sgns::blockchain</innernamespace>
+    <innernamespace refid="df/d6e/namespacesgns_1_1crypto">sgns::crypto</innernamespace>
+    <innernamespace refid="dd/dc5/namespacesgns_1_1primitives">sgns::primitives</innernamespace>
+    <innernamespace refid="df/d6a/namespacesgns_1_1processing">sgns::processing</innernamespace>
+    <innernamespace refid="d1/dc7/namespacesgns_1_1sgprocessing">sgns::sgprocessing</innernamespace>
+    <innernamespace refid="dd/da6/namespacesgns_1_1runtime">sgns::runtime</innernamespace>
+    <innernamespace refid="d0/dbf/namespacesgns_1_1storage">sgns::storage</innernamespace>
+    <innernamespace refid="d1/d56/namespacesgns_1_1scale">sgns::scale</innernamespace>
+    <innernamespace refid="d0/d0d/namespacesgns_1_1face">sgns::face</innernamespace>
+    <innernamespace refid="d4/d82/namespacesgns_1_1subscription">sgns::subscription</innernamespace>
+    <innernamespace refid="df/d85/namespacesgns_1_1evmwatcher">sgns::evmwatcher</innernamespace>
+    <innernamespace refid="d4/d7f/namespacesgns_1_1watcher">sgns::watcher</innernamespace>
+    <innernamespace refid="d2/d7c/namespacesgns_1_1filesystem">sgns::filesystem</innernamespace>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="d2/d2b/namespacesgns_1a1a77b18d6cc82050735081cd0924e619" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>error_cli</name>
+        <qualifiedname>sgns::error_cli</qualifiedname>
+        <enumvalue id="d2/d2b/namespacesgns_1a1a77b18d6cc82050735081cd0924e619a3d517f8924ac7fd03699a29d97dc52d9" prot="public">
+          <name>generic</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1a1a77b18d6cc82050735081cd0924e619a456e19aeafa334241c7ff3f589547f9d" prot="public">
+          <name>parse_error</name>
+          <initializer>= 2</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1a1a77b18d6cc82050735081cd0924e619a242ac674d98ee2191f0bbf6de851d2d0" prot="public">
+          <name>invalid_arguments</name>
+          <initializer>= 3</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1a1a77b18d6cc82050735081cd0924e619a3d5bf453f3e2135b2286abb2b1c5e591" prot="public">
+          <name>unknown_command</name>
+          <initializer>= 4</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1a1a77b18d6cc82050735081cd0924e619a6118741e660bd5ab6b9a41f24fac627e" prot="public">
+          <name>database_write_error</name>
+          <initializer>= 5</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1a1a77b18d6cc82050735081cd0924e619a2d22ee42290e6d564d461581d780fccf" prot="public">
+          <name>reading_config</name>
+          <initializer>= 6</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1a1a77b18d6cc82050735081cd0924e619ae5a191b6dd1c06dde251d6d4e76f6088" prot="public">
+          <name>disable_all_network</name>
+          <initializer>= 7</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1a1a77b18d6cc82050735081cd0924e619a65278483ef8e89e660e0865edeab601c" prot="public">
+          <name>ambiguous_udp_options</name>
+          <initializer>= 8</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Command line related error codes </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/cli.hpp" line="26" column="1" bodyfile="node/cli.hpp" bodystart="27" bodyend="36"/>
+      </memberdef>
+      <memberdef kind="enum" id="d2/d2b/namespacesgns_1a28d1086e9c7886336bab065d17b7541f" prot="public" static="no" strong="yes">
+        <type>uint8_t</type>
+        <name>message_type</name>
+        <qualifiedname>sgns::message_type</qualifiedname>
+        <enumvalue id="d2/d2b/namespacesgns_1a28d1086e9c7886336bab065d17b7541fafedb2d84cafe20862cb4399751a8a7e3" prot="public">
+          <name>invalid</name>
+          <initializer>= 0x0</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1a28d1086e9c7886336bab065d17b7541faee9a8c775ed0a8e3747f9f21cc14b596" prot="public">
+          <name>not_a_type</name>
+          <initializer>= 0x1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1a28d1086e9c7886336bab065d17b7541fa797919b5a9c95dfae9b06cf3086e40c1" prot="public">
+          <name>keepalive</name>
+          <initializer>= 0x2</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1a28d1086e9c7886336bab065d17b7541fa9b6d0bb3102b87fae57bc4a39149518e" prot="public">
+          <name>publish</name>
+          <initializer>= 0x3</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1a28d1086e9c7886336bab065d17b7541fa5049a05ccccb599d3d7733ea566df4ac" prot="public">
+          <name>confirm_req</name>
+          <initializer>= 0x4</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1a28d1086e9c7886336bab065d17b7541faaaf1908e7791860e0d75db8248ef5940" prot="public">
+          <name>confirm_ack</name>
+          <initializer>= 0x5</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1a28d1086e9c7886336bab065d17b7541fa1cf6857f60ea96bd58510dea6d9378b1" prot="public">
+          <name>bulk_pull</name>
+          <initializer>= 0x6</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1a28d1086e9c7886336bab065d17b7541faa3278642e24de6e05d06e5d0dda1ba1b" prot="public">
+          <name>bulk_push</name>
+          <initializer>= 0x7</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1a28d1086e9c7886336bab065d17b7541fa1d759e9fb2ae5df99cd27aa46304af3f" prot="public">
+          <name>frontier_req</name>
+          <initializer>= 0x8</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1a28d1086e9c7886336bab065d17b7541fa641e6833dc5ca6e44f3d024288596935" prot="public">
+          <name>node_id_handshake</name>
+          <initializer>= 0x0a</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1a28d1086e9c7886336bab065d17b7541fabade804fdd1eb0a0d84d03e66c90caab" prot="public">
+          <name>bulk_pull_account</name>
+          <initializer>= 0x0b</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1a28d1086e9c7886336bab065d17b7541fa0d4329da627342807f30fd94a9c1bcb7" prot="public">
+          <name>telemetry_req</name>
+          <initializer>= 0x0c</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1a28d1086e9c7886336bab065d17b7541fa5bc855e59f863901cd6310df76002aa7" prot="public">
+          <name>telemetry_ack</name>
+          <initializer>= 0x0d</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Message types are serialized to the network and existing values must thus never change as types are added, removed and reordered in the enum. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="162" column="1" bodyfile="node/common.hpp" bodystart="163" bodyend="178"/>
+      </memberdef>
+      <memberdef kind="enum" id="d2/d2b/namespacesgns_1acce50fcc3a4088da216a7ae3eb5bbbf0" prot="public" static="no" strong="yes">
+        <type>uint8_t</type>
+        <name>bulk_pull_account_flags</name>
+        <qualifiedname>sgns::bulk_pull_account_flags</qualifiedname>
+        <enumvalue id="d2/d2b/namespacesgns_1acce50fcc3a4088da216a7ae3eb5bbbf0a804b5d1ee14ed834b45d55ddda5aa47f" prot="public">
+          <name>pending_hash_and_amount</name>
+          <initializer>= 0x0</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1acce50fcc3a4088da216a7ae3eb5bbbf0ab3f8c1b9189ea180b1dd8019b95a720d" prot="public">
+          <name>pending_address_only</name>
+          <initializer>= 0x1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d2b/namespacesgns_1acce50fcc3a4088da216a7ae3eb5bbbf0a9361195a1f853ac9ab61ceb3c0502efc" prot="public">
+          <name>pending_hash_amount_and_address</name>
+          <initializer>= 0x2</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="180" column="1" bodyfile="node/common.hpp" bodystart="181" bodyend="185"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="d2/d2b/namespacesgns_1a1d57454b26de7668d4a7d1d83b6badfb" prot="public" static="no">
+        <type>std::pair&lt; std::string, <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>using sgns::EscrowDataPair = std::pair&lt;std::string, base::Buffer&gt;</definition>
+        <argsstring></argsstring>
+        <name>EscrowDataPair</name>
+        <qualifiedname>sgns::EscrowDataPair</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TransactionManager.hpp" line="38" column="5" bodyfile="src/account/TransactionManager.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d2/d2b/namespacesgns_1ab5ebc7fc374823b9575e303e417424fc" prot="public" static="no">
+        <type>std::pair&lt; std::vector&lt; <ref refid="d3/dbc/structsgns_1_1_input_u_t_x_o_info" kindref="compound">InputUTXOInfo</ref> &gt;, std::vector&lt; <ref refid="dc/dfd/structsgns_1_1_output_dest_info" kindref="compound">OutputDestInfo</ref> &gt; &gt;</type>
+        <definition>using sgns::UTXOTxParameters = std::pair&lt;std::vector&lt;InputUTXOInfo&gt;, std::vector&lt;OutputDestInfo&gt;&gt;</definition>
+        <argsstring></argsstring>
+        <name>UTXOTxParameters</name>
+        <qualifiedname>sgns::UTXOTxParameters</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOStructs.hpp" line="30" column="5" bodyfile="src/account/UTXOStructs.hpp" bodystart="30" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d2/d2b/namespacesgns_1aa38696c91743d80c510521ceaf06a591" prot="public" static="no">
+        <type>boost::asio::ip::udp::endpoint</type>
+        <definition>using sgns::endpoint = boost::asio::ip::udp::endpoint</definition>
+        <argsstring></argsstring>
+        <name>endpoint</name>
+        <qualifiedname>sgns::endpoint</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="16" column="1" bodyfile="node/common.hpp" bodystart="16" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d2/d2b/namespacesgns_1a1393d49beee235b599e89a325e914803" prot="public" static="no">
+        <type>boost::asio::ip::tcp::endpoint</type>
+        <definition>using sgns::tcp_endpoint = boost::asio::ip::tcp::endpoint</definition>
+        <argsstring></argsstring>
+        <name>tcp_endpoint</name>
+        <qualifiedname>sgns::tcp_endpoint</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="20" column="1" bodyfile="node/common.hpp" bodystart="20" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" prot="public" static="no">
+        <type>unsigned int</type>
+        <definition>typedef unsigned int sgns::ipfs_dbi</definition>
+        <argsstring></argsstring>
+        <name>ipfs_dbi</name>
+        <qualifiedname>sgns::ipfs_dbi</qualifiedname>
+        <briefdescription>
+<para>A handle for an individual database in the DB environment. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="44" column="25" bodyfile="node/ipfs_lite_store.hpp" bodystart="44" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d2/d2b/namespacesgns_1aa3452b68fa5043a4b7cd36d669923882" prot="public" static="no">
+        <type>db_val&lt; <ref refid="d3/ddb/struct_i_p_f_s__val" kindref="compound">IPFS_val</ref> &gt;</type>
+        <definition>using sgns::ipfs_val = db_val&lt;IPFS_val&gt;</definition>
+        <argsstring></argsstring>
+        <name>ipfs_val</name>
+        <qualifiedname>sgns::ipfs_val</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="46" column="5" bodyfile="node/ipfs_lite_store.hpp" bodystart="46" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a70063e3482afed9e184834124df30e6d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::genius_account_logger</definition>
+        <argsstring>()</argsstring>
+        <name>genius_account_logger</name>
+        <qualifiedname>sgns::genius_account_logger</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusAccount.cpp" line="33" column="18" bodyfile="src/account/GeniusAccount.cpp" bodystart="33" bodyend="38"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a2de1158d91abbd78cc0227c7ddcd6960" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::GeniusNodeLogger</definition>
+        <argsstring>()</argsstring>
+        <name>GeniusNodeLogger</name>
+        <qualifiedname>sgns::GeniusNodeLogger</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusNode.cpp" line="119" column="18" bodyfile="src/account/GeniusNode.cpp" bodystart="119" bodyend="122"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a22da46e7b9a50eec8f2229e2322f48c0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::generate_uuid_with_ipfs_id</definition>
+        <argsstring>(const std::string &amp;ipfs_id)</argsstring>
+        <name>generate_uuid_with_ipfs_id</name>
+        <qualifiedname>sgns::generate_uuid_with_ipfs_id</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>ipfs_id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusNode.cpp" line="863" column="17" bodyfile="src/account/GeniusNode.cpp" bodystart="863" bodyend="883"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1aa528beacefda8b0a1c432a7d0afda122" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>size_t</type>
+            <declname>N</declname>
+            <defname>N</defname>
+          </param>
+          <param>
+            <type>class Stream</type>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const Unused&lt; N &gt; &amp;)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="da/dac/structsgns_1_1_unused" kindref="compound">Unused</ref>&lt; N &gt; &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/unused.hpp" line="20" column="3" bodyfile="src/base/unused.hpp" bodystart="20" bodyend="22"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1af7fe99356bce42afdd5d73359b05caf8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>size_t</type>
+            <declname>N</declname>
+            <defname>N</defname>
+          </param>
+          <param>
+            <type>class Stream</type>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, Unused&lt; N &gt; &amp;)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="da/dac/structsgns_1_1_unused" kindref="compound">Unused</ref>&lt; N &gt; &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/unused.hpp" line="25" column="10" bodyfile="src/base/unused.hpp" bodystart="25" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a93ba70fc01fb8cec81125fcd0398048b" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>static std::string sgns::to_string</definition>
+        <argsstring>(const std::vector&lt; unsigned char &gt; &amp;bytes)</argsstring>
+        <name>to_string</name>
+        <qualifiedname>sgns::to_string</qualifiedname>
+        <param>
+          <type>const std::vector&lt; unsigned char &gt; &amp;</type>
+          <declname>bytes</declname>
+        </param>
+        <briefdescription>
+<para>Convert a byte array to a hexadecimal string. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">bytes</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A vector of bytes to be converted. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A hexadecimal string representation of the bytes. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/util.hpp" line="35" column="24" bodyfile="src/base/util.hpp" bodystart="35" bodyend="45"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a1a24ccd290df939543ce58d677bd4095" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>static bool sgns::isLittleEndian</definition>
+        <argsstring>()</argsstring>
+        <name>isLittleEndian</name>
+        <qualifiedname>sgns::isLittleEndian</qualifiedname>
+        <briefdescription>
+<para>Checks if the architecture is little endian. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>true if little endian, false otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/util.hpp" line="51" column="17" bodyfile="src/base/util.hpp" bodystart="51" bodyend="57"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a475d2084fcb3cfd2846e16029a885bb2" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>T</type>
+        <definition>static T sgns::Vector2Num</definition>
+        <argsstring>(const std::vector&lt; uint8_t &gt; &amp;bytes)</argsstring>
+        <name>Vector2Num</name>
+        <qualifiedname>sgns::Vector2Num</qualifiedname>
+        <param>
+          <type>const std::vector&lt; uint8_t &gt; &amp;</type>
+          <declname>bytes</declname>
+        </param>
+        <briefdescription>
+<para>Converts a little-endian byte vector into a number. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">bytes</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Byte vector to convert. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>uint8_t, uint16_t, uint32_t, uint64_t, or supported multiprecision integer types. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The converted number. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/util.hpp" line="68" column="14" bodyfile="src/base/util.hpp" bodystart="68" bodyend="85"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1aa638178c22460f87747b5af0f7168f0a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+        </templateparamlist>
+        <type>uint128_t</type>
+        <definition>uint128_t sgns::Vector2Num</definition>
+        <argsstring>(const std::vector&lt; uint8_t &gt; &amp;bytes)</argsstring>
+        <name>Vector2Num</name>
+        <qualifiedname>sgns::Vector2Num</qualifiedname>
+        <param>
+          <type>const std::vector&lt; uint8_t &gt; &amp;</type>
+          <declname>bytes</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/util.hpp" line="88" column="15" bodyfile="src/base/util.hpp" bodystart="88" bodyend="101"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a845217ba60579694c836d4dd24ab5161" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+        </templateparamlist>
+        <type>uint256_t</type>
+        <definition>uint256_t sgns::Vector2Num</definition>
+        <argsstring>(const std::vector&lt; uint8_t &gt; &amp;bytes)</argsstring>
+        <name>Vector2Num</name>
+        <qualifiedname>sgns::Vector2Num</qualifiedname>
+        <param>
+          <type>const std::vector&lt; uint8_t &gt; &amp;</type>
+          <declname>bytes</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/util.hpp" line="104" column="15" bodyfile="src/base/util.hpp" bodystart="104" bodyend="117"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1af60920855b308d9c928c78d81c7ede4a" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>static std::vector&lt; uint8_t &gt; sgns::Num2Vector</definition>
+        <argsstring>(const T &amp;num, std::size_t num_bytes_resolution=sizeof(T))</argsstring>
+        <name>Num2Vector</name>
+        <qualifiedname>sgns::Num2Vector</qualifiedname>
+        <param>
+          <type>const T &amp;</type>
+          <declname>num</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>num_bytes_resolution</declname>
+          <defval>sizeof(T)</defval>
+        </param>
+        <briefdescription>
+<para>Converts a number into a byte vector (little-endian). </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">num</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number to convert. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">num_bytes_resolution</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional byte resolution (defaults to sizeof(T)). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>uint8_t, uint16_t, uint32_t or uint64_t </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The converted byte vector. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/util.hpp" line="127" column="24" bodyfile="src/base/util.hpp" bodystart="127" bodyend="131"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a659ec947d9ad16b4d622e1af2433c354" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>T</type>
+        <definition>static T sgns::HexASCII2Num</definition>
+        <argsstring>(const char *p_char, std::size_t num_nibbles_resolution=sizeof(T) *2)</argsstring>
+        <name>HexASCII2Num</name>
+        <qualifiedname>sgns::HexASCII2Num</qualifiedname>
+        <param>
+          <type>const char *</type>
+          <declname>p_char</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>num_nibbles_resolution</declname>
+          <defval>sizeof(T) *2</defval>
+        </param>
+        <briefdescription>
+<para>Converts a hexadecimal ASCII char array into a number. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">p_char</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Hexadecimal ASCII char array </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">num_nibbles_resolution</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>How many nibbles will constitute a number </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>uint8_t, uint16_t, uint32_t or uint64_t </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The converted number (8-64 bit variable) </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/util.hpp" line="141" column="14" bodyfile="src/base/util.hpp" bodystart="141" bodyend="158"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1aa728793261eef6e6b9c222328f73b39b" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>std::vector&lt; T &gt;</type>
+        <definition>static std::vector&lt; T &gt; sgns::HexASCII2NumStr</definition>
+        <argsstring>(const char *p_char, std::size_t char_ptr_size)</argsstring>
+        <name>HexASCII2NumStr</name>
+        <qualifiedname>sgns::HexASCII2NumStr</qualifiedname>
+        <param>
+          <type>const char *</type>
+          <declname>p_char</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>char_ptr_size</declname>
+        </param>
+        <briefdescription>
+<para>Converts a hexadecimal ASCII char array into a vector of numbers. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">p_char</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Hexadecimal ASCII char array </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">char_ptr_size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Size of the char array </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>uint8_t, uint16_t, uint32_t or uint64_t </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The vector of converted numbers </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/util.hpp" line="168" column="24" bodyfile="src/base/util.hpp" bodystart="168" bodyend="189"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a14299b74d2deefeaffce0fc50992e7b2" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>std::enable_if_t&lt; std::is_same_v&lt; typename T::value_type, uint8_t &gt; &gt;</type>
+        <definition>static std::enable_if_t&lt; std::is_same_v&lt; typename T::value_type, uint8_t &gt; &gt; sgns::AdjustEndianess</definition>
+        <argsstring>(T &amp;data, std::optional&lt; typename T::iterator &gt; start=std::nullopt, std::optional&lt; typename T::iterator &gt; finish=std::nullopt)</argsstring>
+        <name>AdjustEndianess</name>
+        <qualifiedname>sgns::AdjustEndianess</qualifiedname>
+        <param>
+          <type>T &amp;</type>
+          <declname>data</declname>
+        </param>
+        <param>
+          <type>std::optional&lt; typename T::iterator &gt;</type>
+          <declname>start</declname>
+          <defval>std::nullopt</defval>
+        </param>
+        <param>
+          <type>std::optional&lt; typename T::iterator &gt;</type>
+          <declname>finish</declname>
+          <defval>std::nullopt</defval>
+        </param>
+        <briefdescription>
+<para>Adjust endianess if needed. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The container of data (vector/array) </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">start</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional beginning of the valid data </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">finish</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional ending of the valid data </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>std::vector&lt;uint8_t&gt; or std::array&lt;uint8_t,N&gt; </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/util.hpp" line="199" column="29" bodyfile="src/base/util.hpp" bodystart="199" bodyend="216"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a56dad9952ac18ad42b0f8f22872f02c7" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>static std::string sgns::Uint256ToString</definition>
+        <argsstring>(const uint256_t &amp;value)</argsstring>
+        <name>Uint256ToString</name>
+        <qualifiedname>sgns::Uint256ToString</qualifiedname>
+        <param>
+          <type>const uint256_t &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/util.hpp" line="218" column="24" bodyfile="src/base/util.hpp" bodystart="218" bodyend="224"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a25791948257a71d3df8cfda2aba14b80" prot="public" static="no" constexpr="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class...</type>
+            <declname>Fs</declname>
+            <defname>Fs</defname>
+          </param>
+        </templateparamlist>
+        <type>auto</type>
+        <definition>auto sgns::make_visitor</definition>
+        <argsstring>(Fs &amp;&amp;...fs)</argsstring>
+        <name>make_visitor</name>
+        <qualifiedname>sgns::make_visitor</qualifiedname>
+        <param>
+          <type>Fs &amp;&amp;...</type>
+          <declname>fs</declname>
+        </param>
+        <briefdescription>
+<para>Creates a compile-time visitor from a set of lambdas. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Example: <programlisting filename=".cpp"><codeline><highlight class="normal"><ref refid="d2/d2b/namespacesgns_1a25791948257a71d3df8cfda2aba14b80" kindref="member">make_visitor</ref>([](</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>a){<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>1;<sp/>},</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[](std::string<sp/>b)<sp/>{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>2;<sp/>});</highlight></codeline>
+</programlisting></para>
+<para>This is essentially the same as: <programlisting filename=".cpp"><codeline><highlight class="keyword">struct<sp/></highlight><highlight class="normal">visitor<sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>boost::static_visitor&lt;int&gt;<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>operator()(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>a)<sp/>{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>1;<sp/>}</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>operator()(std::string<sp/>b)<sp/>{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>2;<sp/>}</highlight></codeline>
+<codeline><highlight class="normal">};</highlight></codeline>
+</programlisting></para>
+<para><simplesect kind="return"><para>Visitor instance that dispatches to the provided lambdas. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/visitor.hpp" line="52" column="32" bodyfile="src/base/visitor.hpp" bodystart="52" bodyend="56"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a58be2814fca70c5ba6a8bbbb59d41fc2" prot="public" static="no" constexpr="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename TVariant</type>
+          </param>
+          <param>
+            <type>typename...</type>
+            <declname>TVisitors</declname>
+            <defname>TVisitors</defname>
+          </param>
+        </templateparamlist>
+        <type>decltype(auto)</type>
+        <definition>decltype(auto) sgns::visit_in_place</definition>
+        <argsstring>(TVariant &amp;&amp;variant, TVisitors &amp;&amp;...visitors)</argsstring>
+        <name>visit_in_place</name>
+        <qualifiedname>sgns::visit_in_place</qualifiedname>
+        <param>
+          <type>TVariant &amp;&amp;</type>
+          <declname>variant</declname>
+        </param>
+        <param>
+          <type>TVisitors &amp;&amp;...</type>
+          <declname>visitors</declname>
+        </param>
+        <briefdescription>
+<para>Applies an in-place visitor to a boost::variant. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Example: <programlisting filename=".cpp"><codeline><highlight class="normal">boost::variant&lt;int,<sp/>std::string&gt;<sp/>value<sp/>=<sp/></highlight><highlight class="stringliteral">&quot;1234&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal"><ref refid="d2/d2b/namespacesgns_1a58be2814fca70c5ba6a8bbbb59d41fc2" kindref="member">visit_in_place</ref>(value,</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[](</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>v)<sp/>{<sp/>std::cout<sp/>&lt;&lt;<sp/></highlight><highlight class="stringliteral">&quot;(int)&quot;</highlight><highlight class="normal"><sp/>&lt;&lt;<sp/>v;<sp/>},</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[](std::string<sp/>v)<sp/>{<sp/>std::cout<sp/>&lt;&lt;<sp/></highlight><highlight class="stringliteral">&quot;(string)&quot;</highlight><highlight class="normal"><sp/>&lt;&lt;<sp/>v;<sp/>});</highlight></codeline>
+</programlisting> </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/visitor.hpp" line="71" column="24" bodyfile="src/base/visitor.hpp" bodystart="71" bodyend="75"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a4326877e1a1b3658874a3c0cd678f9ec" prot="public" static="no" constexpr="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+          <param>
+            <type>typename Matcher</type>
+          </param>
+        </templateparamlist>
+        <type>decltype(auto)</type>
+        <definition>decltype(auto) sgns::match</definition>
+        <argsstring>(T &amp;&amp;t, Matcher &amp;&amp;m)</argsstring>
+        <name>match</name>
+        <qualifiedname>sgns::match</qualifiedname>
+        <param>
+          <type>T &amp;&amp;</type>
+          <declname>t</declname>
+        </param>
+        <param>
+          <type>Matcher &amp;&amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+<para>apply Matcher to optional T </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/visitor.hpp" line="78" column="38" bodyfile="src/base/visitor.hpp" bodystart="78" bodyend="82"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1afa587bc6c120780075eb731e7307baf1" prot="public" static="no" constexpr="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+          <param>
+            <type>typename...</type>
+            <declname>Fs</declname>
+            <defname>Fs</defname>
+          </param>
+        </templateparamlist>
+        <type>decltype(auto)</type>
+        <definition>decltype(auto) sgns::match_in_place</definition>
+        <argsstring>(T &amp;&amp;t, Fs &amp;&amp;...fs)</argsstring>
+        <name>match_in_place</name>
+        <qualifiedname>sgns::match_in_place</qualifiedname>
+        <param>
+          <type>T &amp;&amp;</type>
+          <declname>t</declname>
+        </param>
+        <param>
+          <type>Fs &amp;&amp;...</type>
+          <declname>fs</declname>
+        </param>
+        <briefdescription>
+<para>construct visitor from Fs and apply it to optional T </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/visitor.hpp" line="85" column="38" bodyfile="src/base/visitor.hpp" bodystart="85" bodyend="88"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a876e33c7c38c490bd480aa5f8837ee95" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::blockchain_logger</definition>
+        <argsstring>()</argsstring>
+        <name>blockchain_logger</name>
+        <qualifiedname>sgns::blockchain_logger</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/Blockchain.cpp" line="51" column="18" bodyfile="src/blockchain/impl/Blockchain.cpp" bodystart="51" bodyend="56"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1aa82a2d27cd5adc3c8d2b2681c2777fa4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::decodeChunkedTransfer</definition>
+        <argsstring>(const std::string &amp;chunkedData)</argsstring>
+        <name>decodeChunkedTransfer</name>
+        <qualifiedname>sgns::decodeChunkedTransfer</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>chunkedData</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/coinprices/coinprices.cpp" line="30" column="17" bodyfile="src/coinprices/coinprices.cpp" bodystart="30" bodyend="81"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a88383033eda7f02f5c84d05ba686f90e" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="da/da5/classsgns_1_1_genius_prover_1a0a276b8954f36811668b4c1f45a7b960" kindref="member">GeniusProver::ProofType</ref></type>
+        <definition>static GeniusProver::ProofType sgns::GetSnarkFromProto</definition>
+        <argsstring>(const SGProof::BaseProofData &amp;proof_proto_data)</argsstring>
+        <name>GetSnarkFromProto</name>
+        <qualifiedname>sgns::GetSnarkFromProto</qualifiedname>
+        <param>
+          <type>const SGProof::BaseProofData &amp;</type>
+          <declname>proof_proto_data</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.cpp" line="84" column="36" bodyfile="src/proof/IBasicProof.cpp" bodystart="84" bodyend="93"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1ad2d188761334bcfce70a77bb9699d76b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::add_node_options</definition>
+        <argsstring>(boost::program_options::options_description &amp;)</argsstring>
+        <name>add_node_options</name>
+        <qualifiedname>sgns::add_node_options</qualifiedname>
+        <param>
+          <type>boost::program_options::options_description &amp;</type>
+          <defname>description_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/cli.hpp" line="38" column="6" bodyfile="node/cli.cpp" bodystart="40" bodyend="81" declfile="node/cli.hpp" declline="38" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a9dfcf22e4921fa5fd3739ec2a584d97f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::add_node_flag_options</definition>
+        <argsstring>(boost::program_options::options_description &amp;)</argsstring>
+        <name>add_node_flag_options</name>
+        <qualifiedname>sgns::add_node_flag_options</qualifiedname>
+        <param>
+          <type>boost::program_options::options_description &amp;</type>
+          <defname>description_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/cli.hpp" line="39" column="6" bodyfile="node/cli.cpp" bodystart="83" bodyend="109" declfile="node/cli.hpp" declline="39" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a45b4a27f3fa105eb9d6dce11a070aaf5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::error_code</type>
+        <definition>std::error_code sgns::update_flags</definition>
+        <argsstring>(sgns::node_flags &amp;, boost::program_options::variables_map const &amp;)</argsstring>
+        <name>update_flags</name>
+        <qualifiedname>sgns::update_flags</qualifiedname>
+        <param>
+          <type><ref refid="d0/d54/classsgns_1_1node__flags" kindref="compound">sgns::node_flags</ref> &amp;</type>
+          <defname>flags_a</defname>
+        </param>
+        <param>
+          <type>boost::program_options::variables_map const &amp;</type>
+          <defname>vm</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/cli.hpp" line="40" column="17" bodyfile="node/cli.cpp" bodystart="111" bodyend="182" declfile="node/cli.hpp" declline="40" declcolumn="17"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1af80db9933af63150be4d951907a32b46" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::error_code</type>
+        <definition>std::error_code sgns::handle_node_options</definition>
+        <argsstring>(boost::program_options::variables_map const &amp;)</argsstring>
+        <name>handle_node_options</name>
+        <qualifiedname>sgns::handle_node_options</qualifiedname>
+        <param>
+          <type>boost::program_options::variables_map const &amp;</type>
+          <defname>vm</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/cli.hpp" line="41" column="17" bodyfile="node/cli.cpp" bodystart="243" bodyend="1091" declfile="node/cli.hpp" declline="41" declcolumn="17"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a645b85e21e0afc29fba5e7b48b71b451" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::parse_port</definition>
+        <argsstring>(std::string const &amp;, uint16_t &amp;)</argsstring>
+        <name>parse_port</name>
+        <qualifiedname>sgns::parse_port</qualifiedname>
+        <param>
+          <type>std::string const &amp;</type>
+          <defname>string_a</defname>
+        </param>
+        <param>
+          <type>uint16_t &amp;</type>
+          <defname>port_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="17" column="6" bodyfile="node/common.cpp" bodystart="1430" bodyend="1442" declfile="node/common.hpp" declline="17" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a6e98d7a322fff6192a356f5cc8470514" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::parse_address</definition>
+        <argsstring>(std::string const &amp;, boost::asio::ip::address &amp;)</argsstring>
+        <name>parse_address</name>
+        <qualifiedname>sgns::parse_address</qualifiedname>
+        <param>
+          <type>std::string const &amp;</type>
+          <defname>address_text_a</defname>
+        </param>
+        <param>
+          <type>boost::asio::ip::address &amp;</type>
+          <defname>address_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="18" column="6" bodyfile="node/common.cpp" bodystart="1445" bodyend="1457" declfile="node/common.hpp" declline="18" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a5f374f52c108e9a1bc0e9400f04c684a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::parse_address_port</definition>
+        <argsstring>(std::string const &amp;, boost::asio::ip::address &amp;, uint16_t &amp;)</argsstring>
+        <name>parse_address_port</name>
+        <qualifiedname>sgns::parse_address_port</qualifiedname>
+        <param>
+          <type>std::string const &amp;</type>
+          <defname>string</defname>
+        </param>
+        <param>
+          <type>boost::asio::ip::address &amp;</type>
+          <defname>address_a</defname>
+        </param>
+        <param>
+          <type>uint16_t &amp;</type>
+          <defname>port_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="19" column="6" bodyfile="node/common.cpp" bodystart="1459" bodyend="1499" declfile="node/common.hpp" declline="19" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a3c70337417c019c3986796dd29e53857" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::parse_endpoint</definition>
+        <argsstring>(std::string const &amp;, sgns::endpoint &amp;)</argsstring>
+        <name>parse_endpoint</name>
+        <qualifiedname>sgns::parse_endpoint</qualifiedname>
+        <param>
+          <type>std::string const &amp;</type>
+          <defname>string</defname>
+        </param>
+        <param>
+          <type><ref refid="d2/d2b/namespacesgns_1aa38696c91743d80c510521ceaf06a591" kindref="member">sgns::endpoint</ref> &amp;</type>
+          <defname>endpoint_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="21" column="6" bodyfile="node/common.cpp" bodystart="1501" bodyend="1511" declfile="node/common.hpp" declline="21" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a6666df098bb5eb16fb3a66d89df65a0f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::parse_tcp_endpoint</definition>
+        <argsstring>(std::string const &amp;, sgns::tcp_endpoint &amp;)</argsstring>
+        <name>parse_tcp_endpoint</name>
+        <qualifiedname>sgns::parse_tcp_endpoint</qualifiedname>
+        <param>
+          <type>std::string const &amp;</type>
+          <defname>string</defname>
+        </param>
+        <param>
+          <type><ref refid="d2/d2b/namespacesgns_1a1393d49beee235b599e89a325e914803" kindref="member">sgns::tcp_endpoint</ref> &amp;</type>
+          <defname>endpoint_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="22" column="6" bodyfile="node/common.cpp" bodystart="1513" bodyend="1523" declfile="node/common.hpp" declline="22" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a8765779f3bd862d01463a9c606f69596" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::ip_address_hash_raw</definition>
+        <argsstring>(boost::asio::ip::address const &amp;ip_a, uint16_t port=0)</argsstring>
+        <name>ip_address_hash_raw</name>
+        <qualifiedname>sgns::ip_address_hash_raw</qualifiedname>
+        <param>
+          <type>boost::asio::ip::address const &amp;</type>
+          <declname>ip_a</declname>
+        </param>
+        <param>
+          <type>uint16_t</type>
+          <declname>port</declname>
+          <defval>0</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="23" column="10" bodyfile="node/common.cpp" bodystart="31" bodyend="48" declfile="node/common.hpp" declline="23" declcolumn="10"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1ad25903d41aacc711376f15aee1b728a5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>::sgns::error_</type>
+        <definition>::sgns::error_ sgns::read_node_config_toml</definition>
+        <argsstring>(boost::filesystem::path const &amp;, sgns::daemon_config &amp;config_a, std::vector&lt; std::string &gt; const &amp;config_overrides=std::vector&lt; std::string &gt;())</argsstring>
+        <name>read_node_config_toml</name>
+        <qualifiedname>sgns::read_node_config_toml</qualifiedname>
+        <param>
+          <type>boost::filesystem::path const &amp;</type>
+        </param>
+        <param>
+          <type><ref refid="d3/d64/classsgns_1_1daemon__config" kindref="compound">sgns::daemon_config</ref> &amp;</type>
+          <declname>config_a</declname>
+        </param>
+        <param>
+          <type>std::vector&lt; std::string &gt; const &amp;</type>
+          <declname>config_overrides</declname>
+          <defval>std::vector&lt; std::string &gt;()</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/daemonconfig.hpp" line="38" column="16" declfile="node/daemonconfig.hpp" declline="38" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a456c8c0e2bd1fe37d886d53f73614fcc" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>::sgns::error_</type>
+        <definition>::sgns::error_ sgns::read_and_update_daemon_config</definition>
+        <argsstring>(boost::filesystem::path const &amp;, sgns::daemon_config &amp;config_a, sgns::jsonconfig &amp;json_a)</argsstring>
+        <name>read_and_update_daemon_config</name>
+        <qualifiedname>sgns::read_and_update_daemon_config</qualifiedname>
+        <param>
+          <type>boost::filesystem::path const &amp;</type>
+        </param>
+        <param>
+          <type><ref refid="d3/d64/classsgns_1_1daemon__config" kindref="compound">sgns::daemon_config</ref> &amp;</type>
+          <declname>config_a</declname>
+        </param>
+        <param>
+          <type>sgns::jsonconfig &amp;</type>
+          <declname>json_a</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/daemonconfig.hpp" line="39" column="16" declfile="node/daemonconfig.hpp" declline="39" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a658b4fbe1fd0cc4094b9a738cb1aa192" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d0/d54/classsgns_1_1node__flags" kindref="compound">sgns::node_flags</ref> const &amp;</type>
+        <definition>sgns::node_flags const  &amp; sgns::inactive_node_flag_defaults</definition>
+        <argsstring>()</argsstring>
+        <name>inactive_node_flag_defaults</name>
+        <qualifiedname>sgns::inactive_node_flag_defaults</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="49" column="25" bodyfile="node/node.cpp" bodystart="274" bodyend="285" declfile="node/node.hpp" declline="49" declcolumn="25"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a897257d6666fcf90dbcf8b6c1ce47791" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::unique_ptr&lt; <ref refid="d6/d72/classsgns_1_1inactive__node" kindref="compound">sgns::inactive_node</ref> &gt;</type>
+        <definition>std::unique_ptr&lt; sgns::inactive_node &gt; sgns::default_inactive_node</definition>
+        <argsstring>(boost::filesystem::path const &amp;, boost::program_options::variables_map const &amp;)</argsstring>
+        <name>default_inactive_node</name>
+        <qualifiedname>sgns::default_inactive_node</qualifiedname>
+        <param>
+          <type>boost::filesystem::path const &amp;</type>
+          <defname>path_a</defname>
+        </param>
+        <param>
+          <type>boost::program_options::variables_map const &amp;</type>
+          <defname>vm_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="61" column="17" bodyfile="node/cli.cpp" bodystart="1093" bodyend="1098" declfile="node/node.hpp" declline="61" declcolumn="17"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1ad3ee96d2e91cadf71c8f3ae5ec4cf61c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::unique_ptr&lt; sgns::block_store &gt;</type>
+        <definition>std::unique_ptr&lt; sgns::block_store &gt; sgns::make_store</definition>
+        <argsstring>()</argsstring>
+        <name>make_store</name>
+        <qualifiedname>sgns::make_store</qualifiedname>
+        <briefdescription>
+<para>Create a block store instance for the node. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Newly created block store implementation. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="67" column="17" bodyfile="node/node.cpp" bodystart="327" bodyend="330" declfile="node/node.hpp" declline="67" declcolumn="17"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a1070beeedcc492ad783d0fcb8eaa6590" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::unique_ptr&lt; container_info_component &gt;</type>
+        <definition>std::unique_ptr&lt; container_info_component &gt; sgns::collect_container_info</definition>
+        <argsstring>(wallets &amp;wallets, const std::string &amp;name)</argsstring>
+        <name>collect_container_info</name>
+        <qualifiedname>sgns::collect_container_info</qualifiedname>
+        <param>
+          <type><ref refid="d1/d2f/classsgns_1_1wallets" kindref="compound">wallets</ref> &amp;</type>
+          <declname>wallets</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>name</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="71" column="17" declfile="node/wallet.hpp" declline="71" declcolumn="17"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/account/AccountMessenger.cpp" line="39" column="1"/>
+  </compounddef>
+</doxygen>

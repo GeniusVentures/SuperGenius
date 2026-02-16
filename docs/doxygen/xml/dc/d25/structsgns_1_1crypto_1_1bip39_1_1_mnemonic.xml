@@ -1,0 +1,118 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/d25/structsgns_1_1crypto_1_1bip39_1_1_mnemonic" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::crypto::bip39::Mnemonic</compoundname>
+    <includes refid="de/de4/mnemonic_8hpp" local="no">mnemonic.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="dc/d25/structsgns_1_1crypto_1_1bip39_1_1_mnemonic_1af8d683f3314fb593c03a285b7e4fe6df" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; std::string &gt;</type>
+        <definition>std::vector&lt;std::string&gt; sgns::crypto::bip39::Mnemonic::words</definition>
+        <argsstring></argsstring>
+        <name>words</name>
+        <qualifiedname>sgns::crypto::bip39::Mnemonic::words</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/mnemonic.hpp" line="17" column="17" bodyfile="src/crypto/bip39/mnemonic.hpp" bodystart="17" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d25/structsgns_1_1crypto_1_1bip39_1_1_mnemonic_1a087a5c22a202fe8369681c08d7391b5b" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::crypto::bip39::Mnemonic::password</definition>
+        <argsstring></argsstring>
+        <name>password</name>
+        <qualifiedname>sgns::crypto::bip39::Mnemonic::password</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/mnemonic.hpp" line="18" column="17" bodyfile="src/crypto/bip39/mnemonic.hpp" bodystart="18" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="dc/d25/structsgns_1_1crypto_1_1bip39_1_1_mnemonic_1a78542a5181e86cb8774d2a2901015c37" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="dc/d25/structsgns_1_1crypto_1_1bip39_1_1_mnemonic" kindref="compound">Mnemonic</ref> &gt;</type>
+        <definition>outcome::result&lt; Mnemonic &gt; sgns::crypto::bip39::Mnemonic::parse</definition>
+        <argsstring>(std::string_view phrase)</argsstring>
+        <name>parse</name>
+        <qualifiedname>sgns::crypto::bip39::Mnemonic::parse</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>phrase</declname>
+        </param>
+        <briefdescription>
+<para>parse mnemonic from phrase </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>phrase</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>valid utf8 list of words from bip-39 word list </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="dc/d25/structsgns_1_1crypto_1_1bip39_1_1_mnemonic" kindref="compound">Mnemonic</ref> instance </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/mnemonic.hpp" line="24" column="28" bodyfile="src/crypto/bip39/mnemonic.cpp" bodystart="74" bodyend="103"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="6">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::crypto::bip39::Mnemonic</label>
+        <link refid="dc/d25/structsgns_1_1crypto_1_1bip39_1_1_mnemonic"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+words</edgelabel>
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+password</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="3">
+        <label>std::string</label>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::vector&lt; std::string &gt;</label>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crypto/bip39/mnemonic.hpp" line="16" column="3" bodyfile="src/crypto/bip39/mnemonic.hpp" bodystart="16" bodyend="25"/>
+    <listofallmembers>
+      <member refid="dc/d25/structsgns_1_1crypto_1_1bip39_1_1_mnemonic_1a78542a5181e86cb8774d2a2901015c37" prot="public" virt="non-virtual"><scope>sgns::crypto::bip39::Mnemonic</scope><name>parse</name></member>
+      <member refid="dc/d25/structsgns_1_1crypto_1_1bip39_1_1_mnemonic_1a087a5c22a202fe8369681c08d7391b5b" prot="public" virt="non-virtual"><scope>sgns::crypto::bip39::Mnemonic</scope><name>password</name></member>
+      <member refid="dc/d25/structsgns_1_1crypto_1_1bip39_1_1_mnemonic_1af8d683f3314fb593c03a285b7e4fe6df" prot="public" virt="non-virtual"><scope>sgns::crypto::bip39::Mnemonic</scope><name>words</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

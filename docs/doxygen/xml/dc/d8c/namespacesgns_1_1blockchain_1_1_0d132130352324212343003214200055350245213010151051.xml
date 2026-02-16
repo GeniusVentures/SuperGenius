@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/d8c/namespacesgns_1_1blockchain_1_1_0d132130352324212343003214200055350245213010151051" kind="namespace" language="C++">
+    <compoundname>sgns::blockchain::@132130352324212343003214200055350245213010151051</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/blockchain/ValidatorRegistry.cpp" line="23" column="5"/>
+  </compounddef>
+</doxygen>

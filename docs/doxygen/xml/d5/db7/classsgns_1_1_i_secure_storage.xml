@@ -1,0 +1,191 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/db7/classsgns_1_1_i_secure_storage" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::ISecureStorage</compoundname>
+    <basecompoundref refid="d1/dbf/class_i_component" prot="public" virt="non-virtual">IComponent</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">std::enable_shared_from_this&lt; ISecureStorage &gt;</basecompoundref>
+    <derivedcompoundref refid="d9/d71/classsgns_1_1_j_s_o_n_backend" prot="public" virt="non-virtual">sgns::JSONBackend</derivedcompoundref>
+    <derivedcompoundref refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage" prot="public" virt="non-virtual">sgns::JSONSecureStorage</derivedcompoundref>
+    <includes refid="dd/d1a/_i_secure_storage_8hpp" local="no">ISecureStorage.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d5/db7/classsgns_1_1_i_secure_storage_1a5a10a540c9551ccad7d9c8e44cfd14d1" prot="public" static="no">
+        <type>std::string</type>
+        <definition>using sgns::ISecureStorage::SecureBufferType = std::string</definition>
+        <argsstring></argsstring>
+        <name>SecureBufferType</name>
+        <qualifiedname>sgns::ISecureStorage::SecureBufferType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/ISecureStorage.hpp" line="23" column="9" bodyfile="src/local_secure_storage/ISecureStorage.hpp" bodystart="23" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d5/db7/classsgns_1_1_i_secure_storage_1a941b5c4bbea8622d949ef341b129f55c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::ISecureStorage::~ISecureStorage</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~ISecureStorage</name>
+        <qualifiedname>sgns::ISecureStorage::~ISecureStorage</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/ISecureStorage.hpp" line="21" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/db7/classsgns_1_1_i_secure_storage_1a45d50a23530ee9218d85c063e83758fd" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="d5/db7/classsgns_1_1_i_secure_storage_1a5a10a540c9551ccad7d9c8e44cfd14d1" kindref="member">SecureBufferType</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; SecureBufferType &gt; sgns::ISecureStorage::Load</definition>
+        <argsstring>(const std::string &amp;key)=0</argsstring>
+        <name>Load</name>
+        <qualifiedname>sgns::ISecureStorage::Load</qualifiedname>
+        <reimplementedby refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a40da14b3444d1b03eac8164f59a3c347">Load</reimplementedby>
+        <reimplementedby refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1a955ba62ae5be231e6c499eb5ff0a9b27">Load</reimplementedby>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/ISecureStorage.hpp" line="25" column="33"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/db7/classsgns_1_1_i_secure_storage_1a3cc4bde24353a69a965903afcefb9765" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::ISecureStorage::Save</definition>
+        <argsstring>(const std::string &amp;key, const SecureBufferType &amp;buffer)=0</argsstring>
+        <name>Save</name>
+        <qualifiedname>sgns::ISecureStorage::Save</qualifiedname>
+        <reimplementedby refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a00f62ecffae03504a180358b004d61e4">Save</reimplementedby>
+        <reimplementedby refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1a896bca85596f8c63101bfa8f333fb2c2">Save</reimplementedby>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d5/db7/classsgns_1_1_i_secure_storage_1a5a10a540c9551ccad7d9c8e44cfd14d1" kindref="member">SecureBufferType</ref> &amp;</type>
+          <declname>buffer</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/ISecureStorage.hpp" line="26" column="45"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/db7/classsgns_1_1_i_secure_storage_1ae594e24ee45aced50e30be65eec4facd" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; bool &gt;</type>
+        <definition>virtual outcome::result&lt; bool &gt; sgns::ISecureStorage::DeleteKey</definition>
+        <argsstring>(const std::string &amp;key)=0</argsstring>
+        <name>DeleteKey</name>
+        <qualifiedname>sgns::ISecureStorage::DeleteKey</qualifiedname>
+        <reimplementedby refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a041dd45b9e2196bb757d23d2934876e4">DeleteKey</reimplementedby>
+        <reimplementedby refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1a1a9df7b28b76e1a799120fe8ff7d79e3">DeleteKey</reimplementedby>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/ISecureStorage.hpp" line="27" column="45"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="5">
+        <label>sgns::AndroidSecureStorage</label>
+        <link refid="d5/d83/classsgns_1_1_android_secure_storage"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>sgns::AppleSecureStorage</label>
+        <link refid="d9/d1f/classsgns_1_1_apple_secure_storage"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::ISecureStorage</label>
+        <link refid="d5/db7/classsgns_1_1_i_secure_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::JSONBackend</label>
+        <link refid="d9/d71/classsgns_1_1_j_s_o_n_backend"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::JSONSecureStorage</label>
+        <link refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::LinuxSecureStorage</label>
+        <link refid="dd/de8/classsgns_1_1_linux_secure_storage"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>sgns::WindowsSecureStorage</label>
+        <link refid="db/d24/classsgns_1_1_windows_secure_storage"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::enable_shared_from_this&lt; ISecureStorage &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::ISecureStorage</label>
+        <link refid="d5/db7/classsgns_1_1_i_secure_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::enable_shared_from_this&lt; ISecureStorage &gt;</label>
+      </node>
+    </collaborationgraph>
+    <location file="src/local_secure_storage/ISecureStorage.hpp" line="18" column="5" bodyfile="src/local_secure_storage/ISecureStorage.hpp" bodystart="19" bodyend="28"/>
+    <listofallmembers>
+      <member refid="d5/db7/classsgns_1_1_i_secure_storage_1ae594e24ee45aced50e30be65eec4facd" prot="public" virt="pure-virtual"><scope>sgns::ISecureStorage</scope><name>DeleteKey</name></member>
+      <member refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7" prot="public" virt="pure-virtual"><scope>sgns::ISecureStorage</scope><name>GetName</name></member>
+      <member refid="d5/db7/classsgns_1_1_i_secure_storage_1a45d50a23530ee9218d85c063e83758fd" prot="public" virt="pure-virtual"><scope>sgns::ISecureStorage</scope><name>Load</name></member>
+      <member refid="d5/db7/classsgns_1_1_i_secure_storage_1a3cc4bde24353a69a965903afcefb9765" prot="public" virt="pure-virtual"><scope>sgns::ISecureStorage</scope><name>Save</name></member>
+      <member refid="d5/db7/classsgns_1_1_i_secure_storage_1a5a10a540c9551ccad7d9c8e44cfd14d1" prot="public" virt="non-virtual"><scope>sgns::ISecureStorage</scope><name>SecureBufferType</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::ISecureStorage</scope><name>~IComponent</name></member>
+      <member refid="d5/db7/classsgns_1_1_i_secure_storage_1a941b5c4bbea8622d949ef341b129f55c" prot="public" virt="non-virtual"><scope>sgns::ISecureStorage</scope><name>~ISecureStorage</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

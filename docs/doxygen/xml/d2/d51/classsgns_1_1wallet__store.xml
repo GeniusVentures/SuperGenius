@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/d51/classsgns_1_1wallet__store" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::wallet_store</compoundname>
+    <includes refid="d4/dc7/wallet_8hpp" local="no">wallet.hpp</includes>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::wallet_store</label>
+        <link refid="d2/d51/classsgns_1_1wallet__store"/>
+      </node>
+    </collaborationgraph>
+    <location file="node/wallet.hpp" line="8" column="1" bodyfile="node/wallet.hpp" bodystart="9" bodyend="11"/>
+    <listofallmembers>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

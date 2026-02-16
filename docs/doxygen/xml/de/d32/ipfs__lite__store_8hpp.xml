@@ -1,0 +1,249 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/d32/ipfs__lite__store_8hpp" kind="file" language="C++">
+    <compoundname>ipfs_lite_store.hpp</compoundname>
+    <includes local="no">secure/blockstore_partial.hpp</includes>
+    <includes local="no">boost/filesystem.hpp</includes>
+    <includes local="no">ipfs_lite/ipfs/impl/datastore_leveldb.hpp</includes>
+    <includedby refid="da/d3b/ipfs__lite__store_8cpp" local="yes">node/ipfs_lite_store.cpp</includedby>
+    <includedby refid="d7/d70/node_8cpp" local="yes">node/node.cpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>node/ipfs_lite_store.hpp</label>
+        <link refid="de/d32/ipfs__lite__store_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>boost/filesystem.hpp</label>
+      </node>
+      <node id="4">
+        <label>ipfs_lite/ipfs/impl/datastore_leveldb.hpp</label>
+      </node>
+      <node id="2">
+        <label>secure/blockstore_partial.hpp</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>node/ipfs_lite_store.cpp</label>
+        <link refid="da/d3b/ipfs__lite__store_8cpp"/>
+      </node>
+      <node id="1">
+        <label>node/ipfs_lite_store.hpp</label>
+        <link refid="de/d32/ipfs__lite__store_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>node/node.cpp</label>
+        <link refid="d7/d70/node_8cpp"/>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d3/ddb/struct_i_p_f_s__val" prot="public">IPFS_val</innerclass>
+    <innerclass refid="d4/de6/classsgns_1_1ipfs__lite__store" prot="public">sgns::ipfs_lite_store</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d2/d7c/namespacesgns_1_1filesystem">sgns::filesystem</innernamespace>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="de/d32/ipfs__lite__store_8hpp_1ac1e5596b573572309451dde8161c1d8c" prot="public" static="no">
+        <type>struct IPFS_val</type>
+        <definition>typedef struct IPFS_val IPFS_val</definition>
+        <argsstring></argsstring>
+        <name>IPFS_val</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>==================================================================================== \file <ref refid="de/d32/ipfs__lite__store_8hpp" kindref="compound">ipfs_lite_store.hpp</ref> \brief Header file for storing block into ipfs-lite \date 07/06/2020 </para>
+<sect1 id="de/d32/ipfs__lite__store_8hpp_1autotoc_md5">
+<title>\author ruymaster</title></sect1>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="20" column="10"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" prot="public" static="no">
+        <type>unsigned int</type>
+        <definition>typedef unsigned int sgns::ipfs_dbi</definition>
+        <argsstring></argsstring>
+        <name>ipfs_dbi</name>
+        <qualifiedname>sgns::ipfs_dbi</qualifiedname>
+        <briefdescription>
+<para>A handle for an individual database in the DB environment. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="44" column="25" bodyfile="node/ipfs_lite_store.hpp" bodystart="44" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d2/d2b/namespacesgns_1aa3452b68fa5043a4b7cd36d669923882" prot="public" static="no">
+        <type>db_val&lt; <ref refid="d3/ddb/struct_i_p_f_s__val" kindref="compound">IPFS_val</ref> &gt;</type>
+        <definition>using sgns::ipfs_val = db_val&lt;IPFS_val&gt;</definition>
+        <argsstring></argsstring>
+        <name>ipfs_val</name>
+        <qualifiedname>sgns::ipfs_val</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="46" column="5" bodyfile="node/ipfs_lite_store.hpp" bodystart="46" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_IPFS_LITE_STORE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_IPFS_LITE_STORE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;secure/blockstore_partial.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/filesystem.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;ipfs_lite/ipfs/impl/datastore_leveldb.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17" refid="d3/ddb/struct_i_p_f_s__val" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="d3/ddb/struct_i_p_f_s__val" kindref="compound">IPFS_val</ref><sp/>{</highlight></codeline>
+<codeline lineno="18" refid="d3/ddb/struct_i_p_f_s__val_1af1ea6c0682211f432e071a38dbe51ae0" refkind="member"><highlight class="normal"></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/ddb/struct_i_p_f_s__val_1af1ea6c0682211f432e071a38dbe51ae0" kindref="member">mv_size</ref>;<sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="19" refid="d3/ddb/struct_i_p_f_s__val_1a30a9f4bd54e410659317291c7ee39a7b" refkind="member"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<ref refid="d3/ddb/struct_i_p_f_s__val_1a30a9f4bd54e410659317291c7ee39a7b" kindref="member">mv_data</ref>;<sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="20" refid="de/d32/ipfs__lite__store_8hpp_1ac1e5596b573572309451dde8161c1d8c" refkind="member"><highlight class="normal">}<sp/><ref refid="d3/ddb/struct_i_p_f_s__val" kindref="compound">IPFS_val</ref>;</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="23"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="24" refid="d2/d7c/namespacesgns_1_1filesystem" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d7c/namespacesgns_1_1filesystem" kindref="compound">filesystem</ref></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">path;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="28"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="32"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">filesystem</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">path;</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="37"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="41"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44" refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref>;</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="46" refid="d2/d2b/namespacesgns_1aa3452b68fa5043a4b7cd36d669923882" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns_1aa3452b68fa5043a4b7cd36d669923882" kindref="member">ipfs_val</ref><sp/>=<sp/>db_val&lt;IPFS_val&gt;;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">sgns::ipfs_lite::ipfs::IpfsDatastore;</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">sgns::ipfs_lite::ipfs::LeveldbDatastore;</highlight></codeline>
+<codeline lineno="49" refid="d4/de6/classsgns_1_1ipfs__lite__store" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a47d4a19b212b493af66a5cd25f37d985" kindref="member">ipfs_lite_store</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>block_store_partial&lt;IPFS_val,<sp/>ipfs_lite_store&gt;</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="52" refid="d4/de6/classsgns_1_1ipfs__lite__store_1a0b948935d2bbe64cf4353aec5caf5eb2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;IpfsDatastore&gt;<sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a0b948935d2bbe64cf4353aec5caf5eb2" kindref="member">datastore</ref>;</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a47d4a19b212b493af66a5cd25f37d985" kindref="member">ipfs_lite_store</ref>();</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"></highlight><highlight class="comment">//<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ipfs_lite_store<sp/>(sgns::logger_mt<sp/>&amp;,<sp/>boost::filesystem::path<sp/>const<sp/>&amp;,<sp/>sgns::txn_tracking_config<sp/>const<sp/>&amp;<sp/>txn_tracking_config_a<sp/>=<sp/>sgns::txn_tracking_config{},<sp/>std::chrono::milliseconds<sp/>block_processor_batch_max_time_a<sp/>=<sp/>std::chrono::milliseconds<sp/>(5000),<sp/>sgns::lmdb_config<sp/>const<sp/>&amp;<sp/>lmdb_config_a<sp/>=<sp/>sgns::lmdb_config{},<sp/>size_t<sp/>batch_size<sp/>=<sp/>512,<sp/>bool<sp/>backup_before_upgrade<sp/>=<sp/>false);</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1acdc1a960f225a042ad0b5743bb74b28b" kindref="member">exists</ref><sp/>(sgns::transaction<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;<sp/>transaction_a,<sp/>tables<sp/>table_a,<sp/><ref refid="d2/d2b/namespacesgns_1aa3452b68fa5043a4b7cd36d669923882" kindref="member">ipfs_val</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;<sp/>key_a)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1abebad3c45ceb41afdd300294d471821f" kindref="member">get</ref><sp/>(sgns::transaction<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">&amp;<sp/>transaction_a,<sp/>tables<sp/>table_a,<sp/><ref refid="d2/d2b/namespacesgns_1aa3452b68fa5043a4b7cd36d669923882" kindref="member">ipfs_val</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;key,<sp/><ref refid="d2/d2b/namespacesgns_1aa3452b68fa5043a4b7cd36d669923882" kindref="member">ipfs_val</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;<sp/>value_a)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1ad7060ad8dc4c6bb1133a66643b1b9ef2" kindref="member">put</ref><sp/>(sgns::write_transaction<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;<sp/>transaction_a,<sp/>tables<sp/>table_a,<sp/><ref refid="d2/d2b/namespacesgns_1aa3452b68fa5043a4b7cd36d669923882" kindref="member">ipfs_val</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;<sp/>key_a,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d2/d2b/namespacesgns_1aa3452b68fa5043a4b7cd36d669923882" kindref="member">ipfs_val</ref><sp/>&amp;<sp/>value_a)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a3bdc0b5c1636b5c2066b0f670e34f64e" kindref="member">del</ref><sp/>(sgns::write_transaction<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;<sp/>transaction_a,<sp/>tables<sp/>table_a,<sp/><ref refid="d2/d2b/namespacesgns_1aa3452b68fa5043a4b7cd36d669923882" kindref="member">ipfs_val</ref><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;<sp/>key_a)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a8ff79f21632438fbbf74e7c988235af0" kindref="member">drop</ref><sp/>(sgns::write_transaction<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;<sp/>transaction_a,<sp/>tables<sp/>table_a)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>sgns::write_transaction<sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1ac935ba7b5d1ce4aff282b7d203e599e7" kindref="member">tx_begin_write</ref><sp/>(std::vector&lt;sgns::tables&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;<sp/>tables_requiring_lock<sp/>=<sp/>{},<sp/>std::vector&lt;sgns::tables&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;<sp/>tables_no_lock<sp/>=<sp/>{})<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>sgns::read_transaction<sp/><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a97c372b8436a6b42def0774e85cf38ca" kindref="member">tx_begin_read</ref><sp/>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"></highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1aa050d83f779b39f923c702bc737cc52a" kindref="member">vendor_get</ref><sp/>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"></highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1aea4814ba3df8997b058c00904f2f090a" kindref="member">block_info_get</ref><sp/>(sgns::transaction<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;,<sp/>sgns::block_hash<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;,<sp/>sgns::block_info<sp/>&amp;)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1af221913698cf481cc851c7dc29b9f219" kindref="member">version_put</ref><sp/>(sgns::write_transaction<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;,<sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal">)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a5af3c3af859d0534c067609f5d7f413b" kindref="member">serialize_mdb_tracker</ref><sp/>(boost::property_tree::ptree<sp/>&amp;,<sp/>std::chrono::milliseconds,<sp/>std::chrono::milliseconds)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"></highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>These<sp/>are<sp/>only<sp/>use<sp/>in<sp/>the<sp/>upgrade<sp/>process.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;sgns::block&gt;<sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a16cc378e947b1cdf16c0ca06168c4db9" kindref="member">block_get_v14</ref><sp/>(sgns::transaction<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;<sp/>transaction_a,<sp/>sgns::block_hash<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;<sp/>hash_a,<sp/>sgns::block_sideband_v14<sp/>*<sp/>sideband_a<sp/>=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">,<sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>*<sp/>is_state_v1<sp/>=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a7890b4bbe7ce54a0b37305979ed993e0" kindref="member">copy_db</ref><sp/>(boost::filesystem::path<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;<sp/>destination_file)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a5f61d49d4173bc05ef13940659a10671" kindref="member">rebuild_db</ref><sp/>(sgns::write_transaction<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;<sp/>transaction_a)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1ae6b8a49ab893f3cd1ae1d2aaa435a394" kindref="member">init_error</ref><sp/>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a73c38e25de11636f0f7672932c3c8e73" kindref="member">count</ref><sp/>(sgns::transaction<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;<sp/>transaction_a,<sp/>tables<sp/>table_a)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a62c1149ee4db3cf3e9ad1c0f26d7f541" kindref="member">not_found</ref><sp/>(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>status)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a79490a1e141b7993484109ca71d1d0ec" kindref="member">success</ref><sp/>(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>status)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1ae863a30f88bd7ab8037704a3b776f5cb" kindref="member">status_code_not_found</ref><sp/>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"></highlight></codeline>
+<codeline lineno="86" refid="d4/de6/classsgns_1_1ipfs__lite__store_1a215ef2fa240b3c7de919cd55ef82b6dd" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a215ef2fa240b3c7de919cd55ef82b6dd" kindref="member">frontiers</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"></highlight></codeline>
+<codeline lineno="92" refid="d4/de6/classsgns_1_1ipfs__lite__store_1a6c350a05543244fef2dbf6a3ea54c09f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a6c350a05543244fef2dbf6a3ea54c09f" kindref="member">accounts_v0</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"></highlight></codeline>
+<codeline lineno="98" refid="d4/de6/classsgns_1_1ipfs__lite__store_1ac4382383430f7eb8fd97e61b32f15097" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1ac4382383430f7eb8fd97e61b32f15097" kindref="member">accounts_v1</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"></highlight></codeline>
+<codeline lineno="104" refid="d4/de6/classsgns_1_1ipfs__lite__store_1a9197f26d334660f5d576e5ddaa07eefd" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a9197f26d334660f5d576e5ddaa07eefd" kindref="member">accounts</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"></highlight></codeline>
+<codeline lineno="110" refid="d4/de6/classsgns_1_1ipfs__lite__store_1aa9de72aace0df026277eb882175ebb2d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1aa9de72aace0df026277eb882175ebb2d" kindref="member">send_blocks</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"></highlight></codeline>
+<codeline lineno="116" refid="d4/de6/classsgns_1_1ipfs__lite__store_1ad8c7e7d648e6c57b89d2ed77033a960d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1ad8c7e7d648e6c57b89d2ed77033a960d" kindref="member">receive_blocks</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"></highlight></codeline>
+<codeline lineno="122" refid="d4/de6/classsgns_1_1ipfs__lite__store_1a3a7220f72e1ec10e532c3983e3e15931" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a3a7220f72e1ec10e532c3983e3e15931" kindref="member">open_blocks</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"></highlight></codeline>
+<codeline lineno="128" refid="d4/de6/classsgns_1_1ipfs__lite__store_1a4051a769379acff0a37408b57bf87f4a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a4051a769379acff0a37408b57bf87f4a" kindref="member">change_blocks</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="129"><highlight class="normal"></highlight></codeline>
+<codeline lineno="134" refid="d4/de6/classsgns_1_1ipfs__lite__store_1a22ac6f00bdae96c6f7fa7bbc0999a549" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a22ac6f00bdae96c6f7fa7bbc0999a549" kindref="member">state_blocks_v0</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="135"><highlight class="normal"></highlight></codeline>
+<codeline lineno="140" refid="d4/de6/classsgns_1_1ipfs__lite__store_1a097012dde7fdf20aba416e9426d5674d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a097012dde7fdf20aba416e9426d5674d" kindref="member">state_blocks_v1</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="141"><highlight class="normal"></highlight></codeline>
+<codeline lineno="146" refid="d4/de6/classsgns_1_1ipfs__lite__store_1a3da1cf716fb09508eb40cdddf7410746" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a3da1cf716fb09508eb40cdddf7410746" kindref="member">state_blocks</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="147"><highlight class="normal"></highlight></codeline>
+<codeline lineno="152" refid="d4/de6/classsgns_1_1ipfs__lite__store_1a85bcff04ab14daf6e0757ee64dcb6333" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a85bcff04ab14daf6e0757ee64dcb6333" kindref="member">pending_v0</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="153"><highlight class="normal"></highlight></codeline>
+<codeline lineno="158" refid="d4/de6/classsgns_1_1ipfs__lite__store_1a08dda97f73b3b14be350f73545cc5ab1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a08dda97f73b3b14be350f73545cc5ab1" kindref="member">pending_v1</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="159"><highlight class="normal"></highlight></codeline>
+<codeline lineno="164" refid="d4/de6/classsgns_1_1ipfs__lite__store_1a628198032e4c1c4b10508edc1615ca6f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a628198032e4c1c4b10508edc1615ca6f" kindref="member">pending</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="165"><highlight class="normal"></highlight></codeline>
+<codeline lineno="170" refid="d4/de6/classsgns_1_1ipfs__lite__store_1acdfa394098f7b40fac2f0f2f99d5fd3d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1acdfa394098f7b40fac2f0f2f99d5fd3d" kindref="member">blocks_info</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="171"><highlight class="normal"></highlight></codeline>
+<codeline lineno="176" refid="d4/de6/classsgns_1_1ipfs__lite__store_1aaa4e1181ad8ddb5715e64fa4576941f9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1aaa4e1181ad8ddb5715e64fa4576941f9" kindref="member">representation</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="177"><highlight class="normal"></highlight></codeline>
+<codeline lineno="182" refid="d4/de6/classsgns_1_1ipfs__lite__store_1a029981e35e1e449006d28a0da331463d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a029981e35e1e449006d28a0da331463d" kindref="member">unchecked</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="183"><highlight class="normal"></highlight></codeline>
+<codeline lineno="188" refid="d4/de6/classsgns_1_1ipfs__lite__store_1a640fb63d5adec33bafc63ea3cf37746f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a640fb63d5adec33bafc63ea3cf37746f" kindref="member">vote</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="189"><highlight class="normal"></highlight></codeline>
+<codeline lineno="194" refid="d4/de6/classsgns_1_1ipfs__lite__store_1a2be041e7dbad6e494757bc5971557269" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a2be041e7dbad6e494757bc5971557269" kindref="member">online_weight</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="195"><highlight class="normal"></highlight></codeline>
+<codeline lineno="200" refid="d4/de6/classsgns_1_1ipfs__lite__store_1a4ece17a093d850497faf472134cd96e2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a4ece17a093d850497faf472134cd96e2" kindref="member">meta</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="201"><highlight class="normal"></highlight></codeline>
+<codeline lineno="202"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*</highlight></codeline>
+<codeline lineno="203"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>Endpoints<sp/>for<sp/>peers</highlight></codeline>
+<codeline lineno="204"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>sgns::endpoint_key<sp/>-&gt;<sp/>no_value</highlight></codeline>
+<codeline lineno="205"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="206" refid="d4/de6/classsgns_1_1ipfs__lite__store_1a3d620bb82cb5e2144da014e32d3049ce" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a3d620bb82cb5e2144da014e32d3049ce" kindref="member">peers</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="207"><highlight class="normal"></highlight></codeline>
+<codeline lineno="208"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*</highlight></codeline>
+<codeline lineno="209"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>Confirmation<sp/>height<sp/>of<sp/>an<sp/>account,<sp/>and<sp/>the<sp/>hash<sp/>for<sp/>the<sp/>block<sp/>at<sp/>that<sp/>height</highlight></codeline>
+<codeline lineno="210"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>sgns::account<sp/>-&gt;<sp/>uint64_t,<sp/>sgns::block_hash</highlight></codeline>
+<codeline lineno="211"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="212" refid="d4/de6/classsgns_1_1ipfs__lite__store_1a15c47795859fa980cb0099b3b1563bee" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref><sp/><ref refid="d4/de6/classsgns_1_1ipfs__lite__store_1a15c47795859fa980cb0099b3b1563bee" kindref="member">confirmation_height</ref>{<sp/>0<sp/>};</highlight></codeline>
+<codeline lineno="213"><highlight class="normal"></highlight></codeline>
+<codeline lineno="214"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="215"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>__DOXYGEN__</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="216"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;&gt;</highlight></codeline>
+<codeline lineno="217"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>*<sp/>ipfs_val::data<sp/>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="218"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;&gt;</highlight></codeline>
+<codeline lineno="219"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>ipfs_val::size<sp/>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="220"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;&gt;</highlight></codeline>
+<codeline lineno="221"><highlight class="normal"><sp/><sp/><sp/><sp/>ipfs_val::db_val<sp/>(</highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>size_a,<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>*<sp/>data_a);</highlight></codeline>
+<codeline lineno="222"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;&gt;</highlight></codeline>
+<codeline lineno="223"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>ipfs_val::convert_buffer_to_value<sp/>();</highlight></codeline>
+<codeline lineno="224"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">extern</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">block_store_partial&lt;IPFS_val,<sp/>ipfs_lite_store&gt;;</highlight></codeline>
+<codeline lineno="225"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="226"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="227"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="node/ipfs_lite_store.hpp"/>
+  </compounddef>
+</doxygen>

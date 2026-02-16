@@ -1,0 +1,181 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/df8/bip39__provider__impl_8hpp" kind="file" language="C++">
+    <compoundname>bip39_provider_impl.hpp</compoundname>
+    <includes refid="d0/d59/bip39__provider_8hpp" local="yes">crypto/bip39/bip39_provider.hpp</includes>
+    <includes refid="dc/df7/dictionary_8hpp" local="yes">crypto/bip39/dictionary.hpp</includes>
+    <includes refid="d6/da3/logger_8hpp" local="yes">base/logger.hpp</includes>
+    <includes refid="d7/d0f/pbkdf2__provider_8hpp" local="yes">crypto/pbkdf2/pbkdf2_provider.hpp</includes>
+    <includedby refid="d4/d53/bip39__provider__impl_8cpp" local="yes">src/crypto/bip39/impl/bip39_provider_impl.cpp</includedby>
+    <incdepgraph>
+      <node id="4">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>crypto/bip39/bip39_provider.hpp</label>
+        <link refid="d0/d59/bip39__provider_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>crypto/bip39/bip39_types.hpp</label>
+        <link refid="de/d20/bip39__types_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>crypto/bip39/dictionary.hpp</label>
+        <link refid="dc/df7/dictionary_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>crypto/bip39/entropy_accumulator.hpp</label>
+        <link refid="d0/da6/entropy__accumulator_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crypto/bip39/impl/bip39_provider_impl.hpp</label>
+        <link refid="da/df8/bip39__provider__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>crypto/pbkdf2/pbkdf2_provider.hpp</label>
+        <link refid="d7/d0f/pbkdf2__provider_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>bitset</label>
+      </node>
+      <node id="7">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="8">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="9">
+        <label>gsl/span</label>
+      </node>
+      <node id="11">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="17">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="18">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="5">
+        <label>string_view</label>
+      </node>
+      <node id="15">
+        <label>unordered_map</label>
+      </node>
+      <node id="6">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/crypto/bip39/impl/bip39_provider_impl.cpp</label>
+        <link refid="d4/d53/bip39__provider__impl_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/crypto/bip39/impl/bip39_provider_impl.hpp</label>
+        <link refid="da/df8/bip39__provider__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl" prot="public">sgns::crypto::Bip39ProviderImpl</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6e/namespacesgns_1_1crypto">sgns::crypto</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_BIP39_PROVIDER_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_BIP39_PROVIDER_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d0/d59/bip39__provider_8hpp" kindref="compound">crypto/bip39/bip39_provider.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dc/df7/dictionary_8hpp" kindref="compound">crypto/bip39/dictionary.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/da3/logger_8hpp" kindref="compound">base/logger.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d7/d0f/pbkdf2__provider_8hpp" kindref="compound">crypto/pbkdf2/pbkdf2_provider.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d6e/namespacesgns_1_1crypto" kindref="compound">sgns::crypto</ref><sp/>{</highlight></codeline>
+<codeline lineno="13" refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a8d870543f7757707ea8c1d38594740b6" kindref="member">Bip39ProviderImpl</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d7/d94/classsgns_1_1crypto_1_1_bip39_provider" kindref="compound">Bip39Provider</ref><sp/>{</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="15" refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a1a123a4ddd47d7d4bc38d43c929e60a1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a1a123a4ddd47d7d4bc38d43c929e60a1" kindref="member">~Bip39ProviderImpl</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">explicit</highlight><highlight class="normal"><sp/><ref refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a8d870543f7757707ea8c1d38594740b6" kindref="member">Bip39ProviderImpl</ref>(std::shared_ptr&lt;Pbkdf2Provider&gt;<sp/>pbkdf2_provider);</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;std::vector&lt;uint8_t&gt;&gt;<sp/><ref refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a54cd018fe1aed260b1c901a548c96f97" kindref="member">calculateEntropy</ref>(</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;std::string&gt;<sp/>&amp;word_list)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;bip39::Bip39Seed&gt;<sp/><ref refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a120358b0f7b8b6f3fa63ed46a26cf4ff" kindref="member">makeSeed</ref>(</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/>entropy,<sp/>std::string_view<sp/>password)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="26" refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a53ad9610f12d381cf00578171d393dcb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;Pbkdf2Provider&gt;<sp/><ref refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a53ad9610f12d381cf00578171d393dcb" kindref="member">pbkdf2_provider_</ref>;</highlight></codeline>
+<codeline lineno="27" refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a83225180f9a76743bf038eb20eb31364" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="db/d61/classsgns_1_1crypto_1_1bip39_1_1_dictionary" kindref="compound">bip39::Dictionary</ref><sp/><ref refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a83225180f9a76743bf038eb20eb31364" kindref="member">dictionary_</ref>;</highlight></codeline>
+<codeline lineno="28" refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a6f243eacf356f5eae812481b04ea8cfc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref><sp/><ref refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a6f243eacf356f5eae812481b04ea8cfc" kindref="member">logger_</ref>;</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="30"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::crypto</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_BIP39_PROVIDER_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/crypto/bip39/impl/bip39_provider_impl.hpp"/>
+  </compounddef>
+</doxygen>

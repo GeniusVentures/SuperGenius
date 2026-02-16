@@ -1,0 +1,615 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl" kind="class" language="C++" prot="public">
+    <compoundname>sgns::storage::changes_trie::StorageChangesTrackerImpl</compoundname>
+    <basecompoundref refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker" prot="public" virt="non-virtual">sgns::storage::changes_trie::ChangesTracker</basecompoundref>
+    <includes refid="d7/d4b/storage__changes__tracker__impl_8hpp" local="no">storage_changes_tracker_impl.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a9baa60464fa96ef868ed86e766845d2b" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>Error</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::Error</qualifiedname>
+        <enumvalue id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a9baa60464fa96ef868ed86e766845d2ba0c0451be116b9230d6c4372d1d445649" prot="public">
+          <name>EXTRINSIC_IDX_GETTER_UNINITIALIZED</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a9baa60464fa96ef868ed86e766845d2ba291e6fb968bf10991b1ee240c7415556" prot="public">
+          <name>INVALID_PARENT_HASH</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="32" column="5" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" bodystart="32" bodyend="35"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-type">
+      <memberdef kind="typedef" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a8954a652ca381bc045ba90a9ec0f1d77" prot="private" static="no">
+        <type>std::shared_ptr&lt; <ref refid="db/d02/classsgns_1_1api_1_1_session" kindref="compound">api::Session</ref> &gt;</type>
+        <definition>using sgns::storage::changes_trie::StorageChangesTrackerImpl::SessionPtr = std::shared_ptr&lt;api::Session&gt;</definition>
+        <argsstring></argsstring>
+        <name>SessionPtr</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::SessionPtr</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="23" column="5" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1aaa38f8096da40a127653bc877bc01402" prot="private" static="no">
+        <type><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine" kindref="compound">subscription::SubscriptionEngine</ref>&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref>, <ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a8954a652ca381bc045ba90a9ec0f1d77" kindref="member">SessionPtr</ref>, <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref>, <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &gt;</type>
+        <definition>using sgns::storage::changes_trie::StorageChangesTrackerImpl::SubscriptionEngineType = 
+subscription::SubscriptionEngine&lt;base::Buffer,
+                                 SessionPtr,
+                                 base::Buffer,
+                                 primitives::BlockHash&gt;</definition>
+        <argsstring></argsstring>
+        <name>SubscriptionEngineType</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::SubscriptionEngineType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="24" column="5" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a8298b3e42140943daee4d5fdcde45f8a" prot="private" static="no">
+        <type>std::shared_ptr&lt; <ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1aaa38f8096da40a127653bc877bc01402" kindref="member">SubscriptionEngineType</ref> &gt;</type>
+        <definition>using sgns::storage::changes_trie::StorageChangesTrackerImpl::SubscriptionEnginePtr = std::shared_ptr&lt;SubscriptionEngineType&gt;</definition>
+        <argsstring></argsstring>
+        <name>SubscriptionEnginePtr</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::SubscriptionEnginePtr</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="29" column="5" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" bodystart="29" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a448d31597a2223e9bed6fc205ac7b0e8" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory" kindref="compound">storage::trie::SuperGeniusTrieFactory</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;storage::trie::SuperGeniusTrieFactory&gt; sgns::storage::changes_trie::StorageChangesTrackerImpl::trie_factory_</definition>
+        <argsstring></argsstring>
+        <name>trie_factory_</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::trie_factory_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="69" column="21" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" bodystart="69" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a39467eff1c125352fc844fa027139106" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec" kindref="compound">storage::trie::Codec</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;storage::trie::Codec&gt; sgns::storage::changes_trie::StorageChangesTrackerImpl::codec_</definition>
+        <argsstring></argsstring>
+        <name>codec_</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::codec_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="70" column="21" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" bodystart="70" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a5263951b6c90046e30b4905cf6463183" prot="private" static="no" mutable="no">
+        <type>std::map&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref>, std::vector&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1abd2964ee5c750201a675543e026ad732" kindref="member">primitives::ExtrinsicIndex</ref> &gt; &gt;</type>
+        <definition>std::map&lt;base::Buffer, std::vector&lt;primitives::ExtrinsicIndex&gt; &gt; sgns::storage::changes_trie::StorageChangesTrackerImpl::extrinsics_changes_</definition>
+        <argsstring></argsstring>
+        <name>extrinsics_changes_</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::extrinsics_changes_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="73" column="9" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" bodystart="73" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1aac796d2feda10b42d85b7d49685e358f" prot="private" static="no" mutable="no">
+        <type>std::set&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>std::set&lt;base::Buffer&gt; sgns::storage::changes_trie::StorageChangesTrackerImpl::new_entries_</definition>
+        <argsstring></argsstring>
+        <name>new_entries_</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::new_entries_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="74" column="14" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" bodystart="74" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1afb2db431c31bd355661b954819a52f8e" prot="private" static="no" mutable="no">
+        <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref></type>
+        <definition>primitives::BlockHash sgns::storage::changes_trie::StorageChangesTrackerImpl::parent_hash_</definition>
+        <argsstring></argsstring>
+        <name>parent_hash_</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::parent_hash_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="76" column="27" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" bodystart="76" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1aa9f3fa5eda9d39902bee9f71d1569c99" prot="private" static="no" mutable="no">
+        <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref></type>
+        <definition>primitives::BlockNumber sgns::storage::changes_trie::StorageChangesTrackerImpl::parent_number_</definition>
+        <argsstring></argsstring>
+        <name>parent_number_</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::parent_number_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="77" column="29" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" bodystart="77" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a47a72f41ffc1628a18247d6d0ff2f823" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker_1a506136fb4bfa3050a7a629eb9f970dea" kindref="member">GetExtrinsicIndexDelegate</ref></type>
+        <definition>GetExtrinsicIndexDelegate sgns::storage::changes_trie::StorageChangesTrackerImpl::get_extrinsic_index_</definition>
+        <argsstring></argsstring>
+        <name>get_extrinsic_index_</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::get_extrinsic_index_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="78" column="31" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" bodystart="78" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a796ad94fa40f1edbe5ce5aefd338c21e" prot="private" static="no" mutable="no">
+        <type><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a8298b3e42140943daee4d5fdcde45f8a" kindref="member">SubscriptionEnginePtr</ref></type>
+        <definition>SubscriptionEnginePtr sgns::storage::changes_trie::StorageChangesTrackerImpl::subscription_engine_</definition>
+        <argsstring></argsstring>
+        <name>subscription_engine_</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::subscription_engine_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="79" column="27" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" bodystart="79" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a3c374d81894ccd0dde7c18ce3ba58001" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::changes_trie::StorageChangesTrackerImpl::StorageChangesTrackerImpl</definition>
+        <argsstring>(std::shared_ptr&lt; storage::trie::SuperGeniusTrieFactory &gt; trie_factory, std::shared_ptr&lt; storage::trie::Codec &gt; codec, SubscriptionEnginePtr subscription_engine)</argsstring>
+        <name>StorageChangesTrackerImpl</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::StorageChangesTrackerImpl</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory" kindref="compound">storage::trie::SuperGeniusTrieFactory</ref> &gt;</type>
+          <declname>trie_factory</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec" kindref="compound">storage::trie::Codec</ref> &gt;</type>
+          <declname>codec</declname>
+        </param>
+        <param>
+          <type><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a8298b3e42140943daee4d5fdcde45f8a" kindref="member">SubscriptionEnginePtr</ref></type>
+          <declname>subscription_engine</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="37" column="5" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.cpp" bodystart="22" bodyend="33"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a856c404ad7742033cb49793236560b96" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::changes_trie::StorageChangesTrackerImpl::~StorageChangesTrackerImpl</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~StorageChangesTrackerImpl</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::~StorageChangesTrackerImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Functor that returns the current extrinsic index, which is supposed to be stored in the state trie </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="46" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1adb3760bb75bc34c94025540c04f70d22" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::storage::changes_trie::StorageChangesTrackerImpl::setExtrinsicIdxGetter</definition>
+        <argsstring>(GetExtrinsicIndexDelegate f) override</argsstring>
+        <name>setExtrinsicIdxGetter</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::setExtrinsicIdxGetter</qualifiedname>
+        <reimplements refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker_1a011eb951561ef33ca82bf1e87c69d9d2">setExtrinsicIdxGetter</reimplements>
+        <param>
+          <type><ref refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker_1a506136fb4bfa3050a7a629eb9f970dea" kindref="member">GetExtrinsicIndexDelegate</ref></type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>f</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>is a functor that returns the current extrinsic index </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="48" column="10" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.cpp" bodystart="46" bodyend="49"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a863ba3dfe5b4f557e28626ec34342f18" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::changes_trie::StorageChangesTrackerImpl::onBlockChange</definition>
+        <argsstring>(primitives::BlockHash new_parent_hash, primitives::BlockNumber new_parent_number) override</argsstring>
+        <name>onBlockChange</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::onBlockChange</qualifiedname>
+        <reimplements refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker_1a61cf4237ae410b8e0f4c91920cfc9ad5">onBlockChange</reimplements>
+        <param>
+          <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref></type>
+          <declname>new_parent_hash</declname>
+        </param>
+        <param>
+          <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref></type>
+          <declname>new_parent_number</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Supposed to be called when the processed block changes </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="50" column="21" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.cpp" bodystart="35" bodyend="44"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1acc7219974f91ce5d6f8da5c3c8315107" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::changes_trie::StorageChangesTrackerImpl::onPut</definition>
+        <argsstring>(const base::Buffer &amp;key, const base::Buffer &amp;value, bool new_entry) override</argsstring>
+        <name>onPut</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::onPut</qualifiedname>
+        <reimplements refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker_1a7a526193d4edf69b85694abee66cceee">onPut</reimplements>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>value</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>new_entry</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Supposed to be called when an entry is put into the tracked storage <itemizedlist>
+<listitem><para>new_entry states whether the entry is new, or just an update of a present value </para>
+</listitem>
+</itemizedlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="54" column="21" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.cpp" bodystart="51" bodyend="71"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a233734877217f62ab7342e7f10c65a2e" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::changes_trie::StorageChangesTrackerImpl::onRemove</definition>
+        <argsstring>(const base::Buffer &amp;key) override</argsstring>
+        <name>onRemove</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::onRemove</qualifiedname>
+        <reimplements refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker_1ac9b05da5ba8b704fbd609fcf7f80f2e7">onRemove</reimplements>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Supposed to be called when an entry is removed from the tracked storage </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="57" column="21" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.cpp" bodystart="73" bodyend="95"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1aade9566811938db7a1fbd938ad04e917" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref> &gt;</type>
+        <definition>outcome::result&lt; base::Hash256 &gt; sgns::storage::changes_trie::StorageChangesTrackerImpl::constructChangesTrie</definition>
+        <argsstring>(const primitives::BlockHash &amp;parent, const ChangesTrieConfig &amp;conf) override</argsstring>
+        <name>constructChangesTrie</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::constructChangesTrie</qualifiedname>
+        <reimplements refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker_1a27062a65c7d83fb979525b75eeddc727">constructChangesTrie</reimplements>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &amp;</type>
+          <declname>parent</declname>
+        </param>
+        <param>
+          <type>const <ref refid="da/d4a/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_config" kindref="compound">ChangesTrieConfig</ref> &amp;</type>
+          <declname>conf</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Sinks accumulated changes for the latest registered block to the changes trie and returns its root hash </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="59" column="21" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.cpp" bodystart="98" bodyend="108"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1ab715b9e347c6f0e6262727df63c408bc" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::storage::changes_trie::StorageChangesTrackerImpl::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::storage::changes_trie::StorageChangesTrackerImpl::GetName</qualifiedname>
+        <reimplements refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="63" column="17" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" bodystart="63" bodyend="66"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="2">
+        <label>sgns::storage::changes_trie::ChangesTracker</label>
+        <link refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::changes_trie::StorageChangesTrackerImpl</label>
+        <link refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="19">
+        <label>K</label>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="12">
+        <label>boost::equality_comparable&lt; Buffer &gt;</label>
+      </node>
+      <node id="13">
+        <label>boost::equality_comparable&lt; gsl::span&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="14">
+        <label>boost::equality_comparable&lt; std::vector&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="24">
+        <label>sgns::base::Blob&lt; size_ &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="23" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>sgns::base::Blob&lt; 32 &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="23" relation="public-inheritance">
+        </childnode>
+        <childnode refid="24" relation="template-instance">
+          <edgelabel>&lt; 32 &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::base::Buffer</label>
+        <link refid="de/dd5/classsgns_1_1base_1_1_buffer"/>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+        <childnode refid="13" relation="public-inheritance">
+        </childnode>
+        <childnode refid="14" relation="public-inheritance">
+        </childnode>
+        <childnode refid="15" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::storage::changes_trie::ChangesTracker</label>
+        <link refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::changes_trie::StorageChangesTrackerImpl</label>
+        <link refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-trie_factory_</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-codec_</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>-extrinsics_changes_</edgelabel>
+        </childnode>
+        <childnode refid="20" relation="usage">
+          <edgelabel>-new_entries_</edgelabel>
+        </childnode>
+        <childnode refid="22" relation="usage">
+          <edgelabel>-parent_hash_</edgelabel>
+        </childnode>
+        <childnode refid="25" relation="usage">
+          <edgelabel>-subscription_engine_</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::storage::trie::Codec</label>
+        <link refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::trie::SuperGeniusTrieFactory</label>
+        <link refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="18">
+        <label>std::map&lt; K, T &gt;</label>
+        <childnode refid="19" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::map&lt; sgns::base::Buffer, std::vector&lt; primitives::ExtrinsicIndex &gt; &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="17" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="18" relation="template-instance">
+          <edgelabel>&lt; sgns::base::Buffer, std::vector&lt; primitives::ExtrinsicIndex &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>std::set&lt; K &gt;</label>
+        <childnode refid="19" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+      </node>
+      <node id="20">
+        <label>std::set&lt; sgns::base::Buffer &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="21" relation="template-instance">
+          <edgelabel>&lt; sgns::base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="25">
+        <label>std::shared_ptr&lt; SubscriptionEngineType &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; SubscriptionEngineType &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; sgns::storage::trie::Codec &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::trie::Codec &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::shared_ptr&lt; sgns::storage::trie::SuperGeniusTrieFactory &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::trie::SuperGeniusTrieFactory &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>std::vector&lt; primitives::ExtrinsicIndex &gt;</label>
+        <childnode refid="16" relation="template-instance">
+          <edgelabel>&lt; primitives::ExtrinsicIndex &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="15">
+        <label>std::vector&lt; uint8_t &gt;</label>
+        <childnode refid="16" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="22" column="3" bodyfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" bodystart="22" bodyend="80"/>
+    <listofallmembers>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a39467eff1c125352fc844fa027139106" prot="private" virt="non-virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>codec_</name></member>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1aade9566811938db7a1fbd938ad04e917" prot="public" virt="virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>constructChangesTrie</name></member>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a9baa60464fa96ef868ed86e766845d2b" prot="public" virt="non-virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>Error</name></member>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a5263951b6c90046e30b4905cf6463183" prot="private" virt="non-virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>extrinsics_changes_</name></member>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a47a72f41ffc1628a18247d6d0ff2f823" prot="private" virt="non-virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>get_extrinsic_index_</name></member>
+      <member refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker_1a506136fb4bfa3050a7a629eb9f970dea" prot="public" virt="non-virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>GetExtrinsicIndexDelegate</name></member>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1ab715b9e347c6f0e6262727df63c408bc" prot="public" virt="virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>GetName</name></member>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1aac796d2feda10b42d85b7d49685e358f" prot="private" virt="non-virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>new_entries_</name></member>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a863ba3dfe5b4f557e28626ec34342f18" prot="public" virt="virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>onBlockChange</name></member>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1acc7219974f91ce5d6f8da5c3c8315107" prot="public" virt="virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>onPut</name></member>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a233734877217f62ab7342e7f10c65a2e" prot="public" virt="virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>onRemove</name></member>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1afb2db431c31bd355661b954819a52f8e" prot="private" virt="non-virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>parent_hash_</name></member>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1aa9f3fa5eda9d39902bee9f71d1569c99" prot="private" virt="non-virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>parent_number_</name></member>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a8954a652ca381bc045ba90a9ec0f1d77" prot="private" virt="non-virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>SessionPtr</name></member>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1adb3760bb75bc34c94025540c04f70d22" prot="public" virt="virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>setExtrinsicIdxGetter</name></member>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a3c374d81894ccd0dde7c18ce3ba58001" prot="public" virt="non-virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>StorageChangesTrackerImpl</name></member>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a796ad94fa40f1edbe5ce5aefd338c21e" prot="private" virt="non-virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>subscription_engine_</name></member>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a8298b3e42140943daee4d5fdcde45f8a" prot="private" virt="non-virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>SubscriptionEnginePtr</name></member>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1aaa38f8096da40a127653bc877bc01402" prot="private" virt="non-virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>SubscriptionEngineType</name></member>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a448d31597a2223e9bed6fc205ac7b0e8" prot="private" virt="non-virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>trie_factory_</name></member>
+      <member refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker_1a68fe82b3ea6a5dcdf3fac60b560d2e63" prot="public" virt="non-virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>~ChangesTracker</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>~IComponent</name></member>
+      <member refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a856c404ad7742033cb49793236560b96" prot="public" virt="non-virtual"><scope>sgns::storage::changes_trie::StorageChangesTrackerImpl</scope><name>~StorageChangesTrackerImpl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

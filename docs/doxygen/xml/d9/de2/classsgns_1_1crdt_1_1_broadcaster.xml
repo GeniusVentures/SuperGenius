@@ -1,0 +1,221 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/de2/classsgns_1_1crdt_1_1_broadcaster" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::crdt::Broadcaster</compoundname>
+    <derivedcompoundref refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster" prot="public" virt="non-virtual">sgns::crdt::PubSubBroadcaster</derivedcompoundref>
+    <derivedcompoundref refid="da/d80/classsgns_1_1crdt_1_1_pub_sub_broadcaster_ext" prot="public" virt="non-virtual">sgns::crdt::PubSubBroadcasterExt</derivedcompoundref>
+    <includes refid="d9/d25/broadcaster_8hpp" local="no">broadcaster.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1a0e73c18fe76ca35446806bc7e197a3fd" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>ErrorCode</name>
+        <qualifiedname>sgns::crdt::Broadcaster::ErrorCode</qualifiedname>
+        <enumvalue id="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1a0e73c18fe76ca35446806bc7e197a3fda505a83f220c02df2f85c3810cd9ceb38" prot="public">
+          <name>Success</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1a0e73c18fe76ca35446806bc7e197a3fdabe1bd9e8246051fa1e05d9131fb6e385" prot="public">
+          <name>ErrNoMoreBroadcast</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/broadcaster.hpp" line="22" column="9" bodyfile="src/crdt/broadcaster.hpp" bodystart="23" bodyend="26"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1ae15078f3a6e19fe5eeefabfb3c5b7add" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::crdt::Broadcaster::~Broadcaster</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Broadcaster</name>
+        <qualifiedname>sgns::crdt::Broadcaster::~Broadcaster</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/broadcaster.hpp" line="20" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1a199af3de48ad91ab0be05f9671305ef8" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::crdt::Broadcaster::Broadcast</definition>
+        <argsstring>(const base::Buffer &amp;buff, std::string topic, boost::optional&lt; libp2p::peer::PeerInfo &gt; peerInfo=boost::none)=0</argsstring>
+        <name>Broadcast</name>
+        <qualifiedname>sgns::crdt::Broadcaster::Broadcast</qualifiedname>
+        <reimplementedby refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a697fb87d8c26f13c22e56f01b840ec78">Broadcast</reimplementedby>
+        <reimplementedby refid="da/d80/classsgns_1_1crdt_1_1_pub_sub_broadcaster_ext_1a356d53002800063c0c74643a59259d1e">Broadcast</reimplementedby>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>buff</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>topic</declname>
+        </param>
+        <param>
+          <type>boost::optional&lt; libp2p::peer::PeerInfo &gt;</type>
+          <declname>peerInfo</declname>
+          <defval>boost::none</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Send buffer payload to other replicas. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>buff</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> containing the data to broadcast. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>topic</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Topic to broadcast to. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>peerInfo</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional peer info to avoid repeated GetPeerInfo calls. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>outcome::success on success or outcome::failure on error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/broadcaster.hpp" line="35" column="33"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1ace7660f596b3b136cb4c9c81515aa729" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; base::Buffer &gt; sgns::crdt::Broadcaster::Next</definition>
+        <argsstring>()=0</argsstring>
+        <name>Next</name>
+        <qualifiedname>sgns::crdt::Broadcaster::Next</qualifiedname>
+        <reimplementedby refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a754b1380820223d8fdf3d0c7c1b454f5">Next</reimplementedby>
+        <reimplementedby refid="da/d80/classsgns_1_1crdt_1_1_pub_sub_broadcaster_ext_1a07d662bd953a1cefac4227bccf88cb1a">Next</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Obtain the next payload and its topic received from the network. <simplesect kind="return"><para>buffer value or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/broadcaster.hpp" line="41" column="33"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1a5ca229efa21b412f8a20369ef8700ca2" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>bool</type>
+        <definition>virtual bool sgns::crdt::Broadcaster::HasTopic</definition>
+        <argsstring>(const std::string &amp;topic)=0</argsstring>
+        <name>HasTopic</name>
+        <qualifiedname>sgns::crdt::Broadcaster::HasTopic</qualifiedname>
+        <reimplementedby refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a8e99f1ed779f432464caac5dc26cb641">HasTopic</reimplementedby>
+        <reimplementedby refid="da/d80/classsgns_1_1crdt_1_1_pub_sub_broadcaster_ext_1a7f78759984bf9599843cbbe8210df096">HasTopic</reimplementedby>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>topic</declname>
+        </param>
+        <briefdescription>
+<para>Checks whether the broadcaster is subscribed to the specified topic. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>topic</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The topic string to check. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if the broadcaster is subscribed to the topic, false otherwise. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/broadcaster.hpp" line="49" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1a1594dc715fb4151f2af6ee634133621e" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="virtual">
+        <type>std::shared_ptr&lt; void &gt;</type>
+        <definition>virtual std::shared_ptr&lt; void &gt; sgns::crdt::Broadcaster::GetDagSyncer</definition>
+        <argsstring>() const</argsstring>
+        <name>GetDagSyncer</name>
+        <qualifiedname>sgns::crdt::Broadcaster::GetDagSyncer</qualifiedname>
+        <reimplementedby refid="da/d80/classsgns_1_1crdt_1_1_pub_sub_broadcaster_ext_1ad37871917263a65f86e9df470d939f02">GetDagSyncer</reimplementedby>
+        <briefdescription>
+<para>Get the underlying DAG syncer (if available). </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Shared pointer to the DAG syncer, or nullptr if not available. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/broadcaster.hpp" line="55" column="33" bodyfile="src/crdt/broadcaster.hpp" bodystart="55" bodyend="55"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A <ref refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster" kindref="compound">Broadcaster</ref> provides a way to send (notify) an opaque payload to all replicas and to retrieve payloads broadcasted. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::crdt::Broadcaster</label>
+        <link refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster"/>
+      </node>
+      <node id="2">
+        <label>sgns::crdt::PubSubBroadcaster</label>
+        <link refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::crdt::PubSubBroadcasterExt</label>
+        <link refid="da/d80/classsgns_1_1crdt_1_1_pub_sub_broadcaster_ext"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::crdt::Broadcaster</label>
+        <link refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/crdt/broadcaster.hpp" line="17" column="5" bodyfile="src/crdt/broadcaster.hpp" bodystart="18" bodyend="56"/>
+    <listofallmembers>
+      <member refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1a199af3de48ad91ab0be05f9671305ef8" prot="public" virt="pure-virtual"><scope>sgns::crdt::Broadcaster</scope><name>Broadcast</name></member>
+      <member refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1a0e73c18fe76ca35446806bc7e197a3fd" prot="public" virt="non-virtual"><scope>sgns::crdt::Broadcaster</scope><name>ErrorCode</name></member>
+      <member refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1a1594dc715fb4151f2af6ee634133621e" prot="public" virt="virtual"><scope>sgns::crdt::Broadcaster</scope><name>GetDagSyncer</name></member>
+      <member refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1a5ca229efa21b412f8a20369ef8700ca2" prot="public" virt="pure-virtual"><scope>sgns::crdt::Broadcaster</scope><name>HasTopic</name></member>
+      <member refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1ace7660f596b3b136cb4c9c81515aa729" prot="public" virt="pure-virtual"><scope>sgns::crdt::Broadcaster</scope><name>Next</name></member>
+      <member refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1ae15078f3a6e19fe5eeefabfb3c5b7add" prot="public" virt="virtual"><scope>sgns::crdt::Broadcaster</scope><name>~Broadcaster</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

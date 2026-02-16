@@ -1,0 +1,143 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/d47/classsgns_1_1processing_1_1_sub_task_result_storage" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::processing::SubTaskResultStorage</compoundname>
+    <derivedcompoundref refid="d3/df7/classsgns_1_1processing_1_1_sub_task_result_storage_impl" prot="public" virt="non-virtual">sgns::processing::SubTaskResultStorageImpl</derivedcompoundref>
+    <includes refid="d9/de8/processing__subtask__result__storage_8hpp" local="no">processing_subtask_result_storage.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d0/d47/classsgns_1_1processing_1_1_sub_task_result_storage_1af39cd2152e2e98ae56a3089041c13cdc" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::processing::SubTaskResultStorage::~SubTaskResultStorage</definition>
+        <argsstring>()=default</argsstring>
+        <name>~SubTaskResultStorage</name>
+        <qualifiedname>sgns::processing::SubTaskResultStorage::~SubTaskResultStorage</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_result_storage.hpp" line="13" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d47/classsgns_1_1processing_1_1_sub_task_result_storage_1a7c9428f5557ba0e4ec3ebc3d0e116d19" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::processing::SubTaskResultStorage::AddSubTaskResult</definition>
+        <argsstring>(const SGProcessing::SubTaskResult &amp;subTaskResult)=0</argsstring>
+        <name>AddSubTaskResult</name>
+        <qualifiedname>sgns::processing::SubTaskResultStorage::AddSubTaskResult</qualifiedname>
+        <reimplementedby refid="d3/df7/classsgns_1_1processing_1_1_sub_task_result_storage_impl_1a512a4bf5932c1fe09a1e8a78058bf63d">AddSubTaskResult</reimplementedby>
+        <param>
+          <type>const SGProcessing::SubTaskResult &amp;</type>
+          <declname>subTaskResult</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Adds a result to the storage <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>subTaskResult</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- processing result </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_result_storage.hpp" line="18" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d47/classsgns_1_1processing_1_1_sub_task_result_storage_1a1c397ee1305905a323258229b57082f5" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::processing::SubTaskResultStorage::RemoveSubTaskResult</definition>
+        <argsstring>(const std::string &amp;subTaskId)=0</argsstring>
+        <name>RemoveSubTaskResult</name>
+        <qualifiedname>sgns::processing::SubTaskResultStorage::RemoveSubTaskResult</qualifiedname>
+        <reimplementedby refid="d3/df7/classsgns_1_1processing_1_1_sub_task_result_storage_impl_1a1624137a09e495f8622524f2da119bba">RemoveSubTaskResult</reimplementedby>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>subTaskId</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Removes result from the storage <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>subTaskId</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>subtask id that the result was generated for </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_result_storage.hpp" line="23" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d47/classsgns_1_1processing_1_1_sub_task_result_storage_1a22919fccd334b3f29b94c0776b7e0085" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::vector&lt; SGProcessing::SubTaskResult &gt;</type>
+        <definition>virtual std::vector&lt; SGProcessing::SubTaskResult &gt; sgns::processing::SubTaskResultStorage::GetSubTaskResults</definition>
+        <argsstring>(const std::set&lt; std::string &gt; &amp;subTaskIds)=0</argsstring>
+        <name>GetSubTaskResults</name>
+        <qualifiedname>sgns::processing::SubTaskResultStorage::GetSubTaskResults</qualifiedname>
+        <reimplementedby refid="d3/df7/classsgns_1_1processing_1_1_sub_task_result_storage_impl_1add3fa8149221e6b52edbf5097db5a966">GetSubTaskResults</reimplementedby>
+        <param>
+          <type>const std::set&lt; std::string &gt; &amp;</type>
+          <declname>subTaskIds</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Returns results for specified subtask ids <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>subTaskIds</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- list of subtask ids </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>results </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_result_storage.hpp" line="29" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Handles subtask results storage </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::processing::SubTaskResultStorage</label>
+        <link refid="d0/d47/classsgns_1_1processing_1_1_sub_task_result_storage"/>
+      </node>
+      <node id="2">
+        <label>sgns::processing::SubTaskResultStorageImpl</label>
+        <link refid="d3/df7/classsgns_1_1processing_1_1_sub_task_result_storage_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::processing::SubTaskResultStorage</label>
+        <link refid="d0/d47/classsgns_1_1processing_1_1_sub_task_result_storage"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/processing/processing_subtask_result_storage.hpp" line="10" column="5" bodyfile="src/processing/processing_subtask_result_storage.hpp" bodystart="11" bodyend="31"/>
+    <listofallmembers>
+      <member refid="d0/d47/classsgns_1_1processing_1_1_sub_task_result_storage_1a7c9428f5557ba0e4ec3ebc3d0e116d19" prot="public" virt="pure-virtual"><scope>sgns::processing::SubTaskResultStorage</scope><name>AddSubTaskResult</name></member>
+      <member refid="d0/d47/classsgns_1_1processing_1_1_sub_task_result_storage_1a22919fccd334b3f29b94c0776b7e0085" prot="public" virt="pure-virtual"><scope>sgns::processing::SubTaskResultStorage</scope><name>GetSubTaskResults</name></member>
+      <member refid="d0/d47/classsgns_1_1processing_1_1_sub_task_result_storage_1a1c397ee1305905a323258229b57082f5" prot="public" virt="pure-virtual"><scope>sgns::processing::SubTaskResultStorage</scope><name>RemoveSubTaskResult</name></member>
+      <member refid="d0/d47/classsgns_1_1processing_1_1_sub_task_result_storage_1af39cd2152e2e98ae56a3089041c13cdc" prot="public" virt="virtual"><scope>sgns::processing::SubTaskResultStorage</scope><name>~SubTaskResultStorage</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

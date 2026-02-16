@@ -1,0 +1,102 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors" kind="struct" language="C++" prot="private">
+    <compoundname>sgns::GeniusAssigner::TableVectors</compoundname>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors_1ac643b08711af9f8391f76d2f5b055c9c" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; typename AssignmentTableType::field_type::value_type &gt;</type>
+        <definition>std::vector&lt;typename AssignmentTableType::field_type::value_type&gt; sgns::GeniusAssigner::TableVectors::witness_values</definition>
+        <argsstring></argsstring>
+        <name>witness_values</name>
+        <qualifiedname>sgns::GeniusAssigner::TableVectors::witness_values</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="140" column="25" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="140" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors_1ada6f06bfb29cb123de93331ff692c831" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; typename AssignmentTableType::field_type::value_type &gt;</type>
+        <definition>std::vector&lt;typename AssignmentTableType::field_type::value_type&gt; sgns::GeniusAssigner::TableVectors::public_input_values</definition>
+        <argsstring></argsstring>
+        <name>public_input_values</name>
+        <qualifiedname>sgns::GeniusAssigner::TableVectors::public_input_values</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="141" column="25" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="141" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors_1a1b65be98c6ecc0c95c9d9287ab95cdf7" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; typename AssignmentTableType::field_type::value_type &gt;</type>
+        <definition>std::vector&lt;typename AssignmentTableType::field_type::value_type&gt; sgns::GeniusAssigner::TableVectors::constant_values</definition>
+        <argsstring></argsstring>
+        <name>constant_values</name>
+        <qualifiedname>sgns::GeniusAssigner::TableVectors::constant_values</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="142" column="25" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="142" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors_1a1cdf509c6fb99766442241df4dc5bf49" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; typename AssignmentTableType::field_type::value_type &gt;</type>
+        <definition>std::vector&lt;typename AssignmentTableType::field_type::value_type&gt; sgns::GeniusAssigner::TableVectors::selector_values</definition>
+        <argsstring></argsstring>
+        <name>selector_values</name>
+        <qualifiedname>sgns::GeniusAssigner::TableVectors::selector_values</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="143" column="25" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="143" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="4">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::GeniusAssigner::TableVectors</label>
+        <link refid="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+constant_values</edgelabel>
+          <edgelabel>+public_input_values</edgelabel>
+          <edgelabel>+selector_values</edgelabel>
+          <edgelabel>+witness_values</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::vector&lt; typename AssignmentTableType::field_type::value_type &gt;</label>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; typename AssignmentTableType::field_type::value_type &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/proof/GeniusAssigner.hpp" line="138" column="9" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="139" bodyend="144"/>
+    <listofallmembers>
+      <member refid="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors_1a1b65be98c6ecc0c95c9d9287ab95cdf7" prot="public" virt="non-virtual"><scope>sgns::GeniusAssigner::TableVectors</scope><name>constant_values</name></member>
+      <member refid="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors_1ada6f06bfb29cb123de93331ff692c831" prot="public" virt="non-virtual"><scope>sgns::GeniusAssigner::TableVectors</scope><name>public_input_values</name></member>
+      <member refid="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors_1a1cdf509c6fb99766442241df4dc5bf49" prot="public" virt="non-virtual"><scope>sgns::GeniusAssigner::TableVectors</scope><name>selector_values</name></member>
+      <member refid="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors_1ac643b08711af9f8391f76d2f5b055c9c" prot="public" virt="non-virtual"><scope>sgns::GeniusAssigner::TableVectors</scope><name>witness_values</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

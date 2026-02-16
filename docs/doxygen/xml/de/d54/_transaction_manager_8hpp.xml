@@ -1,0 +1,1224 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/d54/_transaction_manager_8hpp" kind="file" language="C++">
+    <compoundname>TransactionManager.hpp</compoundname>
+    <includes refid="d1/dac/_u_t_x_o_manager_8hpp" local="yes">UTXOManager.hpp</includes>
+    <includes local="no">memory</includes>
+    <includes local="no">deque</includes>
+    <includes local="no">cstdint</includes>
+    <includes local="no">unordered_map</includes>
+    <includes local="no">unordered_set</includes>
+    <includes local="no">optional</includes>
+    <includes local="no">boost/format.hpp</includes>
+    <includes refid="d0/d0e/globaldb_8hpp" local="yes">crdt/globaldb/globaldb.hpp</includes>
+    <includes refid="dd/d8f/atomic__transaction_8hpp" local="yes">crdt/atomic_transaction.hpp</includes>
+    <includes local="yes">account/proto/SGTransaction.pb.h</includes>
+    <includes refid="db/d3c/_i_genius_transactions_8hpp" local="yes">account/IGeniusTransactions.hpp</includes>
+    <includes refid="d0/dad/_genius_account_8hpp" local="yes">account/GeniusAccount.hpp</includes>
+    <includes refid="d6/da3/logger_8hpp" local="yes">base/logger.hpp</includes>
+    <includes refid="da/d1d/buffer_8hpp" local="yes">base/buffer.hpp</includes>
+    <includes refid="da/d6b/hasher_8hpp" local="yes">crypto/hasher.hpp</includes>
+    <includes local="yes">proof/proto/SGProof.pb.h</includes>
+    <includes local="yes">processing/proto/SGProcessing.pb.h</includes>
+    <includes refid="d5/dda/outcome_8hpp" local="yes">outcome/outcome.hpp</includes>
+    <includedby refid="d3/d63/_genius_node_8hpp" local="yes">src/account/GeniusNode.hpp</includedby>
+    <includedby refid="dc/dfe/_migration0__2__0_to1__0__0_8cpp" local="yes">src/account/Migration0_2_0To1_0_0.cpp</includedby>
+    <includedby refid="d6/d71/_migration3__4__0_to3__5__0_8cpp" local="yes">src/account/Migration3_4_0To3_5_0.cpp</includedby>
+    <includedby refid="da/d32/_migration3__5__0_to3__5__1_8cpp" local="yes">src/account/Migration3_5_0To3_5_1.cpp</includedby>
+    <includedby refid="db/da7/_migration3__5__1_to3__6__0_8cpp" local="yes">src/account/Migration3_5_1To3_6_0.cpp</includedby>
+    <includedby refid="d0/dcc/_transaction_manager_8cpp" local="yes">src/account/TransactionManager.cpp</includedby>
+    <incdepgraph>
+      <node id="97">
+        <label>GeniusAccount.hpp</label>
+        <link refid="d0/dad/_genius_account_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="44" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="47" relation="include">
+        </childnode>
+        <childnode refid="56" relation="include">
+        </childnode>
+        <childnode refid="52" relation="include">
+        </childnode>
+        <childnode refid="49" relation="include">
+        </childnode>
+        <childnode refid="98" relation="include">
+        </childnode>
+        <childnode refid="82" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+        <childnode refid="74" relation="include">
+        </childnode>
+        <childnode refid="99" relation="include">
+        </childnode>
+        <childnode refid="100" relation="include">
+        </childnode>
+        <childnode refid="101" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="102" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="103" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>GeniusUTXO.hpp</label>
+        <link refid="d6/d74/_genius_u_t_x_o_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="95">
+        <label>account/IGeniusTransactions.hpp</label>
+        <link refid="db/d3c/_i_genius_transactions_8hpp"/>
+        <childnode refid="96" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="93" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="94" relation="include">
+        </childnode>
+        <childnode refid="97" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>account/TokenID.hpp</label>
+        <link refid="df/d5f/_token_i_d_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/account/TransactionManager.hpp</label>
+        <link refid="de/d54/_transaction_manager_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="44" relation="include">
+        </childnode>
+        <childnode refid="92" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="84" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+        <childnode refid="93" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="94" relation="include">
+        </childnode>
+        <childnode refid="95" relation="include">
+        </childnode>
+        <childnode refid="97" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="104" relation="include">
+        </childnode>
+        <childnode refid="105" relation="include">
+        </childnode>
+        <childnode refid="106" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>UTXOManager.hpp</label>
+        <link refid="d1/dac/_u_t_x_o_manager_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="57" relation="include">
+        </childnode>
+        <childnode refid="47" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>UTXOStructs.hpp</label>
+        <link refid="d1/dd1/_u_t_x_o_structs_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="38">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="37">
+        <label>crdt/atomic_transaction.hpp</label>
+        <link refid="dd/d8f/atomic__transaction_8hpp"/>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="44" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+      <node id="75">
+        <label>crdt/broadcaster.hpp</label>
+        <link refid="d9/d25/broadcaster_8hpp"/>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="76" relation="include">
+        </childnode>
+        <childnode refid="77" relation="include">
+        </childnode>
+        <childnode refid="78" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+      </node>
+      <node id="86">
+        <label>crdt/crdt_callback_manager.hpp</label>
+        <link refid="dc/d0f/crdt__callback__manager_8hpp"/>
+        <childnode refid="82" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="84" relation="include">
+        </childnode>
+        <childnode refid="47" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="83">
+        <label>crdt/crdt_data_filter.hpp</label>
+        <link refid="d9/dc5/crdt__data__filter_8hpp"/>
+        <childnode refid="84" relation="include">
+        </childnode>
+        <childnode refid="82" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="44" relation="include">
+        </childnode>
+        <childnode refid="85" relation="include">
+        </childnode>
+        <childnode refid="47" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+      </node>
+      <node id="46">
+        <label>crdt/crdt_datastore.hpp</label>
+        <link refid="d5/d29/crdt__datastore_8hpp"/>
+        <childnode refid="47" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="49" relation="include">
+        </childnode>
+        <childnode refid="50" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="51" relation="include">
+        </childnode>
+        <childnode refid="52" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+        <childnode refid="53" relation="include">
+        </childnode>
+        <childnode refid="54" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="55" relation="include">
+        </childnode>
+        <childnode refid="73" relation="include">
+        </childnode>
+        <childnode refid="75" relation="include">
+        </childnode>
+        <childnode refid="79" relation="include">
+        </childnode>
+        <childnode refid="81" relation="include">
+        </childnode>
+        <childnode refid="83" relation="include">
+        </childnode>
+        <childnode refid="86" relation="include">
+        </childnode>
+        <childnode refid="57" relation="include">
+        </childnode>
+      </node>
+      <node id="73">
+        <label>crdt/crdt_heads.hpp</label>
+        <link refid="dc/d76/crdt__heads_8hpp"/>
+        <childnode refid="47" relation="include">
+        </childnode>
+        <childnode refid="51" relation="include">
+        </childnode>
+        <childnode refid="74" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="57" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+      </node>
+      <node id="81">
+        <label>crdt/crdt_options.hpp</label>
+        <link refid="d0/d2d/crdt__options_8hpp"/>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="82" relation="include">
+        </childnode>
+      </node>
+      <node id="55">
+        <label>crdt/crdt_set.hpp</label>
+        <link refid="d4/d2e/crdt__set_8hpp"/>
+        <childnode refid="56" relation="include">
+        </childnode>
+        <childnode refid="57" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+      </node>
+      <node id="79">
+        <label>crdt/dagsyncer.hpp</label>
+        <link refid="d5/db5/dagsyncer_8hpp"/>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="80" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="74" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>crdt/globaldb/globaldb.hpp</label>
+        <link refid="d0/d0e/globaldb_8hpp"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="46" relation="include">
+        </childnode>
+        <childnode refid="81" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="87" relation="include">
+        </childnode>
+      </node>
+      <node id="87">
+        <label>pubsub_broadcaster_ext.hpp</label>
+        <link refid="d7/db9/pubsub__broadcaster__ext_8hpp"/>
+        <childnode refid="75" relation="include">
+        </childnode>
+        <childnode refid="88" relation="include">
+        </childnode>
+        <childnode refid="46" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="50" relation="include">
+        </childnode>
+        <childnode refid="78" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="84" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+        <childnode refid="56" relation="include">
+        </childnode>
+      </node>
+      <node id="88">
+        <label>crdt/graphsync_dagsyncer.hpp</label>
+        <link refid="d6/dea/graphsync__dagsyncer_8hpp"/>
+        <childnode refid="44" relation="include">
+        </childnode>
+        <childnode refid="49" relation="include">
+        </childnode>
+        <childnode refid="79" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="89" relation="include">
+        </childnode>
+        <childnode refid="90" relation="include">
+        </childnode>
+        <childnode refid="91" relation="include">
+        </childnode>
+      </node>
+      <node id="41">
+        <label>crdt/hierarchical_key.hpp</label>
+        <link refid="d5/dc7/hierarchical__key_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="104">
+        <label>crypto/hasher.hpp</label>
+        <link refid="da/d6b/hasher_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="72" relation="include">
+        </childnode>
+      </node>
+      <node id="102">
+        <label>local_secure_storage/ISecureStorage.hpp</label>
+        <link refid="dd/d1a/_i_secure_storage_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="72" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="72">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="63">
+        <label>storage/buffer_map_types.hpp</label>
+        <link refid="d8/dcc/buffer__map__types_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="64" relation="include">
+        </childnode>
+        <childnode refid="67" relation="include">
+        </childnode>
+      </node>
+      <node id="66">
+        <label>storage/face/batchable.hpp</label>
+        <link refid="de/d87/batchable_8hpp"/>
+        <childnode refid="44" relation="include">
+        </childnode>
+        <childnode refid="67" relation="include">
+        </childnode>
+      </node>
+      <node id="65">
+        <label>storage/face/generic_maps.hpp</label>
+        <link refid="d9/daa/generic__maps_8hpp"/>
+        <childnode refid="66" relation="include">
+        </childnode>
+        <childnode refid="69" relation="include">
+        </childnode>
+        <childnode refid="71" relation="include">
+        </childnode>
+        <childnode refid="68" relation="include">
+        </childnode>
+      </node>
+      <node id="64">
+        <label>storage/face/generic_storage.hpp</label>
+        <link refid="d6/d4e/generic__storage_8hpp"/>
+        <childnode refid="65" relation="include">
+        </childnode>
+        <childnode refid="72" relation="include">
+        </childnode>
+      </node>
+      <node id="69">
+        <label>storage/face/iterable.hpp</label>
+        <link refid="db/d3e/iterable_8hpp"/>
+        <childnode refid="44" relation="include">
+        </childnode>
+        <childnode refid="70" relation="include">
+        </childnode>
+      </node>
+      <node id="70">
+        <label>storage/face/map_cursor.hpp</label>
+        <link refid="d9/d4b/map__cursor_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="71">
+        <label>storage/face/readable.hpp</label>
+        <link refid="d5/dd2/readable_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="67">
+        <label>storage/face/write_batch.hpp</label>
+        <link refid="d2/d76/write__batch_8hpp"/>
+        <childnode refid="68" relation="include">
+        </childnode>
+      </node>
+      <node id="68">
+        <label>storage/face/writeable.hpp</label>
+        <link refid="dc/da4/writeable_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="57">
+        <label>storage/rocksdb/rocksdb.hpp</label>
+        <link refid="d1/d07/rocksdb_8hpp"/>
+        <childnode refid="58" relation="include">
+        </childnode>
+        <childnode refid="59" relation="include">
+        </childnode>
+        <childnode refid="60" relation="include">
+        </childnode>
+        <childnode refid="61" relation="include">
+        </childnode>
+        <childnode refid="62" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="63" relation="include">
+        </childnode>
+      </node>
+      <node id="100">
+        <label>ProofSystem/ElGamalKeyGenerator.hpp</label>
+      </node>
+      <node id="101">
+        <label>ProofSystem/EthereumKeyGenerator.hpp</label>
+      </node>
+      <node id="94">
+        <label>account/proto/SGTransaction.pb.h</label>
+      </node>
+      <node id="21">
+        <label>algorithm</label>
+      </node>
+      <node id="6">
+        <label>array</label>
+      </node>
+      <node id="28">
+        <label>boost/asio/io_context.hpp</label>
+      </node>
+      <node id="53">
+        <label>boost/asio/steady_timer.hpp</label>
+      </node>
+      <node id="39">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="103">
+        <label>boost/filesystem/operations.hpp</label>
+      </node>
+      <node id="29">
+        <label>boost/filesystem/path.hpp</label>
+      </node>
+      <node id="93">
+        <label>boost/format.hpp</label>
+      </node>
+      <node id="7">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="99">
+        <label>boost/multiprecision/cpp_int.hpp</label>
+      </node>
+      <node id="40">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="77">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="49">
+        <label>chrono</label>
+      </node>
+      <node id="52">
+        <label>condition_variable</label>
+      </node>
+      <node id="42">
+        <label>crdt/proto/delta.pb.h</label>
+      </node>
+      <node id="5">
+        <label>cstddef</label>
+      </node>
+      <node id="16">
+        <label>cstdint</label>
+      </node>
+      <node id="17">
+        <label>cstring</label>
+      </node>
+      <node id="92">
+        <label>deque</label>
+      </node>
+      <node id="98">
+        <label>filesystem</label>
+      </node>
+      <node id="82">
+        <label>functional</label>
+      </node>
+      <node id="48">
+        <label>future</label>
+      </node>
+      <node id="11">
+        <label>gsl/span</label>
+      </node>
+      <node id="18">
+        <label>iomanip</label>
+      </node>
+      <node id="14">
+        <label>iostream</label>
+      </node>
+      <node id="30">
+        <label>ipfs_lite/ipfs/graphsync/impl/graphsync_impl.hpp</label>
+      </node>
+      <node id="31">
+        <label>ipfs_lite/ipfs/graphsync/impl/local_requests.hpp</label>
+      </node>
+      <node id="89">
+        <label>ipfs_lite/ipfs/graphsync/impl/merkledag_bridge_impl.hpp</label>
+      </node>
+      <node id="90">
+        <label>ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp</label>
+      </node>
+      <node id="80">
+        <label>ipfs_lite/ipfs/merkledag/merkledag_service.hpp</label>
+      </node>
+      <node id="54">
+        <label>ipfs_lite/ipld/ipld_node.hpp</label>
+      </node>
+      <node id="32">
+        <label>ipfs_pubsub/gossip_pubsub_topic.hpp</label>
+      </node>
+      <node id="91">
+        <label>libp2p/host/host.hpp</label>
+      </node>
+      <node id="13">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="76">
+        <label>libp2p/peer/peer_info.hpp</label>
+      </node>
+      <node id="33">
+        <label>libp2p/protocol/autonat/autonat.hpp</label>
+      </node>
+      <node id="34">
+        <label>libp2p/protocol/holepunch/holepunch_client.hpp</label>
+      </node>
+      <node id="35">
+        <label>libp2p/protocol/holepunch/holepunch_server.hpp</label>
+      </node>
+      <node id="36">
+        <label>libp2p/protocol/identify/identify.hpp</label>
+      </node>
+      <node id="51">
+        <label>map</label>
+      </node>
+      <node id="44">
+        <label>memory</label>
+      </node>
+      <node id="56">
+        <label>mutex</label>
+      </node>
+      <node id="45">
+        <label>optional</label>
+      </node>
+      <node id="43">
+        <label>primitives/cid/cid.hpp</label>
+      </node>
+      <node id="106">
+        <label>processing/proto/SGProcessing.pb.h</label>
+      </node>
+      <node id="105">
+        <label>proof/proto/SGProof.pb.h</label>
+      </node>
+      <node id="50">
+        <label>queue</label>
+      </node>
+      <node id="85">
+        <label>regex</label>
+      </node>
+      <node id="59">
+        <label>rocksdb/db.h</label>
+      </node>
+      <node id="61">
+        <label>rocksdb/options.h</label>
+      </node>
+      <node id="58">
+        <label>rocksdb/rocksdb_namespace.h</label>
+      </node>
+      <node id="60">
+        <label>rocksdb/slice.h</label>
+      </node>
+      <node id="62">
+        <label>rocksdb/write_batch.h</label>
+      </node>
+      <node id="74">
+        <label>set</label>
+      </node>
+      <node id="47">
+        <label>shared_mutex</label>
+      </node>
+      <node id="24">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="25">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="20">
+        <label>sstream</label>
+      </node>
+      <node id="19">
+        <label>string</label>
+      </node>
+      <node id="9">
+        <label>string_view</label>
+      </node>
+      <node id="78">
+        <label>tuple</label>
+      </node>
+      <node id="84">
+        <label>unordered_map</label>
+      </node>
+      <node id="27">
+        <label>unordered_set</label>
+      </node>
+      <node id="96">
+        <label>utility</label>
+      </node>
+      <node id="10">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="3">
+        <label>src/account/GeniusNode.cpp</label>
+        <link refid="df/de0/_genius_node_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/account/GeniusNode.hpp</label>
+        <link refid="d3/d63/_genius_node_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>src/account/Migration0_2_0To1_0_0.cpp</label>
+        <link refid="dc/dfe/_migration0__2__0_to1__0__0_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/account/Migration3_4_0To3_5_0.cpp</label>
+        <link refid="d6/d71/_migration3__4__0_to3__5__0_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/account/Migration3_5_0To3_5_1.cpp</label>
+        <link refid="da/d32/_migration3__5__0_to3__5__1_8cpp"/>
+      </node>
+      <node id="7">
+        <label>src/account/Migration3_5_1To3_6_0.cpp</label>
+        <link refid="db/da7/_migration3__5__1_to3__6__0_8cpp"/>
+      </node>
+      <node id="8">
+        <label>src/account/TransactionManager.cpp</label>
+        <link refid="d0/dcc/_transaction_manager_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/account/TransactionManager.hpp</label>
+        <link refid="de/d54/_transaction_manager_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d2/d58/classsgns_1_1_transaction_manager" prot="public">sgns::TransactionManager</innerclass>
+    <innerclass refid="d1/dc6/structsgns_1_1_transaction_manager_1_1_tracked_tx" prot="private">sgns::TransactionManager::TrackedTx</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="d2/d2b/namespacesgns_1a1d57454b26de7668d4a7d1d83b6badfb" prot="public" static="no">
+        <type>std::pair&lt; std::string, base::Buffer &gt;</type>
+        <definition>using sgns::EscrowDataPair = std::pair&lt;std::string, base::Buffer&gt;</definition>
+        <argsstring></argsstring>
+        <name>EscrowDataPair</name>
+        <qualifiedname>sgns::EscrowDataPair</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TransactionManager.hpp" line="38" column="5" bodyfile="src/account/TransactionManager.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="date"><para>2024-03-13 </para>
+</simplesect>
+<simplesect kind="author"><para>Henrique A. Klein (<ulink url="mailto:hklein@gnus.ai">hklein@gnus.ai</ulink>) </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>_TRANSACTION_MANAGER_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>_TRANSACTION_MANAGER_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d1/dac/_u_t_x_o_manager_8hpp" kindref="compound">UTXOManager.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;memory&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;deque&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstdint&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;unordered_map&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;unordered_set&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;optional&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/format.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d0/d0e/globaldb_8hpp" kindref="compound">crdt/globaldb/globaldb.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dd/d8f/atomic__transaction_8hpp" kindref="compound">crdt/atomic_transaction.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;account/proto/SGTransaction.pb.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="db/d3c/_i_genius_transactions_8hpp" kindref="compound">account/IGeniusTransactions.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d0/dad/_genius_account_8hpp" kindref="compound">account/GeniusAccount.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/da3/logger_8hpp" kindref="compound">base/logger.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="da/d1d/buffer_8hpp" kindref="compound">base/buffer.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="da/d6b/hasher_8hpp" kindref="compound">crypto/hasher.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;proof/proto/SGProof.pb.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;processing/proto/SGProcessing.pb.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/dda/outcome_8hpp" kindref="compound">outcome/outcome.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="36"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">boost::multiprecision;</highlight></codeline>
+<codeline lineno="38" refid="d2/d2b/namespacesgns_1a1d57454b26de7668d4a7d1d83b6badfb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns_1a1d57454b26de7668d4a7d1d83b6badfb" kindref="member">EscrowDataPair</ref><sp/>=<sp/>std::pair&lt;std::string,<sp/>base::Buffer&gt;;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40" refid="d2/d58/classsgns_1_1_transaction_manager" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ad3b0728d872e5d1eda5bb8bffd4a5cb7" kindref="member">TransactionManager</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>std::enable_shared_from_this&lt;TransactionManager&gt;</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="43" refid="d2/d58/classsgns_1_1_transaction_manager_1aa154ade15e5c6be6200ac62eb8cbd041" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::string_view<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1aa154ade15e5c6be6200ac62eb8cbd041" kindref="member">GNUS_FULL_NODES_TOPIC</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;SuperGNUSNode.TestNet.FullNode&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="44" refid="d2/d58/classsgns_1_1_transaction_manager_1a5009bbac202cca06f1c5b2335155f6e3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::string_view<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a5009bbac202cca06f1c5b2335155f6e3" kindref="member">GNUS_FULL_NODES_TOPIC_LEGACY</ref><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;SuperGNUSNode.TestNet.FullNode.963&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="45" refid="d2/d58/classsgns_1_1_transaction_manager_1a4bce899413e008d0a30efdc156cb8f0c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>uint64_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a4bce899413e008d0a30efdc156cb8f0c" kindref="member">NONCE_REQUEST_TIMEOUT_MS</ref><sp/>=</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>10000;<sp/></highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="51" refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">enum<sp/>class</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37e" kindref="member">State</ref></highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="53" refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37ea6aa51a91f98b50db5edf13a471e12f17" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37ea6aa51a91f98b50db5edf13a471e12f17" kindref="member">CREATING</ref><sp/>=<sp/>0,<sp/></highlight></codeline>
+<codeline lineno="54" refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37ea86bf8c89d85949f8f45cde2f73fce113" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37ea86bf8c89d85949f8f45cde2f73fce113" kindref="member">INITIALIZING</ref>,<sp/></highlight></codeline>
+<codeline lineno="55" refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37eaf0be1f77b2d12fe3d6424fbf9eecc109" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37eaf0be1f77b2d12fe3d6424fbf9eecc109" kindref="member">SYNCING</ref>,<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="56" refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37ea2baa69eafc7204f3bd8648eba580c489" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37ea2baa69eafc7204f3bd8648eba580c489" kindref="member">READY</ref>,<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"></highlight></codeline>
+<codeline lineno="59" refid="d2/d58/classsgns_1_1_transaction_manager_1a52f6ee4ef4b440266baed4ec6c7dcad0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a52f6ee4ef4b440266baed4ec6c7dcad0" kindref="member">TransactionPair</ref><sp/><sp/>=<sp/>std::pair&lt;std::shared_ptr&lt;IGeniusTransactions&gt;,<sp/>std::optional&lt;std::vector&lt;uint8_t&gt;&gt;&gt;;</highlight></codeline>
+<codeline lineno="60" refid="d2/d58/classsgns_1_1_transaction_manager_1a94f34935532a14415253b1d063122d13" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a94f34935532a14415253b1d063122d13" kindref="member">TransactionBatch</ref><sp/>=<sp/>std::vector&lt;TransactionPair&gt;;</highlight></codeline>
+<codeline lineno="61" refid="d2/d58/classsgns_1_1_transaction_manager_1ae021b9c1ef26a6b4d22c4dd60c00a939" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae021b9c1ef26a6b4d22c4dd60c00a939" kindref="member">TransactionItem</ref><sp/><sp/>=<sp/>std::pair&lt;TransactionBatch,<sp/>std::optional&lt;std::shared_ptr&lt;crdt::AtomicTransaction&gt;&gt;&gt;;</highlight></codeline>
+<codeline lineno="62" refid="d2/d58/classsgns_1_1_transaction_manager_1a54d68b9760cf8487d946a18d47106602" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a54d68b9760cf8487d946a18d47106602" kindref="member">StateChangeCallback</ref><sp/>=<sp/>std::function&lt;void(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37e" kindref="member">State</ref><sp/>&amp;previous,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37e" kindref="member">State</ref><sp/>&amp;current<sp/>)&gt;;</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"></highlight></codeline>
+<codeline lineno="67" refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">enum<sp/>class</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581f" kindref="member">TransactionStatus</ref><sp/>:<sp/>uint8_t</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="69" refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581fa98690bf632c29c17c9e4c5a64069903c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581fa98690bf632c29c17c9e4c5a64069903c" kindref="member">CREATED</ref>,<sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="70" refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581fac9c9fa46a3628497a4e7f74444ae4568" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581fac9c9fa46a3628497a4e7f74444ae4568" kindref="member">SENDING</ref>,<sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="71" refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581fa1e314c89b115f3a21ca40f76d231bcd0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581fa1e314c89b115f3a21ca40f76d231bcd0" kindref="member">CONFIRMED</ref>,<sp/></highlight></codeline>
+<codeline lineno="72" refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581fa4ea687957de9caaad1e098e3e95aae9e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581fa4ea687957de9caaad1e098e3e95aae9e" kindref="member">VERIFYING</ref>,<sp/></highlight></codeline>
+<codeline lineno="73" refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581fab9e14d9b2886bcff408b85aefa780419" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581fab9e14d9b2886bcff408b85aefa780419" kindref="member">FAILED</ref>,<sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="74" refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581faccc0377a8afbf50e7094f5c23a8af223" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581faccc0377a8afbf50e7094f5c23a8af223" kindref="member">INVALID</ref><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"></highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;TransactionManager&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ac103adf5c5d4b65e9105e25948ac4035" kindref="member">New</ref>(</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;crdt::GlobalDB&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>processing_db,</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;boost::asio::io_context&gt;<sp/>ctx,</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/dac/classsgns_1_1_u_t_x_o_manager" kindref="compound">UTXOManager</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;utxo_manager,</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;GeniusAccount&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>account,</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;crypto::Hasher&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>hasher,</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>full_node<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">,</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::milliseconds<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>timestamp_tolerance<sp/>=<sp/>std::chrono::milliseconds(<sp/>0<sp/>),</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::milliseconds<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>mutability_window<sp/><sp/><sp/>=<sp/>std::chrono::milliseconds(<sp/>0<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"></highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a356e9717d75d3ea620d66e21df28bc70" kindref="member">~TransactionManager</ref>();</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"></highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1af37a65669a15af077a27ed04c9bccca2" kindref="member">Start</ref>();</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1aae3eb7a82ce808c0bea47dac29246855" kindref="member">PrintAccountInfo</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"></highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dc/d64/classsgns_1_1_genius_account" kindref="compound">GeniusAccount</ref><sp/>&amp;<ref refid="d2/d58/classsgns_1_1_transaction_manager_1a064d1a1ab91d1b9eb2ea913d869fb0f8" kindref="member">GetAccount</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"></highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;std::vector&lt;uint8_t&gt;&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a7ee2085f92f7904122fec9dd52d3d073" kindref="member">GetOutTransactions</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;std::vector&lt;uint8_t&gt;&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1aea864e313ebf2129291e2eaa00be47b0" kindref="member">GetInTransactions</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"></highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;std::string&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a983f46cbc54cd9eed850be1fa42f6c33" kindref="member">TransferFunds</ref>(<sp/>uint64_t<sp/>amount,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;destination,<sp/><ref refid="d9/dd1/classsgns_1_1_token_i_d" kindref="compound">TokenID</ref><sp/>token_id<sp/>);</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;std::string&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1aa56d9d9b3080155ba66556e18a74b73d" kindref="member">MintFunds</ref>(<sp/>uint64_t<sp/><sp/><sp/><sp/>amount,</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/>transaction_hash,</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/>chainid,</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/dd1/classsgns_1_1_token_i_d" kindref="compound">TokenID</ref><sp/><sp/><sp/><sp/><sp/>tokenid<sp/>);</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;std::pair&lt;std::string,<sp/>EscrowDataPair&gt;&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1afa489136d7f11005a502637bb6944a21" kindref="member">HoldEscrow</ref>(<sp/>uint64_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>amount,</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;dev_addr,</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>peers_cut,</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;job_id<sp/>);</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;std::string&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1aad1caa5c5623cde2f2a5ad89393465cc" kindref="member">PayEscrow</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;escrow_path,</highlight></codeline>
+<codeline lineno="122"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>SGProcessing::TaskResult<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;task_result,</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;crdt::AtomicTransaction&gt;<sp/>crdt_transaction<sp/>);</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"></highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Wait<sp/>for<sp/>an<sp/>incoming<sp/>transaction<sp/>to<sp/>be<sp/>processed<sp/>with<sp/>a<sp/>timeout</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="126"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581f" kindref="member">TransactionStatus</ref><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a4a09283039d3d3474de7ef79289f86c7" kindref="member">WaitForTransactionIncoming</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;txId,</highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::milliseconds<sp/>timeout<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Wait<sp/>for<sp/>an<sp/>outgoing<sp/>transaction<sp/>to<sp/>be<sp/>processed<sp/>with<sp/>a<sp/>timeout</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581f" kindref="member">TransactionStatus</ref><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae07a68ca944eed1942e4ab1f7ab0e8d2" kindref="member">WaitForTransactionOutgoing</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;txId,</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::milliseconds<sp/>timeout<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581f" kindref="member">TransactionStatus</ref><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a8218f630c764a50a992acd2e09899657" kindref="member">WaitForEscrowRelease</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;originalEscrowId,</highlight></codeline>
+<codeline lineno="132"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::milliseconds<sp/>timeout<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="133"><highlight class="normal"></highlight></codeline>
+<codeline lineno="134"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::string<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a0348f93a698c70b0ee8e365f90fc0ce3" kindref="member">GetTransactionPath</ref>(<sp/>uint16_t<sp/><ref refid="d4/dcb/namespacesgns_1_1base" kindref="compound">base</ref>,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;tx_hash<sp/>);</highlight></codeline>
+<codeline lineno="135"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::string<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a0348f93a698c70b0ee8e365f90fc0ce3" kindref="member">GetTransactionPath</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions" kindref="compound">IGeniusTransactions</ref><sp/>&amp;element<sp/>);</highlight></codeline>
+<codeline lineno="136"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::string<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a0348f93a698c70b0ee8e365f90fc0ce3" kindref="member">GetTransactionPath</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;tx_hash<sp/>);</highlight></codeline>
+<codeline lineno="137"><highlight class="normal"></highlight></codeline>
+<codeline lineno="138"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::string<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a58a1d031a579ec57fc1b93913bec699f" kindref="member">GetTransactionProofPath</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions" kindref="compound">IGeniusTransactions</ref><sp/>&amp;element<sp/>);</highlight></codeline>
+<codeline lineno="139"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>outcome::result&lt;std::shared_ptr&lt;IGeniusTransactions&gt;&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a64ae4bac55ce19a396af8c3b3ebc1dd0" kindref="member">FetchTransaction</ref>(</highlight></codeline>
+<codeline lineno="140"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;crdt::GlobalDB&gt;<sp/>&amp;db,</highlight></codeline>
+<codeline lineno="141"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string_view<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>transaction_key<sp/>);</highlight></codeline>
+<codeline lineno="142"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>outcome::result&lt;std::shared_ptr&lt;IGeniusTransactions&gt;&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a09da7bdef59d0779850dfdb88b7a1aad" kindref="member">DeSerializeTransaction</ref>(</highlight></codeline>
+<codeline lineno="143"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;tx_data<sp/>);</highlight></codeline>
+<codeline lineno="144"><highlight class="normal"></highlight></codeline>
+<codeline lineno="145" refid="d2/d58/classsgns_1_1_transaction_manager_1a16137402d0df51655fe4d3af671349ba" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37e" kindref="member">State</ref><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a16137402d0df51655fe4d3af671349ba" kindref="member">GetState</ref>()</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="146"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="147"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a3bccb665042436e542ac97f5290b4410" kindref="member">state_m</ref>;</highlight></codeline>
+<codeline lineno="148"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="149"><highlight class="normal"></highlight></codeline>
+<codeline lineno="150"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581f" kindref="member">TransactionStatus</ref><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1aa1f0125b70d00f7d08b211b4c0d68630" kindref="member">GetOutgoingStatusByTxId</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;txId<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="151"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581f" kindref="member">TransactionStatus</ref><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1af6af4dadecdb6f7a121f9ffd7c868055" kindref="member">GetIncomingStatusByTxId</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;txId<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="152"><highlight class="normal"></highlight></codeline>
+<codeline lineno="153"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;std::shared_ptr&lt;IGeniusTransactions&gt;&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1acb11ba9257397df12c6ede02bdc46c7d" kindref="member">GetConflictingTransaction</ref>(</highlight></codeline>
+<codeline lineno="154"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions" kindref="compound">IGeniusTransactions</ref><sp/>&amp;element<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="155"><highlight class="normal"></highlight></codeline>
+<codeline lineno="159"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ac95d479364ccc1f0980fa174a7678b74" kindref="member">Stop</ref>();</highlight></codeline>
+<codeline lineno="160"><highlight class="normal"></highlight></codeline>
+<codeline lineno="161"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a03849780785c6a3c06acd4d91971bde2" kindref="member">RegisterStateChangeCallback</ref>(<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a54d68b9760cf8487d946a18d47106602" kindref="member">StateChangeCallback</ref><sp/>callback<sp/>);</highlight></codeline>
+<codeline lineno="162"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a046cbd3eb8e70c419f0eb5639648040f" kindref="member">UnregisterStateChangeCallback</ref>();</highlight></codeline>
+<codeline lineno="163"><highlight class="normal"></highlight></codeline>
+<codeline lineno="164" refid="d2/d58/classsgns_1_1_transaction_manager_1a3a4f96596f6b1fd47ea1898e8e04a9a6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::string<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a3a4f96596f6b1fd47ea1898e8e04a9a6" kindref="member">StateToString</ref>(<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37e" kindref="member">State</ref><sp/>state<sp/>)</highlight></codeline>
+<codeline lineno="165"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="166"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">switch</highlight><highlight class="normal"><sp/>(<sp/>state<sp/>)</highlight></codeline>
+<codeline lineno="167"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="168"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37ea6aa51a91f98b50db5edf13a471e12f17" kindref="member">State::CREATING</ref>:</highlight></codeline>
+<codeline lineno="169"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;CREATING&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="170"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37ea86bf8c89d85949f8f45cde2f73fce113" kindref="member">State::INITIALIZING</ref>:</highlight></codeline>
+<codeline lineno="171"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;INITIALIZING&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="172"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37eaf0be1f77b2d12fe3d6424fbf9eecc109" kindref="member">State::SYNCING</ref>:</highlight></codeline>
+<codeline lineno="173"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;SYNCING&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="174"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37ea2baa69eafc7204f3bd8648eba580c489" kindref="member">State::READY</ref>:</highlight></codeline>
+<codeline lineno="175"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;READY&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="176"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="177"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;UNKNOWN&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="178"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="179"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="180"><highlight class="normal"></highlight></codeline>
+<codeline lineno="181"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::string<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a9bb94c274c833afdde384cb8357cf49c" kindref="member">GetBlockChainBase</ref>(<sp/>uint16_t<sp/>network_id<sp/>);</highlight></codeline>
+<codeline lineno="182"><highlight class="normal"></highlight></codeline>
+<codeline lineno="183"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a3956432163c992ca8e67a636e8ecbad0" kindref="member">QueryTransactions</ref>();</highlight></codeline>
+<codeline lineno="184"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a6050dcf5da7a070791ab0f464eeb58fa" kindref="member">FetchAndProcessTransaction</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;tx_key,</highlight></codeline>
+<codeline lineno="185"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::optional&lt;base::Buffer&gt;<sp/>tx_data<sp/>=<sp/>std::nullopt<sp/>);</highlight></codeline>
+<codeline lineno="186"><highlight class="normal"></highlight></codeline>
+<codeline lineno="187"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">protected</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="188" refid="d2/d58/classsgns_1_1_transaction_manager_1aa5a17f9f5888c7d62a1b49f00c82fe8d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">friend</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d2/d58/classsgns_1_1_transaction_manager_1aa5a17f9f5888c7d62a1b49f00c82fe8d" kindref="member">GeniusNode</ref>;</highlight></codeline>
+<codeline lineno="189"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a31fd2361e22fd21fe2fabf7f2a79d375" kindref="member">EnqueueTransaction</ref>(<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a52f6ee4ef4b440266baed4ec6c7dcad0" kindref="member">TransactionPair</ref><sp/>element<sp/>);</highlight></codeline>
+<codeline lineno="190"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a31fd2361e22fd21fe2fabf7f2a79d375" kindref="member">EnqueueTransaction</ref>(<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae021b9c1ef26a6b4d22c4dd60c00a939" kindref="member">TransactionItem</ref><sp/>element<sp/>);</highlight></codeline>
+<codeline lineno="191"><highlight class="normal"></highlight></codeline>
+<codeline lineno="192"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a6c662444e306816c24bc8f01a1ef2d6f" kindref="member">SetTimeFrameToleranceMs</ref>(<sp/>uint64_t<sp/>timeframe_tolerance<sp/>);</highlight></codeline>
+<codeline lineno="193"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1aae633285fcd98110bf25b036f9f4985d" kindref="member">SetMutabilityWindowMs</ref>(<sp/>uint64_t<sp/>mutability_window<sp/>);</highlight></codeline>
+<codeline lineno="194"><highlight class="normal"></highlight></codeline>
+<codeline lineno="195"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="196" refid="d2/d58/classsgns_1_1_transaction_manager_1a9eceb6945345f58f7279a955fe8b09c3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::string_view<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a9eceb6945345f58f7279a955fe8b09c3" kindref="member">TRANSACTION_BASE_FORMAT</ref><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;/bc-%hu/&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="197"><highlight class="normal"></highlight></codeline>
+<codeline lineno="198"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ad3b0728d872e5d1eda5bb8bffd4a5cb7" kindref="member">TransactionManager</ref>(<sp/>std::shared_ptr&lt;crdt::GlobalDB&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>processing_db,</highlight></codeline>
+<codeline lineno="199"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;boost::asio::io_context&gt;<sp/>ctx,</highlight></codeline>
+<codeline lineno="200"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/dac/classsgns_1_1_u_t_x_o_manager" kindref="compound">UTXOManager</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;utxo_manager,</highlight></codeline>
+<codeline lineno="201"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;GeniusAccount&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>account,</highlight></codeline>
+<codeline lineno="202"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;crypto::Hasher&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>hasher,</highlight></codeline>
+<codeline lineno="203"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>full_node,</highlight></codeline>
+<codeline lineno="204"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::milliseconds<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>timestamp_tolerance,</highlight></codeline>
+<codeline lineno="205"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::milliseconds<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>mutability_window<sp/>);</highlight></codeline>
+<codeline lineno="206"><highlight class="normal"></highlight></codeline>
+<codeline lineno="207"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Parser<sp/>function<sp/>pointer<sp/>alias:<sp/>returns<sp/>a<sp/>set<sp/>of<sp/>topic<sp/>strings<sp/>or<sp/>an<sp/>error</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="208" refid="d2/d58/classsgns_1_1_transaction_manager_1a086b45bb47177d280c45d55700e491ee" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a086b45bb47177d280c45d55700e491ee" kindref="member">TransactionParserFn</ref><sp/>=</highlight></codeline>
+<codeline lineno="209"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/>(<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ad3b0728d872e5d1eda5bb8bffd4a5cb7" kindref="member">TransactionManager</ref>::*<sp/>)(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;IGeniusTransactions&gt;<sp/>&amp;<sp/>);</highlight></codeline>
+<codeline lineno="210"><highlight class="normal"></highlight></codeline>
+<codeline lineno="211"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SGTransaction::DAGStruct<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a022f2fe8fe4cb50e684d562216cc9017" kindref="member">FillDAGStruct</ref>(<sp/>std::string<sp/>transaction_hash<sp/>=<sp/></highlight><highlight class="stringliteral">&quot;&quot;</highlight><highlight class="normal"><sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="212"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;std::unordered_set&lt;uint64_t&gt;&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1aa60f562617468782c43650997614c3f2" kindref="member">SendTransactionItem</ref>(<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae021b9c1ef26a6b4d22c4dd60c00a939" kindref="member">TransactionItem</ref><sp/>&amp;item<sp/>);</highlight></codeline>
+<codeline lineno="213"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a847358ccc8a01bd6c6649ac91d3195a9" kindref="member">ConfirmTransactions</ref>();</highlight></codeline>
+<codeline lineno="214"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a31cb482c00031fc0a9106815a29e74a9" kindref="member">RollbackTransactions</ref>(<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae021b9c1ef26a6b4d22c4dd60c00a939" kindref="member">TransactionItem</ref><sp/>&amp;item_to_rollback<sp/>);</highlight></codeline>
+<codeline lineno="215"><highlight class="normal"></highlight></codeline>
+<codeline lineno="216"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::vector&lt;uint16_t&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a8577187d452274eea5f67fd85fca1d12" kindref="member">GetMonitoredNetworkIDs</ref>();</highlight></codeline>
+<codeline lineno="217"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a9bb94c274c833afdde384cb8357cf49c" kindref="member">GetBlockChainBase</ref>();</highlight></codeline>
+<codeline lineno="218"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>outcome::result&lt;std::shared_ptr&lt;IGeniusTransactions&gt;&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a09da7bdef59d0779850dfdb88b7a1aad" kindref="member">DeSerializeTransaction</ref>(<sp/>std::string<sp/>tx_data<sp/>);</highlight></codeline>
+<codeline lineno="219"><highlight class="normal"></highlight></codeline>
+<codeline lineno="220"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>outcome::result&lt;std::string&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae03df057918691f922a4981e8d4d3a4f" kindref="member">GetExpectedProofKey</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;tx_key,</highlight></codeline>
+<codeline lineno="221"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;IGeniusTransactions&gt;<sp/>&amp;tx<sp/>);</highlight></codeline>
+<codeline lineno="222"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>outcome::result&lt;std::string&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a066ecdbc5312ba6481b65ee36be81b91" kindref="member">GetExpectedTxKey</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;proof_key<sp/>);</highlight></codeline>
+<codeline lineno="223"><highlight class="normal"></highlight></codeline>
+<codeline lineno="224"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;bool&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a68dfc8752ac083fe1afb807693dc11f4" kindref="member">CheckProof</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;IGeniusTransactions&gt;<sp/>&amp;tx<sp/>);</highlight></codeline>
+<codeline lineno="225"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ab9f6ab28cee46ff43525606bd013d528" kindref="member">ParseTransaction</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;IGeniusTransactions&gt;<sp/>&amp;tx<sp/>);</highlight></codeline>
+<codeline lineno="226"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a93a62b127c6731ba7137841404c61f79" kindref="member">RevertTransaction</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;IGeniusTransactions&gt;<sp/>&amp;tx<sp/>);</highlight></codeline>
+<codeline lineno="227"><highlight class="normal"></highlight></codeline>
+<codeline lineno="228"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a606fb5077049ed6cfda90c771793244c" kindref="member">InitNonce</ref>(<sp/>uint64_t<sp/>timeout_ms<sp/>);</highlight></codeline>
+<codeline lineno="229"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a161e748cccf26731f4c44a8828f0e834" kindref="member">SyncNonce</ref>();</highlight></codeline>
+<codeline lineno="230"><highlight class="normal"></highlight></codeline>
+<codeline lineno="234"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae0be63abf8c603c7cd72ff4735c5cd49" kindref="member">RequestRelevantHeads</ref>();</highlight></codeline>
+<codeline lineno="235"><highlight class="normal"></highlight></codeline>
+<codeline lineno="236"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;bool&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1aca57ed9229d6ff6e9bd61de19046d06b" kindref="member">CheckTransactionValidity</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::set&lt;uint64_t&gt;<sp/>&amp;nonces_to_check<sp/>);</highlight></codeline>
+<codeline lineno="237"><highlight class="normal"></highlight></codeline>
+<codeline lineno="238"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a67ae4ee303d30c7dd8c539b52d153aaa" kindref="member">DeleteTransaction</ref>(<sp/>std::string<sp/>tx_key,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::unordered_set&lt;std::string&gt;<sp/>&amp;topics<sp/>);</highlight></codeline>
+<codeline lineno="239"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;IGeniusTransactions&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a43d83e31a5aa61bc73157fa1f9023c18" kindref="member">GetTransactionByHash</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;tx_hash<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="240"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;IGeniusTransactions&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1acb854adb5faba1aa82c4c88c1d1919da" kindref="member">GetTransactionByHashNoLock</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;tx_hash<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="241"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;IGeniusTransactions&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a7b1fd3c6255dffada4d0e3b6b2528a11" kindref="member">GetTransactionByNonceAndAddress</ref>(<sp/>uint64_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>nonce,</highlight></codeline>
+<codeline lineno="242"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;address<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="243"><highlight class="normal"></highlight></codeline>
+<codeline lineno="244"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a1d41f64403a0f58dd19347cca64fa3ca" kindref="member">SetOutgoingStatusByNonce</ref>(<sp/>uint64_t<sp/>nonce,<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581f" kindref="member">TransactionStatus</ref><sp/>s<sp/>);</highlight></codeline>
+<codeline lineno="245"><highlight class="normal"></highlight></codeline>
+<codeline lineno="246" refid="d2/d58/classsgns_1_1_transaction_manager_1a907b13cb3bd90e758064a599bf820171" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;crdt::GlobalDB&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a907b13cb3bd90e758064a599bf820171" kindref="member">globaldb_m</ref>;</highlight></codeline>
+<codeline lineno="247"><highlight class="normal"></highlight></codeline>
+<codeline lineno="248" refid="d2/d58/classsgns_1_1_transaction_manager_1a84288f30c632402e60fa75975e0b4d32" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;boost::asio::io_context&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a84288f30c632402e60fa75975e0b4d32" kindref="member">ctx_m</ref>;</highlight></codeline>
+<codeline lineno="249" refid="d2/d58/classsgns_1_1_transaction_manager_1a90a00f365923ac08151efbc7a66324e1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;GeniusAccount&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a90a00f365923ac08151efbc7a66324e1" kindref="member">account_m</ref>;</highlight></codeline>
+<codeline lineno="250" refid="d2/d58/classsgns_1_1_transaction_manager_1a86a5c1b08177c865b213f893e2e28509" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/dac/classsgns_1_1_u_t_x_o_manager" kindref="compound">UTXOManager</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;<ref refid="d2/d58/classsgns_1_1_transaction_manager_1a86a5c1b08177c865b213f893e2e28509" kindref="member">utxo_manager_</ref>;</highlight></codeline>
+<codeline lineno="251" refid="d2/d58/classsgns_1_1_transaction_manager_1a1b8055721bae3e9461975cca8eeb815e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;crypto::Hasher&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a1b8055721bae3e9461975cca8eeb815e" kindref="member">hasher_m</ref>;</highlight></codeline>
+<codeline lineno="252" refid="d2/d58/classsgns_1_1_transaction_manager_1a173f73882058236ea17d08f86d285db8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a173f73882058236ea17d08f86d285db8" kindref="member">full_node_m</ref>;</highlight></codeline>
+<codeline lineno="253" refid="d2/d58/classsgns_1_1_transaction_manager_1ac46a13a4aa18ed91fb3759d1480b059d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ac46a13a4aa18ed91fb3759d1480b059d" kindref="member">full_node_topic_m</ref>;<sp/></highlight></codeline>
+<codeline lineno="254"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a2eb4192556e33182cda4f9970be5c9d9" kindref="member">TickOnce</ref>();</highlight></codeline>
+<codeline lineno="255" refid="d2/d58/classsgns_1_1_transaction_manager_1a3bccb665042436e542ac97f5290b4410" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37e" kindref="member">State</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a3bccb665042436e542ac97f5290b4410" kindref="member">state_m</ref>;</highlight></codeline>
+<codeline lineno="256" refid="d2/d58/classsgns_1_1_transaction_manager_1a221d63165e889d597988d85ba40f5c9e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::mutex<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a221d63165e889d597988d85ba40f5c9e" kindref="member">state_change_callback_mutex_</ref>;</highlight></codeline>
+<codeline lineno="257" refid="d2/d58/classsgns_1_1_transaction_manager_1af81911705a3f86da7e7c1b5af0529941" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a54d68b9760cf8487d946a18d47106602" kindref="member">StateChangeCallback</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1af81911705a3f86da7e7c1b5af0529941" kindref="member">state_change_callback_</ref>;</highlight></codeline>
+<codeline lineno="258"><highlight class="normal"></highlight></codeline>
+<codeline lineno="259"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Head<sp/>request<sp/>rate<sp/>limiting<sp/>(for<sp/>reactive<sp/>requests<sp/>due<sp/>to<sp/>nonce<sp/>gaps)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="260" refid="d2/d58/classsgns_1_1_transaction_manager_1adba1ed72dda4abded5bd22b05a1d6ae2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::optional&lt;std::chrono::steady_clock::time_point&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1adba1ed72dda4abded5bd22b05a1d6ae2" kindref="member">last_head_request_time_</ref>;</highlight></codeline>
+<codeline lineno="261"><highlight class="normal"></highlight></codeline>
+<codeline lineno="262"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Periodic<sp/>sync<sp/>-<sp/>request<sp/>heads<sp/>every<sp/>10<sp/>minutes<sp/>to<sp/>stay<sp/>in<sp/>sync<sp/>across<sp/>devices/instances</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="263" refid="d2/d58/classsgns_1_1_transaction_manager_1a4bfbab7876c82794f07f1365d641aabd" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::steady_clock::time_point<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a4bfbab7876c82794f07f1365d641aabd" kindref="member">last_periodic_sync_time_</ref>;</highlight></codeline>
+<codeline lineno="264" refid="d2/d58/classsgns_1_1_transaction_manager_1aa772a844f9d53423f7d512cec6504e14" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::atomic&lt;bool&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1aa772a844f9d53423f7d512cec6504e14" kindref="member">received_first_periodic_sync_response_</ref>{</highlight></codeline>
+<codeline lineno="265"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal"><sp/>};<sp/></highlight><highlight class="comment">//<sp/>Track<sp/>if<sp/>we&apos;ve<sp/>gotten<sp/>at<sp/>least<sp/>one<sp/>response</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="266"><highlight class="normal"></highlight></codeline>
+<codeline lineno="267" refid="d2/d58/classsgns_1_1_transaction_manager_1ac409800636e2a0c11373c27f49925ae2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::chrono::minutes<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ac409800636e2a0c11373c27f49925ae2" kindref="member">PERIODIC_SYNC_INTERVAL</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>std::chrono::minutes(<sp/>10<sp/>);</highlight></codeline>
+<codeline lineno="268" refid="d2/d58/classsgns_1_1_transaction_manager_1a2422451c21c25dd8c45653dee8c92a37" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::chrono::seconds<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a2422451c21c25dd8c45653dee8c92a37" kindref="member">INITIAL_PERIODIC_SYNC_INTERVAL</ref><sp/>=<sp/>std::chrono::seconds(<sp/>30<sp/>);</highlight></codeline>
+<codeline lineno="269"><highlight class="normal"></highlight></codeline>
+<codeline lineno="270"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>for<sp/>the<sp/>SendTransactionItem<sp/>thread<sp/>support</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="271" refid="d2/d58/classsgns_1_1_transaction_manager_1ac22803791fc5630ae04a6e4e4dfbd3e5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">mutable</highlight><highlight class="normal"><sp/>std::mutex<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ac22803791fc5630ae04a6e4e4dfbd3e5" kindref="member">mutex_m</ref>;</highlight></codeline>
+<codeline lineno="272" refid="d2/d58/classsgns_1_1_transaction_manager_1aadb0c6c669af98ef0dccd60e436ef64c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::deque&lt;TransactionItem&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1aadb0c6c669af98ef0dccd60e436ef64c" kindref="member">tx_queue_m</ref>;</highlight></codeline>
+<codeline lineno="273"><highlight class="normal"></highlight></codeline>
+<codeline lineno="274" refid="d1/dc6/structsgns_1_1_transaction_manager_1_1_tracked_tx" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="d1/dc6/structsgns_1_1_transaction_manager_1_1_tracked_tx" kindref="compound">TrackedTx</ref></highlight></codeline>
+<codeline lineno="275"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="276" refid="d1/dc6/structsgns_1_1_transaction_manager_1_1_tracked_tx_1ac39d2196f8d25ebf56075a73b41669ad" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;IGeniusTransactions&gt;<sp/><ref refid="d1/dc6/structsgns_1_1_transaction_manager_1_1_tracked_tx_1ac39d2196f8d25ebf56075a73b41669ad" kindref="member">tx</ref>;</highlight></codeline>
+<codeline lineno="277" refid="d1/dc6/structsgns_1_1_transaction_manager_1_1_tracked_tx_1ab05d7a6bb3fb4a56a7bcd7050c745425" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a2c0a2a8d110daaf042d1b42e91c0581f" kindref="member">TransactionStatus</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/dc6/structsgns_1_1_transaction_manager_1_1_tracked_tx_1ab05d7a6bb3fb4a56a7bcd7050c745425" kindref="member">status</ref>;</highlight></codeline>
+<codeline lineno="278" refid="d1/dc6/structsgns_1_1_transaction_manager_1_1_tracked_tx_1aca1c36ddffe3c150a6238efe6cf20e18" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/dc6/structsgns_1_1_transaction_manager_1_1_tracked_tx_1aca1c36ddffe3c150a6238efe6cf20e18" kindref="member">cached_nonce</ref>;<sp/></highlight><highlight class="comment">//<sp/>Cache<sp/>nonce<sp/>to<sp/>avoid<sp/>dereferencing<sp/>tx</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="279"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="280"><highlight class="normal"></highlight></codeline>
+<codeline lineno="281" refid="d2/d58/classsgns_1_1_transaction_manager_1a217681432d941a80d9bd86c9203e25fe" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">mutable</highlight><highlight class="normal"><sp/>std::shared_mutex<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a217681432d941a80d9bd86c9203e25fe" kindref="member">tx_mutex_m</ref>;</highlight></codeline>
+<codeline lineno="282" refid="d2/d58/classsgns_1_1_transaction_manager_1a6ad7858f66a09b6dfeabc375c404888b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::unordered_map&lt;std::string,<sp/>TrackedTx&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a6ad7858f66a09b6dfeabc375c404888b" kindref="member">tx_processed_m</ref>;</highlight></codeline>
+<codeline lineno="283" refid="d2/d58/classsgns_1_1_transaction_manager_1aad1683296ea5355ad2647c24dd370057" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::atomic&lt;size_t&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1aad1683296ea5355ad2647c24dd370057" kindref="member">verifying_count_</ref>{<sp/>0<sp/>};<sp/></highlight><highlight class="comment">//<sp/>Count<sp/>of<sp/>VERIFYING<sp/>transactions</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="284" refid="d2/d58/classsgns_1_1_transaction_manager_1a3d02574868da50ceef3980f61ac1fd56" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;void()&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a3d02574868da50ceef3980f61ac1fd56" kindref="member">task_m</ref>;</highlight></codeline>
+<codeline lineno="285" refid="d2/d58/classsgns_1_1_transaction_manager_1add4d7ff8b9c3b24a875a09e690a03fa6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::atomic&lt;bool&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1add4d7ff8b9c3b24a875a09e690a03fa6" kindref="member">stopped_</ref>{<sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal"><sp/>};</highlight></codeline>
+<codeline lineno="286" refid="d2/d58/classsgns_1_1_transaction_manager_1a6855941652517c51376fec5cc0a346e5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::milliseconds<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a6855941652517c51376fec5cc0a346e5" kindref="member">timestamp_tolerance_m</ref>;</highlight></codeline>
+<codeline lineno="287" refid="d2/d58/classsgns_1_1_transaction_manager_1a51aca7d706dcce5a39c0a785b30353b9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::milliseconds<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a51aca7d706dcce5a39c0a785b30353b9" kindref="member">mutability_window_m</ref>;</highlight></codeline>
+<codeline lineno="288"><highlight class="normal"></highlight></codeline>
+<codeline lineno="289" refid="d2/d58/classsgns_1_1_transaction_manager_1ab4e0be54f7435398eb07f61aad9e7237" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::chrono::milliseconds<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ab4e0be54f7435398eb07f61aad9e7237" kindref="member">TIMESTAMP_TOLERANCE</ref><sp/>=<sp/>std::chrono::seconds(<sp/>10<sp/>);</highlight></codeline>
+<codeline lineno="290" refid="d2/d58/classsgns_1_1_transaction_manager_1a4102e982efb611ed3be78e13504ba169" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::chrono::milliseconds<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a4102e982efb611ed3be78e13504ba169" kindref="member">MUTABILITY_WINDOW</ref><sp/><sp/><sp/>=<sp/>std::chrono::minutes(<sp/>15<sp/>);</highlight></codeline>
+<codeline lineno="291"><highlight class="normal"></highlight></codeline>
+<codeline lineno="292" refid="d2/d58/classsgns_1_1_transaction_manager_1a83c19829388c21479356d4ceeda76e0a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::mutex<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a83c19829388c21479356d4ceeda76e0a" kindref="member">cv_mutex_</ref>;</highlight></codeline>
+<codeline lineno="293" refid="d2/d58/classsgns_1_1_transaction_manager_1a4139eaf0c42f905d05688691a6b83d05" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::condition_variable<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a4139eaf0c42f905d05688691a6b83d05" kindref="member">cv_</ref>;</highlight></codeline>
+<codeline lineno="294" refid="d2/d58/classsgns_1_1_transaction_manager_1ab893e6c991b003445b359feb39008a3c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::queue&lt;crdt::CRDTCallbackManager::NewDataPair&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ab893e6c991b003445b359feb39008a3c" kindref="member">new_data_queue_</ref>;</highlight></codeline>
+<codeline lineno="295" refid="d2/d58/classsgns_1_1_transaction_manager_1aedcc290867fbffbe3ce12e0534dbcd6d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::queue&lt;std::string&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1aedcc290867fbffbe3ce12e0534dbcd6d" kindref="member">deleted_data_queue_</ref>;</highlight></codeline>
+<codeline lineno="296" refid="d2/d58/classsgns_1_1_transaction_manager_1aa71dbfb8b290a685ae625c55faf16588" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::mutex<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1aa71dbfb8b290a685ae625c55faf16588" kindref="member">new_data_queue_mutex_</ref>;<sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Separate<sp/>mutex<sp/>for<sp/>the<sp/>queue</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="297" refid="d2/d58/classsgns_1_1_transaction_manager_1ac3ad27c794be47311b053bf0f7cd0512" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::mutex<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ac3ad27c794be47311b053bf0f7cd0512" kindref="member">deleted_data_queue_mutex_</ref>;<sp/></highlight><highlight class="comment">//<sp/>Separate<sp/>mutex<sp/>for<sp/>the<sp/>queue</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="298"><highlight class="normal"></highlight></codeline>
+<codeline lineno="299" refid="d2/d58/classsgns_1_1_transaction_manager_1aafcc3fe31675946f9e4f6d65ead1e632" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::steady_clock::time_point<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1aafcc3fe31675946f9e4f6d65ead1e632" kindref="member">last_loop_time_</ref>;</highlight></codeline>
+<codeline lineno="300"><highlight class="normal"></highlight></codeline>
+<codeline lineno="301"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a76ccf89d468d10556035e89875bd7a88" kindref="member">ParseTransferTransaction</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;IGeniusTransactions&gt;<sp/>&amp;tx<sp/>);</highlight></codeline>
+<codeline lineno="302"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a977fbb326474b7f61200142db803090b" kindref="member">ParseMintTransaction</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;IGeniusTransactions&gt;<sp/>&amp;tx<sp/>);</highlight></codeline>
+<codeline lineno="303"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a110fdcf38771e01d42bff51ac1315a4f" kindref="member">ParseEscrowTransaction</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;IGeniusTransactions&gt;<sp/>&amp;tx<sp/>);</highlight></codeline>
+<codeline lineno="304"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae31bf587cf55879ccb079a93a2803467" kindref="member">ParseEscrowReleaseTransaction</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;IGeniusTransactions&gt;<sp/>&amp;tx<sp/>);</highlight></codeline>
+<codeline lineno="305"><highlight class="normal"></highlight></codeline>
+<codeline lineno="306"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a47fe210dbfb5d42fe79ebf8a64d9129c" kindref="member">RevertTransferTransaction</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;IGeniusTransactions&gt;<sp/>&amp;tx<sp/>);</highlight></codeline>
+<codeline lineno="307"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a9aaa4711f01440d08e4c55092c87b9d7" kindref="member">RevertMintTransaction</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;IGeniusTransactions&gt;<sp/>&amp;tx<sp/>);</highlight></codeline>
+<codeline lineno="308"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a61cc94d3776814e514e8897fc4911a20" kindref="member">RevertEscrowTransaction</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;IGeniusTransactions&gt;<sp/>&amp;tx<sp/>);</highlight></codeline>
+<codeline lineno="309"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1af9213f3a11439d9aff536ad27160fc2e" kindref="member">RevertEscrowReleaseTransaction</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;IGeniusTransactions&gt;<sp/>&amp;tx<sp/>);</highlight></codeline>
+<codeline lineno="310"><highlight class="normal"></highlight></codeline>
+<codeline lineno="311"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::unordered_map&lt;std::string,<sp/>std::pair&lt;TransactionParserFn,<sp/>TransactionParserFn&gt;&gt;</highlight></codeline>
+<codeline lineno="312" refid="d2/d58/classsgns_1_1_transaction_manager_1a7342666b69c2e5b10bc0ac59fe3067c0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a7342666b69c2e5b10bc0ac59fe3067c0" kindref="member">transaction_parsers</ref><sp/>=<sp/>{</highlight></codeline>
+<codeline lineno="313"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{<sp/></highlight><highlight class="stringliteral">&quot;transfer&quot;</highlight><highlight class="normal">,</highlight></codeline>
+<codeline lineno="314"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{<sp/>&amp;<ref refid="d2/d58/classsgns_1_1_transaction_manager_1a76ccf89d468d10556035e89875bd7a88" kindref="member">TransactionManager::ParseTransferTransaction</ref>,<sp/>&amp;<ref refid="d2/d58/classsgns_1_1_transaction_manager_1a47fe210dbfb5d42fe79ebf8a64d9129c" kindref="member">TransactionManager::RevertTransferTransaction</ref><sp/>}<sp/>},</highlight></codeline>
+<codeline lineno="315"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{<sp/></highlight><highlight class="stringliteral">&quot;mint&quot;</highlight><highlight class="normal">,<sp/>{<sp/>&amp;<ref refid="d2/d58/classsgns_1_1_transaction_manager_1a977fbb326474b7f61200142db803090b" kindref="member">TransactionManager::ParseMintTransaction</ref>,<sp/>&amp;<ref refid="d2/d58/classsgns_1_1_transaction_manager_1a9aaa4711f01440d08e4c55092c87b9d7" kindref="member">TransactionManager::RevertMintTransaction</ref><sp/>}<sp/>},</highlight></codeline>
+<codeline lineno="316"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{<sp/></highlight><highlight class="stringliteral">&quot;escrow-hold&quot;</highlight><highlight class="normal">,</highlight></codeline>
+<codeline lineno="317"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{<sp/>&amp;<ref refid="d2/d58/classsgns_1_1_transaction_manager_1a110fdcf38771e01d42bff51ac1315a4f" kindref="member">TransactionManager::ParseEscrowTransaction</ref>,<sp/>&amp;<ref refid="d2/d58/classsgns_1_1_transaction_manager_1a61cc94d3776814e514e8897fc4911a20" kindref="member">TransactionManager::RevertEscrowTransaction</ref><sp/>}<sp/>},</highlight></codeline>
+<codeline lineno="318"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{<sp/></highlight><highlight class="stringliteral">&quot;escrow-release&quot;</highlight><highlight class="normal">,</highlight></codeline>
+<codeline lineno="319"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{<sp/>&amp;<ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae31bf587cf55879ccb079a93a2803467" kindref="member">TransactionManager::ParseEscrowReleaseTransaction</ref>,</highlight></codeline>
+<codeline lineno="320"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;<ref refid="d2/d58/classsgns_1_1_transaction_manager_1af9213f3a11439d9aff536ad27160fc2e" kindref="member">TransactionManager::RevertEscrowReleaseTransaction</ref><sp/>}<sp/>}<sp/>};</highlight></codeline>
+<codeline lineno="321"><highlight class="normal"></highlight></codeline>
+<codeline lineno="322" refid="d2/d58/classsgns_1_1_transaction_manager_1ad6c3b99e9baeb2a46ec2bb2358716df8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ad6c3b99e9baeb2a46ec2bb2358716df8" kindref="member">m_logger</ref><sp/>=<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>(<sp/></highlight><highlight class="stringliteral">&quot;TransactionManager&quot;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="323"><highlight class="normal"></highlight></codeline>
+<codeline lineno="324"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::optional&lt;std::vector&lt;crdt::pb::Element&gt;&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a8549e4128d2d1de1a0faaccfa81debe5" kindref="member">FilterTransaction</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>crdt::pb::Element<sp/>&amp;element<sp/>);</highlight></codeline>
+<codeline lineno="325"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::optional&lt;std::vector&lt;crdt::pb::Element&gt;&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a1638a2ff3352c68c35bf9d5dd8f80a99" kindref="member">FilterProof</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>crdt::pb::Element<sp/>&amp;element<sp/>);</highlight></codeline>
+<codeline lineno="326"><highlight class="normal"></highlight></codeline>
+<codeline lineno="327"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a38932501da078cccc362df080a9a5b86" kindref="member">ShouldReplaceTransaction</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions" kindref="compound">IGeniusTransactions</ref><sp/>&amp;existing_tx,</highlight></codeline>
+<codeline lineno="328"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions" kindref="compound">IGeniusTransactions</ref><sp/>&amp;new_tx<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="329"><highlight class="normal"></highlight></codeline>
+<codeline lineno="330"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>uint64_t<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ad04766a8145eed270236f97def98ece3" kindref="member">GetCurrentTimestamp</ref>();</highlight></codeline>
+<codeline lineno="331"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>int64_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a20f2a6420686e63ca2fdd7e9a1dc8aaa" kindref="member">GetElapsedTime</ref>(<sp/>uint64_t<sp/>timestamp,<sp/>uint64_t<sp/>current_timestamp<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="332"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>int64_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a20f2a6420686e63ca2fdd7e9a1dc8aaa" kindref="member">GetElapsedTime</ref>(<sp/>uint64_t<sp/>timestamp<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="333"><highlight class="normal"></highlight></codeline>
+<codeline lineno="334"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1abe64b9da6d6f026ec421d5e22fd26f0e" kindref="member">IsTransactionImmutable</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions" kindref="compound">IGeniusTransactions</ref><sp/>&amp;tx<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="335"><highlight class="normal"></highlight></codeline>
+<codeline lineno="336"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a253ed4e1368123142fd9c5b8b8c557db" kindref="member">RemoveTransactionFromProcessedMaps</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;transaction_key,</highlight></codeline>
+<codeline lineno="337"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>delete_from_crdt<sp/>=<sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="338"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1aae61f05aaa78cc4da8bb3670a8ebe37e" kindref="member">AddTransactionToProcessedMaps</ref>(<sp/><ref refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a6d7c2728bb59cdef78288ab0989fbcda" kindref="member">crdt::CRDTCallbackManager::NewDataPair</ref><sp/>new_data<sp/>);</highlight></codeline>
+<codeline lineno="339"><highlight class="normal"></highlight></codeline>
+<codeline lineno="340"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ab8731f78c41dac2f68b410bba66849ea" kindref="member">ProcessDeletion</ref>(<sp/>std::string<sp/>deleted_key<sp/>);</highlight></codeline>
+<codeline lineno="341"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1afa9dbf74bcb11100ed39d4d7358c418d" kindref="member">ProcessNewData</ref>(<sp/><ref refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a6d7c2728bb59cdef78288ab0989fbcda" kindref="member">crdt::CRDTCallbackManager::NewDataPair</ref><sp/>new_data<sp/>);</highlight></codeline>
+<codeline lineno="342"><highlight class="normal"></highlight></codeline>
+<codeline lineno="343"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a42d3c710542b8d7c0939e446ceee4c8c" kindref="member">NewElementCallback</ref>(<sp/><ref refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a6d7c2728bb59cdef78288ab0989fbcda" kindref="member">crdt::CRDTCallbackManager::NewDataPair</ref><sp/>new_data<sp/>);</highlight></codeline>
+<codeline lineno="344"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a8c3264757f37b963c9572a1b1e52307e" kindref="member">DeleteElementCallback</ref>(<sp/>std::string<sp/>deleted_key<sp/>);</highlight></codeline>
+<codeline lineno="345"><highlight class="normal"></highlight></codeline>
+<codeline lineno="346"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1a21e0b26dadcbf9915488850eaa90636b" kindref="member">ChangeState</ref>(<sp/><ref refid="d2/d58/classsgns_1_1_transaction_manager_1ae1c7b5d9998c6e25fd2b0bdb318ed37e" kindref="member">State</ref><sp/>new_state<sp/>);</highlight></codeline>
+<codeline lineno="347"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="348"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="349"><highlight class="normal"></highlight></codeline>
+<codeline lineno="350"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/account/TransactionManager.hpp"/>
+  </compounddef>
+</doxygen>

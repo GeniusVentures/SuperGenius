@@ -1,0 +1,58 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519" kind="namespace" language="C++">
+    <compoundname>sgns::crypto::constants::ed25519</compoundname>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280" prot="public" static="no" strong="no">
+        <type></type>
+        <name>@154056363010335072042254224046100316353036003164</name>
+        <qualifiedname>sgns::crypto::constants::ed25519::@154056363010335072042254224046100316353036003164</qualifiedname>
+        <enumvalue id="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280ae6872b1afeb949f2bbfa3d970e428637" prot="public">
+          <name>PRIVKEY_SIZE</name>
+          <initializer>= ed25519_privkey_SIZE</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280a896cc6da5f6479dc9ae56ac71d2af285" prot="public">
+          <name>PUBKEY_SIZE</name>
+          <initializer>= ed25519_pubkey_SIZE</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280a2e58e4cfcd730e315e0145db7ea3a195" prot="public">
+          <name>SIGNATURE_SIZE</name>
+          <initializer>= ed25519_signature_SIZE</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280a01600721e692bc0cbd6e4aea46e1158e" prot="public">
+          <name>SEED_SIZE</name>
+          <initializer>= PRIVKEY_SIZE</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Important constants to deal with <ref refid="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519" kindref="compound">ed25519</ref> </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/ed25519_types.hpp" line="13" column="5" bodyfile="src/crypto/ed25519_types.hpp" bodystart="13" bodyend="18"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/ed25519_types.hpp" line="9" column="3"/>
+  </compounddef>
+</doxygen>

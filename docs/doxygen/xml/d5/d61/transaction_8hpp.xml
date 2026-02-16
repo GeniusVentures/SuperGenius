@@ -1,0 +1,262 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/d61/transaction_8hpp" kind="file" language="C++">
+    <compoundname>transaction.hpp</compoundname>
+    <includes refid="d4/d16/blob_8hpp" local="yes">base/blob.hpp</includes>
+    <includes refid="db/dd3/extrinsic_8hpp" local="yes">primitives/extrinsic.hpp</includes>
+    <includedby refid="d0/d4b/transaction__validity_8hpp" local="yes">src/primitives/transaction_validity.hpp</includedby>
+    <incdepgraph>
+      <node id="2">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>primitives/extrinsic.hpp</label>
+        <link refid="db/dd3/extrinsic_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/primitives/transaction.hpp</label>
+        <link refid="d5/d61/transaction_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>array</label>
+      </node>
+      <node id="15">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="5">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="16">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="3">
+        <label>cstddef</label>
+      </node>
+      <node id="9">
+        <label>gsl/span</label>
+      </node>
+      <node id="12">
+        <label>iostream</label>
+      </node>
+      <node id="11">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="7">
+        <label>string_view</label>
+      </node>
+      <node id="8">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="1">
+        <label>src/primitives/transaction.hpp</label>
+        <link refid="d5/d61/transaction_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>src/primitives/transaction_validity.cpp</label>
+        <link refid="d6/dd7/transaction__validity_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/primitives/transaction_validity.hpp</label>
+        <link refid="d0/d4b/transaction__validity_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.cpp</label>
+        <link refid="de/d5e/core__factory__impl_8cpp"/>
+      </node>
+      <node id="9">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.hpp</label>
+        <link refid="d7/de4/core__factory__impl_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>src/runtime/binaryen/runtime_api/core_impl.cpp</label>
+        <link refid="dc/d7c/core__impl_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/runtime/binaryen/runtime_api/core_impl.hpp</label>
+        <link refid="d7/dbc/core__impl_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.cpp</label>
+        <link refid="db/d63/tagged__transaction__queue__impl_8cpp"/>
+      </node>
+      <node id="11">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.hpp</label>
+        <link refid="d4/d66/tagged__transaction__queue__impl_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>src/runtime/core.hpp</label>
+        <link refid="da/d47/core_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>src/runtime/core_factory.hpp</label>
+        <link refid="da/d13/core__factory_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>src/runtime/tagged_transaction_queue.hpp</label>
+        <link refid="d9/dcb/tagged__transaction__queue_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d6/d60/structsgns_1_1primitives_1_1_transaction" prot="public">sgns::primitives::Transaction</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="dd/dc5/namespacesgns_1_1primitives">sgns::primitives</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1af1b123c2418820ff203128a251c255ee" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::primitives::operator==</definition>
+        <argsstring>(const Transaction &amp;v1, const Transaction &amp;v2)</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::primitives::operator==</qualifiedname>
+        <param>
+          <type>const Transaction &amp;</type>
+          <declname>v1</declname>
+        </param>
+        <param>
+          <type>const Transaction &amp;</type>
+          <declname>v2</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/transaction.hpp" line="60" column="15" bodyfile="src/primitives/transaction.hpp" bodystart="60" bodyend="65"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_TRANSACTION_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_TRANSACTION_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d4/d16/blob_8hpp" kindref="compound">base/blob.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="db/dd3/extrinsic_8hpp" kindref="compound">primitives/extrinsic.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="dd/dc5/namespacesgns_1_1primitives" kindref="compound">sgns::primitives</ref><sp/>{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11" refid="d6/d60/structsgns_1_1primitives_1_1_transaction" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction" kindref="compound">Transaction</ref><sp/>{</highlight></codeline>
+<codeline lineno="13" refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a7ba3cf16ba2a4da995bf3010c2acd07e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a7ba3cf16ba2a4da995bf3010c2acd07e" kindref="member">Hash</ref><sp/>=<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref>;</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16" refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a54e96843477ce579ab65cb653e19cc9c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a54e96843477ce579ab65cb653e19cc9c" kindref="member">Priority</ref><sp/>=<sp/>uint64_t;</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22" refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a40bf45f7bcb79bffcbecdca3b935a747" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a40bf45f7bcb79bffcbecdca3b935a747" kindref="member">Longevity</ref><sp/>=<sp/>uint64_t;</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28" refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a80d2067e3e6f7aafe2f6bb869682672c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a80d2067e3e6f7aafe2f6bb869682672c" kindref="member">Tag</ref><sp/>=<sp/>std::vector&lt;uint8_t&gt;;</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31" refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a45c8e5db37e207d5b53ea48bbb109e77" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d2/d62/structsgns_1_1primitives_1_1_extrinsic" kindref="compound">Extrinsic</ref><sp/><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a45c8e5db37e207d5b53ea48bbb109e77" kindref="member">ext</ref>;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="34" refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1aab7484f205b6d0ccc14b7ad4651a638d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1aab7484f205b6d0ccc14b7ad4651a638d" kindref="member">bytes</ref>{};</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37" refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a3ebe2699a199a8139fef1cf7ce5c9cf8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a7ba3cf16ba2a4da995bf3010c2acd07e" kindref="member">Hash</ref><sp/><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a3ebe2699a199a8139fef1cf7ce5c9cf8" kindref="member">hash</ref>;</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40" refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1af7135bfbaeb42a99f4528abd6e2354f7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a54e96843477ce579ab65cb653e19cc9c" kindref="member">Priority</ref><sp/><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1af7135bfbaeb42a99f4528abd6e2354f7" kindref="member">priority</ref>{};</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="43" refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1adf57d12720a8b10dadb99c2bc3a38dcc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a40bf45f7bcb79bffcbecdca3b935a747" kindref="member">Longevity</ref><sp/><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1adf57d12720a8b10dadb99c2bc3a38dcc" kindref="member">valid_till</ref>{};</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/>std::vector&lt;Tag&gt;<sp/></highlight><highlight class="keyword">requires</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="49" refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a5b0a2e69b5a5e716834a736862d8dad1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::vector&lt;Tag&gt;<sp/><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a5b0a2e69b5a5e716834a736862d8dad1" kindref="member">provides</ref>;</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"></highlight></codeline>
+<codeline lineno="52" refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a857cda982e6f112d5005b848d2732384" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a857cda982e6f112d5005b848d2732384" kindref="member">should_propagate</ref>{</highlight><highlight class="keyword">false</highlight><highlight class="normal">};</highlight></codeline>
+<codeline lineno="53" refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a347931f5f9f99130c7c7832998ed6231" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">friend</highlight><highlight class="normal"><sp/>std::ostream<sp/>&amp;<ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a347931f5f9f99130c7c7832998ed6231" kindref="member">operator&lt;&lt;</ref>(std::ostream<sp/>&amp;out,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction" kindref="compound">Transaction</ref><sp/>&amp;test_struct)</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>out;<sp/></highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight></codeline>
+<codeline lineno="60" refid="dd/dc5/namespacesgns_1_1primitives_1af1b123c2418820ff203128a251c255ee" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a9859294b882a3e3177f976669af7fdd5" kindref="member">operator==</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction" kindref="compound">Transaction</ref><sp/>&amp;v1,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction" kindref="compound">Transaction</ref><sp/>&amp;v2)<sp/>{</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>v1.<ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a45c8e5db37e207d5b53ea48bbb109e77" kindref="member">ext</ref><sp/>==<sp/>v2.<ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a45c8e5db37e207d5b53ea48bbb109e77" kindref="member">ext</ref><sp/>&amp;&amp;<sp/>v1.<ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1aab7484f205b6d0ccc14b7ad4651a638d" kindref="member">bytes</ref><sp/>==<sp/>v2.<ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1aab7484f205b6d0ccc14b7ad4651a638d" kindref="member">bytes</ref><sp/>&amp;&amp;<sp/>v1.<ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a3ebe2699a199a8139fef1cf7ce5c9cf8" kindref="member">hash</ref><sp/>==<sp/>v2.<ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a3ebe2699a199a8139fef1cf7ce5c9cf8" kindref="member">hash</ref></highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;&amp;<sp/>v1.<ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1af7135bfbaeb42a99f4528abd6e2354f7" kindref="member">priority</ref><sp/>==<sp/>v2.<ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1af7135bfbaeb42a99f4528abd6e2354f7" kindref="member">priority</ref><sp/>&amp;&amp;<sp/>v1.<ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1adf57d12720a8b10dadb99c2bc3a38dcc" kindref="member">valid_till</ref><sp/>==<sp/>v2.<ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1adf57d12720a8b10dadb99c2bc3a38dcc" kindref="member">valid_till</ref></highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;&amp;<sp/>v1.requires<sp/>==<sp/>v2.requires<sp/>&amp;&amp;<sp/>v1.<ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a5b0a2e69b5a5e716834a736862d8dad1" kindref="member">provides</ref><sp/>==<sp/>v2.<ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a5b0a2e69b5a5e716834a736862d8dad1" kindref="member">provides</ref></highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;&amp;<sp/>v1.<ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a857cda982e6f112d5005b848d2732384" kindref="member">should_propagate</ref><sp/>==<sp/>v2.<ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a857cda982e6f112d5005b848d2732384" kindref="member">should_propagate</ref>;</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"></highlight></codeline>
+<codeline lineno="67"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::primitives</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="68"><highlight class="normal"></highlight></codeline>
+<codeline lineno="69"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_TRANSACTION_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/primitives/transaction.hpp"/>
+  </compounddef>
+</doxygen>

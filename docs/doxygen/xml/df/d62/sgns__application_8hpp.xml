@@ -1,0 +1,91 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/d62/sgns__application_8hpp" kind="file" language="C++">
+    <compoundname>sgns_application.hpp</compoundname>
+    <includedby refid="d9/dd6/block__producing__node__application_8hpp" local="yes">src/application/impl/block_producing_node_application.hpp</includedby>
+    <includedby refid="de/d54/bridging__node__application_8hpp" local="yes">src/application/impl/bridging_node_application.hpp</includedby>
+    <includedby refid="d3/dde/syncing__node__application_8hpp" local="yes">src/application/impl/syncing_node_application.hpp</includedby>
+    <includedby refid="d6/dce/validating__node__application_8hpp" local="yes">src/application/impl/validating_node_application.hpp</includedby>
+    <invincdepgraph>
+      <node id="3">
+        <label>node/app_delegate.cpp</label>
+        <link refid="d5/df0/app__delegate_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/application/impl/block_producing_node_application.cpp</label>
+        <link refid="d0/d95/block__producing__node__application_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/application/impl/block_producing_node_application.hpp</label>
+        <link refid="d9/dd6/block__producing__node__application_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>src/application/impl/bridging_node_application.hpp</label>
+        <link refid="de/d54/bridging__node__application_8hpp"/>
+      </node>
+      <node id="7">
+        <label>src/application/impl/syncing_node_application.cpp</label>
+        <link refid="d9/d7b/syncing__node__application_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/application/impl/syncing_node_application.hpp</label>
+        <link refid="d3/dde/syncing__node__application_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>src/application/impl/validating_node_application.cpp</label>
+        <link refid="d3/d34/validating__node__application_8cpp"/>
+      </node>
+      <node id="8">
+        <label>src/application/impl/validating_node_application.hpp</label>
+        <link refid="d6/dce/validating__node__application_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/application/sgns_application.hpp</label>
+        <link refid="df/d62/sgns__application_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="da/d1d/classsgns_1_1application_1_1_sgns_application" prot="public">sgns::application::SgnsApplication</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="db/d40/namespacesgns_1_1application">sgns::application</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_APPLICATION_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_APPLICATION_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="db/d40/namespacesgns_1_1application" kindref="compound">sgns::application</ref><sp/>{</highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13" refid="da/d1d/classsgns_1_1application_1_1_sgns_application" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="da/d1d/classsgns_1_1application_1_1_sgns_application" kindref="compound">SgnsApplication</ref><sp/>{</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="15" refid="da/d1d/classsgns_1_1application_1_1_sgns_application_1af6c814f3750d9dccbb78d2c653c3da36" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="da/d1d/classsgns_1_1application_1_1_sgns_application_1af6c814f3750d9dccbb78d2c653c3da36" kindref="member">~SgnsApplication</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20" refid="da/d1d/classsgns_1_1application_1_1_sgns_application_1a2314654dc1f566607845a8ab5f427329" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/d1d/classsgns_1_1application_1_1_sgns_application_1a2314654dc1f566607845a8ab5f427329" kindref="member">run</ref>()<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="22"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::application</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_SRC_APPLICATION_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/application/sgns_application.hpp"/>
+  </compounddef>
+</doxygen>

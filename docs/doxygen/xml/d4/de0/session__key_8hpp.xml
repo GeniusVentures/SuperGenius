@@ -1,0 +1,345 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/de0/session__key_8hpp" kind="file" language="C++">
+    <compoundname>session_key.hpp</compoundname>
+    <includes refid="d4/d16/blob_8hpp" local="yes">base/blob.hpp</includes>
+    <includedby refid="d2/d45/authority_8hpp" local="yes">src/primitives/authority.hpp</includedby>
+    <includedby refid="d7/d22/finality__api_8hpp" local="yes">src/runtime/finality_api.hpp</includedby>
+    <incdepgraph>
+      <node id="2">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/primitives/session_key.hpp</label>
+        <link refid="d4/de0/session__key_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>array</label>
+      </node>
+      <node id="5">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="3">
+        <label>cstddef</label>
+      </node>
+      <node id="9">
+        <label>gsl/span</label>
+      </node>
+      <node id="12">
+        <label>iostream</label>
+      </node>
+      <node id="11">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="7">
+        <label>string_view</label>
+      </node>
+      <node id="8">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="10">
+        <label>src/blockchain/block_header_repository.hpp</label>
+        <link refid="d6/d4c/block__header__repository_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>src/blockchain/block_storage.hpp</label>
+        <link refid="d4/d5d/block__storage_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>src/blockchain/block_tree.hpp</label>
+        <link refid="d2/d0a/block__tree_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>src/blockchain/impl/block_header_repository.cpp</label>
+        <link refid="df/d2c/block__header__repository_8cpp"/>
+      </node>
+      <node id="13">
+        <label>src/blockchain/impl/block_tree_impl.cpp</label>
+        <link refid="d5/df4/block__tree__impl_8cpp"/>
+      </node>
+      <node id="12">
+        <label>src/blockchain/impl/block_tree_impl.hpp</label>
+        <link refid="d7/d87/block__tree__impl_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>src/blockchain/impl/key_value_block_header_repository.cpp</label>
+        <link refid="de/d1b/key__value__block__header__repository_8cpp"/>
+      </node>
+      <node id="14">
+        <label>src/blockchain/impl/key_value_block_header_repository.hpp</label>
+        <link refid="dd/dc6/key__value__block__header__repository_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>src/blockchain/impl/key_value_block_storage.cpp</label>
+        <link refid="de/de9/key__value__block__storage_8cpp"/>
+      </node>
+      <node id="16">
+        <label>src/blockchain/impl/key_value_block_storage.hpp</label>
+        <link refid="d4/d6b/key__value__block__storage_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>src/primitives/authority.hpp</label>
+        <link refid="d2/d45/authority_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>src/primitives/block.hpp</label>
+        <link refid="d9/db2/block_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>src/primitives/block_data.hpp</label>
+        <link refid="d1/dce/block__data_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>src/primitives/block_header.hpp</label>
+        <link refid="d7/d72/block__header_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>src/primitives/digest.hpp</label>
+        <link refid="df/dbf/digest_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>src/primitives/production_configuration.hpp</label>
+        <link refid="d6/d2c/production__configuration_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>src/primitives/scheduled_change.hpp</label>
+        <link refid="d7/d5f/scheduled__change_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/primitives/session_key.hpp</label>
+        <link refid="d4/de0/session__key_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.cpp</label>
+        <link refid="d7/d6b/block__builder__impl_8cpp"/>
+      </node>
+      <node id="26">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.hpp</label>
+        <link refid="d3/d95/block__builder__impl_8hpp"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.cpp</label>
+        <link refid="de/d5e/core__factory__impl_8cpp"/>
+      </node>
+      <node id="30">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.hpp</label>
+        <link refid="d7/de4/core__factory__impl_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>src/runtime/binaryen/runtime_api/core_impl.cpp</label>
+        <link refid="dc/d7c/core__impl_8cpp"/>
+      </node>
+      <node id="18">
+        <label>src/runtime/binaryen/runtime_api/core_impl.hpp</label>
+        <link refid="d7/dbc/core__impl_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.cpp</label>
+        <link refid="dc/def/finality__api__impl_8cpp"/>
+      </node>
+      <node id="32">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.hpp</label>
+        <link refid="db/dad/finality__api__impl_8hpp"/>
+        <childnode refid="33" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.cpp</label>
+        <link refid="d3/d02/production__api__impl_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.hpp</label>
+        <link refid="d1/d6a/production__api__impl_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>src/runtime/block_builder.hpp</label>
+        <link refid="d7/d89/block__builder_8hpp"/>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>src/runtime/core.hpp</label>
+        <link refid="da/d47/core_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>src/runtime/core_factory.hpp</label>
+        <link refid="da/d13/core__factory_8hpp"/>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="35">
+        <label>src/runtime/dummy/finality_api_dummy.cpp</label>
+        <link refid="d0/d07/finality__api__dummy_8cpp"/>
+      </node>
+      <node id="34">
+        <label>src/runtime/dummy/finality_api_dummy.hpp</label>
+        <link refid="d5/d14/finality__api__dummy_8hpp"/>
+        <childnode refid="35" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>src/runtime/finality_api.hpp</label>
+        <link refid="d7/d22/finality__api_8hpp"/>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>src/runtime/production_api.hpp</label>
+        <link refid="d8/dec/production__api_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="dd/dc5/namespacesgns_1_1primitives">sgns::primitives</innernamespace>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1ad392b4e4cac3ce9aea0bd7386ed8d7d9" prot="public" static="no">
+        <type>base::Blob&lt; 32 &gt;</type>
+        <definition>using sgns::primitives::SessionKey = base::Blob&lt;32&gt;</definition>
+        <argsstring></argsstring>
+        <name>SessionKey</name>
+        <qualifiedname>sgns::primitives::SessionKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/session_key.hpp" line="10" column="3" bodyfile="src/primitives/session_key.hpp" bodystart="10" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_PRIMITIVES_SESSION_KEY_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_PRIMITIVES_SESSION_KEY_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d4/d16/blob_8hpp" kindref="compound">base/blob.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="dd/dc5/namespacesgns_1_1primitives" kindref="compound">sgns::primitives</ref><sp/>{</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>TODO(akvinikym):<sp/>must<sp/>be<sp/>a<sp/>SR25519<sp/>key</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10" refid="dd/dc5/namespacesgns_1_1primitives_1ad392b4e4cac3ce9aea0bd7386ed8d7d9" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/dc5/namespacesgns_1_1primitives_1ad392b4e4cac3ce9aea0bd7386ed8d7d9" kindref="member">SessionKey</ref><sp/>=<sp/><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob&lt;32&gt;</ref>;</highlight></codeline>
+<codeline lineno="11"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::primitives</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_SRC_PRIMITIVES_SESSION_KEY_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/primitives/session_key.hpp"/>
+  </compounddef>
+</doxygen>

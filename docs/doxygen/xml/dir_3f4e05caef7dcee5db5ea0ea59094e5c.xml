@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_3f4e05caef7dcee5db5ea0ea59094e5c" kind="dir">
+    <compoundname>src/local_secure_storage/impl</compoundname>
+    <innerdir refid="dir_5da7166272b0cdaed3aab4bb3e6e8c31">src/local_secure_storage/impl/json</innerdir>
+    <innerfile refid="dc/dbd/_android_8cpp">Android.cpp</innerfile>
+    <innerfile refid="de/d2b/_android_8hpp">Android.hpp</innerfile>
+    <innerfile refid="dd/dfb/_apple_8cpp">Apple.cpp</innerfile>
+    <innerfile refid="d1/dc4/_apple_8hpp">Apple.hpp</innerfile>
+    <innerfile refid="d9/d83/_j_s_o_n_backend_8cpp">JSONBackend.cpp</innerfile>
+    <innerfile refid="d9/d5a/_j_s_o_n_backend_8hpp">JSONBackend.hpp</innerfile>
+    <innerfile refid="dd/ddb/_key_store_helper_8java">KeyStoreHelper.java</innerfile>
+    <innerfile refid="de/d39/_linux_8cpp">Linux.cpp</innerfile>
+    <innerfile refid="d8/db4/_linux_8hpp">Linux.hpp</innerfile>
+    <innerfile refid="d4/d9f/_windows_8cpp">Windows.cpp</innerfile>
+    <innerfile refid="db/d97/_windows_8hpp">Windows.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/local_secure_storage/impl/"/>
+  </compounddef>
+</doxygen>

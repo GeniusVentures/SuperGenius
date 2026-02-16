@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_395f0e28b55cbd9fd75290c88db061f9" kind="dir">
+    <compoundname>src/runtime/common</compoundname>
+    <innerfile refid="df/dea/const__wasm__provider_8cpp">const_wasm_provider.cpp</innerfile>
+    <innerfile refid="d0/dc8/const__wasm__provider_8hpp">const_wasm_provider.hpp</innerfile>
+    <innerfile refid="d1/d0f/storage__wasm__provider_8cpp">storage_wasm_provider.cpp</innerfile>
+    <innerfile refid="d5/df8/storage__wasm__provider_8hpp">storage_wasm_provider.hpp</innerfile>
+    <innerfile refid="da/dba/trie__storage__provider__impl_8cpp">trie_storage_provider_impl.cpp</innerfile>
+    <innerfile refid="d4/d72/trie__storage__provider__impl_8hpp">trie_storage_provider_impl.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/runtime/common/"/>
+  </compounddef>
+</doxygen>

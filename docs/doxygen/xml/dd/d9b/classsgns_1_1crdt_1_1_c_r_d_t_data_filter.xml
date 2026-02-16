@@ -1,0 +1,424 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter" kind="class" language="C++" prot="public">
+    <compoundname>sgns::crdt::CRDTDataFilter</compoundname>
+    <includes refid="d9/dc5/crdt__data__filter_8hpp" local="no">crdt_data_filter.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1a4cd62ff061aaaf72fa4e362024b06e77" prot="public" static="no">
+        <type>std::function&lt; std::optional&lt; std::vector&lt; pb::Element &gt; &gt;(const pb::Element &amp;)&gt;</type>
+        <definition>using sgns::crdt::CRDTDataFilter::ElementFilterCallback = std::function&lt;std::optional&lt;std::vector&lt;pb::Element&gt;&gt;( const pb::Element &amp; )&gt;</definition>
+        <argsstring></argsstring>
+        <name>ElementFilterCallback</name>
+        <qualifiedname>sgns::crdt::CRDTDataFilter::ElementFilterCallback</qualifiedname>
+        <briefdescription>
+<para>Element filtering callback definition. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_data_filter.hpp" line="28" column="9" bodyfile="src/crdt/crdt_data_filter.hpp" bodystart="28" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1aa0e9425398b71647482426bd87e44641" prot="public" static="no">
+        <type>std::unordered_map&lt; std::string, <ref refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1a4cd62ff061aaaf72fa4e362024b06e77" kindref="member">ElementFilterCallback</ref> &gt;</type>
+        <definition>using sgns::crdt::CRDTDataFilter::FilterCallbackRegistry = std::unordered_map&lt;std::string, ElementFilterCallback&gt;</definition>
+        <argsstring></argsstring>
+        <name>FilterCallbackRegistry</name>
+        <qualifiedname>sgns::crdt::CRDTDataFilter::FilterCallbackRegistry</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_data_filter.hpp" line="29" column="9" bodyfile="src/crdt/crdt_data_filter.hpp" bodystart="29" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1a2daaceb418f96ee581e68fe38d1c3af1" prot="private" static="no" mutable="no">
+        <type>const bool</type>
+        <definition>const bool sgns::crdt::CRDTDataFilter::accept_by_default_</definition>
+        <argsstring></argsstring>
+        <name>accept_by_default_</name>
+        <qualifiedname>sgns::crdt::CRDTDataFilter::accept_by_default_</qualifiedname>
+        <briefdescription>
+<para>The default behavior for values not matching any filter. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_data_filter.hpp" line="84" column="32" bodyfile="src/crdt/crdt_data_filter.hpp" bodystart="84" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1ae726a23da89c968fde96c3c2691d2bdc" prot="private" static="no" mutable="yes">
+        <type>std::shared_mutex</type>
+        <definition>std::shared_mutex sgns::crdt::CRDTDataFilter::element_registry_mutex_</definition>
+        <argsstring></argsstring>
+        <name>element_registry_mutex_</name>
+        <qualifiedname>sgns::crdt::CRDTDataFilter::element_registry_mutex_</qualifiedname>
+        <briefdescription>
+<para>Mutex for the element registry. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_data_filter.hpp" line="85" column="40" bodyfile="src/crdt/crdt_data_filter.hpp" bodystart="85" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1ab601224ef54ceca420b74bcfa5d059a1" prot="private" static="no" mutable="no">
+        <type>std::shared_mutex</type>
+        <definition>std::shared_mutex sgns::crdt::CRDTDataFilter::tombstone_registry_mutex_</definition>
+        <argsstring></argsstring>
+        <name>tombstone_registry_mutex_</name>
+        <qualifiedname>sgns::crdt::CRDTDataFilter::tombstone_registry_mutex_</qualifiedname>
+        <briefdescription>
+<para>Mutex for the tombstone registry. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_data_filter.hpp" line="86" column="32" bodyfile="src/crdt/crdt_data_filter.hpp" bodystart="86" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1a5a79a81c072e290e5f304fb08fe85fbc" prot="private" static="no" mutable="no">
+        <type><ref refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1aa0e9425398b71647482426bd87e44641" kindref="member">FilterCallbackRegistry</ref></type>
+        <definition>FilterCallbackRegistry sgns::crdt::CRDTDataFilter::element_registry_</definition>
+        <argsstring></argsstring>
+        <name>element_registry_</name>
+        <qualifiedname>sgns::crdt::CRDTDataFilter::element_registry_</qualifiedname>
+        <briefdescription>
+<para>Element filter callback registry. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_data_filter.hpp" line="87" column="32" bodyfile="src/crdt/crdt_data_filter.hpp" bodystart="87" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1aea9c1015fc7808dd2ef9b13ebf67c00f" prot="private" static="no" mutable="no">
+        <type><ref refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1aa0e9425398b71647482426bd87e44641" kindref="member">FilterCallbackRegistry</ref></type>
+        <definition>FilterCallbackRegistry sgns::crdt::CRDTDataFilter::tombstone_registry_</definition>
+        <argsstring></argsstring>
+        <name>tombstone_registry_</name>
+        <qualifiedname>sgns::crdt::CRDTDataFilter::tombstone_registry_</qualifiedname>
+        <briefdescription>
+<para>Tombstone filter callback registry. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_data_filter.hpp" line="88" column="32" bodyfile="src/crdt/crdt_data_filter.hpp" bodystart="88" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1ad2141a2aec8f96b82da58e22c84ba0ee" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crdt::CRDTDataFilter::CRDTDataFilter</definition>
+        <argsstring>(bool accept_by_default=true)</argsstring>
+        <name>CRDTDataFilter</name>
+        <qualifiedname>sgns::crdt::CRDTDataFilter::CRDTDataFilter</qualifiedname>
+        <param>
+          <type>bool</type>
+          <declname>accept_by_default</declname>
+          <defval>true</defval>
+        </param>
+        <briefdescription>
+<para>Construct a new <ref refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter" kindref="compound">CRDTDataFilter</ref> object. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">accept_by_default</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>if true, every delta that doesn&apos;t have a filter gets accepted. if false, rejects by default. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_data_filter.hpp" line="36" column="18" bodyfile="src/crdt/impl/crdt_data_filter.cpp" bodystart="12" bodyend="12"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1a7248dc5e2cf1ecc80b391f1548ba092b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crdt::CRDTDataFilter::~CRDTDataFilter</definition>
+        <argsstring>()=default</argsstring>
+        <name>~CRDTDataFilter</name>
+        <qualifiedname>sgns::crdt::CRDTDataFilter::~CRDTDataFilter</qualifiedname>
+        <briefdescription>
+<para>Destroy the <ref refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter" kindref="compound">CRDTDataFilter</ref> object. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_data_filter.hpp" line="41" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1ac863c840f2b41ca843d5da40161fdde9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::CRDTDataFilter::RegisterElementFilter</definition>
+        <argsstring>(const std::string &amp;pattern, ElementFilterCallback filter)</argsstring>
+        <name>RegisterElementFilter</name>
+        <qualifiedname>sgns::crdt::CRDTDataFilter::RegisterElementFilter</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>pattern</declname>
+        </param>
+        <param>
+          <type><ref refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1a4cd62ff061aaaf72fa4e362024b06e77" kindref="member">ElementFilterCallback</ref></type>
+          <declname>filter</declname>
+        </param>
+        <briefdescription>
+<para>Registers an element filter callback. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">pattern</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The regex/pattern that the key of the element has to match </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">filter</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The callback that is executed in case the pattern matches </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if succeeded, false otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_data_filter.hpp" line="49" column="14" bodyfile="src/crdt/impl/crdt_data_filter.cpp" bodystart="14" bodyend="19"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1ae943c2b098c46fa5876e3ec7f8017410" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::CRDTDataFilter::RegisterTombstoneFilter</definition>
+        <argsstring>(const std::string &amp;pattern, ElementFilterCallback filter)</argsstring>
+        <name>RegisterTombstoneFilter</name>
+        <qualifiedname>sgns::crdt::CRDTDataFilter::RegisterTombstoneFilter</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>pattern</declname>
+        </param>
+        <param>
+          <type><ref refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1a4cd62ff061aaaf72fa4e362024b06e77" kindref="member">ElementFilterCallback</ref></type>
+          <declname>filter</declname>
+        </param>
+        <briefdescription>
+<para>Registers a tombstone filter callback. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">pattern</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The regex/pattern that the key of the tombstone has to match </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">filter</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The callback that is executed in case the pattern matches </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if succeeded, false otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_data_filter.hpp" line="57" column="14" bodyfile="src/crdt/impl/crdt_data_filter.cpp" bodystart="21" bodyend="26"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1a43b0140147acaeb2f9b327de1433b879" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::CRDTDataFilter::UnregisterElementFilter</definition>
+        <argsstring>(const std::string &amp;pattern)</argsstring>
+        <name>UnregisterElementFilter</name>
+        <qualifiedname>sgns::crdt::CRDTDataFilter::UnregisterElementFilter</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>pattern</declname>
+        </param>
+        <briefdescription>
+<para>Removes the registration of an element filter that corresponds to a pattern. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">pattern</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The regex/pattern that the key of the element has to match </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_data_filter.hpp" line="63" column="14" bodyfile="src/crdt/impl/crdt_data_filter.cpp" bodystart="28" bodyend="32"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1a34f06dc8fa2ba0fd05bc4f516a0f0193" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::CRDTDataFilter::UnregisterTombstoneFilter</definition>
+        <argsstring>(const std::string &amp;pattern)</argsstring>
+        <name>UnregisterTombstoneFilter</name>
+        <qualifiedname>sgns::crdt::CRDTDataFilter::UnregisterTombstoneFilter</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>pattern</declname>
+        </param>
+        <briefdescription>
+<para>Removes the registration of a tombstone filter that corresponds to a pattern. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">pattern</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The regex/pattern that the key of the tombstone has to match </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_data_filter.hpp" line="69" column="14" bodyfile="src/crdt/impl/crdt_data_filter.cpp" bodystart="34" bodyend="38"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1a74664b48327edeb4778bda8485c3188d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::CRDTDataFilter::FilterElementsOnDelta</definition>
+        <argsstring>(pb::Delta &amp;delta) const</argsstring>
+        <name>FilterElementsOnDelta</name>
+        <qualifiedname>sgns::crdt::CRDTDataFilter::FilterElementsOnDelta</qualifiedname>
+        <param>
+          <type>pb::Delta &amp;</type>
+          <declname>delta</declname>
+        </param>
+        <briefdescription>
+<para>Tries to filter the elements on delta according to stored filters. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">delta</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The delta to be filtered </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_data_filter.hpp" line="75" column="14" bodyfile="src/crdt/impl/crdt_data_filter.cpp" bodystart="40" bodyend="106"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1ad8644f55d8e25a9299ea747241409168" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::CRDTDataFilter::FilterTombstonesOnDelta</definition>
+        <argsstring>(pb::Delta &amp;delta)</argsstring>
+        <name>FilterTombstonesOnDelta</name>
+        <qualifiedname>sgns::crdt::CRDTDataFilter::FilterTombstonesOnDelta</qualifiedname>
+        <param>
+          <type>pb::Delta &amp;</type>
+          <declname>delta</declname>
+        </param>
+        <briefdescription>
+<para>Tries to filter the tombstones on delta according to stored filters. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">delta</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The delta to be filtered </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_data_filter.hpp" line="81" column="14" bodyfile="src/crdt/impl/crdt_data_filter.cpp" bodystart="108" bodyend="112"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="5">
+        <label>K</label>
+      </node>
+      <node id="6">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::crdt::CRDTDataFilter</label>
+        <link refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-element_registry_mutex_</edgelabel>
+          <edgelabel>-tombstone_registry_mutex_</edgelabel>
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-element_registry_</edgelabel>
+          <edgelabel>-tombstone_registry_</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::shared_mutex</label>
+      </node>
+      <node id="4">
+        <label>std::unordered_map&lt; K, T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::unordered_map&lt; std::string, ElementFilterCallback &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; std::string, ElementFilterCallback &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crdt/crdt_data_filter.hpp" line="22" column="5" bodyfile="src/crdt/crdt_data_filter.hpp" bodystart="23" bodyend="89"/>
+    <listofallmembers>
+      <member refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1a2daaceb418f96ee581e68fe38d1c3af1" prot="private" virt="non-virtual"><scope>sgns::crdt::CRDTDataFilter</scope><name>accept_by_default_</name></member>
+      <member refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1ad2141a2aec8f96b82da58e22c84ba0ee" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTDataFilter</scope><name>CRDTDataFilter</name></member>
+      <member refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1a5a79a81c072e290e5f304fb08fe85fbc" prot="private" virt="non-virtual"><scope>sgns::crdt::CRDTDataFilter</scope><name>element_registry_</name></member>
+      <member refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1ae726a23da89c968fde96c3c2691d2bdc" prot="private" virt="non-virtual"><scope>sgns::crdt::CRDTDataFilter</scope><name>element_registry_mutex_</name></member>
+      <member refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1a4cd62ff061aaaf72fa4e362024b06e77" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTDataFilter</scope><name>ElementFilterCallback</name></member>
+      <member refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1aa0e9425398b71647482426bd87e44641" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTDataFilter</scope><name>FilterCallbackRegistry</name></member>
+      <member refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1a74664b48327edeb4778bda8485c3188d" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTDataFilter</scope><name>FilterElementsOnDelta</name></member>
+      <member refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1ad8644f55d8e25a9299ea747241409168" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTDataFilter</scope><name>FilterTombstonesOnDelta</name></member>
+      <member refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1ac863c840f2b41ca843d5da40161fdde9" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTDataFilter</scope><name>RegisterElementFilter</name></member>
+      <member refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1ae943c2b098c46fa5876e3ec7f8017410" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTDataFilter</scope><name>RegisterTombstoneFilter</name></member>
+      <member refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1aea9c1015fc7808dd2ef9b13ebf67c00f" prot="private" virt="non-virtual"><scope>sgns::crdt::CRDTDataFilter</scope><name>tombstone_registry_</name></member>
+      <member refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1ab601224ef54ceca420b74bcfa5d059a1" prot="private" virt="non-virtual"><scope>sgns::crdt::CRDTDataFilter</scope><name>tombstone_registry_mutex_</name></member>
+      <member refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1a43b0140147acaeb2f9b327de1433b879" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTDataFilter</scope><name>UnregisterElementFilter</name></member>
+      <member refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1a34f06dc8fa2ba0fd05bc4f516a0f0193" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTDataFilter</scope><name>UnregisterTombstoneFilter</name></member>
+      <member refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter_1a7248dc5e2cf1ecc80b391f1548ba092b" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTDataFilter</scope><name>~CRDTDataFilter</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

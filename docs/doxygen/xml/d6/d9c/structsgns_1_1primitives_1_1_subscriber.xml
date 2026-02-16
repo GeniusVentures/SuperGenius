@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/d9c/structsgns_1_1primitives_1_1_subscriber" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::primitives::Subscriber</compoundname>
+    <includes refid="d5/d4f/author__api__primitives_8hpp" local="no">author_api_primitives.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d6/d9c/structsgns_1_1primitives_1_1_subscriber_1a1b6ed1da5173b02f46e07ef168bbac60" prot="public" static="no" mutable="no">
+        <type>uint32_t</type>
+        <definition>uint32_t sgns::primitives::Subscriber::id</definition>
+        <argsstring></argsstring>
+        <name>id</name>
+        <qualifiedname>sgns::primitives::Subscriber::id</qualifiedname>
+        <initializer>{}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/author_api_primitives.hpp" line="38" column="14" bodyfile="src/primitives/author_api_primitives.hpp" bodystart="38" bodyend="38"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><ref refid="d6/d9c/structsgns_1_1primitives_1_1_subscriber" kindref="compound">Subscriber</ref> primitive. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::primitives::Subscriber</label>
+        <link refid="d6/d9c/structsgns_1_1primitives_1_1_subscriber"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/primitives/author_api_primitives.hpp" line="37" column="3" bodyfile="src/primitives/author_api_primitives.hpp" bodystart="37" bodyend="39"/>
+    <listofallmembers>
+      <member refid="d6/d9c/structsgns_1_1primitives_1_1_subscriber_1a1b6ed1da5173b02f46e07ef168bbac60" prot="public" virt="non-virtual"><scope>sgns::primitives::Subscriber</scope><name>id</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

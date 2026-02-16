@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_b96ded659b7e6f168a14461d5a0325d6" kind="dir">
+    <compoundname>src/storage/trie/supergenius_trie</compoundname>
+    <innerfile refid="d9/ddd/supergenius__node_8cpp">supergenius_node.cpp</innerfile>
+    <innerfile refid="d0/d2c/supergenius__node_8hpp">supergenius_node.hpp</innerfile>
+    <innerfile refid="d5/d9e/supergenius__trie_8hpp">supergenius_trie.hpp</innerfile>
+    <innerfile refid="d9/d0e/supergenius__trie__cursor_8cpp">supergenius_trie_cursor.cpp</innerfile>
+    <innerfile refid="db/dd4/supergenius__trie__cursor_8hpp">supergenius_trie_cursor.hpp</innerfile>
+    <innerfile refid="dc/dc9/supergenius__trie__factory_8hpp">supergenius_trie_factory.hpp</innerfile>
+    <innerfile refid="d8/d87/supergenius__trie__factory__impl_8cpp">supergenius_trie_factory_impl.cpp</innerfile>
+    <innerfile refid="da/da2/supergenius__trie__factory__impl_8hpp">supergenius_trie_factory_impl.hpp</innerfile>
+    <innerfile refid="db/df1/supergenius__trie__impl_8cpp">supergenius_trie_impl.cpp</innerfile>
+    <innerfile refid="db/d50/supergenius__trie__impl_8hpp">supergenius_trie_impl.hpp</innerfile>
+    <innerfile refid="db/df0/trie__error_8cpp">trie_error.cpp</innerfile>
+    <innerfile refid="d7/dd1/trie__error_8hpp">trie_error.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/storage/trie/supergenius_trie/"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,277 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d3/d0d/app__config__impl_8hpp" kind="file" language="C++">
+    <compoundname>app_config_impl.hpp</compoundname>
+    <includes refid="dd/d95/app__config_8hpp" local="yes">application/app_config.hpp</includes>
+    <includes local="no">rapidjson/document.h</includes>
+    <includes local="no">array</includes>
+    <includes local="no">cstdio</includes>
+    <includes local="no">memory</includes>
+    <includes refid="d6/da3/logger_8hpp" local="yes">base/logger.hpp</includes>
+    <includedby refid="d5/df0/app__delegate_8cpp" local="yes">node/app_delegate.cpp</includedby>
+    <includedby refid="da/de2/app__config__impl_8cpp" local="yes">src/application/impl/app_config_impl.cpp</includedby>
+    <incdepgraph>
+      <node id="2">
+        <label>application/app_config.hpp</label>
+        <link refid="dd/d95/app__config_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/application/impl/app_config_impl.hpp</label>
+        <link refid="d3/d0d/app__config__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>array</label>
+      </node>
+      <node id="4">
+        <label>boost/asio/ip/tcp.hpp</label>
+      </node>
+      <node id="9">
+        <label>cstdio</label>
+      </node>
+      <node id="5">
+        <label>memory</label>
+      </node>
+      <node id="7">
+        <label>rapidjson/document.h</label>
+      </node>
+      <node id="11">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="3">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="6">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>node/app_delegate.cpp</label>
+        <link refid="d5/df0/app__delegate_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/application/impl/app_config_impl.cpp</label>
+        <link refid="da/de2/app__config__impl_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/application/impl/app_config_impl.hpp</label>
+        <link refid="d3/d0d/app__config__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl" prot="public">sgns::application::AppConfigurationImpl</innerclass>
+    <innerclass refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler" prot="private">sgns::application::AppConfigurationImpl::SegmentHandler</innerclass>
+    <innernamespace refid="d1/dc3/namespacerapidjson">rapidjson</innernamespace>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="db/d40/namespacesgns_1_1application">sgns::application</innernamespace>
+    <sectiondef kind="define">
+      <memberdef kind="define" id="d3/d0d/app__config__impl_8hpp_1a250603aa9e2a12429b25ba0c8108ad4f" prot="public" static="no">
+        <name>RAPIDJSON_NO_SIZETYPEDEFINE</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="6" column="9" bodyfile="src/application/impl/app_config_impl.hpp" bodystart="6" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="d3/d0d/app__config__impl_8hpp_1ae233d22fe0713721915edf26be2090f6" prot="public" static="no">
+        <name>DECLARE_PROPERTY</name>
+        <param><defname>T</defname></param>
+        <param><defname>N</defname></param>
+        <initializer>private:                                                                      \
+ T N##_;                                                                      \
+                                                                              \
+public:                                                                       \
+ std::conditional&lt;std::is_trivial&lt;T&gt;::value &amp;&amp; (sizeof(T) &lt;= sizeof(size_t)), \
+                  T,                                                          \
+                  const T &amp;&gt;::type                                            \
+ N() const override {                                                         \
+   return N##_;                                                               \
+ }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="22" column="9" bodyfile="src/application/impl/app_config_impl.hpp" bodystart="22" bodyend="32"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="d1/dc3/namespacerapidjson_1ab6f8ee1a93ec9591e842a5d266b170ab" prot="public" static="no">
+        <type>::std::size_t</type>
+        <definition>using rapidjson::SizeType = ::std::size_t</definition>
+        <argsstring></argsstring>
+        <name>SizeType</name>
+        <qualifiedname>rapidjson::SizeType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="8" column="3" bodyfile="src/application/impl/app_config_impl.hpp" bodystart="8" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_APP_CONFIG_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_APP_CONFIG_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dd/d95/app__config_8hpp" kindref="compound">application/app_config.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6" refid="d3/d0d/app__config__impl_8hpp_1a250603aa9e2a12429b25ba0c8108ad4f" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>RAPIDJSON_NO_SIZETYPEDEFINE</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7" refid="d1/dc3/namespacerapidjson" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d1/dc3/namespacerapidjson" kindref="compound">rapidjson</ref><sp/>{</highlight></codeline>
+<codeline lineno="8" refid="d1/dc3/namespacerapidjson_1ab6f8ee1a93ec9591e842a5d266b170ab" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d1/dc3/namespacerapidjson_1ab6f8ee1a93ec9591e842a5d266b170ab" kindref="member">SizeType</ref><sp/>=<sp/>::std::size_t;</highlight></codeline>
+<codeline lineno="9"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;rapidjson/document.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>RAPIDJSON_NO_SIZETYPEDEFINE</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;array&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstdio&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;memory&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/da3/logger_8hpp" kindref="compound">base/logger.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>DECLARE_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="preprocessor">#error<sp/>DECLARE_PROPERTY<sp/>already<sp/>defined!</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>DECLARE_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22" refid="d3/d0d/app__config__impl_8hpp_1ae233d22fe0713721915edf26be2090f6" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>DECLARE_PROPERTY(T,<sp/>N)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="23"><highlight class="preprocessor"><sp/>private:<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="24"><highlight class="preprocessor"><sp/><sp/>T<sp/>N##_;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="25"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="26"><highlight class="preprocessor"><sp/>public:<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="27"><highlight class="preprocessor"><sp/><sp/>std::conditional&lt;std::is_trivial&lt;T&gt;::value<sp/>&amp;&amp;<sp/>(sizeof(T)<sp/>&lt;=<sp/>sizeof(size_t)),<sp/>\</highlight></codeline>
+<codeline lineno="28"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>T,<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="29"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>const<sp/>T<sp/>&amp;&gt;::type<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="30"><highlight class="preprocessor"><sp/><sp/>N()<sp/>const<sp/>override<sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="31"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>return<sp/>N##_;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="32"><highlight class="preprocessor"><sp/><sp/>}</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="db/d40/namespacesgns_1_1application" kindref="compound">sgns::application</ref><sp/>{</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36" refid="df/d08/classsgns_1_1_app_configuration_impl" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="df/d08/classsgns_1_1_app_configuration_impl_1af47ad0c0d6bbe18536f818e1f405efdf" kindref="member">AppConfigurationImpl</ref><sp/>final<sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration" kindref="compound">AppConfiguration</ref><sp/>{</highlight></codeline>
+<codeline lineno="37" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1ac9062a56a03b8f4b6b560ee4534e687e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1ac9062a56a03b8f4b6b560ee4534e687e" kindref="member">FilePtr</ref><sp/>=<sp/>std::unique_ptr&lt;std::FILE,<sp/></highlight><highlight class="keyword">decltype</highlight><highlight class="normal">(&amp;std::fclose)&gt;;</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a13d6b9063629c4266dee8c20245b5ae0" kindref="member">parse_general_segment</ref>(rapidjson::Value<sp/>&amp;val);</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a58bbbbde7f6990429f2d3bb4d977e234" kindref="member">parse_blockchain_segment</ref>(rapidjson::Value<sp/>&amp;val);</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a89b4bded531cd93bf50614c35865af0f" kindref="member">parse_storage_segment</ref>(rapidjson::Value<sp/>&amp;val);</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a968ecdb40f722a3a6d95cbf29aa1c146" kindref="member">parse_authority_segment</ref>(rapidjson::Value<sp/>&amp;val);</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1ae2817c4c9819c38e366736f12658dfe5" kindref="member">parse_network_segment</ref>(rapidjson::Value<sp/>&amp;val);</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a9dd06ed0f29b75e36381420f8c4e2610" kindref="member">parse_additional_segment</ref>(rapidjson::Value<sp/>&amp;val);</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight></codeline>
+<codeline lineno="49" refid="dd/df7/structsgns_1_1_app_configuration_impl_1_1_segment_handler" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="dd/df7/structsgns_1_1_app_configuration_impl_1_1_segment_handler" kindref="compound">SegmentHandler</ref><sp/>{</highlight></codeline>
+<codeline lineno="50" refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler_1aaf5319e9f5f554f05de21bd6e53a724b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler_1aaf5319e9f5f554f05de21bd6e53a724b" kindref="member">Handler</ref><sp/>=<sp/>void<sp/>(<ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl" kindref="compound">sgns::application::AppConfigurationImpl</ref>::*)(</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>rapidjson::Value<sp/>&amp;);</highlight></codeline>
+<codeline lineno="52" refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler_1aec2fc5f768bfc81ea2fa9d4f21081f16" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>*<ref refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler_1aec2fc5f768bfc81ea2fa9d4f21081f16" kindref="member">segment_name</ref>;</highlight></codeline>
+<codeline lineno="53" refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler_1a52f5407ee9713deb54a7829390d1ad00" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler_1aaf5319e9f5f554f05de21bd6e53a724b" kindref="member">Handler</ref><sp/><ref refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler_1a52f5407ee9713deb54a7829390d1ad00" kindref="member">handler</ref>;</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"></highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>clang-format<sp/>off</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="57" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a6a78566e726ba3a40ea5d898f92753b8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::array&lt;SegmentHandler,<sp/>6&gt;<sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a6a78566e726ba3a40ea5d898f92753b8" kindref="member">handlers</ref><sp/>=<sp/>{</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler" kindref="compound">SegmentHandler</ref>{</highlight><highlight class="stringliteral">&quot;general&quot;</highlight><highlight class="normal">,<sp/><sp/><sp/><sp/>&amp;<ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a13d6b9063629c4266dee8c20245b5ae0" kindref="member">AppConfigurationImpl::parse_general_segment</ref>},</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler" kindref="compound">SegmentHandler</ref>{</highlight><highlight class="stringliteral">&quot;blockchain&quot;</highlight><highlight class="normal">,<sp/>&amp;<ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a58bbbbde7f6990429f2d3bb4d977e234" kindref="member">AppConfigurationImpl::parse_blockchain_segment</ref>},</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler" kindref="compound">SegmentHandler</ref>{</highlight><highlight class="stringliteral">&quot;storage&quot;</highlight><highlight class="normal">,<sp/><sp/><sp/><sp/>&amp;<ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a89b4bded531cd93bf50614c35865af0f" kindref="member">AppConfigurationImpl::parse_storage_segment</ref>},</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler" kindref="compound">SegmentHandler</ref>{</highlight><highlight class="stringliteral">&quot;authority&quot;</highlight><highlight class="normal">,<sp/><sp/>&amp;<ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a968ecdb40f722a3a6d95cbf29aa1c146" kindref="member">AppConfigurationImpl::parse_authority_segment</ref>},</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler" kindref="compound">SegmentHandler</ref>{</highlight><highlight class="stringliteral">&quot;network&quot;</highlight><highlight class="normal">,<sp/><sp/><sp/><sp/>&amp;<ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1ae2817c4c9819c38e366736f12658dfe5" kindref="member">AppConfigurationImpl::parse_network_segment</ref>},</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler" kindref="compound">SegmentHandler</ref>{</highlight><highlight class="stringliteral">&quot;additional&quot;</highlight><highlight class="normal">,<sp/>&amp;<ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a9dd06ed0f29b75e36381420f8c4e2610" kindref="member">AppConfigurationImpl::parse_additional_segment</ref>},</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>clang-format<sp/>on</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="66"><highlight class="normal"></highlight></codeline>
+<codeline lineno="67" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a66b3a93366d564191a3d4042e68b4ed3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">sgns::base::Logger</ref><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a66b3a93366d564191a3d4042e68b4ed3" kindref="member">logger_</ref>;</highlight></codeline>
+<codeline lineno="68" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a8f9269df851ab22c056e0406763530aa" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a8f9269df851ab22c056e0406763530aa" kindref="member">rpc_http_host_</ref>;</highlight></codeline>
+<codeline lineno="69" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1aafce89a5ac7b3d6e0b76715dea8ffdc8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1aafce89a5ac7b3d6e0b76715dea8ffdc8" kindref="member">rpc_ws_host_</ref>;</highlight></codeline>
+<codeline lineno="70" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a8b489be4b3905956ecc392066f34ee3d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>uint16_t<sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a8b489be4b3905956ecc392066f34ee3d" kindref="member">rpc_http_port_</ref>;</highlight></codeline>
+<codeline lineno="71" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a077b153d5c0588fd3e8c44032a1fe672" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>uint16_t<sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a077b153d5c0588fd3e8c44032a1fe672" kindref="member">rpc_ws_port_</ref>;</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"></highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>clang-format<sp/>off</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*</highlight></codeline>
+<codeline lineno="75"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/>*<sp/><sp/><sp/><sp/><sp/><sp/>COMMAND<sp/>LINE<sp/>ARGUMENTS<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&lt;-<sp/>max<sp/>priority</highlight></codeline>
+<codeline lineno="76"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/>*<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>V</highlight></codeline>
+<codeline lineno="77"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/>*<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CONFIGURATION<sp/>FILE</highlight></codeline>
+<codeline lineno="78"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/>*<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>V</highlight></codeline>
+<codeline lineno="79"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/>*<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>DEFAULT<sp/>VALUES<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&lt;-<sp/>low<sp/>priority</highlight></codeline>
+<codeline lineno="80"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>clang-format<sp/>on</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="82"><highlight class="normal"></highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a6587b8d06d21c70f4fc0e39fd65c2def" kindref="member">validate_config</ref>(<ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fd" kindref="member">AppConfiguration::LoadScheme</ref><sp/>scheme);</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a6cc7f7040f043eb8af2898972a14f462" kindref="member">read_config_from_file</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;filepath);</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"></highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1aeab64fe7fb920b87629884b7167e8bd2" kindref="member">load_str</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>rapidjson::Value<sp/>&amp;val,<sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>*name,<sp/>std::string<sp/>&amp;target<sp/>);</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1ad4cde05b00c1da654d3bf47f465da26b" kindref="member">load_u16</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>rapidjson::Value<sp/>&amp;val,<sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>*name,<sp/>uint16_t<sp/>&amp;target<sp/>);</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1ad799632c1a656c79b48cb55b822fbf07" kindref="member">load_bool</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>rapidjson::Value<sp/>&amp;val,<sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>*name,<sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>&amp;target<sp/>);</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"></highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/>boost::asio::ip::tcp::endpoint<sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a96c830542a58e4dda5eb0e2ab1d16db0" kindref="member">get_endpoint_from</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;host,</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint16_t<sp/>port);</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"></highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1ac9062a56a03b8f4b6b560ee4534e687e" kindref="member">FilePtr</ref><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1aa604f51e7f7a333594331adab86561c5" kindref="member">open_file</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;filepath<sp/>);</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"></highlight></codeline>
+<codeline lineno="95"><highlight class="normal"></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">explicit</highlight><highlight class="normal"><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1af47ad0c0d6bbe18536f818e1f405efdf" kindref="member">AppConfigurationImpl</ref>(<ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref><sp/>logger);</highlight></codeline>
+<codeline lineno="97" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a7d69a1a672499efdd66d722f0c77791d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a7d69a1a672499efdd66d722f0c77791d" kindref="member">~AppConfigurationImpl</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"></highlight></codeline>
+<codeline lineno="99" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a21a8c1cb17b35aa69f2592566260ea0a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a21a8c1cb17b35aa69f2592566260ea0a" kindref="member">AppConfigurationImpl</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1af47ad0c0d6bbe18536f818e1f405efdf" kindref="member">AppConfigurationImpl</ref><sp/>&amp;)<sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="100" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1ab9401a30393d2f05fdb50f18b2124c00" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1af47ad0c0d6bbe18536f818e1f405efdf" kindref="member">AppConfigurationImpl</ref><sp/>&amp;<ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1ab9401a30393d2f05fdb50f18b2124c00" kindref="member">operator=</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1af47ad0c0d6bbe18536f818e1f405efdf" kindref="member">AppConfigurationImpl</ref><sp/>&amp;)<sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"></highlight></codeline>
+<codeline lineno="102" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1ac133fe082a4871466b1fd055378141e7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1ac133fe082a4871466b1fd055378141e7" kindref="member">AppConfigurationImpl</ref>(<ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1af47ad0c0d6bbe18536f818e1f405efdf" kindref="member">AppConfigurationImpl</ref><sp/>&amp;&amp;)<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="103" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1af9b5eb03421d211673429276b1025575" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1af47ad0c0d6bbe18536f818e1f405efdf" kindref="member">AppConfigurationImpl</ref><sp/>&amp;<ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1af9b5eb03421d211673429276b1025575" kindref="member">operator=</ref>(<ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1af47ad0c0d6bbe18536f818e1f405efdf" kindref="member">AppConfigurationImpl</ref><sp/>&amp;&amp;)<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"></highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1aab5d82b4fe1aad9c4cef7d6fde5d5195" kindref="member">initialize_from_args</ref>(<ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fd" kindref="member">AppConfiguration::LoadScheme</ref><sp/>scheme,</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>argc,</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>**argv)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"></highlight></codeline>
+<codeline lineno="109" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a0b4ee629da829b54e2f9aa6bad3edc50" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a0b4ee629da829b54e2f9aa6bad3edc50" kindref="member">DECLARE_PROPERTY</ref>(std::string,<sp/><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a74f0590dc4a3ca6dff738860902ae084" kindref="member">genesis_path</ref>);</highlight></codeline>
+<codeline lineno="110" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a7a5c6624277d40f79bb37dd7a015aa81" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a7a5c6624277d40f79bb37dd7a015aa81" kindref="member">DECLARE_PROPERTY</ref>(std::string,<sp/><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1ae171adb944dc2748185197774fcab66c" kindref="member">keystore_path</ref>);</highlight></codeline>
+<codeline lineno="111" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a24591be458faeb58e1557538e72189c1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a24591be458faeb58e1557538e72189c1" kindref="member">DECLARE_PROPERTY</ref>(std::string,<sp/><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a3f8b01b943d532a7c2c86220f05adbe9" kindref="member">rocksdb_path</ref>);</highlight></codeline>
+<codeline lineno="112" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a2756ad28ebee7c5358f0221ed6b0ce75" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a2756ad28ebee7c5358f0221ed6b0ce75" kindref="member">DECLARE_PROPERTY</ref>(uint16_t,<sp/><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a550a82536f6c51016e67da90dffad2c5" kindref="member">p2p_port</ref>);</highlight></codeline>
+<codeline lineno="113" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a1d35f819b5224d8f2439ad357a760cc5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a1d35f819b5224d8f2439ad357a760cc5" kindref="member">DECLARE_PROPERTY</ref>(boost::asio::ip::tcp::endpoint,<sp/><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a208ab523d3876418b9cb162a70d6bc11" kindref="member">rpc_http_endpoint</ref>);</highlight></codeline>
+<codeline lineno="114" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a2a3c8b5ef49317e68b2f0cb332cd4619" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a2a3c8b5ef49317e68b2f0cb332cd4619" kindref="member">DECLARE_PROPERTY</ref>(boost::asio::ip::tcp::endpoint,<sp/><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a377053229eb79d58cc523e15bd432f94" kindref="member">rpc_ws_endpoint</ref>);</highlight></codeline>
+<codeline lineno="115" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1ad49814bee57c5bcff0cf27c227db2200" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1ad49814bee57c5bcff0cf27c227db2200" kindref="member">DECLARE_PROPERTY</ref>(spdlog::level::level_enum,<sp/><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a0fd65b30c9e26763f8c353c26d7e2af3" kindref="member">verbosity</ref>);</highlight></codeline>
+<codeline lineno="116" refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a796e6322104beb9e6a2abaf5483cd4d8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1a796e6322104beb9e6a2abaf5483cd4d8" kindref="member">DECLARE_PROPERTY</ref>(</highlight><highlight class="keywordtype">bool</highlight><highlight class="normal">,<sp/><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a90f250f47e21de9fe30e1a40ea428b54" kindref="member">is_only_finalizing</ref>);</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"></highlight></codeline>
+<codeline lineno="119"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::application</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="120"><highlight class="normal"></highlight></codeline>
+<codeline lineno="121"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>DECLARE_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="122"><highlight class="normal"></highlight></codeline>
+<codeline lineno="123"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_APP_CONFIG_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/application/impl/app_config_impl.hpp"/>
+  </compounddef>
+</doxygen>

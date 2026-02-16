@@ -1,0 +1,258 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d8/d22/classsgns_1_1runtime_1_1_finality_api" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::runtime::FinalityApi</compoundname>
+    <derivedcompoundref refid="df/d99/classsgns_1_1runtime_1_1binaryen_1_1_finality_api_impl" prot="public" virt="non-virtual">sgns::runtime::binaryen::FinalityApiImpl</derivedcompoundref>
+    <derivedcompoundref refid="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy" prot="public" virt="non-virtual">sgns::runtime::dummy::FinalityApiDummy</derivedcompoundref>
+    <includes refid="d7/d22/finality__api_8hpp" local="no">finality_api.hpp</includes>
+    <sectiondef kind="protected-type">
+      <memberdef kind="typedef" id="d8/d22/classsgns_1_1runtime_1_1_finality_api_1aa89fd8cc80a70ca91f223f5308da08ba" prot="protected" static="no">
+        <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1ab8880d489009bfb6d376eb6dc0c1a855" kindref="member">primitives::Digest</ref></type>
+        <definition>using sgns::runtime::FinalityApi::Digest = primitives::Digest</definition>
+        <argsstring></argsstring>
+        <name>Digest</name>
+        <qualifiedname>sgns::runtime::FinalityApi::Digest</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/finality_api.hpp" line="20" column="5" bodyfile="src/runtime/finality_api.hpp" bodystart="20" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a5a4915e08fadb4a886dd9587870175fd" prot="protected" static="no">
+        <type><ref refid="db/d4b/structsgns_1_1primitives_1_1_scheduled_change" kindref="compound">primitives::ScheduledChange</ref></type>
+        <definition>using sgns::runtime::FinalityApi::ScheduledChange = primitives::ScheduledChange</definition>
+        <argsstring></argsstring>
+        <name>ScheduledChange</name>
+        <qualifiedname>sgns::runtime::FinalityApi::ScheduledChange</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/finality_api.hpp" line="21" column="5" bodyfile="src/runtime/finality_api.hpp" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a668eb0a4f163cc3e632c05077854864a" prot="protected" static="no">
+        <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref></type>
+        <definition>using sgns::runtime::FinalityApi::BlockNumber = primitives::BlockNumber</definition>
+        <argsstring></argsstring>
+        <name>BlockNumber</name>
+        <qualifiedname>sgns::runtime::FinalityApi::BlockNumber</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/finality_api.hpp" line="22" column="5" bodyfile="src/runtime/finality_api.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a0e0b19953936b90450ff71d6bbb8a535" prot="protected" static="no">
+        <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1ad392b4e4cac3ce9aea0bd7386ed8d7d9" kindref="member">primitives::SessionKey</ref></type>
+        <definition>using sgns::runtime::FinalityApi::SessionKey = primitives::SessionKey</definition>
+        <argsstring></argsstring>
+        <name>SessionKey</name>
+        <qualifiedname>sgns::runtime::FinalityApi::SessionKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/finality_api.hpp" line="23" column="5" bodyfile="src/runtime/finality_api.hpp" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a8e2b50ecbbffd8d20ac9cf8e715b709f" prot="protected" static="no">
+        <type><ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">primitives::Authority</ref></type>
+        <definition>using sgns::runtime::FinalityApi::WeightedAuthority = primitives::Authority</definition>
+        <argsstring></argsstring>
+        <name>WeightedAuthority</name>
+        <qualifiedname>sgns::runtime::FinalityApi::WeightedAuthority</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/finality_api.hpp" line="24" column="5" bodyfile="src/runtime/finality_api.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d8/d22/classsgns_1_1runtime_1_1_finality_api_1ae0d63bf636bb00c898b3a595a73c68c5" prot="protected" static="no">
+        <type><ref refid="de/dc2/structsgns_1_1primitives_1_1_forced_change" kindref="compound">primitives::ForcedChange</ref></type>
+        <definition>using sgns::runtime::FinalityApi::ForcedChange = primitives::ForcedChange</definition>
+        <argsstring></argsstring>
+        <name>ForcedChange</name>
+        <qualifiedname>sgns::runtime::FinalityApi::ForcedChange</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/finality_api.hpp" line="25" column="5" bodyfile="src/runtime/finality_api.hpp" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a6f27d6faadbbc8c35fe141f06c504371" prot="protected" static="no">
+        <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref></type>
+        <definition>using sgns::runtime::FinalityApi::BlockId = primitives::BlockId</definition>
+        <argsstring></argsstring>
+        <name>BlockId</name>
+        <qualifiedname>sgns::runtime::FinalityApi::BlockId</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/finality_api.hpp" line="26" column="5" bodyfile="src/runtime/finality_api.hpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d8/d22/classsgns_1_1runtime_1_1_finality_api_1ac0e656d3dcf33dfa16040a5dc3fc1143" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::runtime::FinalityApi::~FinalityApi</definition>
+        <argsstring>()=default</argsstring>
+        <name>~FinalityApi</name>
+        <qualifiedname>sgns::runtime::FinalityApi::~FinalityApi</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/finality_api.hpp" line="29" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a5c19577923762f3ab18ffd5307ba3d6c" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; boost::optional&lt; <ref refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a5a4915e08fadb4a886dd9587870175fd" kindref="member">ScheduledChange</ref> &gt; &gt;</type>
+        <definition>virtual outcome::result&lt; boost::optional&lt; ScheduledChange &gt; &gt; sgns::runtime::FinalityApi::pending_change</definition>
+        <argsstring>(const Digest &amp;digest)=0</argsstring>
+        <name>pending_change</name>
+        <qualifiedname>sgns::runtime::FinalityApi::pending_change</qualifiedname>
+        <reimplementedby refid="df/d99/classsgns_1_1runtime_1_1binaryen_1_1_finality_api_impl_1a6b41e1363999e74cedf314a2e449329c">pending_change</reimplementedby>
+        <reimplementedby refid="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy_1ac7117cc2ef7b5706344affe35a0baa49">pending_change</reimplementedby>
+        <param>
+          <type>const <ref refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1aa89fd8cc80a70ca91f223f5308da08ba" kindref="member">Digest</ref> &amp;</type>
+          <declname>digest</declname>
+        </param>
+        <briefdescription>
+<para>calls Finality_pending_change runtime api function, which checks a digest for pending changes. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>digest</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>digest to check </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>nullopt if there are no pending changes, scheduled change item if exists or error if error occured </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/finality_api.hpp" line="37" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d22/classsgns_1_1runtime_1_1_finality_api_1ad1f0d171288f06b45eaf64c5fda28381" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; boost::optional&lt; <ref refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1ae0d63bf636bb00c898b3a595a73c68c5" kindref="member">ForcedChange</ref> &gt; &gt;</type>
+        <definition>virtual outcome::result&lt; boost::optional&lt; ForcedChange &gt; &gt; sgns::runtime::FinalityApi::forced_change</definition>
+        <argsstring>(const Digest &amp;digest)=0</argsstring>
+        <name>forced_change</name>
+        <qualifiedname>sgns::runtime::FinalityApi::forced_change</qualifiedname>
+        <reimplementedby refid="df/d99/classsgns_1_1runtime_1_1binaryen_1_1_finality_api_impl_1a897e1ad4e9684643dbc1bc065856aff5">forced_change</reimplementedby>
+        <reimplementedby refid="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy_1adbd528c1439edb875484a94e2cdb9a73">forced_change</reimplementedby>
+        <param>
+          <type>const <ref refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1aa89fd8cc80a70ca91f223f5308da08ba" kindref="member">Digest</ref> &amp;</type>
+          <declname>digest</declname>
+        </param>
+        <briefdescription>
+<para>calls Finality_forced_change runtime api function which checks a digest for forced changes </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>digest</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>digest to check </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>nullopt if no forced changes, forced change item if exists or error if error occured </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/finality_api.hpp" line="48" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d22/classsgns_1_1runtime_1_1_finality_api_1affe3ab475f3d66b9888b5c99db6af458" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="d6/d76/structsgns_1_1primitives_1_1_authority_list" kindref="compound">primitives::AuthorityList</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; primitives::AuthorityList &gt; sgns::runtime::FinalityApi::authorities</definition>
+        <argsstring>(const primitives::BlockId &amp;block_id)=0</argsstring>
+        <name>authorities</name>
+        <qualifiedname>sgns::runtime::FinalityApi::authorities</qualifiedname>
+        <reimplementedby refid="df/d99/classsgns_1_1runtime_1_1binaryen_1_1_finality_api_impl_1aa6b558813324e6407682bf4b7746646f">authorities</reimplementedby>
+        <reimplementedby refid="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy_1a0e18b87a111e20165732bdf254985085">authorities</reimplementedby>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>block_id</declname>
+        </param>
+        <briefdescription>
+<para>calls Finality_authorities runtime api function </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>collection of current finality authorities with their weights </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/finality_api.hpp" line="55" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>interface for Finality runtime functions </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::runtime::FinalityApi</label>
+        <link refid="d8/d22/classsgns_1_1runtime_1_1_finality_api"/>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::binaryen::FinalityApiImpl</label>
+        <link refid="df/d99/classsgns_1_1runtime_1_1binaryen_1_1_finality_api_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::runtime::dummy::FinalityApiDummy</label>
+        <link refid="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::runtime::FinalityApi</label>
+        <link refid="d8/d22/classsgns_1_1runtime_1_1_finality_api"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/finality_api.hpp" line="18" column="3" bodyfile="src/runtime/finality_api.hpp" bodystart="18" bodyend="57"/>
+    <listofallmembers>
+      <member refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1affe3ab475f3d66b9888b5c99db6af458" prot="public" virt="pure-virtual"><scope>sgns::runtime::FinalityApi</scope><name>authorities</name></member>
+      <member refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a6f27d6faadbbc8c35fe141f06c504371" prot="protected" virt="non-virtual"><scope>sgns::runtime::FinalityApi</scope><name>BlockId</name></member>
+      <member refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a668eb0a4f163cc3e632c05077854864a" prot="protected" virt="non-virtual"><scope>sgns::runtime::FinalityApi</scope><name>BlockNumber</name></member>
+      <member refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1aa89fd8cc80a70ca91f223f5308da08ba" prot="protected" virt="non-virtual"><scope>sgns::runtime::FinalityApi</scope><name>Digest</name></member>
+      <member refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1ad1f0d171288f06b45eaf64c5fda28381" prot="public" virt="pure-virtual"><scope>sgns::runtime::FinalityApi</scope><name>forced_change</name></member>
+      <member refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1ae0d63bf636bb00c898b3a595a73c68c5" prot="protected" virt="non-virtual"><scope>sgns::runtime::FinalityApi</scope><name>ForcedChange</name></member>
+      <member refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a5c19577923762f3ab18ffd5307ba3d6c" prot="public" virt="pure-virtual"><scope>sgns::runtime::FinalityApi</scope><name>pending_change</name></member>
+      <member refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a5a4915e08fadb4a886dd9587870175fd" prot="protected" virt="non-virtual"><scope>sgns::runtime::FinalityApi</scope><name>ScheduledChange</name></member>
+      <member refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a0e0b19953936b90450ff71d6bbb8a535" prot="protected" virt="non-virtual"><scope>sgns::runtime::FinalityApi</scope><name>SessionKey</name></member>
+      <member refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a8e2b50ecbbffd8d20ac9cf8e715b709f" prot="protected" virt="non-virtual"><scope>sgns::runtime::FinalityApi</scope><name>WeightedAuthority</name></member>
+      <member refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1ac0e656d3dcf33dfa16040a5dc3fc1143" prot="public" virt="virtual"><scope>sgns::runtime::FinalityApi</scope><name>~FinalityApi</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

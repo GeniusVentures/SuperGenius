@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/d9a/namespacesgns_1_1scale_1_1compact" kind="namespace" language="C++">
+    <compoundname>sgns::scale::compact</compoundname>
+    <innerclass refid="d6/dd5/structsgns_1_1scale_1_1compact_1_1_encoding_category_limits" prot="public">sgns::scale::compact::EncodingCategoryLimits</innerclass>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/scale/types.hpp" line="24" column="1"/>
+  </compounddef>
+</doxygen>

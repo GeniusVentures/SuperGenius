@@ -1,0 +1,1831 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/d80/classsgns_1_1crdt_1_1_crdt_set" kind="class" language="C++" prot="public">
+    <compoundname>sgns::crdt::CrdtSet</compoundname>
+    <includes refid="d4/d2e/crdt__set_8hpp" local="no">crdt_set.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>QuerySuffix</name>
+        <qualifiedname>sgns::crdt::CrdtSet::QuerySuffix</qualifiedname>
+        <enumvalue id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5a9f9bc38f522e367e0c5bde5252e482be" prot="public">
+          <name>QUERY_ALL</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5af2647f34c723fb3404da1d91fe0f7f45" prot="public">
+          <name>QUERY_VALUESUFFIX</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5ae127acaeedd7818491d8e174d4ae38a1" prot="public">
+          <name>QUERY_PRIORITYSUFFIX</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="27" column="9" bodyfile="src/crdt/crdt_set.hpp" bodystart="28" bodyend="32"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a3c68254073dc4899c0381648bb2b0d5d" prot="public" static="no">
+        <type>pb::Delta</type>
+        <definition>using sgns::crdt::CrdtSet::Delta = pb::Delta</definition>
+        <argsstring></argsstring>
+        <name>Delta</name>
+        <qualifiedname>sgns::crdt::CrdtSet::Delta</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="21" column="9" bodyfile="src/crdt/crdt_set.hpp" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a714946643028e430c20de60a62f6debf" prot="public" static="no">
+        <type>pb::Element</type>
+        <definition>using sgns::crdt::CrdtSet::Element = pb::Element</definition>
+        <argsstring></argsstring>
+        <name>Element</name>
+        <qualifiedname>sgns::crdt::CrdtSet::Element</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="22" column="9" bodyfile="src/crdt/crdt_set.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a7e8ebf0f3c0554a34554e9403f1ed58e" prot="public" static="no">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>using sgns::crdt::CrdtSet::Buffer = base::Buffer</definition>
+        <argsstring></argsstring>
+        <name>Buffer</name>
+        <qualifiedname>sgns::crdt::CrdtSet::Buffer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="23" column="9" bodyfile="src/crdt/crdt_set.hpp" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a10f8dfc0457626df474c0528332e8a28" prot="public" static="no">
+        <type><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb" kindref="compound">storage::rocksdb</ref></type>
+        <definition>using sgns::crdt::CrdtSet::DataStore = storage::rocksdb</definition>
+        <argsstring></argsstring>
+        <name>DataStore</name>
+        <qualifiedname>sgns::crdt::CrdtSet::DataStore</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="24" column="9" bodyfile="src/crdt/crdt_set.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab08b15d094e1258e65bdbfec872b5e19" prot="public" static="no">
+        <type><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a2c93b11da8a6ebd31ca7512ca2c86b41" kindref="member">DataStore::QueryResult</ref></type>
+        <definition>using sgns::crdt::CrdtSet::QueryResult = DataStore::QueryResult</definition>
+        <argsstring></argsstring>
+        <name>QueryResult</name>
+        <qualifiedname>sgns::crdt::CrdtSet::QueryResult</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="25" column="9" bodyfile="src/crdt/crdt_set.hpp" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a0eab41af5fe517c06de2ced00e2f2075" prot="public" static="no">
+        <type>std::function&lt; void(const std::string &amp;k, const <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a7e8ebf0f3c0554a34554e9403f1ed58e" kindref="member">Buffer</ref> &amp;v, const std::string &amp;cid)&gt;</type>
+        <definition>using sgns::crdt::CrdtSet::PutHookPtr = std::function&lt;void( const std::string &amp;k, const Buffer &amp;v, const std::string &amp;cid )&gt;</definition>
+        <argsstring></argsstring>
+        <name>PutHookPtr</name>
+        <qualifiedname>sgns::crdt::CrdtSet::PutHookPtr</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Function pointer to notify caller if key added to datastore <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>k</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key name </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>buffer value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="38" column="9" bodyfile="src/crdt/crdt_set.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab0f1b98bec92e94784401368b56149e2" prot="public" static="no">
+        <type>std::function&lt; void(const std::string &amp;k, const std::string &amp;cid)&gt;</type>
+        <definition>using sgns::crdt::CrdtSet::DeleteHookPtr = std::function&lt;void( const std::string &amp;k, const std::string &amp;cid )&gt;</definition>
+        <argsstring></argsstring>
+        <name>DeleteHookPtr</name>
+        <qualifiedname>sgns::crdt::CrdtSet::DeleteHookPtr</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Function pointer to notify caller when key deleted from datastore <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>k</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key name </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="43" column="9" bodyfile="src/crdt/crdt_set.hpp" bodystart="43" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab8b010c8595afcb90dd7dae915b15232" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a10f8dfc0457626df474c0528332e8a28" kindref="member">DataStore</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;DataStore&gt; sgns::crdt::CrdtSet::dataStore_</definition>
+        <argsstring></argsstring>
+        <name>dataStore_</name>
+        <qualifiedname>sgns::crdt::CrdtSet::dataStore_</qualifiedname>
+        <initializer>= nullptr</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="310" column="25" bodyfile="src/crdt/crdt_set.hpp" bodystart="310" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ae69a448a218970353d2c978909f52782" prot="private" static="no" mutable="no">
+        <type><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref></type>
+        <definition>HierarchicalKey sgns::crdt::CrdtSet::namespaceKey_</definition>
+        <argsstring></argsstring>
+        <name>namespaceKey_</name>
+        <qualifiedname>sgns::crdt::CrdtSet::namespaceKey_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="311" column="36" bodyfile="src/crdt/crdt_set.hpp" bodystart="311" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a4fa932fa4281c56b3cc6188af8dd0ff7" prot="private" static="no" mutable="no">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::crdt::CrdtSet::mutex_</definition>
+        <argsstring></argsstring>
+        <name>mutex_</name>
+        <qualifiedname>sgns::crdt::CrdtSet::mutex_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="312" column="36" bodyfile="src/crdt/crdt_set.hpp" bodystart="312" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab8ff1f252a3f13ca5cf396f3d869c464" prot="private" static="no" mutable="no">
+        <type><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a0eab41af5fe517c06de2ced00e2f2075" kindref="member">PutHookPtr</ref></type>
+        <definition>PutHookPtr sgns::crdt::CrdtSet::putHookFunc_</definition>
+        <argsstring></argsstring>
+        <name>putHookFunc_</name>
+        <qualifiedname>sgns::crdt::CrdtSet::putHookFunc_</qualifiedname>
+        <initializer>= nullptr</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="313" column="36" bodyfile="src/crdt/crdt_set.hpp" bodystart="313" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a2b5c2a715f309fdc603127c482c82c33" prot="private" static="no" mutable="no">
+        <type><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab0f1b98bec92e94784401368b56149e2" kindref="member">DeleteHookPtr</ref></type>
+        <definition>DeleteHookPtr sgns::crdt::CrdtSet::deleteHookFunc_</definition>
+        <argsstring></argsstring>
+        <name>deleteHookFunc_</name>
+        <qualifiedname>sgns::crdt::CrdtSet::deleteHookFunc_</qualifiedname>
+        <initializer>= nullptr</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="314" column="36" bodyfile="src/crdt/crdt_set.hpp" bodystart="314" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a307d200dcb6039ebdd00e8696a7055e1" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>std::string_view</type>
+        <definition>std::string_view sgns::crdt::CrdtSet::elemsNamespace_</definition>
+        <argsstring></argsstring>
+        <name>elemsNamespace_</name>
+        <qualifiedname>sgns::crdt::CrdtSet::elemsNamespace_</qualifiedname>
+        <initializer>= &quot;s&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="316" column="43" bodyfile="src/crdt/crdt_set.hpp" bodystart="316" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1add6f086cee0f74a3da366c9db5c2d858" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>std::string_view</type>
+        <definition>std::string_view sgns::crdt::CrdtSet::tombsNamespace_</definition>
+        <argsstring></argsstring>
+        <name>tombsNamespace_</name>
+        <qualifiedname>sgns::crdt::CrdtSet::tombsNamespace_</qualifiedname>
+        <initializer>= &quot;t&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="317" column="43" bodyfile="src/crdt/crdt_set.hpp" bodystart="317" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a98d7bd761cca31dc611f4209b49f7741" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>std::string_view</type>
+        <definition>std::string_view sgns::crdt::CrdtSet::keysNamespace_</definition>
+        <argsstring></argsstring>
+        <name>keysNamespace_</name>
+        <qualifiedname>sgns::crdt::CrdtSet::keysNamespace_</qualifiedname>
+        <initializer>= &quot;k&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="318" column="43" bodyfile="src/crdt/crdt_set.hpp" bodystart="318" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1acb045e20cc7f88554a132db8eab458d6" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>std::string_view</type>
+        <definition>std::string_view sgns::crdt::CrdtSet::valueSuffix_</definition>
+        <argsstring></argsstring>
+        <name>valueSuffix_</name>
+        <qualifiedname>sgns::crdt::CrdtSet::valueSuffix_</qualifiedname>
+        <initializer>= &quot;v&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="319" column="43" bodyfile="src/crdt/crdt_set.hpp" bodystart="319" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aa73c800b6187153a0b68b8d81ea595bc" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>std::string_view</type>
+        <definition>std::string_view sgns::crdt::CrdtSet::prioritySuffix_</definition>
+        <argsstring></argsstring>
+        <name>prioritySuffix_</name>
+        <qualifiedname>sgns::crdt::CrdtSet::prioritySuffix_</qualifiedname>
+        <initializer>= &quot;p&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="320" column="43" bodyfile="src/crdt/crdt_set.hpp" bodystart="320" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aee3b2c8e139ffbf2077783310258368d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crdt::CrdtSet::CrdtSet</definition>
+        <argsstring>(std::shared_ptr&lt; DataStore &gt; aDatastore, const HierarchicalKey &amp;aNamespace, PutHookPtr aPutHookPtr=nullptr, DeleteHookPtr aDeleteHookPtr=nullptr)</argsstring>
+        <name>CrdtSet</name>
+        <qualifiedname>sgns::crdt::CrdtSet::CrdtSet</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a10f8dfc0457626df474c0528332e8a28" kindref="member">DataStore</ref> &gt;</type>
+          <declname>aDatastore</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref> &amp;</type>
+          <declname>aNamespace</declname>
+        </param>
+        <param>
+          <type><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a0eab41af5fe517c06de2ced00e2f2075" kindref="member">PutHookPtr</ref></type>
+          <declname>aPutHookPtr</declname>
+          <defval>nullptr</defval>
+        </param>
+        <param>
+          <type><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab0f1b98bec92e94784401368b56149e2" kindref="member">DeleteHookPtr</ref></type>
+          <declname>aDeleteHookPtr</declname>
+          <defval>nullptr</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Constructor <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aDatastore</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pointer to datastore </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aNamespace</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Namespce key (e.g &quot;/namespace&quot;) </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aPutHookPtr</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Function pointer to nofify when key added to datastore, default nullptr </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aDeleteHookPtr</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Function pointer to nofify when key deleted from datastore, default nullptr </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="51" column="9" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="12" bodyend="21"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6d86082405b12a2450b434cafb81004e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crdt::CrdtSet::CrdtSet</definition>
+        <argsstring>(const CrdtSet &amp;)</argsstring>
+        <name>CrdtSet</name>
+        <qualifiedname>sgns::crdt::CrdtSet::CrdtSet</qualifiedname>
+        <param>
+          <type>const CrdtSet &amp;</type>
+          <defname>aSet</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Copy constructor </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="58" column="9" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="23" bodyend="26"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ac0c590242c60335dba4b51186b70d78c" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::crdt::CrdtSet::~CrdtSet</definition>
+        <argsstring>()=default</argsstring>
+        <name>~CrdtSet</name>
+        <qualifiedname>sgns::crdt::CrdtSet::~CrdtSet</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Destructor </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="62" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a103fa7e794ba3e7f9869273135385ae9" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::CrdtSet::operator==</definition>
+        <argsstring>(const CrdtSet &amp;) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::crdt::CrdtSet::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aee3b2c8e139ffbf2077783310258368d" kindref="member">CrdtSet</ref> &amp;</type>
+          <defname>aSet</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Equality operator <simplesect kind="return"><para>true if equal otherwise, it returns false. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="67" column="14" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="28" bodyend="34"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a2cbb8428390c033f3d8e22f72b233721" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::CrdtSet::operator!=</definition>
+        <argsstring>(const CrdtSet &amp;) const</argsstring>
+        <name>operator!=</name>
+        <qualifiedname>sgns::crdt::CrdtSet::operator!=</qualifiedname>
+        <param>
+          <type>const <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aee3b2c8e139ffbf2077783310258368d" kindref="member">CrdtSet</ref> &amp;</type>
+          <defname>aSet</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Equality operator <simplesect kind="return"><para>true if NOT equal otherwise, it returns false. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="72" column="14" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="36" bodyend="39"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ae7943a79b7b1096962366d51ddf4d701" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aee3b2c8e139ffbf2077783310258368d" kindref="member">CrdtSet</ref> &amp;</type>
+        <definition>CrdtSet &amp; sgns::crdt::CrdtSet::operator=</definition>
+        <argsstring>(const CrdtSet &amp;)</argsstring>
+        <name>operator=</name>
+        <qualifiedname>sgns::crdt::CrdtSet::operator=</qualifiedname>
+        <param>
+          <type>const <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aee3b2c8e139ffbf2077783310258368d" kindref="member">CrdtSet</ref> &amp;</type>
+          <defname>aSet</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Assignment operator </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="76" column="17" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="41" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a1815525bf64247f1bf75c726e418f9eb" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::string &gt;</type>
+        <definition>outcome::result&lt; std::string &gt; sgns::crdt::CrdtSet::GetValueFromDatastore</definition>
+        <argsstring>(const HierarchicalKey &amp;aKey) const</argsstring>
+        <name>GetValueFromDatastore</name>
+        <qualifiedname>sgns::crdt::CrdtSet::GetValueFromDatastore</qualifiedname>
+        <param>
+          <type>const <ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref> &amp;</type>
+          <declname>aKey</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get value from datastore for <ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref> defined <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aKey</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref> to get value from datastore </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>buffer value as string or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="96" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="53" bodyend="71"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1af96668779574ef8996ec587c16c79ef1" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a3c68254073dc4899c0381648bb2b0d5d" kindref="member">Delta</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; CrdtSet::Delta &gt; &gt; sgns::crdt::CrdtSet::CreateDeltaToRemove</definition>
+        <argsstring>(const std::string &amp;aKey) const</argsstring>
+        <name>CreateDeltaToRemove</name>
+        <qualifiedname>sgns::crdt::CrdtSet::CreateDeltaToRemove</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aKey</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Returns a new delta-set removing the given keys with prefix /namespace/s/key <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aKey</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>delta key to remove from datastore </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>pointer to delta or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="110" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="84" bodyend="119"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1abff7cdd8d9bb587127dcb1cfc1d7615c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a7e8ebf0f3c0554a34554e9403f1ed58e" kindref="member">Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; CrdtSet::Buffer &gt; sgns::crdt::CrdtSet::GetElement</definition>
+        <argsstring>(const std::string &amp;aKey) const</argsstring>
+        <name>GetElement</name>
+        <qualifiedname>sgns::crdt::CrdtSet::GetElement</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aKey</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get the value of an element from the CRDT set /namespace/k/key/v <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aKey</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Key name </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>buffer value or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="116" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="121" bodyend="162"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a9d47deccadf24bd675864b3fadd1c0ed" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab08b15d094e1258e65bdbfec872b5e19" kindref="member">QueryResult</ref> &gt;</type>
+        <definition>outcome::result&lt; CrdtSet::QueryResult &gt; sgns::crdt::CrdtSet::QueryElements</definition>
+        <argsstring>(std::string_view aPrefix, const QuerySuffix &amp;aSuffix=QuerySuffix::QUERY_ALL) const</argsstring>
+        <name>QueryElements</name>
+        <qualifiedname>sgns::crdt::CrdtSet::QueryElements</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>aPrefix</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5" kindref="member">QuerySuffix</ref> &amp;</type>
+          <declname>aSuffix</declname>
+          <defval><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5a9f9bc38f522e367e0c5bde5252e482be" kindref="member">QuerySuffix::QUERY_ALL</ref></defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Query datastore key-value pairs by prefix, if prefix empty return all elements /namespace/k/prefix <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aPrefix</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>prefix to search, if empty string, return all </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aSuffix</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>suffix to search </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>list of key-value pairs matches prefix and suffix </para>
+</simplesect>
+<simplesect kind="see"><para><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5" kindref="member">QuerySuffix</ref> </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="124" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="164" bodyend="228"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ae495e6f10dffe8dd524e22a57d7f27a2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab08b15d094e1258e65bdbfec872b5e19" kindref="member">QueryResult</ref> &gt;</type>
+        <definition>outcome::result&lt; CrdtSet::QueryResult &gt; sgns::crdt::CrdtSet::QueryElements</definition>
+        <argsstring>(const std::string &amp;prefix_base, const std::string &amp;middle_part, const std::string &amp;remainder_prefix, const QuerySuffix &amp;aSuffix=QuerySuffix::QUERY_ALL) const</argsstring>
+        <name>QueryElements</name>
+        <qualifiedname>sgns::crdt::CrdtSet::QueryElements</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>prefix_base</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>middle_part</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>remainder_prefix</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5" kindref="member">QuerySuffix</ref> &amp;</type>
+          <declname>aSuffix</declname>
+          <defval><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5a9f9bc38f522e367e0c5bde5252e482be" kindref="member">QuerySuffix::QUERY_ALL</ref></defval>
+        </param>
+        <briefdescription>
+<para>Queries with a middle part that can be a wildcard, negated string or normal string. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">prefix_base</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The base prefix to query </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">middle_part</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Either a string (normal query), &apos;*&apos; or !string </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">remainder_prefix</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The remainder part of the query prefix </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">aSuffix</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The suffix to search </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>List of query results </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="135" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="230" bodyend="293"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a9276e00323617ff1c8e713f3f586b600" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; bool &gt;</type>
+        <definition>outcome::result&lt; bool &gt; sgns::crdt::CrdtSet::IsValueInSet</definition>
+        <argsstring>(const std::string &amp;aKey) const</argsstring>
+        <name>IsValueInSet</name>
+        <qualifiedname>sgns::crdt::CrdtSet::IsValueInSet</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aKey</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Returns true if the key belongs to one of the elements in the /namespace/k/key/v set, and this element is not tombstoned. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aKey</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key name </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if the key belongs to one of the elements and is not tombstoned or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="148" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="295" bodyend="322"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aa76c9ca73919a5c3041fd42a22573a0a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; bool &gt;</type>
+        <definition>outcome::result&lt; bool &gt; sgns::crdt::CrdtSet::InElemsNotTombstoned</definition>
+        <argsstring>(const std::string &amp;aKey) const</argsstring>
+        <name>InElemsNotTombstoned</name>
+        <qualifiedname>sgns::crdt::CrdtSet::InElemsNotTombstoned</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aKey</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Returns in we have a key/block combinations in the elements set that has not been tombstoned. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aKey</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key name </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if the key has not been tombstoned, false otherwise or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="155" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="324" bodyend="366"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a09a236a88b68d04bf869fb5241616fba" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref></type>
+        <definition>HierarchicalKey sgns::crdt::CrdtSet::KeyPrefix</definition>
+        <argsstring>(const std::string &amp;aKey) const</argsstring>
+        <name>KeyPrefix</name>
+        <qualifiedname>sgns::crdt::CrdtSet::KeyPrefix</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aKey</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get full path prefix in namespace for a key /namespace/key <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aKey</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key string </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref> with key prefix </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="162" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="368" bodyend="372"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a9574ad9a47a74b9ac932eb5a80187059" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref></type>
+        <definition>HierarchicalKey sgns::crdt::CrdtSet::ElemsPrefix</definition>
+        <argsstring>(const std::string &amp;aKey) const</argsstring>
+        <name>ElemsPrefix</name>
+        <qualifiedname>sgns::crdt::CrdtSet::ElemsPrefix</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aKey</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get elems full path prefix in namespace for a key /namespace/s/key <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aKey</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key string </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref> with elems prefix </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="169" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="374" bodyend="378"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1abfa53c5f84133459f9dc09d245c5b776" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref></type>
+        <definition>HierarchicalKey sgns::crdt::CrdtSet::TombsPrefix</definition>
+        <argsstring>(const std::string &amp;aKey) const</argsstring>
+        <name>TombsPrefix</name>
+        <qualifiedname>sgns::crdt::CrdtSet::TombsPrefix</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aKey</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get tombs full path prefix in namespace for a key /namespace/t/key <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aKey</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key string </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref> with tombs prefix </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="176" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="380" bodyend="384"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a05a3d2e0996a4c06c41c3fe9ce7331fc" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref></type>
+        <definition>HierarchicalKey sgns::crdt::CrdtSet::KeysKey</definition>
+        <argsstring>(std::string_view aKey) const</argsstring>
+        <name>KeysKey</name>
+        <qualifiedname>sgns::crdt::CrdtSet::KeysKey</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>aKey</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get keys full path prefix in namespace for a key /namespace/k/key <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aKey</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key string </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref> with key prefix </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="183" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="386" bodyend="390"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a4944ddfb602140c09489bc4c3b85eabf" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref></type>
+        <definition>HierarchicalKey sgns::crdt::CrdtSet::ValueKey</definition>
+        <argsstring>(const std::string &amp;aKey) const</argsstring>
+        <name>ValueKey</name>
+        <qualifiedname>sgns::crdt::CrdtSet::ValueKey</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aKey</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get value full path prefix in namespace for a key /namespace/k/key/v <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aKey</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key string </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref> with value prefix </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="190" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="392" bodyend="396"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a36f103b2c0ea142434859e2de75ee37a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref></type>
+        <definition>HierarchicalKey sgns::crdt::CrdtSet::PriorityKey</definition>
+        <argsstring>(const std::string &amp;aKey) const</argsstring>
+        <name>PriorityKey</name>
+        <qualifiedname>sgns::crdt::CrdtSet::PriorityKey</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aKey</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get priority full path prefix in namespace for a key /namespace/k/key/p <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aKey</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key string </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref> with priority prefix </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="197" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="398" bodyend="402"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a57bebd53171f08177ddbe6f5a7160828" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; uint64_t &gt;</type>
+        <definition>outcome::result&lt; uint64_t &gt; sgns::crdt::CrdtSet::GetPriority</definition>
+        <argsstring>(const std::string &amp;aKey) const</argsstring>
+        <name>GetPriority</name>
+        <qualifiedname>sgns::crdt::CrdtSet::GetPriority</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aKey</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get priority for a key from datastore <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aKey</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key string </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>priority of the key or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="203" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="404" bodyend="425"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a756b190b07b8d3e725b27eacad7a03a2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::CrdtSet::SetPriority</definition>
+        <argsstring>(const std::string &amp;aKey, uint64_t aPriority)</argsstring>
+        <name>SetPriority</name>
+        <qualifiedname>sgns::crdt::CrdtSet::SetPriority</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aKey</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>aPriority</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Set priority for a key and put into datastore <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aKey</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key string </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aPriority</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>priority to save </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>priority of the key or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="210" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="427" bodyend="445"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ae55260e21fd4ba2a647adb178e4a476d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::CrdtSet::SetValue</definition>
+        <argsstring>(const std::string &amp;aKey, const std::string &amp;aID, const Buffer &amp;aValue, uint64_t aPriority)</argsstring>
+        <name>SetValue</name>
+        <qualifiedname>sgns::crdt::CrdtSet::SetValue</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aKey</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aID</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a7e8ebf0f3c0554a34554e9403f1ed58e" kindref="member">Buffer</ref> &amp;</type>
+          <declname>aValue</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>aPriority</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Sets a value to datastore if priority is higher. When equal, it sets if the value is lexicographically higher than the current value. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aKey</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key string </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aID</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>tomb key ID </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aValue</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>buffer value to set </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aPriority</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>priority to save </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>priority of the key or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="220" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="447" bodyend="471"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a8ac205a0d3b3b555a9c8152cca1e5617" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::CrdtSet::SetValue</definition>
+        <argsstring>(const std::unique_ptr&lt; storage::BufferBatch &gt; &amp;aDataStore, const std::string &amp;aKey, const std::string &amp;aID, const Buffer &amp;aValue, uint64_t aPriority)</argsstring>
+        <name>SetValue</name>
+        <qualifiedname>sgns::crdt::CrdtSet::SetValue</qualifiedname>
+        <param>
+          <type>const std::unique_ptr&lt; <ref refid="d0/dbf/namespacesgns_1_1storage_1a5919619e4b0d178dbbbffbc8bcf1fb7d" kindref="member">storage::BufferBatch</ref> &gt; &amp;</type>
+          <declname>aDataStore</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aKey</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aID</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a7e8ebf0f3c0554a34554e9403f1ed58e" kindref="member">Buffer</ref> &amp;</type>
+          <declname>aValue</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>aPriority</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Sets a value to datastore in batch mode if priority is higher. When equal, it sets if the value is lexicographically higher than the current value. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aDataStore</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>datastore batch </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aKey</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key string </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aID</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>tomb key ID </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aValue</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>buffer value to set </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aPriority</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>priority to save </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>priority of the key or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="234" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="473" bodyend="539"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1af7690002bae50aefc3cf7f80a2ed89a7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::CrdtSet::PutElems</definition>
+        <argsstring>(std::vector&lt; Element &gt; &amp;aElems, const std::string &amp;aID, uint64_t aPriority)</argsstring>
+        <name>PutElems</name>
+        <qualifiedname>sgns::crdt::CrdtSet::PutElems</qualifiedname>
+        <param>
+          <type>std::vector&lt; <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a714946643028e430c20de60a62f6debf" kindref="member">Element</ref> &gt; &amp;</type>
+          <declname>aElems</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aID</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>aPriority</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>putElems adds items to the &quot;elems&quot; set. It will also set current values and priorities for each element. This needs to run in a lock, as otherwise races may occur when reading/writing the priorities, resulting in bad behaviours.</para>
+<para>Technically the lock should only affect the keys that are being written, but with the batching optimization the locks would need to be hold until the batch is written), and one lock per key might be way worse than a single global lock in the end. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aElems</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>list of elems to to into datastore </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aID</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>tomb key ID </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aPriority</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>priority to save </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>outcome::success on success or outcome::failure otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="254" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="541" bodyend="588"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aad3a72856238edeb82bb725a2c3da64b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::CrdtSet::PutTombs</definition>
+        <argsstring>(const std::vector&lt; Element &gt; &amp;aTombs, const std::string &amp;aID) const</argsstring>
+        <name>PutTombs</name>
+        <qualifiedname>sgns::crdt::CrdtSet::PutTombs</qualifiedname>
+        <param>
+          <type>const std::vector&lt; <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a714946643028e430c20de60a62f6debf" kindref="member">Element</ref> &gt; &amp;</type>
+          <declname>aTombs</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aID</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>PutTombs adds items to the &quot;tombs&quot; set (marked as deleted) <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aTombs</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>list of tomb elements to put into datastore </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aID</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>tomb key ID </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>outcome::success on success or outcome::failure otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="261" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="590" bodyend="637"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a3185ee6939af7dd1f914da82ea671929" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::CrdtSet::Merge</definition>
+        <argsstring>(const Delta &amp;aDelta, const std::string &amp;aID)</argsstring>
+        <name>Merge</name>
+        <qualifiedname>sgns::crdt::CrdtSet::Merge</qualifiedname>
+        <param>
+          <type>const <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a3c68254073dc4899c0381648bb2b0d5d" kindref="member">Delta</ref> &amp;</type>
+          <declname>aDelta</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aID</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Merge elems and tombs from delta into datastore <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aDelta</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>delta with elems and tombs to save into datastore </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aID</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>tomb key ID </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>outcome::success on success or outcome::failure otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="268" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="639" bodyend="645"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aec5391c272794e5273dc387db7619c02" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; bool &gt;</type>
+        <definition>outcome::result&lt; bool &gt; sgns::crdt::CrdtSet::InTombsKeyID</definition>
+        <argsstring>(const std::string &amp;aKey, const std::string &amp;aID) const</argsstring>
+        <name>InTombsKeyID</name>
+        <qualifiedname>sgns::crdt::CrdtSet::InTombsKeyID</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aKey</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aID</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Check if key is tombstoned with tomb ID and found in datastore <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aKey</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key string </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aID</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>tomb key ID </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if key with ID is tombstoned, false otherwise or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="275" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="647" bodyend="658"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a7960d9ce94f2ccba221a770996b0bf1d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::CrdtSet::SetPutHook</definition>
+        <argsstring>(const PutHookPtr &amp;putHookPtr)</argsstring>
+        <name>SetPutHook</name>
+        <qualifiedname>sgns::crdt::CrdtSet::SetPutHook</qualifiedname>
+        <param>
+          <type>const <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a0eab41af5fe517c06de2ced00e2f2075" kindref="member">PutHookPtr</ref> &amp;</type>
+          <declname>putHookPtr</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>The PutHook function is triggered whenever an element is successfully added to the datastore (either by a local or remote update), and only when that addition is considered the prevalent value. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>putHookPtr</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Function pointer to callback function </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="283" column="14" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="660" bodyend="663"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ad545a9b71d93c0fb834270d8faa538f7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::CrdtSet::SetDeleteHook</definition>
+        <argsstring>(const DeleteHookPtr &amp;deleteHookPtr)</argsstring>
+        <name>SetDeleteHook</name>
+        <qualifiedname>sgns::crdt::CrdtSet::SetDeleteHook</qualifiedname>
+        <param>
+          <type>const <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab0f1b98bec92e94784401368b56149e2" kindref="member">DeleteHookPtr</ref> &amp;</type>
+          <declname>deleteHookPtr</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>The DeleteHook function is triggered whenever a version of an element is successfully removed from the datastore (either by a local or remote update). Unordered and concurrent updates may result in the DeleteHook being triggered even though the element is still present in the datastore because it was re-added. If that is relevant, use Has() to check if the removed element is still part of the datastore. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>deleteHookPtr</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Function pointer to callback function </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="294" column="14" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="665" bodyend="668"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ad8df1342fefe3b2505621c46c7548222" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::CrdtSet::DataStoreSync</definition>
+        <argsstring>(const std::vector&lt; HierarchicalKey &gt; &amp;aKeyList)</argsstring>
+        <name>DataStoreSync</name>
+        <qualifiedname>sgns::crdt::CrdtSet::DataStoreSync</qualifiedname>
+        <param>
+          <type>const std::vector&lt; <ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref> &gt; &amp;</type>
+          <declname>aKeyList</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Perform a Sync against all the paths associated with a key prefix <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aKeyList</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>all heads and the set entries related to the given prefix </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>outcome::success on success or outcome::failure otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="301" column="25" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="670" bodyend="690"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1af3dddf6c6df46ac65aea9282a6f9fa46" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::CrdtSet::PrintDataStore</definition>
+        <argsstring>() const</argsstring>
+        <name>PrintDataStore</name>
+        <qualifiedname>sgns::crdt::CrdtSet::PrintDataStore</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="303" column="14" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="692" bodyend="713"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1abfbf942a3d04e965b5d4db6f467b7fb1" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::string</type>
+        <definition>static std::string sgns::crdt::CrdtSet::GetPrioritySuffix</definition>
+        <argsstring>()</argsstring>
+        <name>GetPrioritySuffix</name>
+        <qualifiedname>sgns::crdt::CrdtSet::GetPrioritySuffix</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get priority suffix </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="80" column="28" bodyfile="src/crdt/crdt_set.hpp" bodystart="80" bodyend="83"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a2bf5113d447a07c61c29a389cc534744" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::string</type>
+        <definition>static std::string sgns::crdt::CrdtSet::GetValueSuffix</definition>
+        <argsstring>()</argsstring>
+        <name>GetValueSuffix</name>
+        <qualifiedname>sgns::crdt::CrdtSet::GetValueSuffix</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get value suffix </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="87" column="28" bodyfile="src/crdt/crdt_set.hpp" bodystart="87" bodyend="90"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a74e5fbcd365b4e1cb5393d770f885637" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a3c68254073dc4899c0381648bb2b0d5d" kindref="member">Delta</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; CrdtSet::Delta &gt; &gt; sgns::crdt::CrdtSet::CreateDeltaToAdd</definition>
+        <argsstring>(const std::string &amp;aKey, const std::string &amp;aValue)</argsstring>
+        <name>CreateDeltaToAdd</name>
+        <qualifiedname>sgns::crdt::CrdtSet::CreateDeltaToAdd</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aKey</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aValue</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Returns a new delta-set adding the given key/value. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aKey</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>delta key to add to datastore </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aValue</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>delta value to add to datastore </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>pointer to new delta or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="103" column="32" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="73" bodyend="82"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a52c8b9b3f00e5e2b5db3c4b38b52734e" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crdt::CrdtSet::CrdtSet</definition>
+        <argsstring>()=default</argsstring>
+        <name>CrdtSet</name>
+        <qualifiedname>sgns::crdt::CrdtSet::CrdtSet</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="306" column="9"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a81c984334a19e54921b3f5b97c7d35a3" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::CrdtSet::PrintTombs</definition>
+        <argsstring>(const std::vector&lt; Element &gt; &amp;aTombs)</argsstring>
+        <name>PrintTombs</name>
+        <qualifiedname>sgns::crdt::CrdtSet::PrintTombs</qualifiedname>
+        <param>
+          <type>const std::vector&lt; <ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a714946643028e430c20de60a62f6debf" kindref="member">Element</ref> &gt; &amp;</type>
+          <declname>aTombs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_set.hpp" line="308" column="21" bodyfile="src/crdt/impl/crdt_set.cpp" bodystart="715" bodyend="723"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set" kindref="compound">CrdtSet</ref> implements an Add-Wins Observed-Remove Set using delta-CRDTs (<ulink url="https://arxiv.org/abs/1410.2803">https://arxiv.org/abs/1410.2803</ulink>) and backing all the data in a datastore. It is fully agnostic to MerkleCRDTs or the delta distribution layer. It chooses the Value with most priority for a Key as the current Value. When two values have the same priority, it chooses by alphabetically sorting their unique IDs alphabetically. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="4">
+        <label>BufferStorage</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+        <childnode refid="13" relation="public-inheritance">
+        </childnode>
+        <childnode refid="20" relation="public-inheritance">
+        </childnode>
+        <childnode refid="21" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="20">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="26">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::crdt::CrdtSet</label>
+        <link refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-dataStore_</edgelabel>
+        </childnode>
+        <childnode refid="31" relation="usage">
+          <edgelabel>-namespaceKey_</edgelabel>
+        </childnode>
+        <childnode refid="32" relation="usage">
+          <edgelabel>-mutex_</edgelabel>
+        </childnode>
+        <childnode refid="33" relation="usage">
+          <edgelabel>-elemsNamespace_</edgelabel>
+          <edgelabel>-keysNamespace_</edgelabel>
+          <edgelabel>-prioritySuffix_</edgelabel>
+          <edgelabel>-tombsNamespace_</edgelabel>
+          <edgelabel>-valueSuffix_</edgelabel>
+        </childnode>
+      </node>
+      <node id="31">
+        <label>sgns::crdt::HierarchicalKey</label>
+        <link refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key"/>
+        <childnode refid="29" relation="usage">
+          <edgelabel>-key_</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>sgns::storage::face::BatchWriteMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="14" relation="public-inheritance">
+        </childnode>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+        <childnode refid="17" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="23">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="19">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="21">
+        <label>sgns::storage::face::GenericStorage&lt; K, V &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="22" relation="public-inheritance">
+        </childnode>
+        <childnode refid="23" relation="public-inheritance">
+        </childnode>
+        <childnode refid="20" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="6">
+        <label>sgns::storage::face::Iterable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="10">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::face::ReadOnlyMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="8" relation="public-inheritance">
+        </childnode>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="22">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="8">
+        <label>sgns::storage::face::Readable&lt; Buffer, Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="9" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="15">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="14">
+        <label>sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="15" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="18">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="3">
+        <label>sgns::storage::rocksdb</label>
+        <link refid="d5/dbf/classsgns_1_1storage_1_1rocksdb"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="24" relation="usage">
+          <edgelabel>-db_</edgelabel>
+        </childnode>
+        <childnode refid="27" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="28" relation="usage">
+          <edgelabel>-options_</edgelabel>
+        </childnode>
+        <childnode refid="29" relation="usage">
+          <edgelabel>-path_</edgelabel>
+        </childnode>
+      </node>
+      <node id="30">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="34">
+        <label>std::basic_string_view&lt; Char &gt;</label>
+      </node>
+      <node id="32">
+        <label>std::mutex</label>
+      </node>
+      <node id="25">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="26" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="24">
+        <label>std::shared_ptr&lt; DB &gt;</label>
+        <childnode refid="25" relation="template-instance">
+          <edgelabel>&lt; DB &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="28">
+        <label>std::shared_ptr&lt; Options &gt;</label>
+        <childnode refid="25" relation="template-instance">
+          <edgelabel>&lt; Options &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::shared_ptr&lt; sgns::storage::rocksdb &gt;</label>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="25" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::rocksdb &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="27">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="25" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="29">
+        <label>std::string</label>
+        <childnode refid="30" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>std::string_view</label>
+        <childnode refid="34" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crdt/crdt_set.hpp" line="18" column="5" bodyfile="src/crdt/crdt_set.hpp" bodystart="19" bodyend="321"/>
+    <listofallmembers>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a7e8ebf0f3c0554a34554e9403f1ed58e" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>Buffer</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aee3b2c8e139ffbf2077783310258368d" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>CrdtSet</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6d86082405b12a2450b434cafb81004e" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>CrdtSet</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a52c8b9b3f00e5e2b5db3c4b38b52734e" prot="private" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>CrdtSet</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a74e5fbcd365b4e1cb5393d770f885637" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>CreateDeltaToAdd</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1af96668779574ef8996ec587c16c79ef1" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>CreateDeltaToRemove</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a10f8dfc0457626df474c0528332e8a28" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>DataStore</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab8b010c8595afcb90dd7dae915b15232" prot="private" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>dataStore_</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ad8df1342fefe3b2505621c46c7548222" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>DataStoreSync</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a2b5c2a715f309fdc603127c482c82c33" prot="private" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>deleteHookFunc_</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab0f1b98bec92e94784401368b56149e2" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>DeleteHookPtr</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a3c68254073dc4899c0381648bb2b0d5d" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>Delta</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a714946643028e430c20de60a62f6debf" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>Element</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a307d200dcb6039ebdd00e8696a7055e1" prot="private" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>elemsNamespace_</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a9574ad9a47a74b9ac932eb5a80187059" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>ElemsPrefix</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1abff7cdd8d9bb587127dcb1cfc1d7615c" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>GetElement</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a57bebd53171f08177ddbe6f5a7160828" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>GetPriority</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1abfbf942a3d04e965b5d4db6f467b7fb1" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>GetPrioritySuffix</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a1815525bf64247f1bf75c726e418f9eb" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>GetValueFromDatastore</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a2bf5113d447a07c61c29a389cc534744" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>GetValueSuffix</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aa76c9ca73919a5c3041fd42a22573a0a" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>InElemsNotTombstoned</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aec5391c272794e5273dc387db7619c02" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>InTombsKeyID</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a9276e00323617ff1c8e713f3f586b600" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>IsValueInSet</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a09a236a88b68d04bf869fb5241616fba" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>KeyPrefix</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a05a3d2e0996a4c06c41c3fe9ce7331fc" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>KeysKey</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a98d7bd761cca31dc611f4209b49f7741" prot="private" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>keysNamespace_</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a3185ee6939af7dd1f914da82ea671929" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>Merge</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a4fa932fa4281c56b3cc6188af8dd0ff7" prot="private" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>mutex_</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ae69a448a218970353d2c978909f52782" prot="private" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>namespaceKey_</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a2cbb8428390c033f3d8e22f72b233721" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>operator!=</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ae7943a79b7b1096962366d51ddf4d701" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>operator=</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a103fa7e794ba3e7f9869273135385ae9" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>operator==</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1af3dddf6c6df46ac65aea9282a6f9fa46" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>PrintDataStore</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a81c984334a19e54921b3f5b97c7d35a3" prot="private" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>PrintTombs</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a36f103b2c0ea142434859e2de75ee37a" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>PriorityKey</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aa73c800b6187153a0b68b8d81ea595bc" prot="private" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>prioritySuffix_</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1af7690002bae50aefc3cf7f80a2ed89a7" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>PutElems</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab8ff1f252a3f13ca5cf396f3d869c464" prot="private" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>putHookFunc_</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a0eab41af5fe517c06de2ced00e2f2075" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>PutHookPtr</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aad3a72856238edeb82bb725a2c3da64b" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>PutTombs</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a9d47deccadf24bd675864b3fadd1c0ed" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>QueryElements</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ae495e6f10dffe8dd524e22a57d7f27a2" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>QueryElements</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab08b15d094e1258e65bdbfec872b5e19" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>QueryResult</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>QuerySuffix</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ad545a9b71d93c0fb834270d8faa538f7" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>SetDeleteHook</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a756b190b07b8d3e725b27eacad7a03a2" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>SetPriority</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a7960d9ce94f2ccba221a770996b0bf1d" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>SetPutHook</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ae55260e21fd4ba2a647adb178e4a476d" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>SetValue</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a8ac205a0d3b3b555a9c8152cca1e5617" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>SetValue</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1add6f086cee0f74a3da366c9db5c2d858" prot="private" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>tombsNamespace_</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1abfa53c5f84133459f9dc09d245c5b776" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>TombsPrefix</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a4944ddfb602140c09489bc4c3b85eabf" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>ValueKey</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1acb045e20cc7f88554a132db8eab458d6" prot="private" virt="non-virtual"><scope>sgns::crdt::CrdtSet</scope><name>valueSuffix_</name></member>
+      <member refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ac0c590242c60335dba4b51186b70d78c" prot="public" virt="virtual"><scope>sgns::crdt::CrdtSet</scope><name>~CrdtSet</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

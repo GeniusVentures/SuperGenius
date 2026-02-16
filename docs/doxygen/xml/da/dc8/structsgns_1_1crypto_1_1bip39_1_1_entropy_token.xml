@@ -1,0 +1,54 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/dc8/structsgns_1_1crypto_1_1bip39_1_1_entropy_token" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::crypto::bip39::EntropyToken</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">std::bitset&lt; 11 &gt;</basecompoundref>
+    <includes refid="d0/da6/entropy__accumulator_8hpp" local="no">entropy_accumulator.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="da/dc8/structsgns_1_1crypto_1_1bip39_1_1_entropy_token_1a7a59e9102c939cb7b69198848bbc34f9" prot="public" static="no">
+        <type>std::bitset&lt; 11 &gt;</type>
+        <definition>using sgns::crypto::bip39::EntropyToken::Parent = std::bitset&lt;11&gt;</definition>
+        <argsstring></argsstring>
+        <name>Parent</name>
+        <qualifiedname>sgns::crypto::bip39::EntropyToken::Parent</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/entropy_accumulator.hpp" line="20" column="5" bodyfile="src/crypto/bip39/entropy_accumulator.hpp" bodystart="20" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::crypto::bip39::EntropyToken</label>
+        <link refid="da/dc8/structsgns_1_1crypto_1_1bip39_1_1_entropy_token"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::bitset&lt; Bits &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::crypto::bip39::EntropyToken</label>
+        <link refid="da/dc8/structsgns_1_1crypto_1_1bip39_1_1_entropy_token"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::bitset&lt; Bits &gt;</label>
+      </node>
+    </collaborationgraph>
+    <location file="src/crypto/bip39/entropy_accumulator.hpp" line="19" column="3" bodyfile="src/crypto/bip39/entropy_accumulator.hpp" bodystart="19" bodyend="22"/>
+    <listofallmembers>
+      <member refid="da/dc8/structsgns_1_1crypto_1_1bip39_1_1_entropy_token_1a7a59e9102c939cb7b69198848bbc34f9" prot="public" virt="non-virtual"><scope>sgns::crypto::bip39::EntropyToken</scope><name>Parent</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

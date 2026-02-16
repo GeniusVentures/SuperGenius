@@ -1,0 +1,235 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/d84/classsgns_1_1message__visitor" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::message_visitor</compoundname>
+    <includes refid="da/d8d/node_2common_8hpp" local="no">common.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dd/d84/classsgns_1_1message__visitor_1a3d03fadb99c3e870700cd0920c840663" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::message_visitor::keepalive</definition>
+        <argsstring>(sgns::keepalive const &amp;)=0</argsstring>
+        <name>keepalive</name>
+        <qualifiedname>sgns::message_visitor::keepalive</qualifiedname>
+        <param>
+          <type><ref refid="d2/d9f/classsgns_1_1keepalive" kindref="compound">sgns::keepalive</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="461" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d84/classsgns_1_1message__visitor_1a1cf44a12e4cfb85c107d3d48e1f6361e" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::message_visitor::publish</definition>
+        <argsstring>(sgns::publish const &amp;)=0</argsstring>
+        <name>publish</name>
+        <qualifiedname>sgns::message_visitor::publish</qualifiedname>
+        <param>
+          <type><ref refid="d6/db9/classsgns_1_1publish" kindref="compound">sgns::publish</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="462" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d84/classsgns_1_1message__visitor_1acf0dc3258c83381de8034da3264ccf0d" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::message_visitor::confirm_req</definition>
+        <argsstring>(sgns::confirm_req const &amp;)=0</argsstring>
+        <name>confirm_req</name>
+        <qualifiedname>sgns::message_visitor::confirm_req</qualifiedname>
+        <param>
+          <type><ref refid="d5/df9/classsgns_1_1confirm__req" kindref="compound">sgns::confirm_req</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="463" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d84/classsgns_1_1message__visitor_1a566129ae0193ea0717ea36e32db77ff9" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::message_visitor::confirm_ack</definition>
+        <argsstring>(sgns::confirm_ack const &amp;)=0</argsstring>
+        <name>confirm_ack</name>
+        <qualifiedname>sgns::message_visitor::confirm_ack</qualifiedname>
+        <param>
+          <type><ref refid="dd/d90/classsgns_1_1confirm__ack" kindref="compound">sgns::confirm_ack</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="464" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d84/classsgns_1_1message__visitor_1aed2c75771048892588145ec2f9691097" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::message_visitor::bulk_pull</definition>
+        <argsstring>(sgns::bulk_pull const &amp;)=0</argsstring>
+        <name>bulk_pull</name>
+        <qualifiedname>sgns::message_visitor::bulk_pull</qualifiedname>
+        <param>
+          <type><ref refid="d1/de0/classsgns_1_1bulk__pull" kindref="compound">sgns::bulk_pull</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="465" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d84/classsgns_1_1message__visitor_1a4bfdc0be4c817fa742ec9e0c7c3ea414" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::message_visitor::bulk_pull_account</definition>
+        <argsstring>(sgns::bulk_pull_account const &amp;)=0</argsstring>
+        <name>bulk_pull_account</name>
+        <qualifiedname>sgns::message_visitor::bulk_pull_account</qualifiedname>
+        <param>
+          <type><ref refid="d6/dcf/classsgns_1_1bulk__pull__account" kindref="compound">sgns::bulk_pull_account</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="466" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d84/classsgns_1_1message__visitor_1a019cea71b06f72260fe3ac851b86148a" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::message_visitor::bulk_push</definition>
+        <argsstring>(sgns::bulk_push const &amp;)=0</argsstring>
+        <name>bulk_push</name>
+        <qualifiedname>sgns::message_visitor::bulk_push</qualifiedname>
+        <param>
+          <type><ref refid="de/d2e/classsgns_1_1bulk__push" kindref="compound">sgns::bulk_push</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="467" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d84/classsgns_1_1message__visitor_1af22728a1947089f61bc1133776f6c012" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::message_visitor::frontier_req</definition>
+        <argsstring>(sgns::frontier_req const &amp;)=0</argsstring>
+        <name>frontier_req</name>
+        <qualifiedname>sgns::message_visitor::frontier_req</qualifiedname>
+        <param>
+          <type><ref refid="d3/d01/classsgns_1_1frontier__req" kindref="compound">sgns::frontier_req</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="468" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d84/classsgns_1_1message__visitor_1aa810afd8ea1217dba3021e9659f04e85" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::message_visitor::node_id_handshake</definition>
+        <argsstring>(sgns::node_id_handshake const &amp;)=0</argsstring>
+        <name>node_id_handshake</name>
+        <qualifiedname>sgns::message_visitor::node_id_handshake</qualifiedname>
+        <param>
+          <type><ref refid="dc/db5/classsgns_1_1node__id__handshake" kindref="compound">sgns::node_id_handshake</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="469" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d84/classsgns_1_1message__visitor_1a3ba49ccbfad37e8c277c75e304db3ab4" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::message_visitor::telemetry_req</definition>
+        <argsstring>(sgns::telemetry_req const &amp;)=0</argsstring>
+        <name>telemetry_req</name>
+        <qualifiedname>sgns::message_visitor::telemetry_req</qualifiedname>
+        <param>
+          <type><ref refid="d8/dbd/classsgns_1_1telemetry__req" kindref="compound">sgns::telemetry_req</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="470" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d84/classsgns_1_1message__visitor_1ab7459af6eac02c8d3f3616bcaa7f956c" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::message_visitor::telemetry_ack</definition>
+        <argsstring>(sgns::telemetry_ack const &amp;)=0</argsstring>
+        <name>telemetry_ack</name>
+        <qualifiedname>sgns::message_visitor::telemetry_ack</qualifiedname>
+        <param>
+          <type><ref refid="db/d21/classsgns_1_1telemetry__ack" kindref="compound">sgns::telemetry_ack</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="471" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d84/classsgns_1_1message__visitor_1a615c5ec3bf5bafa18bf6d5096d3af8ef" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>sgns::message_visitor::~message_visitor</definition>
+        <argsstring>()</argsstring>
+        <name>~message_visitor</name>
+        <qualifiedname>sgns::message_visitor::~message_visitor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="472" column="9" bodyfile="node/common.cpp" bodystart="1426" bodyend="1428"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::message_visitor</label>
+        <link refid="dd/d84/classsgns_1_1message__visitor"/>
+      </node>
+    </collaborationgraph>
+    <location file="node/common.hpp" line="458" column="1" bodyfile="node/common.hpp" bodystart="459" bodyend="473"/>
+    <listofallmembers>
+      <member refid="dd/d84/classsgns_1_1message__visitor_1aed2c75771048892588145ec2f9691097" prot="public" virt="pure-virtual"><scope>sgns::message_visitor</scope><name>bulk_pull</name></member>
+      <member refid="dd/d84/classsgns_1_1message__visitor_1a4bfdc0be4c817fa742ec9e0c7c3ea414" prot="public" virt="pure-virtual"><scope>sgns::message_visitor</scope><name>bulk_pull_account</name></member>
+      <member refid="dd/d84/classsgns_1_1message__visitor_1a019cea71b06f72260fe3ac851b86148a" prot="public" virt="pure-virtual"><scope>sgns::message_visitor</scope><name>bulk_push</name></member>
+      <member refid="dd/d84/classsgns_1_1message__visitor_1a566129ae0193ea0717ea36e32db77ff9" prot="public" virt="pure-virtual"><scope>sgns::message_visitor</scope><name>confirm_ack</name></member>
+      <member refid="dd/d84/classsgns_1_1message__visitor_1acf0dc3258c83381de8034da3264ccf0d" prot="public" virt="pure-virtual"><scope>sgns::message_visitor</scope><name>confirm_req</name></member>
+      <member refid="dd/d84/classsgns_1_1message__visitor_1af22728a1947089f61bc1133776f6c012" prot="public" virt="pure-virtual"><scope>sgns::message_visitor</scope><name>frontier_req</name></member>
+      <member refid="dd/d84/classsgns_1_1message__visitor_1a3d03fadb99c3e870700cd0920c840663" prot="public" virt="pure-virtual"><scope>sgns::message_visitor</scope><name>keepalive</name></member>
+      <member refid="dd/d84/classsgns_1_1message__visitor_1aa810afd8ea1217dba3021e9659f04e85" prot="public" virt="pure-virtual"><scope>sgns::message_visitor</scope><name>node_id_handshake</name></member>
+      <member refid="dd/d84/classsgns_1_1message__visitor_1a1cf44a12e4cfb85c107d3d48e1f6361e" prot="public" virt="pure-virtual"><scope>sgns::message_visitor</scope><name>publish</name></member>
+      <member refid="dd/d84/classsgns_1_1message__visitor_1ab7459af6eac02c8d3f3616bcaa7f956c" prot="public" virt="pure-virtual"><scope>sgns::message_visitor</scope><name>telemetry_ack</name></member>
+      <member refid="dd/d84/classsgns_1_1message__visitor_1a3ba49ccbfad37e8c277c75e304db3ab4" prot="public" virt="pure-virtual"><scope>sgns::message_visitor</scope><name>telemetry_req</name></member>
+      <member refid="dd/d84/classsgns_1_1message__visitor_1a615c5ec3bf5bafa18bf6d5096d3af8ef" prot="public" virt="virtual"><scope>sgns::message_visitor</scope><name>~message_visitor</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

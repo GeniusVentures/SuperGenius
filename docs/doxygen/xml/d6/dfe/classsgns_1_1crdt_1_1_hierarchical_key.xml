@@ -1,0 +1,280 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kind="class" language="C++" prot="public">
+    <compoundname>sgns::crdt::HierarchicalKey</compoundname>
+    <includes refid="d5/dc7/hierarchical__key_8hpp" local="no">hierarchical_key.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1aef5da22827bf10e5e742fcc8b99942da" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::crdt::HierarchicalKey::key_</definition>
+        <argsstring></argsstring>
+        <name>key_</name>
+        <qualifiedname>sgns::crdt::HierarchicalKey::key_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/hierarchical_key.hpp" line="74" column="17" bodyfile="src/crdt/hierarchical_key.hpp" bodystart="74" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a33dc727abecb8b7f6e27efabc43fad5f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crdt::HierarchicalKey::HierarchicalKey</definition>
+        <argsstring>()=default</argsstring>
+        <name>HierarchicalKey</name>
+        <qualifiedname>sgns::crdt::HierarchicalKey::HierarchicalKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/hierarchical_key.hpp" line="27" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a7ccc2a664a1b342bed25e53f97db4f32" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crdt::HierarchicalKey::HierarchicalKey</definition>
+        <argsstring>(std::string key)</argsstring>
+        <name>HierarchicalKey</name>
+        <qualifiedname>sgns::crdt::HierarchicalKey::HierarchicalKey</qualifiedname>
+        <param>
+          <type>std::string</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Constructs a key from a string. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Key string </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/hierarchical_key.hpp" line="32" column="5" bodyfile="src/crdt/impl/hierarchical_key.cpp" bodystart="7" bodyend="22"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a2855e5cce2e9dd52dd50af38ba4a8d72" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crdt::HierarchicalKey::HierarchicalKey</definition>
+        <argsstring>(const HierarchicalKey &amp;)=default</argsstring>
+        <name>HierarchicalKey</name>
+        <qualifiedname>sgns::crdt::HierarchicalKey::HierarchicalKey</qualifiedname>
+        <param>
+          <type>const HierarchicalKey &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Copy constructor </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/hierarchical_key.hpp" line="36" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1aacff34baddb610249492efd04ca30995" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::crdt::HierarchicalKey::~HierarchicalKey</definition>
+        <argsstring>()=default</argsstring>
+        <name>~HierarchicalKey</name>
+        <qualifiedname>sgns::crdt::HierarchicalKey::~HierarchicalKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/hierarchical_key.hpp" line="38" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a073884668636ab0dd689dee1051995f9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a33dc727abecb8b7f6e27efabc43fad5f" kindref="member">HierarchicalKey</ref> &amp;</type>
+        <definition>HierarchicalKey &amp; sgns::crdt::HierarchicalKey::operator=</definition>
+        <argsstring>(const HierarchicalKey &amp;)=default</argsstring>
+        <name>operator=</name>
+        <qualifiedname>sgns::crdt::HierarchicalKey::operator=</qualifiedname>
+        <param>
+          <type>const <ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a33dc727abecb8b7f6e27efabc43fad5f" kindref="member">HierarchicalKey</ref> &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/hierarchical_key.hpp" line="40" column="21"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1ac6b06167e1b4a0cc9f5d76725978df34" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::HierarchicalKey::SetKey</definition>
+        <argsstring>(const std::string &amp;aKey)</argsstring>
+        <name>SetKey</name>
+        <qualifiedname>sgns::crdt::HierarchicalKey::SetKey</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>aKey</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/hierarchical_key.hpp" line="42" column="10" bodyfile="src/crdt/hierarchical_key.hpp" bodystart="42" bodyend="42"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a7b34a5116700317eaabbc6e4d0073c70" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::crdt::HierarchicalKey::GetKey</definition>
+        <argsstring>() const</argsstring>
+        <name>GetKey</name>
+        <qualifiedname>sgns::crdt::HierarchicalKey::GetKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/hierarchical_key.hpp" line="44" column="17" bodyfile="src/crdt/hierarchical_key.hpp" bodystart="44" bodyend="44"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a3f427eb7aa6a38f320110f118dc3837a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a33dc727abecb8b7f6e27efabc43fad5f" kindref="member">HierarchicalKey</ref></type>
+        <definition>HierarchicalKey sgns::crdt::HierarchicalKey::ChildString</definition>
+        <argsstring>(std::string_view s) const</argsstring>
+        <name>ChildString</name>
+        <qualifiedname>sgns::crdt::HierarchicalKey::ChildString</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+<para>Appends <computeroutput>s</computeroutput> to the key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>String to be appended</para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+NewKey(&quot;/Comedy/MontyPython&quot;).ChildString(&quot;Actor:JohnCleese&quot;) NewKey(&quot;/Comedy/MontyPython/Actor:JohnCleese&quot;) </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/hierarchical_key.hpp" line="52" column="21" bodyfile="src/crdt/impl/hierarchical_key.cpp" bodystart="24" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a5fc7298fa4908cdfcae667db41dc8a1e" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; std::string &gt;</type>
+        <definition>std::vector&lt; std::string &gt; sgns::crdt::HierarchicalKey::GetList</definition>
+        <argsstring>() const</argsstring>
+        <name>GetList</name>
+        <qualifiedname>sgns::crdt::HierarchicalKey::GetList</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>List returns the <computeroutput>list</computeroutput> representation of this Key. NewKey(&quot;/Comedy/MontyPython/Actor:JohnCleese&quot;).List() [&quot;Comedy&quot;, &quot;MontyPythong&quot;, &quot;Actor:JohnCleese&quot;] </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/hierarchical_key.hpp" line="58" column="17" bodyfile="src/crdt/impl/hierarchical_key.cpp" bodystart="42" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a7815faac9fdd99bf20dae43bccd664b7" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::HierarchicalKey::IsTopLevel</definition>
+        <argsstring>() const</argsstring>
+        <name>IsTopLevel</name>
+        <qualifiedname>sgns::crdt::HierarchicalKey::IsTopLevel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/hierarchical_key.hpp" line="60" column="10" bodyfile="src/crdt/impl/hierarchical_key.cpp" bodystart="37" bodyend="40"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a78bc6d31fc79bfae056e472bff7a0bd9" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::HierarchicalKey::operator==</definition>
+        <argsstring>(const HierarchicalKey &amp;rhs) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::crdt::HierarchicalKey::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a33dc727abecb8b7f6e27efabc43fad5f" kindref="member">HierarchicalKey</ref> &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/hierarchical_key.hpp" line="62" column="10" bodyfile="src/crdt/hierarchical_key.hpp" bodystart="62" bodyend="65"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a32e49e85f4272acddb306b172bcab194" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::HierarchicalKey::operator!=</definition>
+        <argsstring>(const HierarchicalKey &amp;rhs) const</argsstring>
+        <name>operator!=</name>
+        <qualifiedname>sgns::crdt::HierarchicalKey::operator!=</qualifiedname>
+        <param>
+          <type>const <ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a33dc727abecb8b7f6e27efabc43fad5f" kindref="member">HierarchicalKey</ref> &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/hierarchical_key.hpp" line="67" column="10" bodyfile="src/crdt/hierarchical_key.hpp" bodystart="67" bodyend="70"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A Key represents the unique identifier of an object, inspired by file systems and Google App Engine key model. Keys are meant to be unique across a system. Keys are hierarchical, incorporating more and more specific namespaces. Thus keys can be deemed &apos;children&apos; or &apos;ancestors&apos; of other keys:: Key(&quot;/Comedy&quot;) Key(&quot;/Comedy/MontyPython&quot;) Also, every namespace can be parametrized to embed relevant object information. For example, the Key <computeroutput>name</computeroutput> (most specific namespace) could include the object type:: Key(&quot;/Comedy/MontyPython/Actor:JohnCleese&quot;) Key(&quot;/Comedy/MontyPython/Sketch:CheeseShop&quot;) Key(&quot;/Comedy/MontyPython/Sketch:CheeseShop/Character:Mousebender&quot;). </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::crdt::HierarchicalKey</label>
+        <link refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-key_</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="2">
+        <label>std::string</label>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crdt/hierarchical_key.hpp" line="23" column="3" bodyfile="src/crdt/hierarchical_key.hpp" bodystart="24" bodyend="75"/>
+    <listofallmembers>
+      <member refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a3f427eb7aa6a38f320110f118dc3837a" prot="public" virt="non-virtual"><scope>sgns::crdt::HierarchicalKey</scope><name>ChildString</name></member>
+      <member refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a7b34a5116700317eaabbc6e4d0073c70" prot="public" virt="non-virtual"><scope>sgns::crdt::HierarchicalKey</scope><name>GetKey</name></member>
+      <member refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a5fc7298fa4908cdfcae667db41dc8a1e" prot="public" virt="non-virtual"><scope>sgns::crdt::HierarchicalKey</scope><name>GetList</name></member>
+      <member refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a33dc727abecb8b7f6e27efabc43fad5f" prot="public" virt="non-virtual"><scope>sgns::crdt::HierarchicalKey</scope><name>HierarchicalKey</name></member>
+      <member refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a7ccc2a664a1b342bed25e53f97db4f32" prot="public" virt="non-virtual"><scope>sgns::crdt::HierarchicalKey</scope><name>HierarchicalKey</name></member>
+      <member refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a2855e5cce2e9dd52dd50af38ba4a8d72" prot="public" virt="non-virtual"><scope>sgns::crdt::HierarchicalKey</scope><name>HierarchicalKey</name></member>
+      <member refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a7815faac9fdd99bf20dae43bccd664b7" prot="public" virt="non-virtual"><scope>sgns::crdt::HierarchicalKey</scope><name>IsTopLevel</name></member>
+      <member refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1aef5da22827bf10e5e742fcc8b99942da" prot="private" virt="non-virtual"><scope>sgns::crdt::HierarchicalKey</scope><name>key_</name></member>
+      <member refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a32e49e85f4272acddb306b172bcab194" prot="public" virt="non-virtual"><scope>sgns::crdt::HierarchicalKey</scope><name>operator!=</name></member>
+      <member refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a073884668636ab0dd689dee1051995f9" prot="public" virt="non-virtual"><scope>sgns::crdt::HierarchicalKey</scope><name>operator=</name></member>
+      <member refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a78bc6d31fc79bfae056e472bff7a0bd9" prot="public" virt="non-virtual"><scope>sgns::crdt::HierarchicalKey</scope><name>operator==</name></member>
+      <member refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1ac6b06167e1b4a0cc9f5d76725978df34" prot="public" virt="non-virtual"><scope>sgns::crdt::HierarchicalKey</scope><name>SetKey</name></member>
+      <member refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1aacff34baddb610249492efd04ca30995" prot="public" virt="virtual"><scope>sgns::crdt::HierarchicalKey</scope><name>~HierarchicalKey</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,48 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/d75/structstd_1_1hash_3_01sgns_1_1base_1_1_blob_3_01_n_01_4_01_4" kind="struct" language="C++" prot="public">
+    <compoundname>std::hash&lt; sgns::base::Blob&lt; N &gt; &gt;</compoundname>
+    <includes refid="d4/d16/blob_8hpp" local="no">blob.hpp</includes>
+    <templateparamlist>
+      <param>
+        <type>size_t</type>
+        <declname>N</declname>
+        <defname>N</defname>
+      </param>
+    </templateparamlist>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d9/d75/structstd_1_1hash_3_01sgns_1_1base_1_1_blob_3_01_n_01_4_01_4_1a6acce4ddc04ef4f3e6a4c2dd35483133" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>auto</type>
+        <definition>auto std::hash&lt; sgns::base::Blob&lt; N &gt; &gt;::operator()</definition>
+        <argsstring>(const sgns::base::Blob&lt; N &gt; &amp;blob) const</argsstring>
+        <name>operator()</name>
+        <qualifiedname>std::hash&lt; sgns::base::Blob&lt; N &gt; &gt;::operator()</qualifiedname>
+        <param>
+          <type>const <ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">sgns::base::Blob</ref>&lt; N &gt; &amp;</type>
+          <declname>blob</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/blob.hpp" line="223" column="8" bodyfile="src/base/blob.hpp" bodystart="223" bodyend="225"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>std::hash&lt; sgns::base::Blob&lt; N &gt; &gt;</label>
+        <link refid="d9/d75/structstd_1_1hash_3_01sgns_1_1base_1_1_blob_3_01_n_01_4_01_4"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/base/blob.hpp" line="222" column="1" bodyfile="src/base/blob.hpp" bodystart="222" bodyend="226"/>
+    <listofallmembers>
+      <member refid="d9/d75/structstd_1_1hash_3_01sgns_1_1base_1_1_blob_3_01_n_01_4_01_4_1a6acce4ddc04ef4f3e6a4c2dd35483133" prot="public" virt="non-virtual"><scope>std::hash&lt; sgns::base::Blob&lt; N &gt; &gt;</scope><name>operator()</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

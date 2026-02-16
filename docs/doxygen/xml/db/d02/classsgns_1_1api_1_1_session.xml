@@ -1,0 +1,535 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="db/d02/classsgns_1_1api_1_1_session" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::api::Session</compoundname>
+    <derivedcompoundref refid="de/d31/classsgns_1_1api_1_1_http_session" prot="public" virt="non-virtual">sgns::api::HttpSession</derivedcompoundref>
+    <derivedcompoundref refid="da/dc7/classsgns_1_1api_1_1_ws_session" prot="public" virt="non-virtual">sgns::api::WsSession</derivedcompoundref>
+    <includes refid="d4/d5e/session_8hpp" local="no">session.hpp</includes>
+    <sectiondef kind="private-type">
+      <memberdef kind="typedef" id="db/d02/classsgns_1_1api_1_1_session_1ab83d2fce65fb765c430881991ea24c67" prot="private" static="no">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type>boost::signals2::signal&lt; T &gt;</type>
+        <definition>using sgns::api::Session::Signal = boost::signals2::signal&lt;T&gt;</definition>
+        <argsstring></argsstring>
+        <name>Signal</name>
+        <qualifiedname>sgns::api::Session::Signal</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="25" column="5" bodyfile="src/api/transport/session.hpp" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="db/d02/classsgns_1_1api_1_1_session_1a0354397ff9773e4bb7ec08ab2cf1ab65" prot="private" static="no">
+        <type>void(std::string_view, std::shared_ptr&lt; <ref refid="db/d02/classsgns_1_1api_1_1_session" kindref="compound">Session</ref> &gt; session)</type>
+        <definition>using sgns::api::Session::OnRequestSignature = void(std::string_view,
+                                   std::shared_ptr&lt;Session&gt; session)</definition>
+        <argsstring></argsstring>
+        <name>OnRequestSignature</name>
+        <qualifiedname>sgns::api::Session::OnRequestSignature</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="27" column="5" bodyfile="src/api/transport/session.hpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="db/d02/classsgns_1_1api_1_1_session_1ac6bac7b2025c44184c38e34e8232a3c7" prot="private" static="no">
+        <type><ref refid="db/d02/classsgns_1_1api_1_1_session_1ab83d2fce65fb765c430881991ea24c67" kindref="member">Signal</ref>&lt; <ref refid="db/d02/classsgns_1_1api_1_1_session_1a0354397ff9773e4bb7ec08ab2cf1ab65" kindref="member">OnRequestSignature</ref> &gt;</type>
+        <definition>using sgns::api::Session::OnRequest = Signal&lt;OnRequestSignature&gt;</definition>
+        <argsstring></argsstring>
+        <name>OnRequest</name>
+        <qualifiedname>sgns::api::Session::OnRequest</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="29" column="5" bodyfile="src/api/transport/session.hpp" bodystart="29" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="db/d02/classsgns_1_1api_1_1_session_1a4764a67d047daedafadc808a341dbae5" prot="public" static="no">
+        <type><ref refid="dd/d46/classsgns_1_1api_1_1_rpc_context" kindref="compound">RpcContext</ref></type>
+        <definition>using sgns::api::Session::Context = RpcContext</definition>
+        <argsstring></argsstring>
+        <name>Context</name>
+        <qualifiedname>sgns::api::Session::Context</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="32" column="5" bodyfile="src/api/transport/session.hpp" bodystart="32" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="db/d02/classsgns_1_1api_1_1_session_1a283ab2019b76debbb9301e27b4a64d53" prot="public" static="no">
+        <type>boost::asio::ip::tcp::socket</type>
+        <definition>using sgns::api::Session::Socket = boost::asio::ip::tcp::socket</definition>
+        <argsstring></argsstring>
+        <name>Socket</name>
+        <qualifiedname>sgns::api::Session::Socket</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="33" column="5" bodyfile="src/api/transport/session.hpp" bodystart="33" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="db/d02/classsgns_1_1api_1_1_session_1a5e3bdd1623479f13a3700e8b5e8d7c5d" prot="public" static="no">
+        <type>boost::system::error_code</type>
+        <definition>using sgns::api::Session::ErrorCode = boost::system::error_code</definition>
+        <argsstring></argsstring>
+        <name>ErrorCode</name>
+        <qualifiedname>sgns::api::Session::ErrorCode</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="34" column="5" bodyfile="src/api/transport/session.hpp" bodystart="34" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="db/d02/classsgns_1_1api_1_1_session_1a8ffcb164f0690b1cd611d0fad0268922" prot="public" static="no">
+        <type>boost::asio::streambuf</type>
+        <definition>using sgns::api::Session::Streambuf = boost::asio::streambuf</definition>
+        <argsstring></argsstring>
+        <name>Streambuf</name>
+        <qualifiedname>sgns::api::Session::Streambuf</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="35" column="5" bodyfile="src/api/transport/session.hpp" bodystart="35" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="db/d02/classsgns_1_1api_1_1_session_1abb1ed543281476201cee542238b80ee4" prot="public" static="no">
+        <type>boost::asio::steady_timer</type>
+        <definition>using sgns::api::Session::Timer = boost::asio::steady_timer</definition>
+        <argsstring></argsstring>
+        <name>Timer</name>
+        <qualifiedname>sgns::api::Session::Timer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="36" column="5" bodyfile="src/api/transport/session.hpp" bodystart="36" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="db/d02/classsgns_1_1api_1_1_session_1ac3e901cde61af1e9cfba7ab0baf7f858" prot="public" static="no">
+        <type>boost::signals2::connection</type>
+        <definition>using sgns::api::Session::Connection = boost::signals2::connection</definition>
+        <argsstring></argsstring>
+        <name>Connection</name>
+        <qualifiedname>sgns::api::Session::Connection</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="37" column="5" bodyfile="src/api/transport/session.hpp" bodystart="37" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="db/d02/classsgns_1_1api_1_1_session_1ade6442f88ca08387c1e733fef6f54655" prot="public" static="no">
+        <type>Timer::duration</type>
+        <definition>using sgns::api::Session::Duration = Timer::duration</definition>
+        <argsstring></argsstring>
+        <name>Duration</name>
+        <qualifiedname>sgns::api::Session::Duration</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="38" column="5" bodyfile="src/api/transport/session.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="db/d02/classsgns_1_1api_1_1_session_1aa68e294d772e90f0c69e8b8cd1d79d64" prot="public" static="no">
+        <type>uint64_t</type>
+        <definition>using sgns::api::Session::SessionId = uint64_t</definition>
+        <argsstring></argsstring>
+        <name>SessionId</name>
+        <qualifiedname>sgns::api::Session::SessionId</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="39" column="5" bodyfile="src/api/transport/session.hpp" bodystart="39" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="db/d02/classsgns_1_1api_1_1_session_1a87f1f677b7bd1282b182bcc76dd914e8" prot="public" static="no">
+        <type>std::function&lt; void(<ref refid="db/d02/classsgns_1_1api_1_1_session_1aa68e294d772e90f0c69e8b8cd1d79d64" kindref="member">SessionId</ref>, <ref refid="df/d66/namespacesgns_1_1api_1a581f7e82b9cfa3fb5262a71984f54a1f" kindref="member">SessionType</ref>)&gt;</type>
+        <definition>using sgns::api::Session::OnCloseHandler = std::function&lt;void(SessionId, SessionType)&gt;</definition>
+        <argsstring></argsstring>
+        <name>OnCloseHandler</name>
+        <qualifiedname>sgns::api::Session::OnCloseHandler</qualifiedname>
+        <briefdescription>
+<para>Event handlers. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="42" column="5" bodyfile="src/api/transport/session.hpp" bodystart="42" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="db/d02/classsgns_1_1api_1_1_session_1a76c3869f9fd623d31a00d1b059dae7a6" prot="private" static="no" mutable="no">
+        <type>std::function&lt; <ref refid="db/d02/classsgns_1_1api_1_1_session_1a0354397ff9773e4bb7ec08ab2cf1ab65" kindref="member">OnRequestSignature</ref> &gt;</type>
+        <definition>std::function&lt;OnRequestSignature&gt; sgns::api::Session::on_request_</definition>
+        <argsstring></argsstring>
+        <name>on_request_</name>
+        <qualifiedname>sgns::api::Session::on_request_</qualifiedname>
+        <briefdescription>
+<para><computeroutput>on request</computeroutput> callback </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="107" column="19" bodyfile="src/api/transport/session.hpp" bodystart="107" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="db/d02/classsgns_1_1api_1_1_session_1aac07a048258e122e14d7b6b402bc13ec" prot="private" static="no" mutable="no">
+        <type><ref refid="db/d02/classsgns_1_1api_1_1_session_1a87f1f677b7bd1282b182bcc76dd914e8" kindref="member">OnCloseHandler</ref></type>
+        <definition>OnCloseHandler sgns::api::Session::on_close_</definition>
+        <argsstring></argsstring>
+        <name>on_close_</name>
+        <qualifiedname>sgns::api::Session::on_close_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="108" column="20" bodyfile="src/api/transport/session.hpp" bodystart="108" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="db/d02/classsgns_1_1api_1_1_session_1a94029caff4c3d132f662998b98e6fbb6" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::api::Session::~Session</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Session</name>
+        <qualifiedname>sgns::api::Session::~Session</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="44" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d02/classsgns_1_1api_1_1_session_1a3c3854eb5a09d59a21ab5dda73fab662" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::api::Session::start</definition>
+        <argsstring>()=0</argsstring>
+        <name>start</name>
+        <qualifiedname>sgns::api::Session::start</qualifiedname>
+        <reimplementedby refid="de/d31/classsgns_1_1api_1_1_http_session_1aed2220fb92785c7bbc22dbe7079cf9d2">start</reimplementedby>
+        <reimplementedby refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ac11c2533147955069fa34c71b731bd40">start</reimplementedby>
+        <briefdescription>
+<para>starts listening on socket </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="49" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d02/classsgns_1_1api_1_1_session_1a897f603425d34bd6a0cb13673650c25a" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="db/d02/classsgns_1_1api_1_1_session_1a283ab2019b76debbb9301e27b4a64d53" kindref="member">Socket</ref> &amp;</type>
+        <definition>virtual Socket &amp; sgns::api::Session::socket</definition>
+        <argsstring>()=0</argsstring>
+        <name>socket</name>
+        <qualifiedname>sgns::api::Session::socket</qualifiedname>
+        <reimplementedby refid="de/d31/classsgns_1_1api_1_1_http_session_1a393470096225d90e083ae5923ac9beb0">socket</reimplementedby>
+        <reimplementedby refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a060182526abc24d2d9ab7decbe72622d">socket</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="51" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d02/classsgns_1_1api_1_1_session_1ad35d77dc02ce01ff9b548272ae2bc9a7" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::Session::connectOnRequest</definition>
+        <argsstring>(std::function&lt; OnRequestSignature &gt; callback)</argsstring>
+        <name>connectOnRequest</name>
+        <qualifiedname>sgns::api::Session::connectOnRequest</qualifiedname>
+        <param>
+          <type>std::function&lt; <ref refid="db/d02/classsgns_1_1api_1_1_session_1a0354397ff9773e4bb7ec08ab2cf1ab65" kindref="member">OnRequestSignature</ref> &gt;</type>
+          <declname>callback</declname>
+        </param>
+        <briefdescription>
+<para>connects <computeroutput>on request</computeroutput> callback </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>callback</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><computeroutput>on request</computeroutput> callback </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="57" column="10" bodyfile="src/api/transport/session.hpp" bodystart="57" bodyend="59"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d02/classsgns_1_1api_1_1_session_1aeb11d97bb8e29d696f1afecba7dabb4a" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::Session::connectOnCloseHandler</definition>
+        <argsstring>(OnCloseHandler &amp;&amp;handler)</argsstring>
+        <name>connectOnCloseHandler</name>
+        <qualifiedname>sgns::api::Session::connectOnCloseHandler</qualifiedname>
+        <param>
+          <type><ref refid="db/d02/classsgns_1_1api_1_1_session_1a87f1f677b7bd1282b182bcc76dd914e8" kindref="member">OnCloseHandler</ref> &amp;&amp;</type>
+          <declname>handler</declname>
+        </param>
+        <briefdescription>
+<para>connects <computeroutput>on close</computeroutput> callback </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>handler</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><computeroutput>on close</computeroutput> event handler </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="65" column="10" bodyfile="src/api/transport/session.hpp" bodystart="65" bodyend="67"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d02/classsgns_1_1api_1_1_session_1abd0a3726505e365e7aa987c5b2b21320" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::Session::processRequest</definition>
+        <argsstring>(std::string_view request, std::shared_ptr&lt; Session &gt; session)</argsstring>
+        <name>processRequest</name>
+        <qualifiedname>sgns::api::Session::processRequest</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>request</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="db/d02/classsgns_1_1api_1_1_session" kindref="compound">Session</ref> &gt;</type>
+          <declname>session</declname>
+        </param>
+        <briefdescription>
+<para>process request message </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>request</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>message to process </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>session</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>session instance </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="74" column="10" bodyfile="src/api/transport/session.hpp" bodystart="74" bodyend="77"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d02/classsgns_1_1api_1_1_session_1a227f95f8f11b0572a50013d31203e44f" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::api::Session::respond</definition>
+        <argsstring>(std::string_view message)=0</argsstring>
+        <name>respond</name>
+        <qualifiedname>sgns::api::Session::respond</qualifiedname>
+        <reimplementedby refid="de/d31/classsgns_1_1api_1_1_http_session_1a1985cae9f5296bbe722a9fc5fcaf3b2f">respond</reimplementedby>
+        <reimplementedby refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a30a7b6b53690b096385da18ac23413d2">respond</reimplementedby>
+        <param>
+          <type>std::string_view</type>
+          <declname>message</declname>
+        </param>
+        <briefdescription>
+<para>send response message </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>response message </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="83" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d02/classsgns_1_1api_1_1_session_1ab3dad321654c3ba64a361844f2ea9499" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::Session::notifyOnClose</definition>
+        <argsstring>(SessionId id, SessionType type)</argsstring>
+        <name>notifyOnClose</name>
+        <qualifiedname>sgns::api::Session::notifyOnClose</qualifiedname>
+        <param>
+          <type><ref refid="db/d02/classsgns_1_1api_1_1_session_1aa68e294d772e90f0c69e8b8cd1d79d64" kindref="member">SessionId</ref></type>
+          <declname>id</declname>
+        </param>
+        <param>
+          <type><ref refid="df/d66/namespacesgns_1_1api_1a581f7e82b9cfa3fb5262a71984f54a1f" kindref="member">SessionType</ref></type>
+          <declname>type</declname>
+        </param>
+        <briefdescription>
+<para>makes <computeroutput>on close</computeroutput> notification to listener </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername><ref refid="db/d02/classsgns_1_1api_1_1_session_1ade1be3e75ef4b4b0e5bf0c9d83a9d79c" kindref="member">id</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>session id </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername><ref refid="db/d02/classsgns_1_1api_1_1_session_1a9f128ad7af2aaa49a1b8cb061f89f552" kindref="member">type</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>type of the closed session </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="90" column="10" bodyfile="src/api/transport/session.hpp" bodystart="90" bodyend="92"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d02/classsgns_1_1api_1_1_session_1ade1be3e75ef4b4b0e5bf0c9d83a9d79c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="db/d02/classsgns_1_1api_1_1_session_1aa68e294d772e90f0c69e8b8cd1d79d64" kindref="member">SessionId</ref></type>
+        <definition>virtual SessionId sgns::api::Session::id</definition>
+        <argsstring>() const =0</argsstring>
+        <name>id</name>
+        <qualifiedname>sgns::api::Session::id</qualifiedname>
+        <reimplementedby refid="de/d31/classsgns_1_1api_1_1_http_session_1a210901c3d1d584eb0e059eb1f0a4a976">id</reimplementedby>
+        <reimplementedby refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ab921c7454a11ab36d66bdc6ff43836d5">id</reimplementedby>
+        <briefdescription>
+<para>method to get id of the session </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>id of the session </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="98" column="23"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d02/classsgns_1_1api_1_1_session_1a9f128ad7af2aaa49a1b8cb061f89f552" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="df/d66/namespacesgns_1_1api_1a581f7e82b9cfa3fb5262a71984f54a1f" kindref="member">SessionType</ref></type>
+        <definition>virtual SessionType sgns::api::Session::type</definition>
+        <argsstring>() const =0</argsstring>
+        <name>type</name>
+        <qualifiedname>sgns::api::Session::type</qualifiedname>
+        <reimplementedby refid="de/d31/classsgns_1_1api_1_1_http_session_1abb1bcf74f369fce6b7832118fcce3dc7">type</reimplementedby>
+        <reimplementedby refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a8ad23d4815bbbeb49a5c87e977f56b77">type</reimplementedby>
+        <briefdescription>
+<para>method to get type of the session </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>type of the session </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="104" column="25"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>rpc session </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::api::HttpSession</label>
+        <link refid="de/d31/classsgns_1_1api_1_1_http_session"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::api::Session</label>
+        <link refid="db/d02/classsgns_1_1api_1_1_session"/>
+      </node>
+      <node id="3">
+        <label>sgns::api::WsSession</label>
+        <link refid="da/dc7/classsgns_1_1api_1_1_ws_session"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::api::Session</label>
+        <link refid="db/d02/classsgns_1_1api_1_1_session"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/api/transport/session.hpp" line="23" column="3" bodyfile="src/api/transport/session.hpp" bodystart="23" bodyend="109"/>
+    <listofallmembers>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1ac3e901cde61af1e9cfba7ab0baf7f858" prot="public" virt="non-virtual"><scope>sgns::api::Session</scope><name>Connection</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1aeb11d97bb8e29d696f1afecba7dabb4a" prot="public" virt="non-virtual"><scope>sgns::api::Session</scope><name>connectOnCloseHandler</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1ad35d77dc02ce01ff9b548272ae2bc9a7" prot="public" virt="non-virtual"><scope>sgns::api::Session</scope><name>connectOnRequest</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a4764a67d047daedafadc808a341dbae5" prot="public" virt="non-virtual"><scope>sgns::api::Session</scope><name>Context</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1ade6442f88ca08387c1e733fef6f54655" prot="public" virt="non-virtual"><scope>sgns::api::Session</scope><name>Duration</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a5e3bdd1623479f13a3700e8b5e8d7c5d" prot="public" virt="non-virtual"><scope>sgns::api::Session</scope><name>ErrorCode</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1ade1be3e75ef4b4b0e5bf0c9d83a9d79c" prot="public" virt="pure-virtual"><scope>sgns::api::Session</scope><name>id</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1ab3dad321654c3ba64a361844f2ea9499" prot="public" virt="non-virtual"><scope>sgns::api::Session</scope><name>notifyOnClose</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1aac07a048258e122e14d7b6b402bc13ec" prot="private" virt="non-virtual"><scope>sgns::api::Session</scope><name>on_close_</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a76c3869f9fd623d31a00d1b059dae7a6" prot="private" virt="non-virtual"><scope>sgns::api::Session</scope><name>on_request_</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a87f1f677b7bd1282b182bcc76dd914e8" prot="public" virt="non-virtual"><scope>sgns::api::Session</scope><name>OnCloseHandler</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1ac6bac7b2025c44184c38e34e8232a3c7" prot="private" virt="non-virtual"><scope>sgns::api::Session</scope><name>OnRequest</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a0354397ff9773e4bb7ec08ab2cf1ab65" prot="private" virt="non-virtual"><scope>sgns::api::Session</scope><name>OnRequestSignature</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1abd0a3726505e365e7aa987c5b2b21320" prot="public" virt="non-virtual"><scope>sgns::api::Session</scope><name>processRequest</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a227f95f8f11b0572a50013d31203e44f" prot="public" virt="pure-virtual"><scope>sgns::api::Session</scope><name>respond</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1aa68e294d772e90f0c69e8b8cd1d79d64" prot="public" virt="non-virtual"><scope>sgns::api::Session</scope><name>SessionId</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1ab83d2fce65fb765c430881991ea24c67" prot="private" virt="non-virtual"><scope>sgns::api::Session</scope><name>Signal</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a283ab2019b76debbb9301e27b4a64d53" prot="public" virt="non-virtual"><scope>sgns::api::Session</scope><name>Socket</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a897f603425d34bd6a0cb13673650c25a" prot="public" virt="pure-virtual"><scope>sgns::api::Session</scope><name>socket</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a3c3854eb5a09d59a21ab5dda73fab662" prot="public" virt="pure-virtual"><scope>sgns::api::Session</scope><name>start</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a8ffcb164f0690b1cd611d0fad0268922" prot="public" virt="non-virtual"><scope>sgns::api::Session</scope><name>Streambuf</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1abb1ed543281476201cee542238b80ee4" prot="public" virt="non-virtual"><scope>sgns::api::Session</scope><name>Timer</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a9f128ad7af2aaa49a1b8cb061f89f552" prot="public" virt="pure-virtual"><scope>sgns::api::Session</scope><name>type</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a94029caff4c3d132f662998b98e6fbb6" prot="public" virt="virtual"><scope>sgns::api::Session</scope><name>~Session</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,255 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/d0f/storage__wasm__provider_8cpp" kind="file" language="C++">
+    <compoundname>storage_wasm_provider.cpp</compoundname>
+    <includes refid="d5/df8/storage__wasm__provider_8hpp" local="yes">runtime/common/storage_wasm_provider.hpp</includes>
+    <incdepgraph>
+      <node id="13">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/runtime/common/storage_wasm_provider.cpp</label>
+        <link refid="d1/d0f/storage__wasm__provider_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>runtime/common/storage_wasm_provider.hpp</label>
+        <link refid="d5/df8/storage__wasm__provider_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>runtime/wasm_provider.hpp</label>
+        <link refid="d5/d32/wasm__provider_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="31" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>storage/buffer_map_types.hpp</label>
+        <link refid="d8/dcc/buffer__map__types_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>storage/face/batchable.hpp</label>
+        <link refid="de/d87/batchable_8hpp"/>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>storage/face/generic_maps.hpp</label>
+        <link refid="d9/daa/generic__maps_8hpp"/>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>storage/face/generic_storage.hpp</label>
+        <link refid="d6/d4e/generic__storage_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>storage/face/iterable.hpp</label>
+        <link refid="db/d3e/iterable_8hpp"/>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>storage/face/map_cursor.hpp</label>
+        <link refid="d9/d4b/map__cursor_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>storage/face/readable.hpp</label>
+        <link refid="d5/dd2/readable_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>storage/face/write_batch.hpp</label>
+        <link refid="d2/d76/write__batch_8hpp"/>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>storage/face/writeable.hpp</label>
+        <link refid="dc/da4/writeable_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>storage/trie/trie_batches.hpp</label>
+        <link refid="dc/d8a/trie__batches_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>storage/trie/trie_storage.hpp</label>
+        <link refid="dd/df1/trie__storage_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>array</label>
+      </node>
+      <node id="7">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="16">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="8">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="14">
+        <label>cstddef</label>
+      </node>
+      <node id="9">
+        <label>gsl/span</label>
+      </node>
+      <node id="18">
+        <label>iostream</label>
+      </node>
+      <node id="11">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="24">
+        <label>memory</label>
+      </node>
+      <node id="31">
+        <label>string</label>
+      </node>
+      <node id="5">
+        <label>string_view</label>
+      </node>
+      <node id="6">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="dd/da6/namespacesgns_1_1runtime">sgns::runtime</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/df8/storage__wasm__provider_8hpp" kindref="compound">runtime/common/storage_wasm_provider.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="dd/da6/namespacesgns_1_1runtime" kindref="compound">sgns::runtime</ref><sp/>{</highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6" refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1afe2a181b5312831b5982a8f747c001cb" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1afe2a181b5312831b5982a8f747c001cb" kindref="member">StorageWasmProvider::StorageWasmProvider</ref>(</highlight></codeline>
+<codeline lineno="7"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;const<sp/>storage::trie::TrieStorage&gt;<sp/><ref refid="d0/dbf/namespacesgns_1_1storage" kindref="compound">storage</ref>)</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/><ref refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1aa21d6759803d69dd21a8b24184f3a50a" kindref="member">storage_</ref>{<ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(<ref refid="d0/dbf/namespacesgns_1_1storage" kindref="compound">storage</ref>)}<sp/>{</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_ASSERT(<ref refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1aa21d6759803d69dd21a8b24184f3a50a" kindref="member">storage_</ref><sp/>!=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1a374dada4135a044e67b9f6e6db124ef5" kindref="member">last_state_root_</ref><sp/>=<sp/><ref refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1aa21d6759803d69dd21a8b24184f3a50a" kindref="member">storage_</ref>-&gt;getRootHash();</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>batch<sp/>=<sp/><ref refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1aa21d6759803d69dd21a8b24184f3a50a" kindref="member">storage_</ref>-&gt;getEphemeralBatch();</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_ASSERT_MSG(batch.has_value(),</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;Error<sp/>getting<sp/>a<sp/>batch<sp/>of<sp/>the<sp/>storage&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>state_code_res<sp/>=<sp/>batch.value()-&gt;get(<ref refid="dd/da6/namespacesgns_1_1runtime_1a6f421c95acf1c4db60a1f72ff04cabb2" kindref="member">kRuntimeKey</ref>);</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>for<sp/>debug</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_ASSERT_MSG(state_code_res.has_value(),</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;Runtime<sp/>code<sp/>does<sp/>not<sp/>exist<sp/>in<sp/>the<sp/>storage&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1a6aac15d00a60243f2cb371c853565328" kindref="member">state_code_</ref><sp/>=<sp/>state_code_res.value();</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22" refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1adb1f45d96e2092f9131ca641418a7d43" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;<ref refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1adb1f45d96e2092f9131ca641418a7d43" kindref="member">StorageWasmProvider::getStateCode</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>current_state_root<sp/>=<sp/><ref refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1aa21d6759803d69dd21a8b24184f3a50a" kindref="member">storage_</ref>-&gt;getRootHash();</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1a374dada4135a044e67b9f6e6db124ef5" kindref="member">last_state_root_</ref><sp/>==<sp/>current_state_root)<sp/>{</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1a6aac15d00a60243f2cb371c853565328" kindref="member">state_code_</ref>;</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1a374dada4135a044e67b9f6e6db124ef5" kindref="member">last_state_root_</ref><sp/>=<sp/>current_state_root;</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>batch<sp/>=<sp/><ref refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1aa21d6759803d69dd21a8b24184f3a50a" kindref="member">storage_</ref>-&gt;getEphemeralBatch();</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_ASSERT_MSG(batch.has_value(),</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;Error<sp/>getting<sp/>a<sp/>batch<sp/>of<sp/>the<sp/>storage&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>state_code_res<sp/>=<sp/>batch.value()-&gt;get(<ref refid="dd/da6/namespacesgns_1_1runtime_1a6f421c95acf1c4db60a1f72ff04cabb2" kindref="member">kRuntimeKey</ref>);</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_ASSERT_MSG(state_code_res.has_value(),</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;Runtime<sp/>code<sp/>does<sp/>not<sp/>exist<sp/>in<sp/>the<sp/>storage&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1a6aac15d00a60243f2cb371c853565328" kindref="member">state_code_</ref><sp/>=<sp/>state_code_res.value();</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1a6aac15d00a60243f2cb371c853565328" kindref="member">state_code_</ref>;</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="39"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::runtime</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/runtime/common/storage_wasm_provider.cpp"/>
+  </compounddef>
+</doxygen>

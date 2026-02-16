@@ -1,0 +1,286 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl" kind="class" language="C++" prot="public">
+    <compoundname>sgns::crypto::Bip39ProviderImpl</compoundname>
+    <basecompoundref refid="d7/d94/classsgns_1_1crypto_1_1_bip39_provider" prot="public" virt="non-virtual">sgns::crypto::Bip39Provider</basecompoundref>
+    <includes refid="da/df8/bip39__provider__impl_8hpp" local="no">bip39_provider_impl.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a53ad9610f12d381cf00578171d393dcb" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d2/d06/classsgns_1_1crypto_1_1_pbkdf2_provider" kindref="compound">Pbkdf2Provider</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Pbkdf2Provider&gt; sgns::crypto::Bip39ProviderImpl::pbkdf2_provider_</definition>
+        <argsstring></argsstring>
+        <name>pbkdf2_provider_</name>
+        <qualifiedname>sgns::crypto::Bip39ProviderImpl::pbkdf2_provider_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/impl/bip39_provider_impl.hpp" line="26" column="21" bodyfile="src/crypto/bip39/impl/bip39_provider_impl.hpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a83225180f9a76743bf038eb20eb31364" prot="private" static="no" mutable="no">
+        <type><ref refid="db/d61/classsgns_1_1crypto_1_1bip39_1_1_dictionary" kindref="compound">bip39::Dictionary</ref></type>
+        <definition>bip39::Dictionary sgns::crypto::Bip39ProviderImpl::dictionary_</definition>
+        <argsstring></argsstring>
+        <name>dictionary_</name>
+        <qualifiedname>sgns::crypto::Bip39ProviderImpl::dictionary_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/impl/bip39_provider_impl.hpp" line="27" column="23" bodyfile="src/crypto/bip39/impl/bip39_provider_impl.hpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a6f243eacf356f5eae812481b04ea8cfc" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::crypto::Bip39ProviderImpl::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::crypto::Bip39ProviderImpl::logger_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/impl/bip39_provider_impl.hpp" line="28" column="18" bodyfile="src/crypto/bip39/impl/bip39_provider_impl.hpp" bodystart="28" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a1a123a4ddd47d7d4bc38d43c929e60a1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crypto::Bip39ProviderImpl::~Bip39ProviderImpl</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~Bip39ProviderImpl</name>
+        <qualifiedname>sgns::crypto::Bip39ProviderImpl::~Bip39ProviderImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/impl/bip39_provider_impl.hpp" line="15" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a8d870543f7757707ea8c1d38594740b6" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crypto::Bip39ProviderImpl::Bip39ProviderImpl</definition>
+        <argsstring>(std::shared_ptr&lt; Pbkdf2Provider &gt; pbkdf2_provider)</argsstring>
+        <name>Bip39ProviderImpl</name>
+        <qualifiedname>sgns::crypto::Bip39ProviderImpl::Bip39ProviderImpl</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d2/d06/classsgns_1_1crypto_1_1_pbkdf2_provider" kindref="compound">Pbkdf2Provider</ref> &gt;</type>
+          <declname>pbkdf2_provider</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/impl/bip39_provider_impl.hpp" line="17" column="14" bodyfile="src/crypto/bip39/impl/bip39_provider_impl.cpp" bodystart="10" bodyend="15"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a54cd018fe1aed260b1c901a548c96f97" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; std::vector&lt; uint8_t &gt; &gt;</type>
+        <definition>outcome::result&lt; std::vector&lt; uint8_t &gt; &gt; sgns::crypto::Bip39ProviderImpl::calculateEntropy</definition>
+        <argsstring>(const std::vector&lt; std::string &gt; &amp;word_list) override</argsstring>
+        <name>calculateEntropy</name>
+        <qualifiedname>sgns::crypto::Bip39ProviderImpl::calculateEntropy</qualifiedname>
+        <reimplements refid="d7/d94/classsgns_1_1crypto_1_1_bip39_provider_1a5d848ec8d2e53e15d85691143cd277d7">calculateEntropy</reimplements>
+        <param>
+          <type>const std::vector&lt; std::string &gt; &amp;</type>
+          <declname>word_list</declname>
+        </param>
+        <briefdescription>
+<para>Calculates entropy from a mnemonic word list. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>word_list</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Mnemonic words in order. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Entropy value. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/impl/bip39_provider_impl.hpp" line="19" column="21" bodyfile="src/crypto/bip39/impl/bip39_provider_impl.cpp" bodystart="17" bodyend="38"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a120358b0f7b8b6f3fa63ed46a26cf4ff" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39_1a543a047169289887fc9c5545af736954" kindref="member">bip39::Bip39Seed</ref> &gt;</type>
+        <definition>outcome::result&lt; bip39::Bip39Seed &gt; sgns::crypto::Bip39ProviderImpl::makeSeed</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; entropy, std::string_view password) override</argsstring>
+        <name>makeSeed</name>
+        <qualifiedname>sgns::crypto::Bip39ProviderImpl::makeSeed</qualifiedname>
+        <reimplements refid="d7/d94/classsgns_1_1crypto_1_1_bip39_provider_1ae99f65fe4cb057fa008edcc954cb7d4b">makeSeed</reimplements>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>entropy</declname>
+        </param>
+        <param>
+          <type>std::string_view</type>
+          <declname>password</declname>
+        </param>
+        <briefdescription>
+<para>Derives a seed from entropy and an optional password. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>entropy</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Entropy bytes. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>password</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional passphrase used for seed derivation. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Seed bytes. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/impl/bip39_provider_impl.hpp" line="22" column="21" bodyfile="src/crypto/bip39/impl/bip39_provider_impl.cpp" bodystart="40" bodyend="51"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::crypto::Bip39Provider</label>
+        <link refid="d7/d94/classsgns_1_1crypto_1_1_bip39_provider"/>
+      </node>
+      <node id="1">
+        <label>sgns::crypto::Bip39ProviderImpl</label>
+        <link refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="14">
+        <label>K</label>
+      </node>
+      <node id="6">
+        <label>T</label>
+      </node>
+      <node id="2">
+        <label>sgns::crypto::Bip39Provider</label>
+        <link refid="d7/d94/classsgns_1_1crypto_1_1_bip39_provider"/>
+      </node>
+      <node id="1">
+        <label>sgns::crypto::Bip39ProviderImpl</label>
+        <link refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-pbkdf2_provider_</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>-dictionary_</edgelabel>
+        </childnode>
+        <childnode refid="15" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::crypto::Pbkdf2Provider</label>
+        <link refid="d2/d06/classsgns_1_1crypto_1_1_pbkdf2_provider"/>
+      </node>
+      <node id="7">
+        <label>sgns::crypto::bip39::Dictionary</label>
+        <link refid="db/d61/classsgns_1_1crypto_1_1bip39_1_1_dictionary"/>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-entropy_map_</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::crypto::bip39::EntropyToken</label>
+        <link refid="da/dc8/structsgns_1_1crypto_1_1bip39_1_1_entropy_token"/>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::basic_string_view&lt; Char &gt;</label>
+      </node>
+      <node id="12">
+        <label>std::bitset&lt; Bits &gt;</label>
+      </node>
+      <node id="5">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; sgns::crypto::Pbkdf2Provider &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; sgns::crypto::Pbkdf2Provider &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="15">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::string_view</label>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>std::unordered_map&lt; K, T &gt;</label>
+        <childnode refid="14" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::unordered_map&lt; std::string_view, sgns::crypto::bip39::EntropyToken &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="13" relation="template-instance">
+          <edgelabel>&lt; std::string_view, sgns::crypto::bip39::EntropyToken &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crypto/bip39/impl/bip39_provider_impl.hpp" line="13" column="3" bodyfile="src/crypto/bip39/impl/bip39_provider_impl.hpp" bodystart="13" bodyend="29"/>
+    <listofallmembers>
+      <member refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a8d870543f7757707ea8c1d38594740b6" prot="public" virt="non-virtual"><scope>sgns::crypto::Bip39ProviderImpl</scope><name>Bip39ProviderImpl</name></member>
+      <member refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a54cd018fe1aed260b1c901a548c96f97" prot="public" virt="virtual"><scope>sgns::crypto::Bip39ProviderImpl</scope><name>calculateEntropy</name></member>
+      <member refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a83225180f9a76743bf038eb20eb31364" prot="private" virt="non-virtual"><scope>sgns::crypto::Bip39ProviderImpl</scope><name>dictionary_</name></member>
+      <member refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a6f243eacf356f5eae812481b04ea8cfc" prot="private" virt="non-virtual"><scope>sgns::crypto::Bip39ProviderImpl</scope><name>logger_</name></member>
+      <member refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a120358b0f7b8b6f3fa63ed46a26cf4ff" prot="public" virt="virtual"><scope>sgns::crypto::Bip39ProviderImpl</scope><name>makeSeed</name></member>
+      <member refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a53ad9610f12d381cf00578171d393dcb" prot="private" virt="non-virtual"><scope>sgns::crypto::Bip39ProviderImpl</scope><name>pbkdf2_provider_</name></member>
+      <member refid="d7/d94/classsgns_1_1crypto_1_1_bip39_provider_1aedd0b0334779355b90823d4516dbe4b3" prot="public" virt="virtual"><scope>sgns::crypto::Bip39ProviderImpl</scope><name>~Bip39Provider</name></member>
+      <member refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a1a123a4ddd47d7d4bc38d43c929e60a1" prot="public" virt="non-virtual"><scope>sgns::crypto::Bip39ProviderImpl</scope><name>~Bip39ProviderImpl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

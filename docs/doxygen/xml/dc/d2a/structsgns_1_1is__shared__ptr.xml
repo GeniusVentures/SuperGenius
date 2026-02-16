@@ -1,0 +1,49 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/d2a/structsgns_1_1is__shared__ptr" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::is_shared_ptr</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">std::false_type</basecompoundref>
+    <includes refid="dc/d54/type__traits_8hpp" local="no">type_traits.hpp</includes>
+    <templateparamlist>
+      <param>
+        <type>typename T</type>
+      </param>
+    </templateparamlist>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::is_shared_ptr&lt; T &gt;</label>
+        <link refid="dc/d2a/structsgns_1_1is__shared__ptr"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::is_shared_ptr&lt; std::shared_ptr&lt; T &gt; &gt;</label>
+        <link refid="d9/d66/structsgns_1_1is__shared__ptr_3_01std_1_1shared__ptr_3_01_t_01_4_01_4"/>
+        <childnode refid="1" relation="template-instance">
+          <edgelabel>&lt; std::shared_ptr&lt; T &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::false_type</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::is_shared_ptr&lt; T &gt;</label>
+        <link refid="dc/d2a/structsgns_1_1is__shared__ptr"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::false_type</label>
+      </node>
+    </collaborationgraph>
+    <location file="src/base/type_traits.hpp" line="8" column="3" bodyfile="src/base/type_traits.hpp" bodystart="8" bodyend="8"/>
+    <listofallmembers>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

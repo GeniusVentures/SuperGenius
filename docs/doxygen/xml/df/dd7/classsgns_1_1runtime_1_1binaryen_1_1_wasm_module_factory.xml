@@ -1,0 +1,84 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/dd7/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_factory" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::runtime::binaryen::WasmModuleFactory</compoundname>
+    <derivedcompoundref refid="dc/d1f/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_factory_impl" prot="public" virt="non-virtual">sgns::runtime::binaryen::WasmModuleFactoryImpl</derivedcompoundref>
+    <includes refid="d4/dc9/wasm__module__factory_8hpp" local="no">wasm_module_factory.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="df/dd7/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_factory_1aac2b9f5af81fea0c55202eaf980f22fd" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::runtime::binaryen::WasmModuleFactory::~WasmModuleFactory</definition>
+        <argsstring>()=default</argsstring>
+        <name>~WasmModuleFactory</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmModuleFactory::~WasmModuleFactory</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/module/wasm_module_factory.hpp" line="16" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="df/dd7/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_factory_1adf810bf02d85e9c1d7306cfd4fbe6fe0" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; std::unique_ptr&lt; <ref refid="d9/d10/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module" kindref="compound">WasmModule</ref> &gt; &gt;</type>
+        <definition>virtual outcome::result&lt; std::unique_ptr&lt; WasmModule &gt; &gt; sgns::runtime::binaryen::WasmModuleFactory::createModule</definition>
+        <argsstring>(const base::Buffer &amp;code, std::shared_ptr&lt; RuntimeExternalInterface &gt; rei) const =0</argsstring>
+        <name>createModule</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmModuleFactory::createModule</qualifiedname>
+        <reimplementedby refid="dc/d1f/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_factory_impl_1a5eafe0e6634c388004c10561008ca820">createModule</reimplementedby>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>code</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface" kindref="compound">RuntimeExternalInterface</ref> &gt;</type>
+          <declname>rei</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>A module will be created with the provided <itemizedlist>
+<listitem><para>code and instantiated with </para>
+</listitem>
+<listitem><para>rei (runtime external interface) <simplesect kind="return"><para>the module in case of success </para>
+</simplesect>
+</para>
+</listitem>
+</itemizedlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/module/wasm_module_factory.hpp" line="23" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>An abstract factory to produce WasmModules </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::runtime::binaryen::WasmModuleFactory</label>
+        <link refid="df/dd7/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_factory"/>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::binaryen::WasmModuleFactoryImpl</label>
+        <link refid="dc/d1f/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_factory_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::runtime::binaryen::WasmModuleFactory</label>
+        <link refid="df/dd7/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_factory"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/binaryen/module/wasm_module_factory.hpp" line="14" column="3" bodyfile="src/runtime/binaryen/module/wasm_module_factory.hpp" bodystart="14" bodyend="26"/>
+    <listofallmembers>
+      <member refid="df/dd7/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_factory_1adf810bf02d85e9c1d7306cfd4fbe6fe0" prot="public" virt="pure-virtual"><scope>sgns::runtime::binaryen::WasmModuleFactory</scope><name>createModule</name></member>
+      <member refid="df/dd7/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_factory_1aac2b9f5af81fea0c55202eaf980f22fd" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmModuleFactory</scope><name>~WasmModuleFactory</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

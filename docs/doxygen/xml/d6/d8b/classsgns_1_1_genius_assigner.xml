@@ -1,0 +1,786 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/d8b/classsgns_1_1_genius_assigner" kind="class" language="C++" prot="public">
+    <compoundname>sgns::GeniusAssigner</compoundname>
+    <includes refid="d1/d19/_genius_assigner_8hpp" local="no">GeniusAssigner.hpp</includes>
+    <innerclass refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output" prot="public">sgns::GeniusAssigner::AssignerOutput</innerclass>
+    <innerclass refid="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors" prot="private">sgns::GeniusAssigner::TableVectors</innerclass>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>AssignerError</name>
+        <qualifiedname>sgns::GeniusAssigner::AssignerError</qualifiedname>
+        <enumvalue id="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70a18fcf6528f69a110eda90d31fe2e38d3" prot="public">
+          <name>EMPTY_BYTECODE</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70a53e5639adb257d60be9e68e806fd4952" prot="public">
+          <name>BYTECODE_MISMATCH</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70af8fd338f08e48d5ab6d0391b8152074f" prot="public">
+          <name>HAS_SIZE_ESTIMATION</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70aaadee091fd7f2fe9185ac0ee19fd8c50" prot="public">
+          <name>TABLE_PATH_ERROR</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70aeb9e1ed11a9380417d6e723449ea591a" prot="public">
+          <name>CIRCUIT_PATH_ERROR</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70a4c32967bd614979f6b9dd89740b80a17" prot="public">
+          <name>SELECTOR_COLUMNS_INVALID</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70aa617ea9ba11835ec9f94a663068fad00" prot="public">
+          <name>WRONG_TARGET_PROVER</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70ade69fdc2e265df843195609181256b08" prot="public">
+          <name>UNSATISFIED_CIRCUIT</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70ad5ad426ec8e91a632fe9de696d4b1bcd" prot="public">
+          <name>TABLE_CIRCUIT_NUM_MISMATCH</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70ae1a4e442c3c47df8d6daaebbbf82afaa" prot="public">
+          <name>CIRCUIT_NOT_FOUND</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="67" column="9" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="68" bodyend="79"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d6/d8b/classsgns_1_1_genius_assigner_1a3da104ae5fb3329634ea33db73300d88" prot="public" static="no">
+        <type>crypto3::zk::snark::plonk_table_description&lt; <ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a2d2769c400cea111cdac310aaca4f9a6" kindref="member">BlueprintFieldType</ref> &gt;</type>
+        <definition>using sgns::GeniusAssigner::TableDescriptionType = crypto3::zk::snark::plonk_table_description&lt;BlueprintFieldType&gt;</definition>
+        <argsstring></argsstring>
+        <name>TableDescriptionType</name>
+        <qualifiedname>sgns::GeniusAssigner::TableDescriptionType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="42" column="9" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="42" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d6/d8b/classsgns_1_1_genius_assigner_1a636b6edfc3948db5355f97c042edac23" prot="public" static="no">
+        <type>crypto3::marshalling::types::plonk_constraint_system&lt; nil::marshalling::field_type&lt; <ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ae76b73acb13fb990fa666f45205a72ce" kindref="member">AssignerEndianess</ref> &gt;, <ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a4d6ca29808798b4bd89572ae258864f8" kindref="member">ConstraintSystemType</ref> &gt;</type>
+        <definition>using sgns::GeniusAssigner::PlonkConstraintSystemType = 
+crypto3::marshalling::types::plonk_constraint_system&lt;nil::marshalling::field_type&lt;AssignerEndianess&gt;,
+                                                     ConstraintSystemType&gt;</definition>
+        <argsstring></argsstring>
+        <name>PlonkConstraintSystemType</name>
+        <qualifiedname>sgns::GeniusAssigner::PlonkConstraintSystemType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="43" column="9" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="43" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d6/d8b/classsgns_1_1_genius_assigner_1afa467b5b38c772695d1365d4ac6601b6" prot="public" static="no">
+        <type>crypto3::marshalling::types::plonk_assignment_table&lt; nil::marshalling::field_type&lt; <ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ae76b73acb13fb990fa666f45205a72ce" kindref="member">AssignerEndianess</ref> &gt;, <ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a8a018dbbea894ec4191ad1fc855dbbfb" kindref="member">AssignmentTableType</ref> &gt;</type>
+        <definition>using sgns::GeniusAssigner::PlonkAssignTableType = 
+crypto3::marshalling::types::plonk_assignment_table&lt;nil::marshalling::field_type&lt;AssignerEndianess&gt;,
+                                                    AssignmentTableType&gt;</definition>
+        <argsstring></argsstring>
+        <name>PlonkAssignTableType</name>
+        <qualifiedname>sgns::GeniusAssigner::PlonkAssignTableType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="46" column="9" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="46" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-type">
+      <memberdef kind="enum" id="d6/d8b/classsgns_1_1_genius_assigner_1a2c5149d4abb14c8c192956f2bda72791" prot="private" static="no" strong="yes">
+        <type></type>
+        <name>PrintTableKind</name>
+        <qualifiedname>sgns::GeniusAssigner::PrintTableKind</qualifiedname>
+        <enumvalue id="d6/d8b/classsgns_1_1_genius_assigner_1a2c5149d4abb14c8c192956f2bda72791a40ad8d6d515524aedf6b929c360e9a09" prot="private">
+          <name>SINGLE_PROVER</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d6/d8b/classsgns_1_1_genius_assigner_1a2c5149d4abb14c8c192956f2bda72791a6184694980d7d96c00d3767deefbf3bf" prot="private">
+          <name>MULTI_PROVER</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="132" column="9" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="133" bodyend="136"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d6/d8b/classsgns_1_1_genius_assigner_1a2d2769c400cea111cdac310aaca4f9a6" prot="private" static="no">
+        <type>typename crypto3::algebra::curves::pallas::base_field_type</type>
+        <definition>using sgns::GeniusAssigner::BlueprintFieldType = typename crypto3::algebra::curves::pallas::base_field_type</definition>
+        <argsstring></argsstring>
+        <name>BlueprintFieldType</name>
+        <qualifiedname>sgns::GeniusAssigner::BlueprintFieldType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="35" column="9" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="35" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d6/d8b/classsgns_1_1_genius_assigner_1ae76b73acb13fb990fa666f45205a72ce" prot="private" static="no">
+        <type>nil::marshalling::option::big_endian</type>
+        <definition>using sgns::GeniusAssigner::AssignerEndianess = nil::marshalling::option::big_endian</definition>
+        <argsstring></argsstring>
+        <name>AssignerEndianess</name>
+        <qualifiedname>sgns::GeniusAssigner::AssignerEndianess</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="36" column="9" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="36" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d6/d8b/classsgns_1_1_genius_assigner_1a7fad0f9c3f25451bfb42471f02400373" prot="private" static="no">
+        <type>crypto3::zk::snark::plonk_constraint_system&lt; <ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a2d2769c400cea111cdac310aaca4f9a6" kindref="member">BlueprintFieldType</ref> &gt;</type>
+        <definition>using sgns::GeniusAssigner::ArithmetizationType = crypto3::zk::snark::plonk_constraint_system&lt;BlueprintFieldType&gt;</definition>
+        <argsstring></argsstring>
+        <name>ArithmetizationType</name>
+        <qualifiedname>sgns::GeniusAssigner::ArithmetizationType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="37" column="9" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="37" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d6/d8b/classsgns_1_1_genius_assigner_1a4d6ca29808798b4bd89572ae258864f8" prot="private" static="no">
+        <type>crypto3::zk::snark::plonk_constraint_system&lt; <ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a2d2769c400cea111cdac310aaca4f9a6" kindref="member">BlueprintFieldType</ref> &gt;</type>
+        <definition>using sgns::GeniusAssigner::ConstraintSystemType = crypto3::zk::snark::plonk_constraint_system&lt;BlueprintFieldType&gt;</definition>
+        <argsstring></argsstring>
+        <name>ConstraintSystemType</name>
+        <qualifiedname>sgns::GeniusAssigner::ConstraintSystemType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="38" column="9" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d6/d8b/classsgns_1_1_genius_assigner_1a8a018dbbea894ec4191ad1fc855dbbfb" prot="private" static="no">
+        <type>nil::blueprint::assignment_proxy&lt; <ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a7fad0f9c3f25451bfb42471f02400373" kindref="member">ArithmetizationType</ref> &gt;</type>
+        <definition>using sgns::GeniusAssigner::AssignmentTableType = nil::blueprint::assignment_proxy&lt;ArithmetizationType&gt;</definition>
+        <argsstring></argsstring>
+        <name>AssignmentTableType</name>
+        <qualifiedname>sgns::GeniusAssigner::AssignmentTableType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="39" column="9" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="39" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="d6/d8b/classsgns_1_1_genius_assigner_1abb563c75628d0af441f5ad69dba9ae67" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>const std::size_t</type>
+        <definition>const std::size_t sgns::GeniusAssigner::WITNESS_COLUMNS</definition>
+        <argsstring></argsstring>
+        <name>WITNESS_COLUMNS</name>
+        <qualifiedname>sgns::GeniusAssigner::WITNESS_COLUMNS</qualifiedname>
+        <initializer>= 15</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="116" column="68" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="116" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d8b/classsgns_1_1_genius_assigner_1ad7b98cb670cb85bd0835f53678f26014" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>const std::size_t</type>
+        <definition>const std::size_t sgns::GeniusAssigner::PUBLIC_INPUT_COLUMNS</definition>
+        <argsstring></argsstring>
+        <name>PUBLIC_INPUT_COLUMNS</name>
+        <qualifiedname>sgns::GeniusAssigner::PUBLIC_INPUT_COLUMNS</qualifiedname>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="117" column="68" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="117" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d8b/classsgns_1_1_genius_assigner_1a1ba4f084efbdecf0742f48be8478957e" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>const std::size_t</type>
+        <definition>const std::size_t sgns::GeniusAssigner::COMPONENT_CONSTANT_COLUMNS</definition>
+        <argsstring></argsstring>
+        <name>COMPONENT_CONSTANT_COLUMNS</name>
+        <qualifiedname>sgns::GeniusAssigner::COMPONENT_CONSTANT_COLUMNS</qualifiedname>
+        <initializer>= 5</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="118" column="68" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="118" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d8b/classsgns_1_1_genius_assigner_1a36267752b11ed84438bebc6e1552fa90" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>const std::size_t</type>
+        <definition>const std::size_t sgns::GeniusAssigner::LOOKUP_CONSTANT_COLUMNS</definition>
+        <argsstring></argsstring>
+        <name>LOOKUP_CONSTANT_COLUMNS</name>
+        <qualifiedname>sgns::GeniusAssigner::LOOKUP_CONSTANT_COLUMNS</qualifiedname>
+        <initializer>= 30</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="119" column="68" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="119" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d8b/classsgns_1_1_genius_assigner_1af62e803e646ecbacecfc07853706478a" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>const std::size_t</type>
+        <definition>const std::size_t sgns::GeniusAssigner::COMPONENT_SELECTOR_COLUMNS</definition>
+        <argsstring></argsstring>
+        <name>COMPONENT_SELECTOR_COLUMNS</name>
+        <qualifiedname>sgns::GeniusAssigner::COMPONENT_SELECTOR_COLUMNS</qualifiedname>
+        <initializer>= 50</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="120" column="68" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="120" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d8b/classsgns_1_1_genius_assigner_1a20c97d3238cbb5a7b7cf49eb7eaea7cb" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>const std::size_t</type>
+        <definition>const std::size_t sgns::GeniusAssigner::LOOKUP_SELECTOR_COLUMNS</definition>
+        <argsstring></argsstring>
+        <name>LOOKUP_SELECTOR_COLUMNS</name>
+        <qualifiedname>sgns::GeniusAssigner::LOOKUP_SELECTOR_COLUMNS</qualifiedname>
+        <initializer>= 6</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="121" column="68" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="121" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d8b/classsgns_1_1_genius_assigner_1a5e9cfa23c0624a20843ea476988bf64a" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>const long</type>
+        <definition>const long sgns::GeniusAssigner::STACK_SIZE</definition>
+        <argsstring></argsstring>
+        <name>STACK_SIZE</name>
+        <qualifiedname>sgns::GeniusAssigner::STACK_SIZE</qualifiedname>
+        <initializer>= 4000000</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="122" column="68" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="122" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d8b/classsgns_1_1_genius_assigner_1a5e961a8c954f82c3eeeafe9918e6a259" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>const boost::log::trivial::severity_level</type>
+        <definition>const boost::log::trivial::severity_level sgns::GeniusAssigner::LOG_LEVEL</definition>
+        <argsstring></argsstring>
+        <name>LOG_LEVEL</name>
+        <qualifiedname>sgns::GeniusAssigner::LOG_LEVEL</qualifiedname>
+        <initializer>= boost::log::trivial::info</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="123" column="68" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="123" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d8b/classsgns_1_1_genius_assigner_1a69d889458e00ecca8b452ba8ebc22da5" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>const std::uint32_t</type>
+        <definition>const std::uint32_t sgns::GeniusAssigner::MAX_NUM_PROVERS</definition>
+        <argsstring></argsstring>
+        <name>MAX_NUM_PROVERS</name>
+        <qualifiedname>sgns::GeniusAssigner::MAX_NUM_PROVERS</qualifiedname>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="124" column="68" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="124" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d8b/classsgns_1_1_genius_assigner_1a5367bb2d56626ac245d26743b026c2cf" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>const std::uint32_t</type>
+        <definition>const std::uint32_t sgns::GeniusAssigner::TARGET_PROVER</definition>
+        <argsstring></argsstring>
+        <name>TARGET_PROVER</name>
+        <qualifiedname>sgns::GeniusAssigner::TARGET_PROVER</qualifiedname>
+        <initializer>= std::numeric_limits&lt;std::uint32_t&gt;::max()</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="125" column="49" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="125" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d8b/classsgns_1_1_genius_assigner_1a2989bc4d4b1f7b0e41b771a77d2e72e4" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>const std::string_view</type>
+        <definition>const std::string_view sgns::GeniusAssigner::POLICY</definition>
+        <argsstring></argsstring>
+        <name>POLICY</name>
+        <qualifiedname>sgns::GeniusAssigner::POLICY</qualifiedname>
+        <initializer>= &quot;default&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="126" column="49" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="126" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d8b/classsgns_1_1_genius_assigner_1abe671554372448e293b134a01d0e1d7e" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>const std::string_view</type>
+        <definition>const std::string_view sgns::GeniusAssigner::CHECK_VALIDITY</definition>
+        <argsstring></argsstring>
+        <name>CHECK_VALIDITY</name>
+        <qualifiedname>sgns::GeniusAssigner::CHECK_VALIDITY</qualifiedname>
+        <initializer>= &quot;&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="127" column="49" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="127" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d6/d8b/classsgns_1_1_genius_assigner_1a3e69f85356a6838840e2188c211b47cf" prot="private" static="no" mutable="no">
+        <type>nil::blueprint::generation_mode</type>
+        <definition>nil::blueprint::generation_mode sgns::GeniusAssigner::gen_mode_</definition>
+        <argsstring></argsstring>
+        <name>gen_mode_</name>
+        <qualifiedname>sgns::GeniusAssigner::gen_mode_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="129" column="71" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="129" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d8b/classsgns_1_1_genius_assigner_1adfe213075b1eae9a471a9f4ec3608b2f" prot="private" static="no" mutable="no">
+        <type>nil::blueprint::assigner&lt; <ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a2d2769c400cea111cdac310aaca4f9a6" kindref="member">BlueprintFieldType</ref> &gt;</type>
+        <definition>nil::blueprint::assigner&lt;BlueprintFieldType&gt; sgns::GeniusAssigner::assigner_instance_</definition>
+        <argsstring></argsstring>
+        <name>assigner_instance_</name>
+        <qualifiedname>sgns::GeniusAssigner::assigner_instance_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="130" column="51" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="130" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d6/d8b/classsgns_1_1_genius_assigner_1a9e3a852b9d6aada7ccebecb3c5a9f56d" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::GeniusAssigner::GeniusAssigner</definition>
+        <argsstring>()</argsstring>
+        <name>GeniusAssigner</name>
+        <qualifiedname>sgns::GeniusAssigner::GeniusAssigner</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="50" column="9" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="50" bodyend="63"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d8b/classsgns_1_1_genius_assigner_1a34acd052ee548e655d6b36b8e8b7a7fb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::GeniusAssigner::~GeniusAssigner</definition>
+        <argsstring>()=default</argsstring>
+        <name>~GeniusAssigner</name>
+        <qualifiedname>sgns::GeniusAssigner::~GeniusAssigner</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="65" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d8b/classsgns_1_1_genius_assigner_1ad373c58f0c6b02dc6985e691097e9d61" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::vector&lt; <ref refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output" kindref="compound">AssignerOutput</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::vector&lt; GeniusAssigner::AssignerOutput &gt; &gt; sgns::GeniusAssigner::GenerateCircuitAndTable</definition>
+        <argsstring>(const boost::json::array &amp;public_inputs_json, const boost::json::array &amp;private_inputs_json, const std::string &amp;bytecode_file_payload)</argsstring>
+        <name>GenerateCircuitAndTable</name>
+        <qualifiedname>sgns::GeniusAssigner::GenerateCircuitAndTable</qualifiedname>
+        <param>
+          <type>const boost::json::array &amp;</type>
+          <declname>public_inputs_json</declname>
+        </param>
+        <param>
+          <type>const boost::json::array &amp;</type>
+          <declname>private_inputs_json</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>bytecode_file_payload</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="102" column="25" bodyfile="src/proof/GeniusAssigner.cpp" bodystart="45" bodyend="188"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d8b/classsgns_1_1_genius_assigner_1ad2d20a625b494db17e3b6f52409ca645" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::vector&lt; <ref refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output" kindref="compound">AssignerOutput</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::vector&lt; GeniusAssigner::AssignerOutput &gt; &gt; sgns::GeniusAssigner::GenerateCircuitAndTable</definition>
+        <argsstring>(const std::vector&lt; int &gt; &amp;public_inputs, const std::vector&lt; int &gt; &amp;private_inputs, const std::string &amp;bytecode_file_payload)</argsstring>
+        <name>GenerateCircuitAndTable</name>
+        <qualifiedname>sgns::GeniusAssigner::GenerateCircuitAndTable</qualifiedname>
+        <param>
+          <type>const std::vector&lt; int &gt; &amp;</type>
+          <declname>public_inputs</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; int &gt; &amp;</type>
+          <declname>private_inputs</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>bytecode_file_payload</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="106" column="25" bodyfile="src/proof/GeniusAssigner.cpp" bodystart="190" bodyend="213"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d8b/classsgns_1_1_genius_assigner_1a3ce1cb0f5b09f174d201e8e1594aecc2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::GeniusAssigner::PrintCircuitAndTable</definition>
+        <argsstring>(const std::vector&lt; AssignerOutput &gt; &amp;public_inputs, const std::string &amp;table_path, const std::string &amp;circuit_path)</argsstring>
+        <name>PrintCircuitAndTable</name>
+        <qualifiedname>sgns::GeniusAssigner::PrintCircuitAndTable</qualifiedname>
+        <param>
+          <type>const std::vector&lt; <ref refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output" kindref="compound">AssignerOutput</ref> &gt; &amp;</type>
+          <declname>public_inputs</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>table_path</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>circuit_path</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="110" column="25" bodyfile="src/proof/GeniusAssigner.cpp" bodystart="215" bodyend="249"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d6/d8b/classsgns_1_1_genius_assigner_1ab99b65dcd3104420afbc36e7e9fcd8a0" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>const <ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a3da104ae5fb3329634ea33db73300d88" kindref="member">TableDescriptionType</ref> &amp;</type>
+        <definition>static const TableDescriptionType &amp; sgns::GeniusAssigner::GetPlonkTableDescription</definition>
+        <argsstring>()</argsstring>
+        <name>GetPlonkTableDescription</name>
+        <qualifiedname>sgns::GeniusAssigner::GetPlonkTableDescription</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="92" column="43" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="92" bodyend="100"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d6/d8b/classsgns_1_1_genius_assigner_1abfe678cb40707129a322dbb726b448e1" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1afa467b5b38c772695d1365d4ac6601b6" kindref="member">PlonkAssignTableType</ref></type>
+        <definition>GeniusAssigner::PlonkAssignTableType sgns::GeniusAssigner::BuildPlonkAssignmentTable</definition>
+        <argsstring>(const AssignmentTableType &amp;table_proxy, PrintTableKind print_kind, std::uint32_t ComponentConstantColumns, std::uint32_t ComponentSelectorColumns)</argsstring>
+        <name>BuildPlonkAssignmentTable</name>
+        <qualifiedname>sgns::GeniusAssigner::BuildPlonkAssignmentTable</qualifiedname>
+        <param>
+          <type>const <ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a8a018dbbea894ec4191ad1fc855dbbfb" kindref="member">AssignmentTableType</ref> &amp;</type>
+          <declname>table_proxy</declname>
+        </param>
+        <param>
+          <type><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a2c5149d4abb14c8c192956f2bda72791" kindref="member">PrintTableKind</ref></type>
+          <declname>print_kind</declname>
+        </param>
+        <param>
+          <type>std::uint32_t</type>
+          <declname>ComponentConstantColumns</declname>
+        </param>
+        <param>
+          <type>std::uint32_t</type>
+          <declname>ComponentSelectorColumns</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="146" column="30" bodyfile="src/proof/GeniusAssigner.cpp" bodystart="251" bodyend="306"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d8b/classsgns_1_1_genius_assigner_1a753258860e00923eddfe75f99a443d83" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors" kindref="compound">TableVectors</ref></type>
+        <definition>GeniusAssigner::TableVectors sgns::GeniusAssigner::GetTableVectors</definition>
+        <argsstring>(const AssignmentTableType &amp;table_proxy, PrintTableKind print_kind, std::uint32_t ComponentConstantColumns, std::uint32_t ComponentSelectorColumns, std::uint32_t padded_rows_amount)</argsstring>
+        <name>GetTableVectors</name>
+        <qualifiedname>sgns::GeniusAssigner::GetTableVectors</qualifiedname>
+        <param>
+          <type>const <ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a8a018dbbea894ec4191ad1fc855dbbfb" kindref="member">AssignmentTableType</ref> &amp;</type>
+          <declname>table_proxy</declname>
+        </param>
+        <param>
+          <type><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a2c5149d4abb14c8c192956f2bda72791" kindref="member">PrintTableKind</ref></type>
+          <declname>print_kind</declname>
+        </param>
+        <param>
+          <type>std::uint32_t</type>
+          <declname>ComponentConstantColumns</declname>
+        </param>
+        <param>
+          <type>std::uint32_t</type>
+          <declname>ComponentSelectorColumns</declname>
+        </param>
+        <param>
+          <type>std::uint32_t</type>
+          <declname>padded_rows_amount</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="153" column="22" bodyfile="src/proof/GeniusAssigner.cpp" bodystart="373" bodyend="533"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d8b/classsgns_1_1_genius_assigner_1ad405133fab7ded05674abc5506673937" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a636b6edfc3948db5355f97c042edac23" kindref="member">PlonkConstraintSystemType</ref></type>
+        <definition>GeniusAssigner::PlonkConstraintSystemType sgns::GeniusAssigner::BuildPlonkConstraintSystem</definition>
+        <argsstring>(const nil::blueprint::circuit_proxy&lt; ArithmetizationType &gt; &amp;circuit_proxy, const AssignmentTableType &amp;table_proxy, bool rename_required)</argsstring>
+        <name>BuildPlonkConstraintSystem</name>
+        <qualifiedname>sgns::GeniusAssigner::BuildPlonkConstraintSystem</qualifiedname>
+        <param>
+          <type>const nil::blueprint::circuit_proxy&lt; <ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a7fad0f9c3f25451bfb42471f02400373" kindref="member">ArithmetizationType</ref> &gt; &amp;</type>
+          <declname>circuit_proxy</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a8a018dbbea894ec4191ad1fc855dbbfb" kindref="member">AssignmentTableType</ref> &amp;</type>
+          <declname>table_proxy</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>rename_required</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="159" column="35" bodyfile="src/proof/GeniusAssigner.cpp" bodystart="535" bodyend="617"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d8b/classsgns_1_1_genius_assigner_1a9bbd217b74b23a19b962597eabc1bfab" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename ValueType</type>
+          </param>
+          <param>
+            <type>typename ContainerType</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::GeniusAssigner::FillVectorValue</definition>
+        <argsstring>(std::vector&lt; ValueType &gt; &amp;table_values, const ContainerType &amp;table_col, typename std::vector&lt; ValueType &gt;::iterator start)</argsstring>
+        <name>FillVectorValue</name>
+        <qualifiedname>sgns::GeniusAssigner::FillVectorValue</qualifiedname>
+        <param>
+          <type>std::vector&lt; ValueType &gt; &amp;</type>
+          <declname>table_values</declname>
+        </param>
+        <param>
+          <type>const ContainerType &amp;</type>
+          <declname>table_col</declname>
+        </param>
+        <param>
+          <type>typename std::vector&lt; ValueType &gt;::iterator</type>
+          <declname>start</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="165" column="14" bodyfile="src/proof/GeniusAssigner.cpp" bodystart="620" bodyend="625"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="d6/d8b/classsgns_1_1_genius_assigner_1a1ac967c76f93bd44f874d9105d0246ee" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::uint32_t</type>
+        <definition>std::uint32_t sgns::GeniusAssigner::GetUsableRowsAmount</definition>
+        <argsstring>(const AssignmentTableType &amp;table_proxy, PrintTableKind print_kind)</argsstring>
+        <name>GetUsableRowsAmount</name>
+        <qualifiedname>sgns::GeniusAssigner::GetUsableRowsAmount</qualifiedname>
+        <param>
+          <type>const <ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a8a018dbbea894ec4191ad1fc855dbbfb" kindref="member">AssignmentTableType</ref> &amp;</type>
+          <declname>table_proxy</declname>
+        </param>
+        <param>
+          <type><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a2c5149d4abb14c8c192956f2bda72791" kindref="member">PrintTableKind</ref></type>
+          <declname>print_kind</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="151" column="30" bodyfile="src/proof/GeniusAssigner.cpp" bodystart="308" bodyend="371"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::GeniusAssigner</label>
+        <link refid="d6/d8b/classsgns_1_1_genius_assigner"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-CHECK_VALIDITY</edgelabel>
+          <edgelabel>-POLICY</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::basic_string_view&lt; Char &gt;</label>
+      </node>
+      <node id="2">
+        <label>std::string_view</label>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/proof/GeniusAssigner.hpp" line="33" column="5" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="34" bodyend="168"/>
+    <listofallmembers>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a7fad0f9c3f25451bfb42471f02400373" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>ArithmetizationType</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1adfe213075b1eae9a471a9f4ec3608b2f" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>assigner_instance_</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1ae76b73acb13fb990fa666f45205a72ce" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>AssignerEndianess</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70" prot="public" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>AssignerError</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a8a018dbbea894ec4191ad1fc855dbbfb" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>AssignmentTableType</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a2d2769c400cea111cdac310aaca4f9a6" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>BlueprintFieldType</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1abfe678cb40707129a322dbb726b448e1" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>BuildPlonkAssignmentTable</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1ad405133fab7ded05674abc5506673937" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>BuildPlonkConstraintSystem</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1abe671554372448e293b134a01d0e1d7e" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>CHECK_VALIDITY</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a1ba4f084efbdecf0742f48be8478957e" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>COMPONENT_CONSTANT_COLUMNS</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1af62e803e646ecbacecfc07853706478a" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>COMPONENT_SELECTOR_COLUMNS</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a4d6ca29808798b4bd89572ae258864f8" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>ConstraintSystemType</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a9bbd217b74b23a19b962597eabc1bfab" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>FillVectorValue</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a3e69f85356a6838840e2188c211b47cf" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>gen_mode_</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1ad373c58f0c6b02dc6985e691097e9d61" prot="public" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>GenerateCircuitAndTable</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1ad2d20a625b494db17e3b6f52409ca645" prot="public" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>GenerateCircuitAndTable</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a9e3a852b9d6aada7ccebecb3c5a9f56d" prot="public" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>GeniusAssigner</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1ab99b65dcd3104420afbc36e7e9fcd8a0" prot="public" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>GetPlonkTableDescription</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a753258860e00923eddfe75f99a443d83" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>GetTableVectors</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a1ac967c76f93bd44f874d9105d0246ee" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>GetUsableRowsAmount</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a5e961a8c954f82c3eeeafe9918e6a259" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>LOG_LEVEL</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a36267752b11ed84438bebc6e1552fa90" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>LOOKUP_CONSTANT_COLUMNS</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a20c97d3238cbb5a7b7cf49eb7eaea7cb" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>LOOKUP_SELECTOR_COLUMNS</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a69d889458e00ecca8b452ba8ebc22da5" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>MAX_NUM_PROVERS</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1afa467b5b38c772695d1365d4ac6601b6" prot="public" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>PlonkAssignTableType</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a636b6edfc3948db5355f97c042edac23" prot="public" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>PlonkConstraintSystemType</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a2989bc4d4b1f7b0e41b771a77d2e72e4" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>POLICY</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a3ce1cb0f5b09f174d201e8e1594aecc2" prot="public" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>PrintCircuitAndTable</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a2c5149d4abb14c8c192956f2bda72791" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>PrintTableKind</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1ad7b98cb670cb85bd0835f53678f26014" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>PUBLIC_INPUT_COLUMNS</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a5e9cfa23c0624a20843ea476988bf64a" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>STACK_SIZE</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a3da104ae5fb3329634ea33db73300d88" prot="public" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>TableDescriptionType</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a5367bb2d56626ac245d26743b026c2cf" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>TARGET_PROVER</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1abb563c75628d0af441f5ad69dba9ae67" prot="private" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>WITNESS_COLUMNS</name></member>
+      <member refid="d6/d8b/classsgns_1_1_genius_assigner_1a34acd052ee548e655d6b36b8e8b7a7fb" prot="public" virt="non-virtual"><scope>sgns::GeniusAssigner</scope><name>~GeniusAssigner</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

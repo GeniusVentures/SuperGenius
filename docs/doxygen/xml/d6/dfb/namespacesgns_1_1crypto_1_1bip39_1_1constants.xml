@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/dfb/namespacesgns_1_1crypto_1_1bip39_1_1constants" kind="namespace" language="C++">
+    <compoundname>sgns::crypto::bip39::constants</compoundname>
+    <sectiondef kind="var">
+      <memberdef kind="variable" id="d6/dfb/namespacesgns_1_1crypto_1_1bip39_1_1constants_1a80e6e1ca84032ffbb598014aad2fbd3b" prot="public" static="no" constexpr="yes" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::crypto::bip39::constants::BIP39_SEED_LEN_512</definition>
+        <argsstring></argsstring>
+        <name>BIP39_SEED_LEN_512</name>
+        <qualifiedname>sgns::crypto::bip39::constants::BIP39_SEED_LEN_512</qualifiedname>
+        <initializer>= 64u</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/bip39_types.hpp" line="10" column="22" bodyfile="src/crypto/bip39/bip39_types.hpp" bodystart="10" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/bip39/bip39_types.hpp" line="9" column="3"/>
+  </compounddef>
+</doxygen>

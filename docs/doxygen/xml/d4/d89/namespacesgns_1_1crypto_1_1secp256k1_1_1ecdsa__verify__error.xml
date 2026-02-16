@@ -1,0 +1,58 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/d89/namespacesgns_1_1crypto_1_1secp256k1_1_1ecdsa__verify__error" kind="namespace" language="C++">
+    <compoundname>sgns::crypto::secp256k1::ecdsa_verify_error</compoundname>
+    <sectiondef kind="var">
+      <memberdef kind="variable" id="d4/d89/namespacesgns_1_1crypto_1_1secp256k1_1_1ecdsa__verify__error_1ad67a357719c80b404d32a6baf4760442" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a4252c878ff41e9a1875d0ac3bb5fa636" kindref="member">EcdsaVerifyError</ref></type>
+        <definition>EcdsaVerifyError sgns::crypto::secp256k1::ecdsa_verify_error::kInvalidRS</definition>
+        <argsstring></argsstring>
+        <name>kInvalidRS</name>
+        <qualifiedname>sgns::crypto::secp256k1::ecdsa_verify_error::kInvalidRS</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="16" column="39" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="16" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d89/namespacesgns_1_1crypto_1_1secp256k1_1_1ecdsa__verify__error_1a741b3d4ffcba3e2110df65e336fdaf8d" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a4252c878ff41e9a1875d0ac3bb5fa636" kindref="member">EcdsaVerifyError</ref></type>
+        <definition>EcdsaVerifyError sgns::crypto::secp256k1::ecdsa_verify_error::kInvalidV</definition>
+        <argsstring></argsstring>
+        <name>kInvalidV</name>
+        <qualifiedname>sgns::crypto::secp256k1::ecdsa_verify_error::kInvalidV</qualifiedname>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="17" column="39" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="17" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d89/namespacesgns_1_1crypto_1_1secp256k1_1_1ecdsa__verify__error_1a401f941cbb85925f358d096f26fec52a" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a4252c878ff41e9a1875d0ac3bb5fa636" kindref="member">EcdsaVerifyError</ref></type>
+        <definition>EcdsaVerifyError sgns::crypto::secp256k1::ecdsa_verify_error::kInvalidSignature</definition>
+        <argsstring></argsstring>
+        <name>kInvalidSignature</name>
+        <qualifiedname>sgns::crypto::secp256k1::ecdsa_verify_error::kInvalidSignature</qualifiedname>
+        <initializer>= 2</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="18" column="39" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="18" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/secp256k1_types.hpp" line="15" column="3"/>
+  </compounddef>
+</doxygen>

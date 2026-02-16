@@ -1,0 +1,341 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/dfc/topper__trie__batch__impl_8cpp" kind="file" language="C++">
+    <compoundname>topper_trie_batch_impl.cpp</compoundname>
+    <includes refid="de/dc7/topper__trie__batch__impl_8hpp" local="yes">storage/trie/impl/topper_trie_batch_impl.hpp</includes>
+    <includes refid="d7/dd1/trie__error_8hpp" local="yes">storage/trie/supergenius_trie/trie_error.hpp</includes>
+    <incdepgraph>
+      <node id="9">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>storage/buffer_map_types.hpp</label>
+        <link refid="d8/dcc/buffer__map__types_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>storage/face/batchable.hpp</label>
+        <link refid="de/d87/batchable_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>storage/face/generic_maps.hpp</label>
+        <link refid="d9/daa/generic__maps_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>storage/face/generic_storage.hpp</label>
+        <link refid="d6/d4e/generic__storage_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>storage/face/iterable.hpp</label>
+        <link refid="db/d3e/iterable_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>storage/face/map_cursor.hpp</label>
+        <link refid="d9/d4b/map__cursor_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>storage/face/readable.hpp</label>
+        <link refid="d5/dd2/readable_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>storage/face/write_batch.hpp</label>
+        <link refid="d2/d76/write__batch_8hpp"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>storage/face/writeable.hpp</label>
+        <link refid="dc/da4/writeable_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/storage/trie/impl/topper_trie_batch_impl.cpp</label>
+        <link refid="d1/dfc/topper__trie__batch__impl_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>storage/trie/impl/topper_trie_batch_impl.hpp</label>
+        <link refid="de/dc7/topper__trie__batch__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>storage/trie/supergenius_trie/trie_error.hpp</label>
+        <link refid="d7/dd1/trie__error_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>storage/trie/trie_batches.hpp</label>
+        <link refid="dc/d8a/trie__batches_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="13">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="5">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="8">
+        <label>gsl/span</label>
+      </node>
+      <node id="15">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="4">
+        <label>list</label>
+      </node>
+      <node id="3">
+        <label>map</label>
+      </node>
+      <node id="19">
+        <label>memory</label>
+      </node>
+      <node id="26">
+        <label>string</label>
+      </node>
+      <node id="10">
+        <label>string_view</label>
+      </node>
+      <node id="11">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d0/dbf/namespacesgns_1_1storage">sgns::storage</innernamespace>
+    <innernamespace refid="d2/db5/namespacesgns_1_1storage_1_1trie">sgns::storage::trie</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d1/dfc/topper__trie__batch__impl_8cpp_1aa24739b479c00a6a3dbeb5c87a9b72e0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>OUTCOME_CPP_DEFINE_CATEGORY_3</definition>
+        <argsstring>(sgns::storage::trie, TopperTrieBatchImpl::Error, e)</argsstring>
+        <name>OUTCOME_CPP_DEFINE_CATEGORY_3</name>
+        <param>
+          <type><ref refid="d2/db5/namespacesgns_1_1storage_1_1trie" kindref="compound">sgns::storage::trie</ref></type>
+        </param>
+        <param>
+          <type>TopperTrieBatchImpl::Error</type>
+        </param>
+        <param>
+          <type>e</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/topper_trie_batch_impl.cpp" line="7" column="1" bodyfile="src/storage/trie/impl/topper_trie_batch_impl.cpp" bodystart="7" bodyend="16"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="de/dc7/topper__trie__batch__impl_8hpp" kindref="compound">storage/trie/impl/topper_trie_batch_impl.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d7/dd1/trie__error_8hpp" kindref="compound">storage/trie/supergenius_trie/trie_error.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7" refid="d1/dfc/topper__trie__batch__impl_8cpp_1aa24739b479c00a6a3dbeb5c87a9b72e0" refkind="member"><highlight class="normal"><ref refid="d1/dfc/topper__trie__batch__impl_8cpp_1aa24739b479c00a6a3dbeb5c87a9b72e0" kindref="member">OUTCOME_CPP_DEFINE_CATEGORY_3</ref>(<ref refid="d2/db5/namespacesgns_1_1storage_1_1trie" kindref="compound">sgns::storage::trie</ref>,</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>TopperTrieBatchImpl::Error,</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>e)<sp/>{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">E<sp/>=<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aaf8c3e1f54b6f0c205d02365e3713172" kindref="member">sgns::storage::trie::TopperTrieBatchImpl::Error</ref>;</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">switch</highlight><highlight class="normal"><sp/>(e)<sp/>{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/>E::PARENT_EXPIRED:</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;Pointer<sp/>to<sp/>the<sp/>parent<sp/>batch<sp/>expired&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;Unknown<sp/>error&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="16"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/db5/namespacesgns_1_1storage_1_1trie" kindref="compound">sgns::storage::trie</ref><sp/>{</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20" refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a2a3ca603ba33c3e4330ab7e8c9987673" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a2a3ca603ba33c3e4330ab7e8c9987673" kindref="member">TopperTrieBatchImpl::TopperTrieBatchImpl</ref>(</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;TrieBatch&gt;<sp/>&amp;parent)</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a6575d5f7267356a009fbb4f6a00beb86" kindref="member">parent_</ref>(parent)<sp/>{}</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24" refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aed779b066e2ffe01df0ac5e66eec6be9" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;Buffer&gt;<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aed779b066e2ffe01df0ac5e66eec6be9" kindref="member">TopperTrieBatchImpl::get</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>it<sp/>=<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a5a940bc1b02fee8be947a40a5fed28ee" kindref="member">cache_</ref>.find(key);<sp/>it<sp/>!=<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a5a940bc1b02fee8be947a40a5fed28ee" kindref="member">cache_</ref>.end())<sp/>{</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(it-&gt;second.has_value())<sp/>{</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>it-&gt;second.value();</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d2/db5/namespacesgns_1_1storage_1_1trie_1a963b1f72427405d39ceed948b9edb550a40e006699bb0f012104a8bd7110a9dc9" kindref="member">TrieError::NO_VALUE</ref>;</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1af5b3a705f76f472c266919f1d8484efd" kindref="member">wasClearedByPrefix</ref>(key))<sp/>{</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d2/db5/namespacesgns_1_1storage_1_1trie_1a963b1f72427405d39ceed948b9edb550a40e006699bb0f012104a8bd7110a9dc9" kindref="member">TrieError::NO_VALUE</ref>;</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>p<sp/>=<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a6575d5f7267356a009fbb4f6a00beb86" kindref="member">parent_</ref>.lock();<sp/>p<sp/>!=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">)<sp/>{</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>p-&gt;get(key);</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aaf8c3e1f54b6f0c205d02365e3713172a8a82367f02b31213005708c2ff1929c2" kindref="member">Error::PARENT_EXPIRED</ref>;</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40" refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1ae5cebd05a2d8cb19279a76744b531407" refkind="member"><highlight class="normal"><sp/><sp/>std::unique_ptr&lt;BufferMapCursor&gt;<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1ae5cebd05a2d8cb19279a76744b531407" kindref="member">TopperTrieBatchImpl::cursor</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>p<sp/>=<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a6575d5f7267356a009fbb4f6a00beb86" kindref="member">parent_</ref>.lock();<sp/>p<sp/>!=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">)<sp/>{</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>p-&gt;cursor();</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight></codeline>
+<codeline lineno="47" refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1ad4513dbf71e657ea135485d7094ba9a9" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1ad4513dbf71e657ea135485d7094ba9a9" kindref="member">TopperTrieBatchImpl::contains</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>it<sp/>=<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a5a940bc1b02fee8be947a40a5fed28ee" kindref="member">cache_</ref>.find(key);<sp/>it<sp/>!=<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a5a940bc1b02fee8be947a40a5fed28ee" kindref="member">cache_</ref>.end())<sp/>{</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>it-&gt;second.has_value();</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1af5b3a705f76f472c266919f1d8484efd" kindref="member">wasClearedByPrefix</ref>(key))<sp/>{</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>p<sp/>=<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a6575d5f7267356a009fbb4f6a00beb86" kindref="member">parent_</ref>.lock();<sp/>p<sp/>!=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">)<sp/>{</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>p-&gt;contains(key);</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight></codeline>
+<codeline lineno="60" refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a16cd7374bbfa9f97228045618749f202" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a16cd7374bbfa9f97228045618749f202" kindref="member">TopperTrieBatchImpl::empty</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!<ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a5a940bc1b02fee8be947a40a5fed28ee" kindref="member">cache_</ref>.empty()</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;&amp;<sp/>std::any_of(<ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a5a940bc1b02fee8be947a40a5fed28ee" kindref="member">cache_</ref>.begin(),<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a5a940bc1b02fee8be947a40a5fed28ee" kindref="member">cache_</ref>.end(),<sp/>[](</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;p)<sp/>{</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>p.second.has_value();</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}))<sp/>{</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>TODO(Harrm)<sp/>PRE-462<sp/>consider<sp/>clearPrefix<sp/>here.<sp/>Not<sp/>an<sp/>easy<sp/>thing<sp/>and<sp/>is</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>barely<sp/>possible<sp/>to<sp/>happen,<sp/>so<sp/>leave<sp/>it<sp/>for<sp/>the<sp/>future</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>p<sp/>=<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a6575d5f7267356a009fbb4f6a00beb86" kindref="member">parent_</ref>.lock();<sp/>p<sp/>!=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">)<sp/>{</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>p-&gt;empty();</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"></highlight></codeline>
+<codeline lineno="75" refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1acb2b93d4895d494727ad8898f52060f5" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1acb2b93d4895d494727ad8898f52060f5" kindref="member">TopperTrieBatchImpl::put</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key,</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;value)<sp/>{</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1acb2b93d4895d494727ad8898f52060f5" kindref="member">put</ref>(key,<sp/><ref refid="d0/dbf/namespacesgns_1_1storage_1a040e162fcce788f6ecea4e5ec54ed1c6" kindref="member">Buffer</ref>(value));</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"></highlight></codeline>
+<codeline lineno="80" refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1ab20a55a7c200cfffcb318f24500f5b9a" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1acb2b93d4895d494727ad8898f52060f5" kindref="member">TopperTrieBatchImpl::put</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key,</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;&amp;value)<sp/>{</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a5a940bc1b02fee8be947a40a5fed28ee" kindref="member">cache_</ref>[key]<sp/>=<sp/>std::move(value);</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success();</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"></highlight></codeline>
+<codeline lineno="86" refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aad234930f71ae7634b4f154e2ae26574" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aad234930f71ae7634b4f154e2ae26574" kindref="member">TopperTrieBatchImpl::remove</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key)<sp/>{</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a5a940bc1b02fee8be947a40a5fed28ee" kindref="member">cache_</ref>[key]<sp/>=<sp/>boost::none;</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success();</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"></highlight></codeline>
+<codeline lineno="91" refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1af7c3a65846cf1c48fe980757820e7364" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1af7c3a65846cf1c48fe980757820e7364" kindref="member">TopperTrieBatchImpl::clearPrefix</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;prefix)<sp/>{</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;p<sp/>:<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a5a940bc1b02fee8be947a40a5fed28ee" kindref="member">cache_</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(p.first.subbuffer(0,<sp/>prefix.<ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1a77edb688fb1bff45a612ee6f03c6bda8" kindref="member">size</ref>())<sp/>==<sp/>prefix)<sp/>{</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a5a940bc1b02fee8be947a40a5fed28ee" kindref="member">cache_</ref>[p.first]<sp/>=<sp/>boost::none;</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aabd939eca3dd730241168e71131a81e1" kindref="member">cleared_prefixes_</ref>.push_back(prefix);</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a6575d5f7267356a009fbb4f6a00beb86" kindref="member">parent_</ref>.lock()<sp/>!=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">)<sp/>{</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success();</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aaf8c3e1f54b6f0c205d02365e3713172a8a82367f02b31213005708c2ff1929c2" kindref="member">Error::PARENT_EXPIRED</ref>;</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"></highlight></codeline>
+<codeline lineno="104" refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a1ab14c2672be158751e3dc43a0534fa2" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a1ab14c2672be158751e3dc43a0534fa2" kindref="member">TopperTrieBatchImpl::writeBack</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>p<sp/>=<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a6575d5f7267356a009fbb4f6a00beb86" kindref="member">parent_</ref>.lock();<sp/>p<sp/>!=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">)<sp/>{</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>it<sp/>=<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a5a940bc1b02fee8be947a40a5fed28ee" kindref="member">cache_</ref>.begin();</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;prefix<sp/>:<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aabd939eca3dd730241168e71131a81e1" kindref="member">cleared_prefixes_</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>BOOST_OUTCOME_TRYV2(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/>p-&gt;clearPrefix(prefix));</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(;<sp/>it<sp/>!=<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a5a940bc1b02fee8be947a40a5fed28ee" kindref="member">cache_</ref>.end();<sp/>it++)<sp/>{</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(it-&gt;second.has_value())<sp/>{</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>BOOST_OUTCOME_TRYV2(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/>p-&gt;put(it-&gt;first,<sp/>it-&gt;second.value()));</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">else</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>BOOST_OUTCOME_TRYV2(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/>p-&gt;remove(it-&gt;first));</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success();</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aaf8c3e1f54b6f0c205d02365e3713172a8a82367f02b31213005708c2ff1929c2" kindref="member">Error::PARENT_EXPIRED</ref>;</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"></highlight></codeline>
+<codeline lineno="122" refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1af5b3a705f76f472c266919f1d8484efd" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1af5b3a705f76f472c266919f1d8484efd" kindref="member">TopperTrieBatchImpl::wasClearedByPrefix</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>prefix<sp/>:<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aabd939eca3dd730241168e71131a81e1" kindref="member">cleared_prefixes_</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>key_end<sp/>=<sp/>key.<ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1a698c67bc1af015482347122655533d89" kindref="member">begin</ref>();</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::advance(key_end,<sp/>std::min(key.<ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1a77edb688fb1bff45a612ee6f03c6bda8" kindref="member">size</ref>(),<sp/>prefix.size())<sp/>-<sp/>1);</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>is_cleared<sp/>=<sp/>std::equal(key.<ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1a698c67bc1af015482347122655533d89" kindref="member">begin</ref>(),<sp/>key_end,<sp/>prefix.begin());</highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(is_cleared)<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"></highlight></codeline>
+<codeline lineno="132"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::storage::trie</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/storage/trie/impl/topper_trie_batch_impl.cpp"/>
+  </compounddef>
+</doxygen>

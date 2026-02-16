@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/d82/namespacesgns_1_1subscription" kind="namespace" language="C++">
+    <compoundname>sgns::subscription</compoundname>
+    <innerclass refid="d4/de2/classsgns_1_1subscription_1_1_subscriber" prot="public">sgns::subscription::Subscriber</innerclass>
+    <innerclass refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine" prot="public">sgns::subscription::SubscriptionEngine</innerclass>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/subscription/subscriber.hpp" line="11" column="1"/>
+  </compounddef>
+</doxygen>

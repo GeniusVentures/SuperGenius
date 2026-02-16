@@ -1,0 +1,293 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/dc0/scale__encoder__stream_8cpp" kind="file" language="C++">
+    <compoundname>scale_encoder_stream.cpp</compoundname>
+    <includes refid="dc/da0/scale__encoder__stream_8hpp" local="yes">scale/scale_encoder_stream.hpp</includes>
+    <includes refid="d6/d8d/outcome__throw_8hpp" local="yes">base/outcome_throw.hpp</includes>
+    <includes refid="d0/d8d/scale__error_8hpp" local="yes">scale/scale_error.hpp</includes>
+    <includes refid="dd/d27/scale_2types_8hpp" local="yes">scale/types.hpp</includes>
+    <incdepgraph>
+      <node id="13">
+        <label>base/outcome_throw.hpp</label>
+        <link refid="d6/d8d/outcome__throw_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>macro/unreachable.hpp</label>
+        <link refid="d7/d10/unreachable_8hpp"/>
+      </node>
+      <node id="18">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>scale/detail/fixed_witdh_integer.hpp</label>
+        <link refid="de/d03/fixed__witdh__integer_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/scale/scale_encoder_stream.cpp</label>
+        <link refid="de/dc0/scale__encoder__stream_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>scale/scale_encoder_stream.hpp</label>
+        <link refid="dc/da0/scale__encoder__stream_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>scale/scale_error.hpp</label>
+        <link refid="d0/d8d/scale__error_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>scale/types.hpp</label>
+        <link refid="dd/d27/scale_2types_8hpp"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>array</label>
+      </node>
+      <node id="12">
+        <label>boost/endian/arithmetic.hpp</label>
+      </node>
+      <node id="22">
+        <label>boost/multiprecision/cpp_int.hpp</label>
+      </node>
+      <node id="7">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="14">
+        <label>boost/system/system_error.hpp</label>
+      </node>
+      <node id="15">
+        <label>boost/throw_exception.hpp</label>
+      </node>
+      <node id="5">
+        <label>boost/variant/get.hpp</label>
+      </node>
+      <node id="6">
+        <label>boost/variant/variant.hpp</label>
+      </node>
+      <node id="11">
+        <label>cstdint</label>
+      </node>
+      <node id="3">
+        <label>deque</label>
+      </node>
+      <node id="8">
+        <label>gsl/span</label>
+      </node>
+      <node id="19">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="4">
+        <label>list</label>
+      </node>
+      <node id="21">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d1/d56/namespacesgns_1_1scale">sgns::scale</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dc/da0/scale__encoder__stream_8hpp" kindref="compound">scale/scale_encoder_stream.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/d8d/outcome__throw_8hpp" kindref="compound">base/outcome_throw.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d0/d8d/scale__error_8hpp" kindref="compound">scale/scale_error.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dd/d27/scale_2types_8hpp" kindref="compound">scale/types.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d1/d56/namespacesgns_1_1scale" kindref="compound">sgns::scale</ref><sp/>{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>must<sp/>not<sp/>use<sp/>these<sp/>functions<sp/>outside<sp/>encodeInteger</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>encodeFirstCategory(uint8_t<sp/>value,<sp/><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref><sp/>&amp;out)<sp/>{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>only<sp/>values<sp/>from<sp/>[0,<sp/>kMinUint16)<sp/>can<sp/>be<sp/>put<sp/>here</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>out<sp/>&lt;&lt;<sp/>static_cast&lt;uint8_t&gt;(value<sp/>&lt;&lt;<sp/>2u);</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>encodeSecondCategory(uint16_t<sp/>value,<sp/><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref><sp/>&amp;out)<sp/>{</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>only<sp/>values<sp/>from<sp/>[kMinUint16,<sp/>kMinUint32)<sp/>can<sp/>be<sp/>put<sp/>here</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>v<sp/>=<sp/>value;</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>v<sp/>&lt;&lt;=<sp/>2u;<sp/><sp/></highlight><highlight class="comment">//<sp/>v<sp/>*=<sp/>4</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>v<sp/>+=<sp/>1u;<sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>set<sp/>0b01<sp/>flag</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>minor_byte<sp/>=<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint8_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(v<sp/>&amp;<sp/>0xFFu);</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>v<sp/>&gt;&gt;=<sp/>8u;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>major_byte<sp/>=<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint8_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(v<sp/>&amp;<sp/>0xFFu);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>out<sp/>&lt;&lt;<sp/>minor_byte<sp/>&lt;&lt;<sp/>major_byte;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>encodeThirdCategory(uint32_t<sp/>value,<sp/><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref><sp/>&amp;out)<sp/>{</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>only<sp/>values<sp/>from<sp/>[kMinUint32,<sp/>kMinBigInteger)<sp/>can<sp/>be<sp/>put<sp/>here</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>uint32_t<sp/>v<sp/>=<sp/>(value<sp/>&lt;&lt;<sp/>2u)<sp/>+<sp/>2;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/da8/namespacesgns_1_1scale_1_1detail_1a00560eb012697d25626321b959eed7cf" kindref="member">scale::detail::encodeInteger&lt;uint32_t&gt;</ref>(v,<sp/>out);</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>calculate<sp/>number<sp/>of<sp/>bytes<sp/>required</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>countBytes(<ref refid="d1/d56/namespacesgns_1_1scale_1ac1997d51bb44310de23a0fd42d42aac0" kindref="member">CompactInteger</ref><sp/>v)<sp/>{</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(0<sp/>==<sp/>v)<sp/>{</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>1;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>counter<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">while</highlight><highlight class="normal"><sp/>(v<sp/>&gt;<sp/>0)<sp/>{</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>++counter;</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>v<sp/>&gt;&gt;=<sp/>8;</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>counter;</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>encodeCompactInteger(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d1/d56/namespacesgns_1_1scale_1ac1997d51bb44310de23a0fd42d42aac0" kindref="member">CompactInteger</ref><sp/>&amp;value,</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref><sp/>&amp;out)<sp/>{</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>cannot<sp/>encode<sp/>negative<sp/>numbers</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>there<sp/>is<sp/>no<sp/>description<sp/>how<sp/>to<sp/>encode<sp/>compact<sp/>negative<sp/>numbers</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(value<sp/>&lt;<sp/>0)<sp/>{</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a6e3f4809320974468497c0cb0999e28a" kindref="member">base::raise</ref>(<ref refid="d1/d56/namespacesgns_1_1scale_1a3394ed761bbfb57cf4f53ebff0b555e1a78a55958b7491d5d94d3ea269025e6af" kindref="member">EncodeError::NEGATIVE_COMPACT_INTEGER</ref>);</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"></highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(value<sp/>&lt;<sp/><ref refid="d6/dd5/structsgns_1_1scale_1_1compact_1_1_encoding_category_limits_1a5e505e1cb300b37c9bcdb76aca89e9a7" kindref="member">compact::EncodingCategoryLimits::kMinUint16</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>encodeFirstCategory(value.convert_to&lt;uint8_t&gt;(),<sp/>out);</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"></highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(value<sp/>&lt;<sp/><ref refid="d6/dd5/structsgns_1_1scale_1_1compact_1_1_encoding_category_limits_1a17b2ab4099965fd26ed3dfefc13f9896" kindref="member">compact::EncodingCategoryLimits::kMinUint32</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>encodeSecondCategory(value.convert_to&lt;uint16_t&gt;(),<sp/>out);</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"></highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(value<sp/>&lt;<sp/><ref refid="d6/dd5/structsgns_1_1scale_1_1compact_1_1_encoding_category_limits_1ab54259e49414282861eba1837b9af7ae" kindref="member">compact::EncodingCategoryLimits::kMinBigInteger</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>encodeThirdCategory(value.convert_to&lt;uint32_t&gt;(),<sp/>out);</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"></highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>number<sp/>of<sp/>bytes<sp/>required<sp/>to<sp/>represent<sp/>value</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>bigIntLength<sp/>=<sp/>countBytes(value);</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"></highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>number<sp/>of<sp/>bytes<sp/>to<sp/>scale-encode<sp/>value</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>1<sp/>byte<sp/>is<sp/>reserved<sp/>for<sp/>header</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>requiredLength<sp/>=<sp/>1<sp/>+<sp/>bigIntLength;</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"></highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(bigIntLength<sp/>&gt;<sp/>67)<sp/>{</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a6e3f4809320974468497c0cb0999e28a" kindref="member">base::raise</ref>(<ref refid="d1/d56/namespacesgns_1_1scale_1a3394ed761bbfb57cf4f53ebff0b555e1a0692f4668dd1c8d0fd76b73649d4703b" kindref="member">EncodeError::COMPACT_INTEGER_TOO_BIG</ref>);</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"></highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d56/namespacesgns_1_1scale_1a5dfaa1d4f83677c0074ffc18021503cc" kindref="member">ByteArray</ref><sp/>result;</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>result.reserve(requiredLength);</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"></highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*<sp/>The<sp/>value<sp/>stored<sp/>in<sp/>6<sp/>major<sp/>bits<sp/>of<sp/>header<sp/>is<sp/>used</highlight></codeline>
+<codeline lineno="91"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>to<sp/>encode<sp/>number<sp/>of<sp/>bytes<sp/>for<sp/>storing<sp/>big<sp/>integer.</highlight></codeline>
+<codeline lineno="92"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>Value<sp/>formed<sp/>by<sp/>6<sp/>bits<sp/>varies<sp/>from<sp/>0<sp/>to<sp/>63<sp/>==<sp/>2^6<sp/>-<sp/>1,</highlight></codeline>
+<codeline lineno="93"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>However<sp/>big<sp/>integer<sp/>byte<sp/>count<sp/>starts<sp/>from<sp/>4,</highlight></codeline>
+<codeline lineno="94"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>so<sp/>to<sp/>store<sp/>this<sp/>number<sp/>we<sp/>should<sp/>decrease<sp/>this<sp/>value<sp/>by<sp/>4.</highlight></codeline>
+<codeline lineno="95"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>And<sp/>the<sp/>range<sp/>of<sp/>bytes<sp/>number<sp/>for<sp/>storing<sp/>big<sp/>integer</highlight></codeline>
+<codeline lineno="96"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>becomes<sp/>4<sp/>..<sp/>67.<sp/>To<sp/>form<sp/>resulting<sp/>header<sp/>we<sp/>need<sp/>to<sp/>move</highlight></codeline>
+<codeline lineno="97"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>those<sp/>bits<sp/>representing<sp/>bytes<sp/>count<sp/>to<sp/>the<sp/>left<sp/>by<sp/>2<sp/>positions</highlight></codeline>
+<codeline lineno="98"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>by<sp/>means<sp/>of<sp/>multiplying<sp/>by<sp/>4.</highlight></codeline>
+<codeline lineno="99"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>Minor<sp/>2<sp/>bits<sp/>store<sp/>encoding<sp/>option,<sp/>in<sp/>our<sp/>case<sp/>it<sp/>is<sp/>0b11<sp/>==<sp/>3</highlight></codeline>
+<codeline lineno="100"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>We<sp/>just<sp/>add<sp/>3<sp/>to<sp/>the<sp/>result<sp/>of<sp/>operations<sp/>above</highlight></codeline>
+<codeline lineno="101"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>uint8_t<sp/>header<sp/>=<sp/>(bigIntLength<sp/>-<sp/>4)<sp/>*<sp/>4<sp/>+<sp/>3;</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"></highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>result.push_back(header);</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"></highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d56/namespacesgns_1_1scale_1ac1997d51bb44310de23a0fd42d42aac0" kindref="member">CompactInteger</ref><sp/>v{value};</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>i<sp/>=<sp/>0;<sp/>i<sp/>&lt;<sp/>bigIntLength;<sp/>++i)<sp/>{</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>result.push_back(</highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint8_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>v<sp/>&amp;<sp/>0xFF));<sp/><sp/></highlight><highlight class="comment">//<sp/>push<sp/>back<sp/>least<sp/>significant<sp/>byte</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>v<sp/>&gt;&gt;=<sp/>8;</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"></highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uint8_t<sp/>c<sp/>:<sp/>result)<sp/>{</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>out<sp/>&lt;&lt;<sp/>c;</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/>}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="118"><highlight class="normal"></highlight></codeline>
+<codeline lineno="119" refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a638d2a4efec1d78eeb79475869f55409" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d1/d56/namespacesgns_1_1scale_1a5dfaa1d4f83677c0074ffc18021503cc" kindref="member">ByteArray</ref><sp/><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a638d2a4efec1d78eeb79475869f55409" kindref="member">ScaleEncoderStream::data</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d56/namespacesgns_1_1scale_1a5dfaa1d4f83677c0074ffc18021503cc" kindref="member">ByteArray</ref><sp/>buffer(<ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a782f24f1a39287c38d9e608527759630" kindref="member">stream_</ref>.size(),<sp/>0u);</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;[it,<sp/>dest]<sp/>=<sp/>std::pair(<ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a782f24f1a39287c38d9e608527759630" kindref="member">stream_</ref>.begin(),<sp/>buffer.begin());</highlight></codeline>
+<codeline lineno="122"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>it<sp/>!=<sp/><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a782f24f1a39287c38d9e608527759630" kindref="member">stream_</ref>.end();</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>++it,<sp/>++dest)<sp/>{</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>*dest<sp/>=<sp/>*it;</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>buffer;</highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"></highlight></codeline>
+<codeline lineno="129" refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a7a85365d5e404c47f5471313f2d4a662" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref><sp/>&amp;<ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a7a85365d5e404c47f5471313f2d4a662" kindref="member">ScaleEncoderStream::putByte</ref>(uint8_t<sp/>v)<sp/>{</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a782f24f1a39287c38d9e608527759630" kindref="member">stream_</ref>.push_back(v);</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="132"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="133"><highlight class="normal"></highlight></codeline>
+<codeline lineno="134" refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a7b8c0f4cedfeebcac0de66649e627575" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref><sp/>&amp;<ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1aad63a0fb2f27e82477c36c89dd90f59e" kindref="member">ScaleEncoderStream::operator&lt;&lt;</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d1/d56/namespacesgns_1_1scale_1ac1997d51bb44310de23a0fd42d42aac0" kindref="member">CompactInteger</ref><sp/>&amp;v)<sp/>{</highlight></codeline>
+<codeline lineno="135"><highlight class="normal"><sp/><sp/><sp/><sp/>encodeCompactInteger(v,<sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="136"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="137"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="138"><highlight class="normal"></highlight></codeline>
+<codeline lineno="139" refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1ad38befc944f9f1ba96d3b6709f62bd05" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref><sp/>&amp;<ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1ad38befc944f9f1ba96d3b6709f62bd05" kindref="member">ScaleEncoderStream::encodeOptionalBool</ref>(</highlight></codeline>
+<codeline lineno="140"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::optional&lt;bool&gt;<sp/>&amp;v)<sp/>{</highlight></codeline>
+<codeline lineno="141"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>result<sp/>=<sp/><ref refid="d1/d56/namespacesgns_1_1scale_1a8d472432eeb5c5a0bf46196dc3a8bb16a6f7a7af4f53ecc1010a4ff4f9960a008" kindref="member">OptionalBool::TRUE_</ref>;</highlight></codeline>
+<codeline lineno="142"><highlight class="normal"></highlight></codeline>
+<codeline lineno="143"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!v.has_value())<sp/>{</highlight></codeline>
+<codeline lineno="144"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>result<sp/>=<sp/><ref refid="d1/d56/namespacesgns_1_1scale_1a8d472432eeb5c5a0bf46196dc3a8bb16a558c49fe6b2a8ffb916805ec4403488c" kindref="member">OptionalBool::NONE_</ref>;</highlight></codeline>
+<codeline lineno="145"><highlight class="normal"><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">else</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!*v)<sp/>{</highlight></codeline>
+<codeline lineno="146"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>result<sp/>=<sp/><ref refid="d1/d56/namespacesgns_1_1scale_1a8d472432eeb5c5a0bf46196dc3a8bb16a79844da1e31ce393f7919e7e103a379f" kindref="member">OptionalBool::FALSE_</ref>;</highlight></codeline>
+<codeline lineno="147"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="148"><highlight class="normal"></highlight></codeline>
+<codeline lineno="149"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a7a85365d5e404c47f5471313f2d4a662" kindref="member">putByte</ref>(</highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint8_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(result));</highlight></codeline>
+<codeline lineno="150"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="151"><highlight class="normal"></highlight></codeline>
+<codeline lineno="152"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::scale</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/scale/scale_encoder_stream.cpp"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,260 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/d10/unreachable_8hpp" kind="file" language="C++">
+    <compoundname>unreachable.hpp</compoundname>
+    <includedby refid="de/d03/fixed__witdh__integer_8hpp" local="yes">src/scale/detail/fixed_witdh_integer.hpp</includedby>
+    <includedby refid="da/d0f/scale__decoder__stream_8cpp" local="yes">src/scale/scale_decoder_stream.cpp</includedby>
+    <invincdepgraph>
+      <node id="1">
+        <label>src/macro/unreachable.hpp</label>
+        <link refid="d7/d10/unreachable_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>src/primitives/check_inherents_result.hpp</label>
+        <link refid="d9/d68/check__inherents__result_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>src/primitives/inherent_data.cpp</label>
+        <link refid="dc/d77/inherent__data_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/primitives/inherent_data.hpp</label>
+        <link refid="d7/dcf/inherent__data_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.cpp</label>
+        <link refid="d7/d6b/block__builder__impl_8cpp"/>
+      </node>
+      <node id="8">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.hpp</label>
+        <link refid="d3/d95/block__builder__impl_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.cpp</label>
+        <link refid="de/d5e/core__factory__impl_8cpp"/>
+      </node>
+      <node id="14">
+        <label>src/runtime/binaryen/runtime_api/core_impl.cpp</label>
+        <link refid="dc/d7c/core__impl_8cpp"/>
+      </node>
+      <node id="12">
+        <label>src/runtime/binaryen/runtime_api/core_impl.hpp</label>
+        <link refid="d7/dbc/core__impl_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.cpp</label>
+        <link refid="dc/def/finality__api__impl_8cpp"/>
+      </node>
+      <node id="15">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.hpp</label>
+        <link refid="db/dad/finality__api__impl_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>src/runtime/binaryen/runtime_api/metadata_impl.cpp</label>
+        <link refid="d0/dfc/metadata__impl_8cpp"/>
+      </node>
+      <node id="17">
+        <label>src/runtime/binaryen/runtime_api/metadata_impl.hpp</label>
+        <link refid="dc/dcf/metadata__impl_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>src/runtime/binaryen/runtime_api/offchain_worker_impl.cpp</label>
+        <link refid="d3/d58/offchain__worker__impl_8cpp"/>
+      </node>
+      <node id="19">
+        <label>src/runtime/binaryen/runtime_api/offchain_worker_impl.hpp</label>
+        <link refid="dd/d03/offchain__worker__impl_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.cpp</label>
+        <link refid="db/dae/parachain__host__impl_8cpp"/>
+      </node>
+      <node id="21">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.hpp</label>
+        <link refid="d6/d15/parachain__host__impl_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.cpp</label>
+        <link refid="d3/d02/production__api__impl_8cpp"/>
+      </node>
+      <node id="23">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.hpp</label>
+        <link refid="d1/d6a/production__api__impl_8hpp"/>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>src/runtime/binaryen/runtime_api/runtime_api.hpp</label>
+        <link refid="dd/d87/runtime__api_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.cpp</label>
+        <link refid="db/d63/tagged__transaction__queue__impl_8cpp"/>
+      </node>
+      <node id="25">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.hpp</label>
+        <link refid="d4/d66/tagged__transaction__queue__impl_8hpp"/>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>src/runtime/block_builder.hpp</label>
+        <link refid="d7/d89/block__builder_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>src/scale/detail/fixed_witdh_integer.hpp</label>
+        <link refid="de/d03/fixed__witdh__integer_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>src/scale/scale.hpp</label>
+        <link refid="db/d80/scale_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>src/scale/scale_decoder_stream.cpp</label>
+        <link refid="da/d0f/scale__decoder__stream_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/scale/scale_decoder_stream.hpp</label>
+        <link refid="de/dab/scale__decoder__stream_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+      </node>
+      <node id="34">
+        <label>src/scale/scale_encoder_stream.cpp</label>
+        <link refid="de/dc0/scale__encoder__stream_8cpp"/>
+      </node>
+      <node id="33">
+        <label>src/scale/scale_encoder_stream.hpp</label>
+        <link refid="dc/da0/scale__encoder__stream_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>src/storage/changes_trie/impl/changes_trie.cpp</label>
+        <link refid="d9/d77/changes__trie_8cpp"/>
+      </node>
+      <node id="28">
+        <label>src/storage/changes_trie/impl/storage_changes_tracker_impl.cpp</label>
+        <link refid="d8/d2c/storage__changes__tracker__impl_8cpp"/>
+      </node>
+      <node id="29">
+        <label>src/storage/trie/impl/persistent_trie_batch_impl.cpp</label>
+        <link refid="dd/dda/persistent__trie__batch__impl_8cpp"/>
+      </node>
+      <node id="30">
+        <label>src/storage/trie/serialization/ordered_trie_hash.hpp</label>
+        <link refid="d9/dcb/ordered__trie__hash_8hpp"/>
+      </node>
+      <node id="31">
+        <label>src/storage/trie/serialization/supergenius_codec.cpp</label>
+        <link refid="d1/dc3/supergenius__codec_8cpp"/>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d5/d2f/class_unreachable___at___line" prot="public">Unreachable_At_Line</innerclass>
+    <sectiondef kind="define">
+      <memberdef kind="define" id="d7/d10/unreachable_8hpp_1a3af99897b60119951af8961dbd52dd3f" prot="public" static="no">
+        <name>UNREACHABLE</name>
+        <initializer>throw <ref refid="d5/d2f/class_unreachable___at___line" kindref="compound">Unreachable_At_Line</ref>&lt;__LINE__&gt;();</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/macro/unreachable.hpp" line="16" column="9" bodyfile="src/macro/unreachable.hpp" bodystart="16" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_UNREACHABLE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_UNREACHABLE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#if<sp/>defined(__GNUC__)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>UNREACHABLE<sp/>__builtin_unreachable();</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#elif<sp/>defined(_MSC_VER)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>UNREACHABLE<sp/>__assume(false);</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#else</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>LINE&gt;</highlight></codeline>
+<codeline lineno="15" refid="d5/d2f/class_unreachable___at___line" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d5/d2f/class_unreachable___at___line" kindref="compound">Unreachable_At_Line</ref><sp/>{};</highlight></codeline>
+<codeline lineno="16" refid="d7/d10/unreachable_8hpp_1a3af99897b60119951af8961dbd52dd3f" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>UNREACHABLE<sp/>throw<sp/>Unreachable_At_Line&lt;__LINE__&gt;();<sp/><sp/></highlight><highlight class="comment">//<sp/>NOLINT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>GCC_VERSION</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/macro/unreachable.hpp"/>
+  </compounddef>
+</doxygen>

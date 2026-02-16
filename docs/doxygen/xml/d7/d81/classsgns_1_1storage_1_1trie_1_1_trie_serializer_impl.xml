@@ -1,0 +1,526 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl" kind="class" language="C++" prot="public">
+    <compoundname>sgns::storage::trie::TrieSerializerImpl</compoundname>
+    <basecompoundref refid="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer" prot="public" virt="non-virtual">sgns::storage::trie::TrieSerializer</basecompoundref>
+    <includes refid="d4/d17/trie__serializer__impl_8hpp" local="no">trie_serializer_impl.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a46834d6e59b28f381ba6b1e2e365fdfd" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory" kindref="compound">SuperGeniusTrieFactory</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;SuperGeniusTrieFactory&gt; sgns::storage::trie::TrieSerializerImpl::trie_factory_</definition>
+        <argsstring></argsstring>
+        <name>trie_factory_</name>
+        <qualifiedname>sgns::storage::trie::TrieSerializerImpl::trie_factory_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/trie_serializer_impl.hpp" line="57" column="21" bodyfile="src/storage/trie/serialization/trie_serializer_impl.hpp" bodystart="57" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a565af43737714931d17fb3930e5bf07b" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec" kindref="compound">Codec</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Codec&gt; sgns::storage::trie::TrieSerializerImpl::codec_</definition>
+        <argsstring></argsstring>
+        <name>codec_</name>
+        <qualifiedname>sgns::storage::trie::TrieSerializerImpl::codec_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/trie_serializer_impl.hpp" line="58" column="21" bodyfile="src/storage/trie/serialization/trie_serializer_impl.hpp" bodystart="58" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a905252fe961eb4065a7c7d7451266810" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="dd/d95/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend" kindref="compound">TrieStorageBackend</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;TrieStorageBackend&gt; sgns::storage::trie::TrieSerializerImpl::backend_</definition>
+        <argsstring></argsstring>
+        <name>backend_</name>
+        <qualifiedname>sgns::storage::trie::TrieSerializerImpl::backend_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/trie_serializer_impl.hpp" line="59" column="21" bodyfile="src/storage/trie/serialization/trie_serializer_impl.hpp" bodystart="59" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a9501cc585dee3ad10bd24612e7349447" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::TrieSerializerImpl::TrieSerializerImpl</definition>
+        <argsstring>(std::shared_ptr&lt; SuperGeniusTrieFactory &gt; factory, std::shared_ptr&lt; Codec &gt; codec, std::shared_ptr&lt; TrieStorageBackend &gt; backend)</argsstring>
+        <name>TrieSerializerImpl</name>
+        <qualifiedname>sgns::storage::trie::TrieSerializerImpl::TrieSerializerImpl</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory" kindref="compound">SuperGeniusTrieFactory</ref> &gt;</type>
+          <declname>factory</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec" kindref="compound">Codec</ref> &gt;</type>
+          <declname>codec</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="dd/d95/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend" kindref="compound">TrieStorageBackend</ref> &gt;</type>
+          <declname>backend</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/trie_serializer_impl.hpp" line="16" column="5" bodyfile="src/storage/trie/serialization/trie_serializer_impl.cpp" bodystart="7" bodyend="17"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a86b6ebd8f7ddf1fe4b45d18df2938fc1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::TrieSerializerImpl::~TrieSerializerImpl</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~TrieSerializerImpl</name>
+        <qualifiedname>sgns::storage::trie::TrieSerializerImpl::~TrieSerializerImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/trie_serializer_impl.hpp" line="19" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a7f61945b8d33de70e7d16d3fb60a2e55" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>Buffer sgns::storage::trie::TrieSerializerImpl::getEmptyRootHash</definition>
+        <argsstring>() const override</argsstring>
+        <name>getEmptyRootHash</name>
+        <qualifiedname>sgns::storage::trie::TrieSerializerImpl::getEmptyRootHash</qualifiedname>
+        <reimplements refid="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer_1aaaf6e9b2511209317772f8ebea9ccb78">getEmptyRootHash</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>root hash of an empty trie </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/trie_serializer_impl.hpp" line="21" column="18" bodyfile="src/storage/trie/serialization/trie_serializer_impl.cpp" bodystart="19" bodyend="21"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1ab5887c576680cf975d4cc11943578c2e" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; Buffer &gt; sgns::storage::trie::TrieSerializerImpl::storeTrie</definition>
+        <argsstring>(SuperGeniusTrie &amp;trie) override</argsstring>
+        <name>storeTrie</name>
+        <qualifiedname>sgns::storage::trie::TrieSerializerImpl::storeTrie</qualifiedname>
+        <reimplements refid="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer_1ab07d300efbd3d1d8235ac0f5fd46fd73">storeTrie</reimplements>
+        <param>
+          <type><ref refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie" kindref="compound">SuperGeniusTrie</ref> &amp;</type>
+          <declname>trie</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Writes a trie to a storage, recursively storing its nodes. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/trie_serializer_impl.hpp" line="23" column="21" bodyfile="src/storage/trie/serialization/trie_serializer_impl.cpp" bodystart="23" bodyend="28"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a134bf80a9383a52ebe689a3384ada0de" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; std::unique_ptr&lt; <ref refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie" kindref="compound">SuperGeniusTrie</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::unique_ptr&lt; SuperGeniusTrie &gt; &gt; sgns::storage::trie::TrieSerializerImpl::retrieveTrie</definition>
+        <argsstring>(const base::Buffer &amp;db_key) const override</argsstring>
+        <name>retrieveTrie</name>
+        <qualifiedname>sgns::storage::trie::TrieSerializerImpl::retrieveTrie</qualifiedname>
+        <reimplements refid="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer_1af12e61605b2465e7c9ed31512b5bf13e">retrieveTrie</reimplements>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>db_key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Fetches a trie from the storage. A nullptr is returned in case that there is no entry for provided key. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/trie_serializer_impl.hpp" line="25" column="21" bodyfile="src/storage/trie/serialization/trie_serializer_impl.cpp" bodystart="31" bodyend="41"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a4805f566131ac614e81bbd25686c3984" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::storage::trie::TrieSerializerImpl::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::storage::trie::TrieSerializerImpl::GetName</qualifiedname>
+        <reimplements refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/trie_serializer_impl.hpp" line="28" column="17" bodyfile="src/storage/trie/serialization/trie_serializer_impl.hpp" bodystart="28" bodyend="31"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a74ab71b28b2f8772ed67077b17e337be" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; Buffer &gt; sgns::storage::trie::TrieSerializerImpl::storeRootNode</definition>
+        <argsstring>(SuperGeniusNode &amp;node)</argsstring>
+        <name>storeRootNode</name>
+        <qualifiedname>sgns::storage::trie::TrieSerializerImpl::storeRootNode</qualifiedname>
+        <param>
+          <type><ref refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node" kindref="compound">SuperGeniusNode</ref> &amp;</type>
+          <declname>node</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Writes a node to a persistent storage, recursively storing its descendants as well. Then replaces the node children to dummy nodes to avoid memory waste </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/trie_serializer_impl.hpp" line="39" column="21" bodyfile="src/storage/trie/serialization/trie_serializer_impl.cpp" bodystart="43" bodyend="63"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a5fff991dbe928e9501a934a83ef501d5" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; base::Buffer &gt; sgns::storage::trie::TrieSerializerImpl::storeNode</definition>
+        <argsstring>(SuperGeniusNode &amp;node, BufferBatch &amp;batch)</argsstring>
+        <name>storeNode</name>
+        <qualifiedname>sgns::storage::trie::TrieSerializerImpl::storeNode</qualifiedname>
+        <param>
+          <type><ref refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node" kindref="compound">SuperGeniusNode</ref> &amp;</type>
+          <declname>node</declname>
+        </param>
+        <param>
+          <type><ref refid="d0/dbf/namespacesgns_1_1storage_1a5919619e4b0d178dbbbffbc8bcf1fb7d" kindref="member">BufferBatch</ref> &amp;</type>
+          <declname>batch</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/trie_serializer_impl.hpp" line="40" column="21" bodyfile="src/storage/trie/serialization/trie_serializer_impl.cpp" bodystart="65" bodyend="81"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a37800fca342f2042da9aaa328b80072c" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::trie::TrieSerializerImpl::storeChildren</definition>
+        <argsstring>(BranchNode &amp;branch, BufferBatch &amp;batch)</argsstring>
+        <name>storeChildren</name>
+        <qualifiedname>sgns::storage::trie::TrieSerializerImpl::storeChildren</qualifiedname>
+        <param>
+          <type><ref refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node" kindref="compound">BranchNode</ref> &amp;</type>
+          <declname>branch</declname>
+        </param>
+        <param>
+          <type><ref refid="d0/dbf/namespacesgns_1_1storage_1a5919619e4b0d178dbbbffbc8bcf1fb7d" kindref="member">BufferBatch</ref> &amp;</type>
+          <declname>batch</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/trie_serializer_impl.hpp" line="42" column="21" bodyfile="src/storage/trie/serialization/trie_serializer_impl.cpp" bodystart="83" bodyend="94"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a6a39752563d20a8b71622be0b2248054" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_1a1b60f029e681ccadc921629dc417fde7" kindref="member">SuperGeniusTrie::NodePtr</ref> &gt;</type>
+        <definition>outcome::result&lt; SuperGeniusTrie::NodePtr &gt; sgns::storage::trie::TrieSerializerImpl::retrieveNode</definition>
+        <argsstring>(const base::Buffer &amp;db_key) const</argsstring>
+        <name>retrieveNode</name>
+        <qualifiedname>sgns::storage::trie::TrieSerializerImpl::retrieveNode</qualifiedname>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>db_key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Fetches a node from the storage. A nullptr is returned in case that there is no entry for provided key. Mind that a branch node will have dummy nodes as its children </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/trie_serializer_impl.hpp" line="48" column="21" bodyfile="src/storage/trie/serialization/trie_serializer_impl.cpp" bodystart="110" bodyend="118"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a5d5e4d1c7ff2805c0d870c54e7288fbc" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_1a1b60f029e681ccadc921629dc417fde7" kindref="member">SuperGeniusTrie::NodePtr</ref> &gt;</type>
+        <definition>outcome::result&lt; SuperGeniusTrie::NodePtr &gt; sgns::storage::trie::TrieSerializerImpl::retrieveChild</definition>
+        <argsstring>(const SuperGeniusTrie::BranchPtr &amp;parent, uint8_t idx) const</argsstring>
+        <name>retrieveChild</name>
+        <qualifiedname>sgns::storage::trie::TrieSerializerImpl::retrieveChild</qualifiedname>
+        <param>
+          <type>const <ref refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_1a05a28686a4c57ae5c77a5f286343f695" kindref="member">SuperGeniusTrie::BranchPtr</ref> &amp;</type>
+          <declname>parent</declname>
+        </param>
+        <param>
+          <type>uint8_t</type>
+          <declname>idx</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Retrieves a node child, replacing a dummy node to an actual node if needed </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/trie_serializer_impl.hpp" line="54" column="21" bodyfile="src/storage/trie/serialization/trie_serializer_impl.cpp" bodystart="96" bodyend="108"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="2">
+        <label>sgns::storage::trie::TrieSerializer</label>
+        <link refid="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::TrieSerializerImpl</label>
+        <link refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="12">
+        <label>BufferStorage</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="13" relation="public-inheritance">
+        </childnode>
+        <childnode refid="21" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="25">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="26" relation="public-inheritance">
+        </childnode>
+        <childnode refid="27" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>sgns::storage::face::BatchWriteMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="22" relation="public-inheritance">
+        </childnode>
+        <childnode refid="24" relation="public-inheritance">
+        </childnode>
+        <childnode refid="25" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="30">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="26" relation="public-inheritance">
+        </childnode>
+        <childnode refid="27" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="27">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="28">
+        <label>sgns::storage::face::GenericStorage&lt; K, V &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="29" relation="public-inheritance">
+        </childnode>
+        <childnode refid="30" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="14">
+        <label>sgns::storage::face::Iterable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="15" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="19">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="18">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+        <childnode refid="20" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>sgns::storage::face::ReadOnlyMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="14" relation="public-inheritance">
+        </childnode>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+        <childnode refid="18" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="29">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+        <childnode refid="20" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="16">
+        <label>sgns::storage::face::Readable&lt; Buffer, Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="17" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="20">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="23">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="22">
+        <label>sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="23" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="26">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="9">
+        <label>sgns::storage::trie::Codec</label>
+        <link refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::trie::SuperGeniusTrieFactory</label>
+        <link refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::storage::trie::TrieSerializer</label>
+        <link refid="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::TrieSerializerImpl</label>
+        <link refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-trie_factory_</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-codec_</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>-backend_</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::storage::trie::TrieStorageBackend</label>
+        <link refid="dd/d95/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend"/>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; sgns::storage::trie::Codec &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::trie::Codec &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::shared_ptr&lt; sgns::storage::trie::SuperGeniusTrieFactory &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::trie::SuperGeniusTrieFactory &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::shared_ptr&lt; sgns::storage::trie::TrieStorageBackend &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::trie::TrieStorageBackend &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/trie/serialization/trie_serializer_impl.hpp" line="14" column="3" bodyfile="src/storage/trie/serialization/trie_serializer_impl.hpp" bodystart="14" bodyend="60"/>
+    <listofallmembers>
+      <member refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a905252fe961eb4065a7c7d7451266810" prot="private" virt="non-virtual"><scope>sgns::storage::trie::TrieSerializerImpl</scope><name>backend_</name></member>
+      <member refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a565af43737714931d17fb3930e5bf07b" prot="private" virt="non-virtual"><scope>sgns::storage::trie::TrieSerializerImpl</scope><name>codec_</name></member>
+      <member refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a7f61945b8d33de70e7d16d3fb60a2e55" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieSerializerImpl</scope><name>getEmptyRootHash</name></member>
+      <member refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a4805f566131ac614e81bbd25686c3984" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieSerializerImpl</scope><name>GetName</name></member>
+      <member refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a5d5e4d1c7ff2805c0d870c54e7288fbc" prot="private" virt="non-virtual"><scope>sgns::storage::trie::TrieSerializerImpl</scope><name>retrieveChild</name></member>
+      <member refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a6a39752563d20a8b71622be0b2248054" prot="private" virt="non-virtual"><scope>sgns::storage::trie::TrieSerializerImpl</scope><name>retrieveNode</name></member>
+      <member refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a134bf80a9383a52ebe689a3384ada0de" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieSerializerImpl</scope><name>retrieveTrie</name></member>
+      <member refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a37800fca342f2042da9aaa328b80072c" prot="private" virt="non-virtual"><scope>sgns::storage::trie::TrieSerializerImpl</scope><name>storeChildren</name></member>
+      <member refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a5fff991dbe928e9501a934a83ef501d5" prot="private" virt="non-virtual"><scope>sgns::storage::trie::TrieSerializerImpl</scope><name>storeNode</name></member>
+      <member refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a74ab71b28b2f8772ed67077b17e337be" prot="private" virt="non-virtual"><scope>sgns::storage::trie::TrieSerializerImpl</scope><name>storeRootNode</name></member>
+      <member refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1ab5887c576680cf975d4cc11943578c2e" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieSerializerImpl</scope><name>storeTrie</name></member>
+      <member refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a46834d6e59b28f381ba6b1e2e365fdfd" prot="private" virt="non-virtual"><scope>sgns::storage::trie::TrieSerializerImpl</scope><name>trie_factory_</name></member>
+      <member refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a9501cc585dee3ad10bd24612e7349447" prot="public" virt="non-virtual"><scope>sgns::storage::trie::TrieSerializerImpl</scope><name>TrieSerializerImpl</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieSerializerImpl</scope><name>~IComponent</name></member>
+      <member refid="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer_1aee88ae5df61afc427a31de5c712f0c2b" prot="public" virt="non-virtual"><scope>sgns::storage::trie::TrieSerializerImpl</scope><name>~TrieSerializer</name></member>
+      <member refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a86b6ebd8f7ddf1fe4b45d18df2938fc1" prot="public" virt="non-virtual"><scope>sgns::storage::trie::TrieSerializerImpl</scope><name>~TrieSerializerImpl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

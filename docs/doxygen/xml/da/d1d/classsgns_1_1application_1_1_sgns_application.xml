@@ -1,0 +1,93 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/d1d/classsgns_1_1application_1_1_sgns_application" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::application::SgnsApplication</compoundname>
+    <derivedcompoundref refid="d8/dbd/classsgns_1_1application_1_1_block_producing_node_application" prot="public" virt="non-virtual">sgns::application::BlockProducingNodeApplication</derivedcompoundref>
+    <derivedcompoundref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application" prot="public" virt="non-virtual">sgns::application::BridgingNodeApplication</derivedcompoundref>
+    <derivedcompoundref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application" prot="public" virt="non-virtual">sgns::application::SyncingNodeApplication</derivedcompoundref>
+    <derivedcompoundref refid="de/de2/classsgns_1_1application_1_1_validating_node_application" prot="public" virt="non-virtual">sgns::application::ValidatingNodeApplication</derivedcompoundref>
+    <includes refid="df/d62/sgns__application_8hpp" local="no">sgns_application.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="da/d1d/classsgns_1_1application_1_1_sgns_application_1af6c814f3750d9dccbb78d2c653c3da36" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::application::SgnsApplication::~SgnsApplication</definition>
+        <argsstring>()=default</argsstring>
+        <name>~SgnsApplication</name>
+        <qualifiedname>sgns::application::SgnsApplication::~SgnsApplication</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/sgns_application.hpp" line="15" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d1d/classsgns_1_1application_1_1_sgns_application_1a2314654dc1f566607845a8ab5f427329" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::application::SgnsApplication::run</definition>
+        <argsstring>()=0</argsstring>
+        <name>run</name>
+        <qualifiedname>sgns::application::SgnsApplication::run</qualifiedname>
+        <reimplementedby refid="d8/dbd/classsgns_1_1application_1_1_block_producing_node_application_1aeda263441e59f4183bf65391ef3f4df8">run</reimplementedby>
+        <reimplementedby refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1ab0849b1c3536f861b7dcb2ed9291fdca">run</reimplementedby>
+        <reimplementedby refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1ab01c6e34ea934ddbc5541e93acfc5787">run</reimplementedby>
+        <reimplementedby refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1aff4325a699ba31ed368f697896f90cc8">run</reimplementedby>
+        <briefdescription>
+<para>runs application </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/sgns_application.hpp" line="20" column="18"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Application interface for starting the SuperGenius node. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Implementations encapsulate initialization and run-loop behavior for the node application. </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::application::BlockProducingNodeApplication</label>
+        <link refid="d8/dbd/classsgns_1_1application_1_1_block_producing_node_application"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::application::BridgingNodeApplication</label>
+        <link refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::application::SgnsApplication</label>
+        <link refid="da/d1d/classsgns_1_1application_1_1_sgns_application"/>
+      </node>
+      <node id="4">
+        <label>sgns::application::SyncingNodeApplication</label>
+        <link refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::application::ValidatingNodeApplication</label>
+        <link refid="de/de2/classsgns_1_1application_1_1_validating_node_application"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::application::SgnsApplication</label>
+        <link refid="da/d1d/classsgns_1_1application_1_1_sgns_application"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/application/sgns_application.hpp" line="13" column="3" bodyfile="src/application/sgns_application.hpp" bodystart="13" bodyend="21"/>
+    <listofallmembers>
+      <member refid="da/d1d/classsgns_1_1application_1_1_sgns_application_1a2314654dc1f566607845a8ab5f427329" prot="public" virt="pure-virtual"><scope>sgns::application::SgnsApplication</scope><name>run</name></member>
+      <member refid="da/d1d/classsgns_1_1application_1_1_sgns_application_1af6c814f3750d9dccbb78d2c653c3da36" prot="public" virt="virtual"><scope>sgns::application::SgnsApplication</scope><name>~SgnsApplication</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,561 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/d54/classsgns_1_1node__flags" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::node_flags</compoundname>
+    <includes refid="d5/d60/node__config_8hpp" local="no">node_config.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1aae36a4ce8d311b85712ebae84ff66fe7" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; std::string &gt;</type>
+        <definition>std::vector&lt;std::string&gt; sgns::node_flags::config_overrides</definition>
+        <argsstring></argsstring>
+        <name>config_overrides</name>
+        <qualifiedname>sgns::node_flags::config_overrides</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="100" column="13" bodyfile="node/node_config.hpp" bodystart="100" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a26f2f6655cd59eb7f55ac61f2aa8fad8" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::disable_backup</definition>
+        <argsstring></argsstring>
+        <name>disable_backup</name>
+        <qualifiedname>sgns::node_flags::disable_backup</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="101" column="6" bodyfile="node/node_config.hpp" bodystart="101" bodyend="101"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a26d8fc85c7bf86d98411a1d0f6c76cce" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::disable_lazy_bootstrap</definition>
+        <argsstring></argsstring>
+        <name>disable_lazy_bootstrap</name>
+        <qualifiedname>sgns::node_flags::disable_lazy_bootstrap</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="102" column="6" bodyfile="node/node_config.hpp" bodystart="102" bodyend="102"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a5d1bf23a823bc041e9c7da4a2d57ef93" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::disable_legacy_bootstrap</definition>
+        <argsstring></argsstring>
+        <name>disable_legacy_bootstrap</name>
+        <qualifiedname>sgns::node_flags::disable_legacy_bootstrap</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="103" column="6" bodyfile="node/node_config.hpp" bodystart="103" bodyend="103"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1aed1564eefd552f01c0afc8d91ca5684e" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::disable_wallet_bootstrap</definition>
+        <argsstring></argsstring>
+        <name>disable_wallet_bootstrap</name>
+        <qualifiedname>sgns::node_flags::disable_wallet_bootstrap</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="104" column="6" bodyfile="node/node_config.hpp" bodystart="104" bodyend="104"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a6e28a0a79b59a3f19fce6c8af38bcc8e" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::disable_bootstrap_listener</definition>
+        <argsstring></argsstring>
+        <name>disable_bootstrap_listener</name>
+        <qualifiedname>sgns::node_flags::disable_bootstrap_listener</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="105" column="6" bodyfile="node/node_config.hpp" bodystart="105" bodyend="105"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1aa453a27090805a9ba43bb699ac20ada6" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::disable_bootstrap_bulk_pull_server</definition>
+        <argsstring></argsstring>
+        <name>disable_bootstrap_bulk_pull_server</name>
+        <qualifiedname>sgns::node_flags::disable_bootstrap_bulk_pull_server</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="106" column="6" bodyfile="node/node_config.hpp" bodystart="106" bodyend="106"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a8289e9d950feaf4f093b55603a1d45bd" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::disable_bootstrap_bulk_push_client</definition>
+        <argsstring></argsstring>
+        <name>disable_bootstrap_bulk_push_client</name>
+        <qualifiedname>sgns::node_flags::disable_bootstrap_bulk_push_client</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="107" column="6" bodyfile="node/node_config.hpp" bodystart="107" bodyend="107"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a38e3a0f5b26a881a26aebc4f1e873ef4" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::disable_rep_crawler</definition>
+        <argsstring></argsstring>
+        <name>disable_rep_crawler</name>
+        <qualifiedname>sgns::node_flags::disable_rep_crawler</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="108" column="6" bodyfile="node/node_config.hpp" bodystart="108" bodyend="108"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a8005519be591bd99ba11923028fa8681" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::disable_request_loop</definition>
+        <argsstring></argsstring>
+        <name>disable_request_loop</name>
+        <qualifiedname>sgns::node_flags::disable_request_loop</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="109" column="6" bodyfile="node/node_config.hpp" bodystart="109" bodyend="109"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a820b69b9b8604cf259b63bbf31960c5d" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::disable_tcp_realtime</definition>
+        <argsstring></argsstring>
+        <name>disable_tcp_realtime</name>
+        <qualifiedname>sgns::node_flags::disable_tcp_realtime</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="110" column="6" bodyfile="node/node_config.hpp" bodystart="110" bodyend="110"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a6dccd5b63b7f84a890e8ab9bb94bc9ab" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::disable_udp</definition>
+        <argsstring></argsstring>
+        <name>disable_udp</name>
+        <qualifiedname>sgns::node_flags::disable_udp</qualifiedname>
+        <initializer>{ true }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="111" column="6" bodyfile="node/node_config.hpp" bodystart="111" bodyend="111"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a3778d3ae67abc86d1595df238ee56fd4" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::disable_unchecked_cleanup</definition>
+        <argsstring></argsstring>
+        <name>disable_unchecked_cleanup</name>
+        <qualifiedname>sgns::node_flags::disable_unchecked_cleanup</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="112" column="6" bodyfile="node/node_config.hpp" bodystart="112" bodyend="112"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a88d90057fc15c0367292ad42280b54a9" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::disable_unchecked_drop</definition>
+        <argsstring></argsstring>
+        <name>disable_unchecked_drop</name>
+        <qualifiedname>sgns::node_flags::disable_unchecked_drop</qualifiedname>
+        <initializer>{ true }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="113" column="6" bodyfile="node/node_config.hpp" bodystart="113" bodyend="113"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a1cfe4adf30ab12e1295e9e6848a4fc2f" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::disable_providing_telemetry_metrics</definition>
+        <argsstring></argsstring>
+        <name>disable_providing_telemetry_metrics</name>
+        <qualifiedname>sgns::node_flags::disable_providing_telemetry_metrics</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="114" column="6" bodyfile="node/node_config.hpp" bodystart="114" bodyend="114"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a51ae96fe77640cb7e51e35bc87983bfc" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::disable_ongoing_telemetry_requests</definition>
+        <argsstring></argsstring>
+        <name>disable_ongoing_telemetry_requests</name>
+        <qualifiedname>sgns::node_flags::disable_ongoing_telemetry_requests</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="115" column="6" bodyfile="node/node_config.hpp" bodystart="115" bodyend="115"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a102df672f86eb8626d87b41c7fdda9d4" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::disable_initial_telemetry_requests</definition>
+        <argsstring></argsstring>
+        <name>disable_initial_telemetry_requests</name>
+        <qualifiedname>sgns::node_flags::disable_initial_telemetry_requests</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="116" column="6" bodyfile="node/node_config.hpp" bodystart="116" bodyend="116"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a75a7840be5da20dd4a41870bb8fb3d83" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::disable_block_processor_unchecked_deletion</definition>
+        <argsstring></argsstring>
+        <name>disable_block_processor_unchecked_deletion</name>
+        <qualifiedname>sgns::node_flags::disable_block_processor_unchecked_deletion</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="117" column="6" bodyfile="node/node_config.hpp" bodystart="117" bodyend="117"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a7e42cf2006eed157ad6e43d7211fab88" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::disable_block_processor_republishing</definition>
+        <argsstring></argsstring>
+        <name>disable_block_processor_republishing</name>
+        <qualifiedname>sgns::node_flags::disable_block_processor_republishing</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="118" column="6" bodyfile="node/node_config.hpp" bodystart="118" bodyend="118"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a3ffce89e47ef34ca7f31a4f7afcde330" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::allow_bootstrap_peers_duplicates</definition>
+        <argsstring></argsstring>
+        <name>allow_bootstrap_peers_duplicates</name>
+        <qualifiedname>sgns::node_flags::allow_bootstrap_peers_duplicates</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="119" column="6" bodyfile="node/node_config.hpp" bodystart="119" bodyend="119"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1ad9c84bcd74a7b061708a029b0cf9fd43" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::disable_max_peers_per_ip</definition>
+        <argsstring></argsstring>
+        <name>disable_max_peers_per_ip</name>
+        <qualifiedname>sgns::node_flags::disable_max_peers_per_ip</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="120" column="6" bodyfile="node/node_config.hpp" bodystart="120" bodyend="120"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1ab185562b27d042a21af3d2c267c7ceb8" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::fast_bootstrap</definition>
+        <argsstring></argsstring>
+        <name>fast_bootstrap</name>
+        <qualifiedname>sgns::node_flags::fast_bootstrap</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="121" column="6" bodyfile="node/node_config.hpp" bodystart="121" bodyend="121"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a60fcb5afd50a0bcf9b68f2078bf2d6f3" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::read_only</definition>
+        <argsstring></argsstring>
+        <name>read_only</name>
+        <qualifiedname>sgns::node_flags::read_only</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="122" column="6" bodyfile="node/node_config.hpp" bodystart="122" bodyend="122"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a4f48462c3f4251530dfa703c552b7ed3" prot="public" static="no" mutable="no">
+        <type>sgns::confirmation_height_mode</type>
+        <definition>sgns::confirmation_height_mode sgns::node_flags::confirmation_height_processor_mode</definition>
+        <argsstring></argsstring>
+        <name>confirmation_height_processor_mode</name>
+        <qualifiedname>sgns::node_flags::confirmation_height_processor_mode</qualifiedname>
+        <initializer>{ sgns::confirmation_height_mode::automatic }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="123" column="32" bodyfile="node/node_config.hpp" bodystart="123" bodyend="123"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1af3ac12fb49f6015a6440054078cdc14c" prot="public" static="no" mutable="no">
+        <type>sgns::generate_cache</type>
+        <definition>sgns::generate_cache sgns::node_flags::generate_cache</definition>
+        <argsstring></argsstring>
+        <name>generate_cache</name>
+        <qualifiedname>sgns::node_flags::generate_cache</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="124" column="22" bodyfile="node/node_config.hpp" bodystart="124" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a1309dc6d0fe714af1d536aeb37620334" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_flags::inactive_node</definition>
+        <argsstring></argsstring>
+        <name>inactive_node</name>
+        <qualifiedname>sgns::node_flags::inactive_node</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="125" column="6" bodyfile="node/node_config.hpp" bodystart="125" bodyend="125"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1ad2534ac5b30eae060e8d0bd30090d38c" prot="public" static="no" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::node_flags::sideband_batch_size</definition>
+        <argsstring></argsstring>
+        <name>sideband_batch_size</name>
+        <qualifiedname>sgns::node_flags::sideband_batch_size</qualifiedname>
+        <initializer>{ 512 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="126" column="8" bodyfile="node/node_config.hpp" bodystart="126" bodyend="126"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1ae7b003145066759058e4746c5d332037" prot="public" static="no" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::node_flags::block_processor_batch_size</definition>
+        <argsstring></argsstring>
+        <name>block_processor_batch_size</name>
+        <qualifiedname>sgns::node_flags::block_processor_batch_size</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="127" column="8" bodyfile="node/node_config.hpp" bodystart="127" bodyend="127"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a56f4d414eb5bf63798fcc65916715538" prot="public" static="no" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::node_flags::block_processor_full_size</definition>
+        <argsstring></argsstring>
+        <name>block_processor_full_size</name>
+        <qualifiedname>sgns::node_flags::block_processor_full_size</qualifiedname>
+        <initializer>{ 65536 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="128" column="8" bodyfile="node/node_config.hpp" bodystart="128" bodyend="128"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1aa1302edbf6ccb9c9d03ee834c76743b9" prot="public" static="no" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::node_flags::block_processor_verification_size</definition>
+        <argsstring></argsstring>
+        <name>block_processor_verification_size</name>
+        <qualifiedname>sgns::node_flags::block_processor_verification_size</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="129" column="8" bodyfile="node/node_config.hpp" bodystart="129" bodyend="129"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1ae2025de00fcf7790aa45d1389a004924" prot="public" static="no" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::node_flags::inactive_votes_cache_size</definition>
+        <argsstring></argsstring>
+        <name>inactive_votes_cache_size</name>
+        <qualifiedname>sgns::node_flags::inactive_votes_cache_size</qualifiedname>
+        <initializer>{ 16 * 1024 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="130" column="8" bodyfile="node/node_config.hpp" bodystart="130" bodyend="130"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d54/classsgns_1_1node__flags_1a28d6bf1ccf225af90f8f19d0cba36ee1" prot="public" static="no" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::node_flags::vote_processor_capacity</definition>
+        <argsstring></argsstring>
+        <name>vote_processor_capacity</name>
+        <qualifiedname>sgns::node_flags::vote_processor_capacity</qualifiedname>
+        <initializer>{ 144 * 1024 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="131" column="8" bodyfile="node/node_config.hpp" bodystart="131" bodyend="131"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="6">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::node_flags</label>
+        <link refid="d0/d54/classsgns_1_1node__flags"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+config_overrides</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="3">
+        <label>std::string</label>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::vector&lt; std::string &gt;</label>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="node/node_config.hpp" line="97" column="1" bodyfile="node/node_config.hpp" bodystart="98" bodyend="132"/>
+    <listofallmembers>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a3ffce89e47ef34ca7f31a4f7afcde330" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>allow_bootstrap_peers_duplicates</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1ae7b003145066759058e4746c5d332037" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>block_processor_batch_size</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a56f4d414eb5bf63798fcc65916715538" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>block_processor_full_size</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1aa1302edbf6ccb9c9d03ee834c76743b9" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>block_processor_verification_size</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1aae36a4ce8d311b85712ebae84ff66fe7" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>config_overrides</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a4f48462c3f4251530dfa703c552b7ed3" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>confirmation_height_processor_mode</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a26f2f6655cd59eb7f55ac61f2aa8fad8" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>disable_backup</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a7e42cf2006eed157ad6e43d7211fab88" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>disable_block_processor_republishing</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a75a7840be5da20dd4a41870bb8fb3d83" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>disable_block_processor_unchecked_deletion</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1aa453a27090805a9ba43bb699ac20ada6" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>disable_bootstrap_bulk_pull_server</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a8289e9d950feaf4f093b55603a1d45bd" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>disable_bootstrap_bulk_push_client</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a6e28a0a79b59a3f19fce6c8af38bcc8e" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>disable_bootstrap_listener</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a102df672f86eb8626d87b41c7fdda9d4" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>disable_initial_telemetry_requests</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a26d8fc85c7bf86d98411a1d0f6c76cce" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>disable_lazy_bootstrap</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a5d1bf23a823bc041e9c7da4a2d57ef93" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>disable_legacy_bootstrap</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1ad9c84bcd74a7b061708a029b0cf9fd43" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>disable_max_peers_per_ip</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a51ae96fe77640cb7e51e35bc87983bfc" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>disable_ongoing_telemetry_requests</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a1cfe4adf30ab12e1295e9e6848a4fc2f" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>disable_providing_telemetry_metrics</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a38e3a0f5b26a881a26aebc4f1e873ef4" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>disable_rep_crawler</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a8005519be591bd99ba11923028fa8681" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>disable_request_loop</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a820b69b9b8604cf259b63bbf31960c5d" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>disable_tcp_realtime</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a6dccd5b63b7f84a890e8ab9bb94bc9ab" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>disable_udp</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a3778d3ae67abc86d1595df238ee56fd4" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>disable_unchecked_cleanup</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a88d90057fc15c0367292ad42280b54a9" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>disable_unchecked_drop</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1aed1564eefd552f01c0afc8d91ca5684e" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>disable_wallet_bootstrap</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1ab185562b27d042a21af3d2c267c7ceb8" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>fast_bootstrap</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1af3ac12fb49f6015a6440054078cdc14c" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>generate_cache</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a1309dc6d0fe714af1d536aeb37620334" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>inactive_node</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1ae2025de00fcf7790aa45d1389a004924" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>inactive_votes_cache_size</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a60fcb5afd50a0bcf9b68f2078bf2d6f3" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>read_only</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1ad2534ac5b30eae060e8d0bd30090d38c" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>sideband_batch_size</name></member>
+      <member refid="d0/d54/classsgns_1_1node__flags_1a28d6bf1ccf225af90f8f19d0cba36ee1" prot="public" virt="non-virtual"><scope>sgns::node_flags</scope><name>vote_processor_capacity</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

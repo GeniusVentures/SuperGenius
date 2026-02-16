@@ -1,0 +1,174 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/dc6/_processing_proof_8cpp" kind="file" language="C++">
+    <compoundname>ProcessingProof.cpp</compoundname>
+    <includes refid="d8/d51/_processing_proof_8hpp" local="yes">ProcessingProof.hpp</includes>
+    <includes local="no">nil/crypto3/multiprecision/cpp_int.hpp</includes>
+    <includes local="no">nil/crypto3/algebra/curves/pallas.hpp</includes>
+    <includes local="no">nil/crypto3/hash/algorithm/hash.hpp</includes>
+    <includes local="no">nil/crypto3/hash/adaptor/hashed.hpp</includes>
+    <includes local="no">nil/crypto3/algebra/marshalling.hpp</includes>
+    <includes local="yes">proof/proto/SGProof.pb.h</includes>
+    <incdepgraph>
+      <node id="13">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>IBasicProof.hpp</label>
+        <link refid="de/d4a/_i_basic_proof_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/proof/ProcessingProof.cpp</label>
+        <link refid="dc/dc6/_processing_proof_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>ProcessingProof.hpp</label>
+        <link refid="d8/d51/_processing_proof_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>array</label>
+      </node>
+      <node id="7">
+        <label>boost/json.hpp</label>
+      </node>
+      <node id="4">
+        <label>cstdint</label>
+      </node>
+      <node id="14">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="11">
+        <label>memory</label>
+      </node>
+      <node id="16">
+        <label>nil/crypto3/algebra/curves/pallas.hpp</label>
+      </node>
+      <node id="19">
+        <label>nil/crypto3/algebra/marshalling.hpp</label>
+      </node>
+      <node id="18">
+        <label>nil/crypto3/hash/adaptor/hashed.hpp</label>
+      </node>
+      <node id="17">
+        <label>nil/crypto3/hash/algorithm/hash.hpp</label>
+      </node>
+      <node id="15">
+        <label>nil/crypto3/multiprecision/cpp_int.hpp</label>
+      </node>
+      <node id="12">
+        <label>proof/proto/SGProof.pb.h</label>
+      </node>
+      <node id="3">
+        <label>string</label>
+      </node>
+      <node id="8">
+        <label>string_view</label>
+      </node>
+      <node id="6">
+        <label>utility</label>
+      </node>
+      <node id="10">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="db/dc3/namespacenil_1_1crypto3_1_1algebra_1_1curves">nil::crypto3::algebra::curves</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="date"><para>2024-09-29 </para>
+</simplesect>
+<simplesect kind="author"><para>Henrique A. Klein (<ulink url="mailto:hklein@gnus.ai">hklein@gnus.ai</ulink>) </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d8/d51/_processing_proof_8hpp" kindref="compound">ProcessingProof.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;nil/crypto3/multiprecision/cpp_int.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;nil/crypto3/algebra/curves/pallas.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;nil/crypto3/hash/algorithm/hash.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;nil/crypto3/hash/adaptor/hashed.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;nil/crypto3/algebra/marshalling.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;proof/proto/SGProof.pb.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">nil::crypto3::algebra::curves;</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="18"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20" refid="df/df1/classsgns_1_1_processing_proof_1ade6021b920db97896f14e435e0cb9518" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;std::vector&lt;uint8_t&gt;&gt;<sp/><ref refid="df/df1/classsgns_1_1_processing_proof_1ade6021b920db97896f14e435e0cb9518" kindref="member">ProcessingProof::SerializeFullProof</ref>(</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>SGProof::BaseProofData<sp/>&amp;base_proof<sp/>)</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::vector&lt;uint8_t&gt;{};</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26" refid="df/df1/classsgns_1_1_processing_proof_1ad8306b903bb582592a2e481a2e7e7268" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::pair&lt;boost::json::array,<sp/>boost::json::array&gt;<sp/><ref refid="df/df1/classsgns_1_1_processing_proof_1ad8306b903bb582592a2e481a2e7e7268" kindref="member">ProcessingProof::GenerateJsonParameters</ref>()</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boost::json::array<sp/>public_inputs_json_array;</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boost::json::array<sp/>private_inputs_json_array;</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::make_pair(<sp/>public_inputs_json_array,<sp/>private_inputs_json_array<sp/>);</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight></codeline>
+<codeline lineno="34" refid="df/df1/classsgns_1_1_processing_proof_1af7dc6ffab191b97386d6bcd1bf92f704" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;std::pair&lt;boost::json::array,<sp/>boost::json::array&gt;&gt;<sp/><ref refid="df/df1/classsgns_1_1_processing_proof_1af7dc6ffab191b97386d6bcd1bf92f704" kindref="member">ProcessingProof::DeSerializePublicParams</ref>(</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;uint8_t&gt;<sp/>&amp;full_proof_data<sp/>)</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boost::json::array<sp/>public_inputs_json_array;</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boost::json::array<sp/>private_inputs_json_array;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::make_pair(<sp/>public_inputs_json_array,<sp/>private_inputs_json_array<sp/>);</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight></codeline>
+<codeline lineno="43"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="src/proof/ProcessingProof.cpp"/>
+  </compounddef>
+</doxygen>

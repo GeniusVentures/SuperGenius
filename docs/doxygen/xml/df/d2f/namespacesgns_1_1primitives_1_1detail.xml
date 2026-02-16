@@ -1,0 +1,83 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/d2f/namespacesgns_1_1primitives_1_1detail" kind="namespace" language="C++">
+    <compoundname>sgns::primitives::detail</compoundname>
+    <innerclass refid="de/d12/structsgns_1_1primitives_1_1detail_1_1_block_info_t" prot="public">sgns::primitives::detail::BlockInfoT</innerclass>
+    <innerclass refid="df/db0/structsgns_1_1primitives_1_1detail_1_1_digest_item_common" prot="public">sgns::primitives::detail::DigestItemCommon</innerclass>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="df/d2f/namespacesgns_1_1primitives_1_1detail_1ace6c627525cb5d15611f9eeb6bfaa821" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename Tag</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::detail::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const BlockInfoT&lt; Tag &gt; &amp;msg)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::detail::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="de/d12/structsgns_1_1primitives_1_1detail_1_1_block_info_t" kindref="compound">BlockInfoT</ref>&lt; Tag &gt; &amp;</type>
+          <declname>msg</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/common.hpp" line="37" column="5" bodyfile="src/primitives/common.hpp" bodystart="37" bodyend="39"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d2f/namespacesgns_1_1primitives_1_1detail_1abf8aa33580d72b7644b7f3b6c57ef8dc" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename Tag</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::detail::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, BlockInfoT&lt; Tag &gt; &amp;msg)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::detail::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="de/d12/structsgns_1_1primitives_1_1detail_1_1_block_info_t" kindref="compound">BlockInfoT</ref>&lt; Tag &gt; &amp;</type>
+          <declname>msg</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/common.hpp" line="44" column="12" bodyfile="src/primitives/common.hpp" bodystart="44" bodyend="46"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/primitives/common.hpp" line="15" column="3"/>
+  </compounddef>
+</doxygen>

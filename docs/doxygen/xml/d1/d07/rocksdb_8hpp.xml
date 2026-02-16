@@ -1,0 +1,705 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/d07/rocksdb_8hpp" kind="file" language="C++">
+    <compoundname>rocksdb.hpp</compoundname>
+    <includes local="no">rocksdb/rocksdb_namespace.h</includes>
+    <includes local="no">rocksdb/db.h</includes>
+    <includes local="no">rocksdb/slice.h</includes>
+    <includes local="no">rocksdb/options.h</includes>
+    <includes local="no">rocksdb/write_batch.h</includes>
+    <includes refid="d6/da3/logger_8hpp" local="yes">base/logger.hpp</includes>
+    <includes refid="d8/dcc/buffer__map__types_8hpp" local="yes">storage/buffer_map_types.hpp</includes>
+    <includedby refid="d1/dac/_u_t_x_o_manager_8hpp" local="yes">src/account/UTXOManager.hpp</includedby>
+    <includedby refid="d5/d29/crdt__datastore_8hpp" local="yes">src/crdt/crdt_datastore.hpp</includedby>
+    <includedby refid="dc/d76/crdt__heads_8hpp" local="no">src/crdt/crdt_heads.hpp</includedby>
+    <includedby refid="d4/d2e/crdt__set_8hpp" local="no">src/crdt/crdt_set.hpp</includedby>
+    <includedby refid="d9/d51/crdt__datastore_8cpp" local="no">src/crdt/impl/crdt_datastore.cpp</includedby>
+    <includedby refid="dc/d6d/rocksdb_8cpp" local="no">src/storage/rocksdb/rocksdb.cpp</includedby>
+    <includedby refid="dc/d5f/rocksdb__batch_8hpp" local="no">src/storage/rocksdb/rocksdb_batch.hpp</includedby>
+    <includedby refid="db/d06/rocksdb__cursor_8hpp" local="yes">src/storage/rocksdb/rocksdb_cursor.hpp</includedby>
+    <incdepgraph>
+      <node id="12">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="29" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>storage/buffer_map_types.hpp</label>
+        <link refid="d8/dcc/buffer__map__types_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>storage/face/batchable.hpp</label>
+        <link refid="de/d87/batchable_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>storage/face/generic_maps.hpp</label>
+        <link refid="d9/daa/generic__maps_8hpp"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>storage/face/generic_storage.hpp</label>
+        <link refid="d6/d4e/generic__storage_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>storage/face/iterable.hpp</label>
+        <link refid="db/d3e/iterable_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>storage/face/map_cursor.hpp</label>
+        <link refid="d9/d4b/map__cursor_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>storage/face/readable.hpp</label>
+        <link refid="d5/dd2/readable_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>storage/face/write_batch.hpp</label>
+        <link refid="d2/d76/write__batch_8hpp"/>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>storage/face/writeable.hpp</label>
+        <link refid="dc/da4/writeable_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/storage/rocksdb/rocksdb.hpp</label>
+        <link refid="d1/d07/rocksdb_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="16">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="11">
+        <label>gsl/span</label>
+      </node>
+      <node id="18">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="22">
+        <label>memory</label>
+      </node>
+      <node id="3">
+        <label>rocksdb/db.h</label>
+      </node>
+      <node id="5">
+        <label>rocksdb/options.h</label>
+      </node>
+      <node id="2">
+        <label>rocksdb/rocksdb_namespace.h</label>
+      </node>
+      <node id="4">
+        <label>rocksdb/slice.h</label>
+      </node>
+      <node id="6">
+        <label>rocksdb/write_batch.h</label>
+      </node>
+      <node id="8">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="9">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="29">
+        <label>string</label>
+      </node>
+      <node id="13">
+        <label>string_view</label>
+      </node>
+      <node id="14">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="15">
+        <label>src/account/GeniusAccount.cpp</label>
+        <link refid="dd/dd9/_genius_account_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/account/GeniusNode.cpp</label>
+        <link refid="df/de0/_genius_node_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/account/GeniusNode.hpp</label>
+        <link refid="d3/d63/_genius_node_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>src/account/Migration0_2_0To1_0_0.cpp</label>
+        <link refid="dc/dfe/_migration0__2__0_to1__0__0_8cpp"/>
+      </node>
+      <node id="16">
+        <label>src/account/Migration0_2_0To1_0_0.hpp</label>
+        <link refid="d1/d31/_migration0__2__0_to1__0__0_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>src/account/Migration1_0_0To3_4_0.cpp</label>
+        <link refid="d8/d30/_migration1__0__0_to3__4__0_8cpp"/>
+      </node>
+      <node id="18">
+        <label>src/account/Migration1_0_0To3_4_0.hpp</label>
+        <link refid="dc/db1/_migration1__0__0_to3__4__0_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>src/account/Migration3_4_0To3_5_0.cpp</label>
+        <link refid="d6/d71/_migration3__4__0_to3__5__0_8cpp"/>
+      </node>
+      <node id="20">
+        <label>src/account/Migration3_4_0To3_5_0.hpp</label>
+        <link refid="de/d71/_migration3__4__0_to3__5__0_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>src/account/Migration3_5_0To3_5_1.cpp</label>
+        <link refid="da/d32/_migration3__5__0_to3__5__1_8cpp"/>
+      </node>
+      <node id="21">
+        <label>src/account/Migration3_5_0To3_5_1.hpp</label>
+        <link refid="d6/d6e/_migration3__5__0_to3__5__1_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>src/account/Migration3_5_1To3_6_0.cpp</label>
+        <link refid="db/da7/_migration3__5__1_to3__6__0_8cpp"/>
+      </node>
+      <node id="22">
+        <label>src/account/Migration3_5_1To3_6_0.hpp</label>
+        <link refid="df/dd5/_migration3__5__1_to3__6__0_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>src/account/MigrationManager.cpp</label>
+        <link refid="d2/d4b/_migration_manager_8cpp"/>
+      </node>
+      <node id="23">
+        <label>src/account/MigrationManager.hpp</label>
+        <link refid="dc/d31/_migration_manager_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>src/account/TransactionManager.cpp</label>
+        <link refid="d0/dcc/_transaction_manager_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/account/TransactionManager.hpp</label>
+        <link refid="de/d54/_transaction_manager_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>src/account/UTXOManager.cpp</label>
+        <link refid="dc/d76/_u_t_x_o_manager_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/account/UTXOManager.hpp</label>
+        <link refid="d1/dac/_u_t_x_o_manager_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>src/blockchain/Blockchain.hpp</label>
+        <link refid="dc/d59/_blockchain_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>src/blockchain/ValidatorRegistry.cpp</label>
+        <link refid="df/d00/_validator_registry_8cpp"/>
+      </node>
+      <node id="26">
+        <label>src/blockchain/ValidatorRegistry.hpp</label>
+        <link refid="df/df1/_validator_registry_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>src/blockchain/impl/Blockchain.cpp</label>
+        <link refid="da/d8c/_blockchain_8cpp"/>
+      </node>
+      <node id="36">
+        <label>src/blockchain/impl/block_tree_impl.cpp</label>
+        <link refid="d5/df4/block__tree__impl_8cpp"/>
+      </node>
+      <node id="28">
+        <label>src/blockchain/impl/common.hpp</label>
+        <link refid="db/d1e/src_2blockchain_2impl_2common_8hpp"/>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>src/blockchain/impl/key_value_block_header_repository.cpp</label>
+        <link refid="de/d1b/key__value__block__header__repository_8cpp"/>
+      </node>
+      <node id="33">
+        <label>src/blockchain/impl/key_value_block_header_repository.hpp</label>
+        <link refid="dd/dc6/key__value__block__header__repository_8hpp"/>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>src/blockchain/impl/key_value_block_storage.cpp</label>
+        <link refid="de/de9/key__value__block__storage_8cpp"/>
+      </node>
+      <node id="34">
+        <label>src/blockchain/impl/key_value_block_storage.hpp</label>
+        <link refid="d4/d6b/key__value__block__storage_8hpp"/>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>src/blockchain/impl/storage_util.cpp</label>
+        <link refid="d3/d2f/storage__util_8cpp"/>
+      </node>
+      <node id="35">
+        <label>src/blockchain/impl/storage_util.hpp</label>
+        <link refid="dd/d87/storage__util_8hpp"/>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>src/blockchain/impl/types.cpp</label>
+        <link refid="da/ddf/types_8cpp"/>
+      </node>
+      <node id="12">
+        <label>src/crdt/crdt_datastore.hpp</label>
+        <link refid="d5/d29/crdt__datastore_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="44" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+        <childnode refid="46" relation="include">
+        </childnode>
+      </node>
+      <node id="47">
+        <label>src/crdt/crdt_heads.hpp</label>
+        <link refid="dc/d76/crdt__heads_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+      </node>
+      <node id="49">
+        <label>src/crdt/crdt_set.hpp</label>
+        <link refid="d4/d2e/crdt__set_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="50" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>src/crdt/globaldb/globaldb.cpp</label>
+        <link refid="d6/de2/globaldb_8cpp"/>
+      </node>
+      <node id="14">
+        <label>src/crdt/globaldb/globaldb.hpp</label>
+        <link refid="d0/d0e/globaldb_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+      </node>
+      <node id="43">
+        <label>src/crdt/globaldb/pubsub_broadcaster_ext.cpp</label>
+        <link refid="d1/dc9/pubsub__broadcaster__ext_8cpp"/>
+      </node>
+      <node id="44">
+        <label>src/crdt/globaldb/pubsub_broadcaster_ext.hpp</label>
+        <link refid="d7/db9/pubsub__broadcaster__ext_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+      </node>
+      <node id="45">
+        <label>src/crdt/impl/atomic_transaction.cpp</label>
+        <link refid="d3/db3/atomic__transaction_8cpp"/>
+      </node>
+      <node id="46">
+        <label>src/crdt/impl/crdt_datastore.cpp</label>
+        <link refid="d9/d51/crdt__datastore_8cpp"/>
+      </node>
+      <node id="48">
+        <label>src/crdt/impl/crdt_heads.cpp</label>
+        <link refid="d1/de6/crdt__heads_8cpp"/>
+      </node>
+      <node id="50">
+        <label>src/crdt/impl/crdt_set.cpp</label>
+        <link refid="d4/d84/crdt__set_8cpp"/>
+      </node>
+      <node id="38">
+        <label>src/processing/impl/processing_core_impl.cpp</label>
+        <link refid="db/d83/processing__core__impl_8cpp"/>
+      </node>
+      <node id="37">
+        <label>src/processing/impl/processing_core_impl.hpp</label>
+        <link refid="dd/da6/processing__core__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+      </node>
+      <node id="40">
+        <label>src/processing/impl/processing_subtask_result_storage_impl.cpp</label>
+        <link refid="d5/d95/processing__subtask__result__storage__impl_8cpp"/>
+      </node>
+      <node id="39">
+        <label>src/processing/impl/processing_subtask_result_storage_impl.hpp</label>
+        <link refid="d6/dd6/processing__subtask__result__storage__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+      </node>
+      <node id="42">
+        <label>src/processing/impl/processing_task_queue_impl.cpp</label>
+        <link refid="d1/dff/processing__task__queue__impl_8cpp"/>
+      </node>
+      <node id="41">
+        <label>src/processing/impl/processing_task_queue_impl.hpp</label>
+        <link refid="d2/d76/processing__task__queue__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+      </node>
+      <node id="51">
+        <label>src/storage/rocksdb/rocksdb.cpp</label>
+        <link refid="dc/d6d/rocksdb_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/storage/rocksdb/rocksdb.hpp</label>
+        <link refid="d1/d07/rocksdb_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="47" relation="include">
+        </childnode>
+        <childnode refid="49" relation="include">
+        </childnode>
+        <childnode refid="46" relation="include">
+        </childnode>
+        <childnode refid="51" relation="include">
+        </childnode>
+        <childnode refid="52" relation="include">
+        </childnode>
+        <childnode refid="54" relation="include">
+        </childnode>
+      </node>
+      <node id="53">
+        <label>src/storage/rocksdb/rocksdb_batch.cpp</label>
+        <link refid="d6/d9a/rocksdb__batch_8cpp"/>
+      </node>
+      <node id="52">
+        <label>src/storage/rocksdb/rocksdb_batch.hpp</label>
+        <link refid="dc/d5f/rocksdb__batch_8hpp"/>
+        <childnode refid="51" relation="include">
+        </childnode>
+        <childnode refid="53" relation="include">
+        </childnode>
+      </node>
+      <node id="55">
+        <label>src/storage/rocksdb/rocksdb_cursor.cpp</label>
+        <link refid="da/dd7/rocksdb__cursor_8cpp"/>
+      </node>
+      <node id="54">
+        <label>src/storage/rocksdb/rocksdb_cursor.hpp</label>
+        <link refid="db/d06/rocksdb__cursor_8hpp"/>
+        <childnode refid="51" relation="include">
+        </childnode>
+        <childnode refid="55" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d5/dbf/classsgns_1_1storage_1_1rocksdb" prot="public">sgns::storage::rocksdb</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d0/dbf/namespacesgns_1_1storage">sgns::storage</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_rocksdb_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_rocksdb_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;rocksdb/rocksdb_namespace.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;rocksdb/db.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;rocksdb/slice.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;rocksdb/options.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;rocksdb/write_batch.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/da3/logger_8hpp" kindref="compound">base/logger.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d8/dcc/buffer__map__types_8hpp" kindref="compound">storage/buffer_map_types.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d0/dbf/namespacesgns_1_1storage" kindref="compound">sgns::storage</ref></highlight></codeline>
+<codeline lineno="14"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20" refid="d5/dbf/classsgns_1_1storage_1_1rocksdb" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb" kindref="compound">rocksdb</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d0/dbf/namespacesgns_1_1storage_1a1f822800c416f58b1bcc7b1d86c11797" kindref="member">BufferStorage</ref></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch" kindref="compound">Batch</ref>;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor" kindref="compound">Cursor</ref>;</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26" refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a4c81a1024edb1d6c7cd81361de6b4db8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a4c81a1024edb1d6c7cd81361de6b4db8" kindref="member">Iterator</ref><sp/><sp/><sp/><sp/><sp/>=<sp/>::ROCKSDB_NAMESPACE::Iterator;</highlight></codeline>
+<codeline lineno="27" refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a468da9bdf288ed7ca5a9e91dd0c60480" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a468da9bdf288ed7ca5a9e91dd0c60480" kindref="member">Options</ref><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>::ROCKSDB_NAMESPACE::Options;</highlight></codeline>
+<codeline lineno="28" refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a407019abe6ea6dcf20c8941909512967" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a407019abe6ea6dcf20c8941909512967" kindref="member">ReadOptions</ref><sp/><sp/>=<sp/>::ROCKSDB_NAMESPACE::ReadOptions;</highlight></codeline>
+<codeline lineno="29" refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a301a7c55b4016f3bc36e6e6a00fb68c8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a301a7c55b4016f3bc36e6e6a00fb68c8" kindref="member">WriteOptions</ref><sp/>=<sp/>::ROCKSDB_NAMESPACE::WriteOptions;</highlight></codeline>
+<codeline lineno="30" refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a637f04462eed6959d2de4d3ef6f44f19" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a637f04462eed6959d2de4d3ef6f44f19" kindref="member">DB</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>::ROCKSDB_NAMESPACE::DB;</highlight></codeline>
+<codeline lineno="31" refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a0c62d4a12443a094d04b1f1c9c84d7b9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a0c62d4a12443a094d04b1f1c9c84d7b9" kindref="member">Status</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>::ROCKSDB_NAMESPACE::Status;</highlight></codeline>
+<codeline lineno="32" refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a1492da459c197a6587932a81c3f48423" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a1492da459c197a6587932a81c3f48423" kindref="member">Slice</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>::ROCKSDB_NAMESPACE::Slice;</highlight></codeline>
+<codeline lineno="33" refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a2c93b11da8a6ebd31ca7512ca2c86b41" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a2c93b11da8a6ebd31ca7512ca2c86b41" kindref="member">QueryResult</ref><sp/><sp/>=<sp/>std::map&lt;Buffer,<sp/>Buffer&gt;;</highlight></codeline>
+<codeline lineno="34" refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1acad76d16fd17bc57044d10d18b36bb9a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1acad76d16fd17bc57044d10d18b36bb9a" kindref="member">KeyValuePair</ref><sp/>=<sp/>std::pair&lt;Buffer,<sp/>Buffer&gt;;</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1afe5441e0945f6df3efc24899d0e74bb9" kindref="member">~rocksdb</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>outcome::result&lt;std::shared_ptr&lt;rocksdb&gt;&gt;<sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a854c6acc35ec78f8f80ff591694f6058" kindref="member">create</ref>(<sp/>std::string_view<sp/>path,</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a468da9bdf288ed7ca5a9e91dd0c60480" kindref="member">Options</ref><sp/><sp/><sp/>&amp;options<sp/>=<sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a468da9bdf288ed7ca5a9e91dd0c60480" kindref="member">Options</ref>()<sp/>);</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>outcome::result&lt;std::shared_ptr&lt;rocksdb&gt;&gt;<sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a854c6acc35ec78f8f80ff591694f6058" kindref="member">create</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;DB&gt;<sp/>&amp;db<sp/>);</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a718f819cbcb72a4c918d331e14fa7dcf" kindref="member">setReadOptions</ref>(<sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a407019abe6ea6dcf20c8941909512967" kindref="member">ReadOptions</ref><sp/>ro<sp/>);</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"></highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a913015f58da9a0c0150f150ee4a41133" kindref="member">setWriteOptions</ref>(<sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a301a7c55b4016f3bc36e6e6a00fb68c8" kindref="member">WriteOptions</ref><sp/>wo<sp/>);</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"></highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::unique_ptr&lt;BufferMapCursor&gt;<sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a8c990ea95ebeee5fd0abf5b1ecd65456" kindref="member">cursor</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"></highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::unique_ptr&lt;BufferBatch&gt;<sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a255eca48e3786f29e7aad0ae1879a2af" kindref="member">batch</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"></highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;Buffer&gt;<sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1abbd51767a3338a64b3db846bf3a22c16" kindref="member">get</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key<sp/>)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"></highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;QueryResult&gt;<sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a641035624043197b9baf08b3a36beaf5" kindref="member">query</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;keyPrefix<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"></highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;QueryResult&gt;<sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a641035624043197b9baf08b3a36beaf5" kindref="member">query</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;prefix_base,</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;middle_part,</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;remainder_prefix<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"></highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1ac97834c7ce02ce1fe31f220b90d91ff1" kindref="member">contains</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key<sp/>)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"></highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1acd1731393890033964295c54c938cff7" kindref="member">empty</ref>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"></highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1adb3aff8f23568bd166c2df9e70a2f1d2" kindref="member">put</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;value<sp/>)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"></highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>value<sp/>will<sp/>be<sp/>copied,<sp/>not<sp/>moved,<sp/>due<sp/>to<sp/>internal<sp/>structure<sp/>of<sp/>rocksdb</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1adb3aff8f23568bd166c2df9e70a2f1d2" kindref="member">put</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key,<sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;&amp;value<sp/>)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"></highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1aa08bc5bf21f634b350ce1242a9eefbe5" kindref="member">remove</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key<sp/>)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"></highlight></codeline>
+<codeline lineno="95" refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a23b9b096bd601ab101803431eb352b0f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a23b9b096bd601ab101803431eb352b0f" kindref="member">GetName</ref>()</highlight><highlight class="keyword"><sp/>override</highlight></codeline>
+<codeline lineno="96"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;rocksdb&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"></highlight></codeline>
+<codeline lineno="100" refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1aaeae841cf8fede555c24860863c47ffb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/>std::shared_ptr&lt;DB&gt;<sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1aaeae841cf8fede555c24860863c47ffb" kindref="member">getDB</ref>()</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="101"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a5d8153c8a888ce3e11e1b383f87d60c8" kindref="member">db_</ref>;</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"></highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;KeyValuePair&gt;<sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a9f6c4fbbc1cf26decf452d1a99d2b8a0" kindref="member">GetAll</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"></highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="111" refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a5d8153c8a888ce3e11e1b383f87d60c8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;DB&gt;<sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a5d8153c8a888ce3e11e1b383f87d60c8" kindref="member">db_</ref>;</highlight></codeline>
+<codeline lineno="112" refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1ac3d098c7e87bca4776b0119df74bd0fd" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a407019abe6ea6dcf20c8941909512967" kindref="member">ReadOptions</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1ac3d098c7e87bca4776b0119df74bd0fd" kindref="member">ro_</ref>;</highlight></codeline>
+<codeline lineno="113" refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a2e7539a5d303bd280dd8a574f6604678" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a301a7c55b4016f3bc36e6e6a00fb68c8" kindref="member">WriteOptions</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a2e7539a5d303bd280dd8a574f6604678" kindref="member">wo_</ref>;</highlight></codeline>
+<codeline lineno="114" refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a887ed6aacb28210b454f71acc859fa43" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a887ed6aacb28210b454f71acc859fa43" kindref="member">logger_</ref>;</highlight></codeline>
+<codeline lineno="115" refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1af7364bd0d13b6553b5e512ec47184980" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;Options&gt;<sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1af7364bd0d13b6553b5e512ec47184980" kindref="member">options_</ref>;</highlight></codeline>
+<codeline lineno="116" refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a1b18fe835b15b5d5aa30ced2d5513ceb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a1b18fe835b15b5d5aa30ced2d5513ceb" kindref="member">path_</ref>;</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"></highlight></codeline>
+<codeline lineno="119"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::storage</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="120"><highlight class="normal"></highlight></codeline>
+<codeline lineno="121"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_rocksdb_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/storage/rocksdb/rocksdb.hpp"/>
+  </compounddef>
+</doxygen>

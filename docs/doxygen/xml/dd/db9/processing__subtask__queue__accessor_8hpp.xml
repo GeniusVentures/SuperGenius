@@ -1,0 +1,147 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/db9/processing__subtask__queue__accessor_8hpp" kind="file" language="C++">
+    <compoundname>processing_subtask_queue_accessor.hpp</compoundname>
+    <includes local="yes">processing/proto/SGProcessing.pb.h</includes>
+    <includes local="no">boost/optional.hpp</includes>
+    <includes local="no">list</includes>
+    <includedby refid="d3/d33/processing__engine_8hpp" local="yes">src/processing/processing_engine.hpp</includedby>
+    <includedby refid="df/dac/processing__node_8hpp" local="yes">src/processing/processing_node.hpp</includedby>
+    <includedby refid="de/d17/processing__subtask__queue__accessor__impl_8hpp" local="yes">src/processing/processing_subtask_queue_accessor_impl.hpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/processing/processing_subtask_queue_accessor.hpp</label>
+        <link refid="dd/db9/processing__subtask__queue__accessor_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="4">
+        <label>list</label>
+      </node>
+      <node id="2">
+        <label>processing/proto/SGProcessing.pb.h</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="8">
+        <label>src/account/GeniusNode.cpp</label>
+        <link refid="df/de0/_genius_node_8cpp"/>
+      </node>
+      <node id="7">
+        <label>src/account/GeniusNode.hpp</label>
+        <link refid="d3/d63/_genius_node_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>src/processing/processing_engine.cpp</label>
+        <link refid="df/d3c/processing__engine_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/processing/processing_engine.hpp</label>
+        <link refid="d3/d33/processing__engine_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>src/processing/processing_node.cpp</label>
+        <link refid="de/d98/processing__node_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/processing/processing_node.hpp</label>
+        <link refid="df/dac/processing__node_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>src/processing/processing_service.cpp</label>
+        <link refid="d3/d3a/processing__service_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/processing/processing_service.hpp</label>
+        <link refid="d5/d37/processing__service_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/processing/processing_subtask_queue_accessor.hpp</label>
+        <link refid="dd/db9/processing__subtask__queue__accessor_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>src/processing/processing_subtask_queue_accessor_impl.cpp</label>
+        <link refid="dd/d14/processing__subtask__queue__accessor__impl_8cpp"/>
+      </node>
+      <node id="10">
+        <label>src/processing/processing_subtask_queue_accessor_impl.hpp</label>
+        <link refid="de/d17/processing__subtask__queue__accessor__impl_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor" prot="public">sgns::processing::SubTaskQueueAccessor</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6a/namespacesgns_1_1processing">sgns::processing</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_ACCESSOR_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_ACCESSOR_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;processing/proto/SGProcessing.pb.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/optional.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;list&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d6a/namespacesgns_1_1processing" kindref="compound">sgns::processing</ref></highlight></codeline>
+<codeline lineno="14"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="17" refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor" kindref="compound">SubTaskQueueAccessor</ref></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="20" refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1a1a696bb65e6afc736edfdbd2e607ab97" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1a1a696bb65e6afc736edfdbd2e607ab97" kindref="member">SubTaskGrabbedCallback</ref><sp/>=<sp/>std::function&lt;void(<sp/>boost::optional&lt;const<sp/>SGProcessing::SubTask<sp/>&amp;&gt;<sp/>)&gt;;</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22" refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1abbdee09e0a2c4f6f41ffc33ff49613ae" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1abbdee09e0a2c4f6f41ffc33ff49613ae" kindref="member">~SubTaskQueueAccessor</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27" refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1ace433d44b572066fb521f44e2cb588c7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1ace433d44b572066fb521f44e2cb588c7" kindref="member">ConnectToSubTaskQueue</ref>(<sp/>std::function&lt;</highlight><highlight class="keywordtype">void</highlight><highlight class="normal">()&gt;<sp/>onSubTaskQueueConnectedEventSink<sp/>)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32" refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1ac532f88cf45eeb488e109acbc3306a5d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1ac532f88cf45eeb488e109acbc3306a5d" kindref="member">AssignSubTasks</ref>(<sp/>std::list&lt;SGProcessing::SubTask&gt;<sp/>&amp;subTasks<sp/>)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37" refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1a2ed5ed1f6df8e6ecbdbfa8f106b6d6bd" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1a2ed5ed1f6df8e6ecbdbfa8f106b6d6bd" kindref="member">GrabSubTask</ref>(<sp/><ref refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1a1a696bb65e6afc736edfdbd2e607ab97" kindref="member">SubTaskGrabbedCallback</ref><sp/>onSubTaskGrabbedCallback<sp/>)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="43" refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1a950916f646605d9330c1e2b1d8200da4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1a950916f646605d9330c1e2b1d8200da4" kindref="member">CompleteSubTask</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;subTaskId,</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>SGProcessing::SubTaskResult<sp/>&amp;subTaskResult<sp/>)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46" refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1a836d9971bfaa4ad9561405b99fad9750" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1a836d9971bfaa4ad9561405b99fad9750" kindref="member">CreateResultsChannel</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;task_id<sp/>)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>@todo<sp/>Add<sp/>SetErrorsHandler<sp/>method</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="50"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"></highlight></codeline>
+<codeline lineno="52"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_ACCESSOR_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/processing/processing_subtask_queue_accessor.hpp"/>
+  </compounddef>
+</doxygen>

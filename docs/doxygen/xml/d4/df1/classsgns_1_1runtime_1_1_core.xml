@@ -1,0 +1,160 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/df1/classsgns_1_1runtime_1_1_core" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::runtime::Core</compoundname>
+    <derivedcompoundref refid="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl" prot="public" virt="non-virtual">sgns::runtime::binaryen::CoreImpl</derivedcompoundref>
+    <includes refid="da/d47/core_8hpp" local="no">core.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d4/df1/classsgns_1_1runtime_1_1_core_1a2841054146a6a0c9bcb76e56c5a4a503" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::runtime::Core::~Core</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Core</name>
+        <qualifiedname>sgns::runtime::Core::~Core</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/core.hpp" line="23" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/df1/classsgns_1_1runtime_1_1_core_1a4446a2872b230da459fc300b499a5329" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="de/d6d/structsgns_1_1primitives_1_1_version" kindref="compound">primitives::Version</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; primitives::Version &gt; sgns::runtime::Core::version</definition>
+        <argsstring>(const boost::optional&lt; primitives::BlockHash &gt; &amp;block_hash)=0</argsstring>
+        <name>version</name>
+        <qualifiedname>sgns::runtime::Core::version</qualifiedname>
+        <reimplementedby refid="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1ad95c2c91f80f3f088defd164517f5860">version</reimplementedby>
+        <param>
+          <type>const boost::optional&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &gt; &amp;</type>
+          <declname>block_hash</declname>
+        </param>
+        <briefdescription>
+<para>Returns the version of the runtime. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>runtime version </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/core.hpp" line="29" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/df1/classsgns_1_1runtime_1_1_core_1abf9b51aebbc6e51f771833bdddbfa1fa" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::runtime::Core::execute_block</definition>
+        <argsstring>(const primitives::Block &amp;block)=0</argsstring>
+        <name>execute_block</name>
+        <qualifiedname>sgns::runtime::Core::execute_block</qualifiedname>
+        <reimplementedby refid="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1a238290489c71d5c01ec8f882456ec94b">execute_block</reimplementedby>
+        <param>
+          <type>const <ref refid="da/dcc/structsgns_1_1primitives_1_1_block" kindref="compound">primitives::Block</ref> &amp;</type>
+          <declname>block</declname>
+        </param>
+        <briefdescription>
+<para>Executes the given block. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>block</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>block to execute </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/core.hpp" line="36" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/df1/classsgns_1_1runtime_1_1_core_1aed43dd94de2d91e8c11e9c313ca5710a" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::runtime::Core::initialise_block</definition>
+        <argsstring>(const primitives::BlockHeader &amp;header)=0</argsstring>
+        <name>initialise_block</name>
+        <qualifiedname>sgns::runtime::Core::initialise_block</qualifiedname>
+        <reimplementedby refid="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1a2fbcb52af57e42f9ee4cc7752fdf160c">initialise_block</reimplementedby>
+        <param>
+          <type>const <ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">primitives::BlockHeader</ref> &amp;</type>
+          <declname>header</declname>
+        </param>
+        <briefdescription>
+<para>Initialize a block with the given header. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>header</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>header used for block initialization </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/core.hpp" line="43" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/df1/classsgns_1_1runtime_1_1_core_1a61c0d3b0f660dcd09020c2b73c262b8b" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; std::vector&lt; <ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">primitives::AuthorityId</ref> &gt; &gt;</type>
+        <definition>virtual outcome::result&lt; std::vector&lt; primitives::AuthorityId &gt; &gt; sgns::runtime::Core::authorities</definition>
+        <argsstring>(const primitives::BlockId &amp;block_id)=0</argsstring>
+        <name>authorities</name>
+        <qualifiedname>sgns::runtime::Core::authorities</qualifiedname>
+        <reimplementedby refid="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl_1a06d804a151f60b237f68edcb4234cad7">authorities</reimplementedby>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>block_id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get current authorities <simplesect kind="return"><para>collection of authorities </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/core.hpp" line="50" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para><ref refid="d4/df1/classsgns_1_1runtime_1_1_core" kindref="compound">Core</ref> represents mandatory part of runtime api </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::runtime::Core</label>
+        <link refid="d4/df1/classsgns_1_1runtime_1_1_core"/>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::binaryen::CoreImpl</label>
+        <link refid="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::runtime::Core</label>
+        <link refid="d4/df1/classsgns_1_1runtime_1_1_core"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/core.hpp" line="21" column="3" bodyfile="src/runtime/core.hpp" bodystart="21" bodyend="52"/>
+    <listofallmembers>
+      <member refid="d4/df1/classsgns_1_1runtime_1_1_core_1a61c0d3b0f660dcd09020c2b73c262b8b" prot="public" virt="pure-virtual"><scope>sgns::runtime::Core</scope><name>authorities</name></member>
+      <member refid="d4/df1/classsgns_1_1runtime_1_1_core_1abf9b51aebbc6e51f771833bdddbfa1fa" prot="public" virt="pure-virtual"><scope>sgns::runtime::Core</scope><name>execute_block</name></member>
+      <member refid="d4/df1/classsgns_1_1runtime_1_1_core_1aed43dd94de2d91e8c11e9c313ca5710a" prot="public" virt="pure-virtual"><scope>sgns::runtime::Core</scope><name>initialise_block</name></member>
+      <member refid="d4/df1/classsgns_1_1runtime_1_1_core_1a4446a2872b230da459fc300b499a5329" prot="public" virt="pure-virtual"><scope>sgns::runtime::Core</scope><name>version</name></member>
+      <member refid="d4/df1/classsgns_1_1runtime_1_1_core_1a2841054146a6a0c9bcb76e56c5a4a503" prot="public" virt="virtual"><scope>sgns::runtime::Core</scope><name>~Core</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

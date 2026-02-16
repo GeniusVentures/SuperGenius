@@ -1,0 +1,405 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/df1/trie__storage_8hpp" kind="file" language="C++">
+    <compoundname>trie_storage.hpp</compoundname>
+    <includes refid="d4/d16/blob_8hpp" local="yes">base/blob.hpp</includes>
+    <includes refid="dc/d8a/trie__batches_8hpp" local="yes">storage/trie/trie_batches.hpp</includes>
+    <includes refid="df/dec/_i_component_8hpp" local="yes">singleton/IComponent.hpp</includes>
+    <includedby refid="d3/d10/runtime__manager_8hpp" local="yes">src/runtime/binaryen/runtime_manager.hpp</includedby>
+    <includedby refid="d5/df8/storage__wasm__provider_8hpp" local="yes">src/runtime/common/storage_wasm_provider.hpp</includedby>
+    <includedby refid="d4/d72/trie__storage__provider__impl_8hpp" local="yes">src/runtime/common/trie_storage_provider_impl.hpp</includedby>
+    <includedby refid="d8/dd1/trie__storage__impl_8hpp" local="yes">src/storage/trie/impl/trie_storage_impl.hpp</includedby>
+    <incdepgraph>
+      <node id="2">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>storage/buffer_map_types.hpp</label>
+        <link refid="d8/dcc/buffer__map__types_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>storage/face/batchable.hpp</label>
+        <link refid="de/d87/batchable_8hpp"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>storage/face/generic_maps.hpp</label>
+        <link refid="d9/daa/generic__maps_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>storage/face/generic_storage.hpp</label>
+        <link refid="d6/d4e/generic__storage_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>storage/face/iterable.hpp</label>
+        <link refid="db/d3e/iterable_8hpp"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>storage/face/map_cursor.hpp</label>
+        <link refid="d9/d4b/map__cursor_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>storage/face/readable.hpp</label>
+        <link refid="d5/dd2/readable_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>storage/face/write_batch.hpp</label>
+        <link refid="d2/d76/write__batch_8hpp"/>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>storage/face/writeable.hpp</label>
+        <link refid="dc/da4/writeable_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>storage/trie/trie_batches.hpp</label>
+        <link refid="dc/d8a/trie__batches_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/storage/trie/trie_storage.hpp</label>
+        <link refid="dd/df1/trie__storage_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>array</label>
+      </node>
+      <node id="16">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="5">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="17">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="3">
+        <label>cstddef</label>
+      </node>
+      <node id="9">
+        <label>gsl/span</label>
+      </node>
+      <node id="12">
+        <label>iostream</label>
+      </node>
+      <node id="11">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="21">
+        <label>memory</label>
+      </node>
+      <node id="28">
+        <label>string</label>
+      </node>
+      <node id="7">
+        <label>string_view</label>
+      </node>
+      <node id="8">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="7">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.cpp</label>
+        <link refid="d7/d6b/block__builder__impl_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.hpp</label>
+        <link refid="d3/d95/block__builder__impl_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.cpp</label>
+        <link refid="de/d5e/core__factory__impl_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.hpp</label>
+        <link refid="d7/de4/core__factory__impl_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>src/runtime/binaryen/runtime_api/core_impl.cpp</label>
+        <link refid="dc/d7c/core__impl_8cpp"/>
+      </node>
+      <node id="8">
+        <label>src/runtime/binaryen/runtime_api/core_impl.hpp</label>
+        <link refid="d7/dbc/core__impl_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.cpp</label>
+        <link refid="dc/def/finality__api__impl_8cpp"/>
+      </node>
+      <node id="10">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.hpp</label>
+        <link refid="db/dad/finality__api__impl_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>src/runtime/binaryen/runtime_api/metadata_impl.cpp</label>
+        <link refid="d0/dfc/metadata__impl_8cpp"/>
+      </node>
+      <node id="12">
+        <label>src/runtime/binaryen/runtime_api/metadata_impl.hpp</label>
+        <link refid="dc/dcf/metadata__impl_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>src/runtime/binaryen/runtime_api/offchain_worker_impl.cpp</label>
+        <link refid="d3/d58/offchain__worker__impl_8cpp"/>
+      </node>
+      <node id="14">
+        <label>src/runtime/binaryen/runtime_api/offchain_worker_impl.hpp</label>
+        <link refid="dd/d03/offchain__worker__impl_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.cpp</label>
+        <link refid="db/dae/parachain__host__impl_8cpp"/>
+      </node>
+      <node id="16">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.hpp</label>
+        <link refid="d6/d15/parachain__host__impl_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.cpp</label>
+        <link refid="d3/d02/production__api__impl_8cpp"/>
+      </node>
+      <node id="18">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.hpp</label>
+        <link refid="d1/d6a/production__api__impl_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>src/runtime/binaryen/runtime_api/runtime_api.hpp</label>
+        <link refid="dd/d87/runtime__api_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.cpp</label>
+        <link refid="db/d63/tagged__transaction__queue__impl_8cpp"/>
+      </node>
+      <node id="20">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.hpp</label>
+        <link refid="d4/d66/tagged__transaction__queue__impl_8hpp"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>src/runtime/binaryen/runtime_manager.cpp</label>
+        <link refid="da/dc5/runtime__manager_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/runtime/binaryen/runtime_manager.hpp</label>
+        <link refid="d3/d10/runtime__manager_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>src/runtime/common/storage_wasm_provider.cpp</label>
+        <link refid="d1/d0f/storage__wasm__provider_8cpp"/>
+      </node>
+      <node id="23">
+        <label>src/runtime/common/storage_wasm_provider.hpp</label>
+        <link refid="d5/df8/storage__wasm__provider_8hpp"/>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>src/runtime/common/trie_storage_provider_impl.cpp</label>
+        <link refid="da/dba/trie__storage__provider__impl_8cpp"/>
+      </node>
+      <node id="25">
+        <label>src/runtime/common/trie_storage_provider_impl.hpp</label>
+        <link refid="d4/d72/trie__storage__provider__impl_8hpp"/>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>src/storage/trie/impl/trie_storage_impl.cpp</label>
+        <link refid="db/dc1/trie__storage__impl_8cpp"/>
+      </node>
+      <node id="27">
+        <label>src/storage/trie/impl/trie_storage_impl.hpp</label>
+        <link refid="d8/dd1/trie__storage__impl_8hpp"/>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/storage/trie/trie_storage.hpp</label>
+        <link refid="dd/df1/trie__storage_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage" prot="public">sgns::storage::trie::TrieStorage</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d0/dbf/namespacesgns_1_1storage">sgns::storage</innernamespace>
+    <innernamespace refid="d2/db5/namespacesgns_1_1storage_1_1trie">sgns::storage::trie</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_STORAGE_TRIE_TRIE_STORAGE</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_STORAGE_TRIE_TRIE_STORAGE</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d4/d16/blob_8hpp" kindref="compound">base/blob.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dc/d8a/trie__batches_8hpp" kindref="compound">storage/trie/trie_batches.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="df/dec/_i_component_8hpp" kindref="compound">singleton/IComponent.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/db5/namespacesgns_1_1storage_1_1trie" kindref="compound">sgns::storage::trie</ref><sp/>{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19" refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage" kindref="compound">TrieStorage</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d1/dbf/class_i_component" kindref="compound">IComponent</ref><sp/>{</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="21" refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1af5b35122af906199c3d45f42ba0cd2e1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1af5b35122af906199c3d45f42ba0cd2e1" kindref="member">~TrieStorage</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;std::unique_ptr&lt;PersistentTrieBatch&gt;&gt;</highlight></codeline>
+<codeline lineno="24" refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1a1b800c32ddc9ee474118395bcca9b88b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1a1b800c32ddc9ee474118395bcca9b88b" kindref="member">getPersistentBatch</ref>()<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;std::unique_ptr&lt;EphemeralTrieBatch&gt;&gt;</highlight></codeline>
+<codeline lineno="26" refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1ad91e39b485bd23229b99f2b5e688a2f5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1ad91e39b485bd23229b99f2b5e688a2f5" kindref="member">getEphemeralBatch</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;std::unique_ptr&lt;PersistentTrieBatch&gt;&gt;</highlight></codeline>
+<codeline lineno="34" refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1a9ddf33f9f25481ddc6e61c5d1390b714" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1a9ddf33f9f25481ddc6e61c5d1390b714" kindref="member">getPersistentBatchAt</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref><sp/>&amp;root)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;std::unique_ptr&lt;EphemeralTrieBatch&gt;&gt;</highlight></codeline>
+<codeline lineno="36" refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1afe63730a6e25696fc79fc3f74529f26c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1afe63730a6e25696fc79fc3f74529f26c" kindref="member">getEphemeralBatchAt</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref><sp/>&amp;root)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41" refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1a531514796a89812dd7682db8df014226" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/><ref refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1a531514796a89812dd7682db8df014226" kindref="member">getRootHash</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::storage::trie</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_STORAGE_TRIE_TRIE_STORAGE</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/storage/trie/trie_storage.hpp"/>
+  </compounddef>
+</doxygen>

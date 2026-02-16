@@ -1,0 +1,306 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache" kind="class" language="C++" prot="private">
+    <compoundname>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache</compoundname>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1a42ff3b51ec5ac7359f7b9eeddbe4382b" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::MAX_CACHE_SIZE</definition>
+        <argsstring></argsstring>
+        <name>MAX_CACHE_SIZE</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::MAX_CACHE_SIZE</qualifiedname>
+        <initializer>= 250</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="211" column="37" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="211" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1a6121becb3a7ebab474572c09292e7354" prot="public" static="no" mutable="no">
+        <type>std::map&lt; CID, std::pair&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;, std::list&lt; CID &gt;::iterator &gt; &gt;</type>
+        <definition>std::map&lt;CID, std::pair&lt;std::shared_ptr&lt;ipfs_lite::ipld::IPLDNode&gt;, std::list&lt;CID&gt;::iterator&gt; &gt; sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::cache_map_</definition>
+        <argsstring></argsstring>
+        <name>cache_map_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::cache_map_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="227" column="23" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="227" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1ae8b05727030f620a4c086ef46a0fcd63" prot="public" static="no" mutable="no">
+        <type>std::list&lt; CID &gt;</type>
+        <definition>std::list&lt;CID&gt; sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::lru_list_</definition>
+        <argsstring></argsstring>
+        <name>lru_list_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::lru_list_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="230" column="23" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="230" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1ac3760583023146171e33d59f7f72f68e" prot="public" static="no" mutable="yes">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::mutex_</definition>
+        <argsstring></argsstring>
+        <name>mutex_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::mutex_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="232" column="32" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="232" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1a93225c2992398472b145a940197ae2bc" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::init</definition>
+        <argsstring>(const CID &amp;cid)</argsstring>
+        <name>init</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::init</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="213" column="18" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="957" bodyend="985"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1a7ce8d1b5ea9ad5e7132a8102a297773e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::add</definition>
+        <argsstring>(const CID &amp;cid, std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; node)</argsstring>
+        <name>add</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::add</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;</type>
+          <declname>node</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="214" column="18" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="987" bodyend="1018"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1a861d939a33c863d260eb1034b8411577" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;</type>
+        <definition>std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::get</definition>
+        <argsstring>(const CID &amp;cid)</argsstring>
+        <name>get</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::get</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="215" column="29" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="1020" bodyend="1038"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1a15c2e1730a70e65b16d6baee77dacb70" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::remove</definition>
+        <argsstring>(const CID &amp;cid)</argsstring>
+        <name>remove</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::remove</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="216" column="56" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="1040" bodyend="1056"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1acd9236b3f5e8119ee27abd2c5f776f55" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::contains</definition>
+        <argsstring>(const CID &amp;cid) const</argsstring>
+        <name>contains</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::contains</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="217" column="56" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="1058" bodyend="1062"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1a327882ea60e58b88d94c0e9b96dd9540" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::hasContent</definition>
+        <argsstring>(const CID &amp;cid) const</argsstring>
+        <name>hasContent</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::hasContent</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="219" column="18" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="1065" bodyend="1070"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1aedeac2a371d5ff1c0a39262496c54f8b" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::size</definition>
+        <argsstring>() const</argsstring>
+        <name>size</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache::size</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="221" column="20" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="221" bodyend="224"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="13">
+        <label>K</label>
+      </node>
+      <node id="6">
+        <label>T</label>
+      </node>
+      <node id="10">
+        <label>T1</label>
+      </node>
+      <node id="11">
+        <label>T2</label>
+      </node>
+      <node id="1">
+        <label>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache</label>
+        <link refid="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+cache_map_</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+lru_list_</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="usage">
+          <edgelabel>+mutex_</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::list&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::list&lt; CID &gt;</label>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; CID &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::map&lt; K, T &gt;</label>
+        <childnode refid="13" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::map&lt; CID, std::pair&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;, std::list&lt; CID &gt;::iterator &gt; &gt;</label>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="template-instance">
+          <edgelabel>&lt; CID, std::pair&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;, std::list&lt; CID &gt;::iterator &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="14">
+        <label>std::mutex</label>
+      </node>
+      <node id="9">
+        <label>std::pair&lt; T1, T2 &gt;</label>
+        <childnode refid="10" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+second_type</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::pair&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;, std::list&lt; CID &gt;::iterator &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+second_type</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="template-instance">
+          <edgelabel>&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;, std::list&lt; CID &gt;::iterator &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; ipfs_lite::ipld::IPLDNode &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crdt/graphsync_dagsyncer.hpp" line="207" column="9" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="208" bodyend="233"/>
+    <listofallmembers>
+      <member refid="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1a7ce8d1b5ea9ad5e7132a8102a297773e" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache</scope><name>add</name></member>
+      <member refid="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1a6121becb3a7ebab474572c09292e7354" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache</scope><name>cache_map_</name></member>
+      <member refid="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1acd9236b3f5e8119ee27abd2c5f776f55" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache</scope><name>contains</name></member>
+      <member refid="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1a861d939a33c863d260eb1034b8411577" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache</scope><name>get</name></member>
+      <member refid="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1a327882ea60e58b88d94c0e9b96dd9540" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache</scope><name>hasContent</name></member>
+      <member refid="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1a93225c2992398472b145a940197ae2bc" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache</scope><name>init</name></member>
+      <member refid="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1ae8b05727030f620a4c086ef46a0fcd63" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache</scope><name>lru_list_</name></member>
+      <member refid="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1a42ff3b51ec5ac7359f7b9eeddbe4382b" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache</scope><name>MAX_CACHE_SIZE</name></member>
+      <member refid="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1ac3760583023146171e33d59f7f72f68e" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache</scope><name>mutex_</name></member>
+      <member refid="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1a15c2e1730a70e65b16d6baee77dacb70" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache</scope><name>remove</name></member>
+      <member refid="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache_1aedeac2a371d5ff1c0a39262496c54f8b" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache</scope><name>size</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

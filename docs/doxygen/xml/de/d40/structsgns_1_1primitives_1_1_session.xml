@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/d40/structsgns_1_1primitives_1_1_session" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::primitives::Session</compoundname>
+    <includes refid="d5/d4f/author__api__primitives_8hpp" local="no">author_api_primitives.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="de/d40/structsgns_1_1primitives_1_1_session_1a86d9f5064a5a449667992e2f71881825" prot="public" static="no" mutable="no">
+        <type>uint32_t</type>
+        <definition>uint32_t sgns::primitives::Session::id</definition>
+        <argsstring></argsstring>
+        <name>id</name>
+        <qualifiedname>sgns::primitives::Session::id</qualifiedname>
+        <initializer>{}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/author_api_primitives.hpp" line="25" column="14" bodyfile="src/primitives/author_api_primitives.hpp" bodystart="25" bodyend="25"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><ref refid="de/d40/structsgns_1_1primitives_1_1_session" kindref="compound">Session</ref> primitive. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::primitives::Session</label>
+        <link refid="de/d40/structsgns_1_1primitives_1_1_session"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/primitives/author_api_primitives.hpp" line="24" column="3" bodyfile="src/primitives/author_api_primitives.hpp" bodystart="24" bodyend="26"/>
+    <listofallmembers>
+      <member refid="de/d40/structsgns_1_1primitives_1_1_session_1a86d9f5064a5a449667992e2f71881825" prot="public" virt="non-virtual"><scope>sgns::primitives::Session</scope><name>id</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

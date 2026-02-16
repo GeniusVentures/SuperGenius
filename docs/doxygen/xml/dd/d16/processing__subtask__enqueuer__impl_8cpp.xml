@@ -1,0 +1,215 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/d16/processing__subtask__enqueuer__impl_8cpp" kind="file" language="C++">
+    <compoundname>processing_subtask_enqueuer_impl.cpp</compoundname>
+    <includes refid="df/d39/processing__subtask__enqueuer__impl_8hpp" local="yes">processing_subtask_enqueuer_impl.hpp</includes>
+    <includes local="no">utility</includes>
+    <incdepgraph>
+      <node id="14">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>crdt/atomic_transaction.hpp</label>
+        <link refid="dd/d8f/atomic__transaction_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>crdt/hierarchical_key.hpp</label>
+        <link refid="d5/dc7/hierarchical__key_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>processing/processing_subtask_enqueuer.hpp</label>
+        <link refid="d6/de9/processing__subtask__enqueuer_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/processing/processing_subtask_enqueuer_impl.cpp</label>
+        <link refid="dd/d16/processing__subtask__enqueuer__impl_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>processing_subtask_enqueuer_impl.hpp</label>
+        <link refid="df/d39/processing__subtask__enqueuer__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>processing/processing_task_queue.hpp</label>
+        <link refid="d1/d7c/processing__task__queue_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="18">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="21">
+        <label>crdt/proto/delta.pb.h</label>
+      </node>
+      <node id="19">
+        <label>gsl/span</label>
+      </node>
+      <node id="11">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="3">
+        <label>list</label>
+      </node>
+      <node id="23">
+        <label>memory</label>
+      </node>
+      <node id="24">
+        <label>optional</label>
+      </node>
+      <node id="22">
+        <label>primitives/cid/cid.hpp</label>
+      </node>
+      <node id="9">
+        <label>processing/proto/SGProcessing.pb.h</label>
+      </node>
+      <node id="6">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="7">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="4">
+        <label>string</label>
+      </node>
+      <node id="15">
+        <label>string_view</label>
+      </node>
+      <node id="25">
+        <label>unordered_set</label>
+      </node>
+      <node id="26">
+        <label>utility</label>
+      </node>
+      <node id="16">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6a/namespacesgns_1_1processing">sgns::processing</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;<ref refid="df/d39/processing__subtask__enqueuer__impl_8hpp" kindref="compound">processing_subtask_enqueuer_impl.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;utility&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d6a/namespacesgns_1_1processing" kindref="compound">sgns::processing</ref></highlight></codeline>
+<codeline lineno="6"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="7" refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1a2b03358ac96e7ec8882ca1f125f1f647" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1a2b03358ac96e7ec8882ca1f125f1f647" kindref="member">SubTaskEnqueuerImpl::SubTaskEnqueuerImpl</ref>(<sp/>std::shared_ptr&lt;ProcessingTaskQueue&gt;<sp/>taskQueue<sp/>)<sp/>:</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1abc5c3a3911b72479283fed27ebe56023" kindref="member">m_taskQueue</ref>(<sp/><ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(<sp/>taskQueue<sp/>)<sp/>)</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12" refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1a8c3b9a29dc7e87a98a7f63ea331458e1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;SGProcessing::Task&gt;<sp/><ref refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1a8c3b9a29dc7e87a98a7f63ea331458e1" kindref="member">SubTaskEnqueuerImpl::EnqueueSubTasks</ref>(</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;subTaskQueueId,</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::list&lt;SGProcessing::SubTask&gt;<sp/>&amp;subTasks<sp/>)</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>OUTCOME_TRY(<sp/>(<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/>task_result<sp/>),<sp/><ref refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1abc5c3a3911b72479283fed27ebe56023" kindref="member">m_taskQueue</ref>-&gt;GrabTask()<sp/>);</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>[taskKey,<sp/>task]<sp/>=<sp/>task_result;</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>subTaskQueueId<sp/>=<sp/>taskKey;</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1a00df3ade3ac4f2c1da6c40a5dee47a18" kindref="member">m_logger</ref>-&gt;debug(<sp/></highlight><highlight class="stringliteral">&quot;ENQUEUE_SUBTASKS:<sp/>taskKey={},<sp/>task.ipfs_block_id()={}&quot;</highlight><highlight class="normal">,<sp/>taskKey,<sp/>task.ipfs_block_id()<sp/>);</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1abc5c3a3911b72479283fed27ebe56023" kindref="member">m_taskQueue</ref>-&gt;GetSubTasks(<sp/>taskKey,<sp/>subTasks<sp/>);</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1a00df3ade3ac4f2c1da6c40a5dee47a18" kindref="member">m_logger</ref>-&gt;debug(<sp/></highlight><highlight class="stringliteral">&quot;ENQUEUE_SUBTASKS:<sp/>{}<sp/>subtasks<sp/>found&quot;</highlight><highlight class="normal">,<sp/>subTasks.size()<sp/>);</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal">&amp;<sp/>subtask<sp/>:<sp/>subTasks<sp/>)</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1a00df3ade3ac4f2c1da6c40a5dee47a18" kindref="member">m_logger</ref>-&gt;debug(<sp/></highlight><highlight class="stringliteral">&quot;SUBTASK:<sp/>id={},<sp/>ipfsblock={}&quot;</highlight><highlight class="normal">,<sp/>subtask.subtaskid(),<sp/>subtask.ipfsblock()<sp/>);</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>task;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight></codeline>
+<codeline lineno="34" refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1a50a4672ec015e4621add0c1485fb16e1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1a50a4672ec015e4621add0c1485fb16e1" kindref="member">SubTaskEnqueuerImpl::MarkTaskBad</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;taskKey<sp/>)</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1abc5c3a3911b72479283fed27ebe56023" kindref="member">m_taskQueue</ref>-&gt;MarkTaskBad(<sp/>taskKey<sp/>);</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="39"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="src/processing/processing_subtask_enqueuer_impl.cpp"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,125 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/d83/_j_s_o_n_backend_8cpp" kind="file" language="C++">
+    <compoundname>JSONBackend.cpp</compoundname>
+    <includes refid="d9/d5a/_j_s_o_n_backend_8hpp" local="yes">JSONBackend.hpp</includes>
+    <includes local="no">rapidjson/stringbuffer.h</includes>
+    <incdepgraph>
+      <node id="3">
+        <label>../ISecureStorage.hpp</label>
+        <link refid="dd/d1a/_i_secure_storage_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/local_secure_storage/impl/JSONBackend.cpp</label>
+        <link refid="d9/d83/_j_s_o_n_backend_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>JSONBackend.hpp</label>
+        <link refid="d9/d5a/_j_s_o_n_backend_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="8">
+        <label>rapidjson/document.h</label>
+      </node>
+      <node id="9">
+        <label>rapidjson/stringbuffer.h</label>
+      </node>
+      <node id="4">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d9/d5a/_j_s_o_n_backend_8hpp" kindref="compound">JSONBackend.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;rapidjson/stringbuffer.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d1/dc3/namespacerapidjson" kindref="compound">rj</ref><sp/>=<sp/><ref refid="d1/dc3/namespacerapidjson" kindref="compound">rapidjson</ref>;</highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="8"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="9" refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a40da14b3444d1b03eac8164f59a3c347" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;ISecureStorage::SecureBufferType&gt;<sp/><ref refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a40da14b3444d1b03eac8164f59a3c347" kindref="member">JSONBackend::Load</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;key<sp/>)</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>OUTCOME_TRY(<sp/>rj::Document<sp/>d,<sp/><ref refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1aa20b2995d7c4d206ae8217b08ee94fc1" kindref="member">LoadJSON</ref>()<sp/>);</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>!d.HasMember(<sp/>key.c_str()<sp/>)<sp/>)</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>std::errc::no_message<sp/>);</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;value<sp/>=<sp/>d[key.c_str()];</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>!value.IsString()<sp/>)</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>std::errc::bad_message<sp/>);</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d5/db7/classsgns_1_1_i_secure_storage_1a5a10a540c9551ccad7d9c8e44cfd14d1" kindref="member">SecureBufferType</ref><sp/>ret(<sp/>value.GetString(),<sp/>value.GetStringLength()<sp/>);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>ret;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29" refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a00f62ecffae03504a180358b004d61e4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a00f62ecffae03504a180358b004d61e4" kindref="member">JSONBackend::Save</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;key,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d5/db7/classsgns_1_1_i_secure_storage_1a5a10a540c9551ccad7d9c8e44cfd14d1" kindref="member">SecureBufferType</ref><sp/>&amp;buffer<sp/>)</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>OUTCOME_TRY(<sp/>rj::Document<sp/>d,<sp/><ref refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1aa20b2995d7c4d206ae8217b08ee94fc1" kindref="member">LoadJSON</ref>()<sp/>);</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>rj::Value<sp/>val(<sp/>rj::StringRef(<sp/>buffer.c_str(),<sp/>buffer.length()<sp/>),<sp/>d.GetAllocator()<sp/>);</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>d.HasMember(<sp/>key.c_str()<sp/>)<sp/>)</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>d[key.c_str()]<sp/>=<sp/>val;</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">else</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>d.AddMember(<sp/>rj::StringRef(<sp/>key.c_str(),<sp/>key.size()<sp/>),<sp/>val,<sp/>d.GetAllocator()<sp/>);</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a7ec4c317139903bcb835bb3d33a4ae07" kindref="member">SaveJSON</ref>(<sp/>std::move(<sp/>d<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight></codeline>
+<codeline lineno="47" refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a041dd45b9e2196bb757d23d2934876e4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;bool&gt;<sp/><ref refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a041dd45b9e2196bb757d23d2934876e4" kindref="member">JSONBackend::DeleteKey</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;key<sp/>)</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>OUTCOME_TRY(<sp/>rj::Document<sp/>d,<sp/><ref refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1aa20b2995d7c4d206ae8217b08ee94fc1" kindref="member">LoadJSON</ref>()<sp/>);</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"></highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>ret<sp/>=<sp/>d.RemoveMember(<sp/>key.c_str()<sp/>);</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"></highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>OUTCOME_TRY(<sp/><ref refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a7ec4c317139903bcb835bb3d33a4ae07" kindref="member">SaveJSON</ref>(<sp/>std::move(<sp/>d<sp/>)<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>ret;</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="57"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="src/local_secure_storage/impl/JSONBackend.cpp"/>
+  </compounddef>
+</doxygen>

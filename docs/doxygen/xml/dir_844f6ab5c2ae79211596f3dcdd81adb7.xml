@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_844f6ab5c2ae79211596f3dcdd81adb7" kind="dir">
+    <compoundname>src/application</compoundname>
+    <innerdir refid="dir_a749e11ba167a416f235c44ad5aefafd">src/application/impl</innerdir>
+    <innerfile refid="dd/d95/app__config_8hpp">app_config.hpp</innerfile>
+    <innerfile refid="df/d24/app__state__manager_8hpp">app_state_manager.hpp</innerfile>
+    <innerfile refid="d1/d83/configuration__storage_8hpp">configuration_storage.hpp</innerfile>
+    <innerfile refid="db/dd2/genesis__raw__config_8hpp">genesis_raw_config.hpp</innerfile>
+    <innerfile refid="d0/d63/key__storage_8hpp">key_storage.hpp</innerfile>
+    <innerfile refid="df/d62/sgns__application_8hpp">sgns_application.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/application/"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_68267d1309a1af8e8297ef4c3efbcdba" kind="dir">
+    <compoundname>src</compoundname>
+    <innerdir refid="dir_c56d198fa588e71da7ab4334564c4fd0">src/account</innerdir>
+    <innerdir refid="dir_da61e3e9a357748887e3ca8d7c5a0c16">src/api</innerdir>
+    <innerdir refid="dir_844f6ab5c2ae79211596f3dcdd81adb7">src/application</innerdir>
+    <innerdir refid="dir_0af1587c8378955de40f48b4bd1869f0">src/base</innerdir>
+    <innerdir refid="dir_028cfb450258cb26cf2de4f75f6778d5">src/blockchain</innerdir>
+    <innerdir refid="dir_b2c4bcb78fca9f082a8ac22247d78df2">src/coinprices</innerdir>
+    <innerdir refid="dir_bf58cfc8dc6aef76ae72f0316c83afcb">src/crdt</innerdir>
+    <innerdir refid="dir_4261af1259721e3e39e0d2dd7354b511">src/crypto</innerdir>
+    <innerdir refid="dir_d8c7158a8cbf4ead7b56ff7c404a504a">src/local_secure_storage</innerdir>
+    <innerdir refid="dir_24d19e8344eb5ac9918913b572c7f839">src/macro</innerdir>
+    <innerdir refid="dir_7be59ee8c4293a2ed5de3468b8a07cd9">src/outcome</innerdir>
+    <innerdir refid="dir_bbf56bce9985720f86fc476f3812db24">src/primitives</innerdir>
+    <innerdir refid="dir_0a512cdfab597aff87e92947a97cc98a">src/processing</innerdir>
+    <innerdir refid="dir_563a5df61297d2b6c6e2789a71958f47">src/proof</innerdir>
+    <innerdir refid="dir_bf9f26469d00835ba20ff8d80ee5a804">src/runtime</innerdir>
+    <innerdir refid="dir_e3ad572831d545eb552494b95f9c029d">src/scale</innerdir>
+    <innerdir refid="dir_aa402a023b7a65474dcfb81d0e676bef">src/singleton</innerdir>
+    <innerdir refid="dir_452baf35e1d7639c9f2a5ece4ec85855">src/storage</innerdir>
+    <innerdir refid="dir_0e31ebb83418efe443380d36898f4c39">src/subscription</innerdir>
+    <innerdir refid="dir_a0e215a65efa46f71fb1b59f1d6ea35a">src/watcher</innerdir>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/"/>
+  </compounddef>
+</doxygen>

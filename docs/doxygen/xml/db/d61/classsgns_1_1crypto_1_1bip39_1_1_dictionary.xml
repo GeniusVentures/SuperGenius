@@ -1,0 +1,136 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="db/d61/classsgns_1_1crypto_1_1bip39_1_1_dictionary" kind="class" language="C++" prot="public">
+    <compoundname>sgns::crypto::bip39::Dictionary</compoundname>
+    <includes refid="dc/df7/dictionary_8hpp" local="no">dictionary.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="db/d61/classsgns_1_1crypto_1_1bip39_1_1_dictionary_1a382e62348b449eb547aa8df722a6f8f7" prot="private" static="no" mutable="no">
+        <type>std::unordered_map&lt; std::string_view, <ref refid="da/dc8/structsgns_1_1crypto_1_1bip39_1_1_entropy_token" kindref="compound">EntropyToken</ref> &gt;</type>
+        <definition>std::unordered_map&lt;std::string_view, EntropyToken&gt; sgns::crypto::bip39::Dictionary::entropy_map_</definition>
+        <argsstring></argsstring>
+        <name>entropy_map_</name>
+        <qualifiedname>sgns::crypto::bip39::Dictionary::entropy_map_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/dictionary.hpp" line="37" column="24" bodyfile="src/crypto/bip39/dictionary.hpp" bodystart="37" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="db/d61/classsgns_1_1crypto_1_1bip39_1_1_dictionary_1aaedb5286427e16f2fee933d39f2de048" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crypto::bip39::Dictionary::initialize</definition>
+        <argsstring>()</argsstring>
+        <name>initialize</name>
+        <qualifiedname>sgns::crypto::bip39::Dictionary::initialize</qualifiedname>
+        <briefdescription>
+<para>initializes dictionary </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/dictionary.hpp" line="27" column="10" bodyfile="src/crypto/bip39/dictionary.cpp" bodystart="11" bodyend="17"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d61/classsgns_1_1crypto_1_1bip39_1_1_dictionary_1a0ef059f7a94573d50ce24a518ac1a358" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="da/dc8/structsgns_1_1crypto_1_1bip39_1_1_entropy_token" kindref="compound">EntropyToken</ref> &gt;</type>
+        <definition>outcome::result&lt; EntropyToken &gt; sgns::crypto::bip39::Dictionary::findValue</definition>
+        <argsstring>(std::string_view word)</argsstring>
+        <name>findValue</name>
+        <qualifiedname>sgns::crypto::bip39::Dictionary::findValue</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>word</declname>
+        </param>
+        <briefdescription>
+<para>looks for word in dictionary </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>word</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>word to look for </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>entropy value or error if not found </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/dictionary.hpp" line="34" column="21" bodyfile="src/crypto/bip39/dictionary.cpp" bodystart="19" bodyend="26"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Stores the BIP-39 word list and maps words to entropy tokens. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Currently only the English word list is supported. </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="8">
+        <label>K</label>
+      </node>
+      <node id="9">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::crypto::bip39::Dictionary</label>
+        <link refid="db/d61/classsgns_1_1crypto_1_1bip39_1_1_dictionary"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-entropy_map_</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::crypto::bip39::EntropyToken</label>
+        <link refid="da/dc8/structsgns_1_1crypto_1_1bip39_1_1_entropy_token"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::basic_string_view&lt; Char &gt;</label>
+      </node>
+      <node id="6">
+        <label>std::bitset&lt; Bits &gt;</label>
+      </node>
+      <node id="3">
+        <label>std::string_view</label>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::unordered_map&lt; K, T &gt;</label>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::unordered_map&lt; std::string_view, sgns::crypto::bip39::EntropyToken &gt;</label>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; std::string_view, sgns::crypto::bip39::EntropyToken &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crypto/bip39/dictionary.hpp" line="22" column="3" bodyfile="src/crypto/bip39/dictionary.hpp" bodystart="22" bodyend="38"/>
+    <listofallmembers>
+      <member refid="db/d61/classsgns_1_1crypto_1_1bip39_1_1_dictionary_1a382e62348b449eb547aa8df722a6f8f7" prot="private" virt="non-virtual"><scope>sgns::crypto::bip39::Dictionary</scope><name>entropy_map_</name></member>
+      <member refid="db/d61/classsgns_1_1crypto_1_1bip39_1_1_dictionary_1a0ef059f7a94573d50ce24a518ac1a358" prot="public" virt="non-virtual"><scope>sgns::crypto::bip39::Dictionary</scope><name>findValue</name></member>
+      <member refid="db/d61/classsgns_1_1crypto_1_1bip39_1_1_dictionary_1aaedb5286427e16f2fee933d39f2de048" prot="public" virt="non-virtual"><scope>sgns::crypto::bip39::Dictionary</scope><name>initialize</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

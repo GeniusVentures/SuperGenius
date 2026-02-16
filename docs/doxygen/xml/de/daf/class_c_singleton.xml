@@ -1,0 +1,147 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/daf/class_c_singleton" kind="class" language="C++" prot="public">
+    <compoundname>CSingleton</compoundname>
+    <includes refid="d3/d91/_singleton_8hpp" local="no">Singleton.hpp</includes>
+    <templateparamlist>
+      <param>
+        <type>class T</type>
+      </param>
+    </templateparamlist>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="de/daf/class_c_singleton_1afd4dd334479cfadcc6c710ede7ebe444" prot="private" static="yes" mutable="no">
+        <type>bool</type>
+        <definition>bool CSingleton&lt; T &gt;::isInitialized</definition>
+        <argsstring></argsstring>
+        <name>isInitialized</name>
+        <qualifiedname>CSingleton::isInitialized</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/singleton/Singleton.hpp" line="32" column="17" bodyfile="src/singleton/Singleton.hpp" bodystart="32" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/daf/class_c_singleton_1ac76740135b4f2422de39a1c0fc16c27a" prot="private" static="yes" mutable="no">
+        <type>T *</type>
+        <definition>T* CSingleton&lt; T &gt;::_instance</definition>
+        <argsstring></argsstring>
+        <name>_instance</name>
+        <qualifiedname>CSingleton::_instance</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/singleton/Singleton.hpp" line="33" column="14" bodyfile="src/singleton/Singleton.hpp" bodystart="33" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="de/daf/class_c_singleton_1a336bfe76577199fbe4cffcfb36273f85" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>T *</type>
+        <definition>static T * CSingleton&lt; T &gt;::Instance</definition>
+        <argsstring>()</argsstring>
+        <name>Instance</name>
+        <qualifiedname>CSingleton::Instance</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/singleton/Singleton.hpp" line="35" column="10" bodyfile="src/singleton/Singleton.hpp" bodystart="35" bodyend="49"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="de/daf/class_c_singleton_1a9363c7dab54cf622af286b1732a323a2" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>CSingleton&lt; T &gt;::CSingleton</definition>
+        <argsstring>()</argsstring>
+        <name>CSingleton</name>
+        <qualifiedname>CSingleton::CSingleton</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/singleton/Singleton.hpp" line="52" column="1" bodyfile="src/singleton/Singleton.hpp" bodystart="52" bodyend="52"/>
+      </memberdef>
+      <memberdef kind="function" id="de/daf/class_c_singleton_1a922fb42fefc56df7e4d23ae9ac718d45" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>CSingleton&lt; T &gt;::~CSingleton</definition>
+        <argsstring>()</argsstring>
+        <name>~CSingleton</name>
+        <qualifiedname>CSingleton::~CSingleton</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/singleton/Singleton.hpp" line="53" column="1" bodyfile="src/singleton/Singleton.hpp" bodystart="53" bodyend="53"/>
+      </memberdef>
+      <memberdef kind="function" id="de/daf/class_c_singleton_1a1a0554b76a53872f9618d7517de697ec" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>CSingleton&lt; T &gt;::CSingleton</definition>
+        <argsstring>(CSingleton const &amp;)</argsstring>
+        <name>CSingleton</name>
+        <qualifiedname>CSingleton::CSingleton</qualifiedname>
+        <param>
+          <type><ref refid="de/daf/class_c_singleton" kindref="compound">CSingleton</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/singleton/Singleton.hpp" line="55" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="de/daf/class_c_singleton_1a91b399c9e024add7a5283f7e3c7b7cdc" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="de/daf/class_c_singleton" kindref="compound">CSingleton</ref> &amp;</type>
+        <definition>CSingleton &amp; CSingleton&lt; T &gt;::operator=</definition>
+        <argsstring>(CSingleton const &amp;)</argsstring>
+        <name>operator=</name>
+        <qualifiedname>CSingleton::operator=</qualifiedname>
+        <param>
+          <type><ref refid="de/daf/class_c_singleton" kindref="compound">CSingleton</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/singleton/Singleton.hpp" line="56" column="16"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="note"><para>Elemental Engine Copyright (C) 2013 Social Systems Technology, Inc.</para>
+</simplesect>
+This code is redistributable under the terms of the EE License.</para>
+<para>This code is distributed without warranty or implied warranty of merchantability or fitness for a particular purpose. See the EE License for more details.</para>
+<para>You should have received a copy of the EE License along with this code; If not, write to Social Systems Technology, Inc., 109 East 17th Street Suite 4210 Cheyenne, WY 82001 USA </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>CSingleton&lt; T &gt;</label>
+        <link refid="de/daf/class_c_singleton"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/singleton/Singleton.hpp" line="29" column="1" bodyfile="src/singleton/Singleton.hpp" bodystart="30" bodyend="57"/>
+    <listofallmembers>
+      <member refid="de/daf/class_c_singleton_1ac76740135b4f2422de39a1c0fc16c27a" prot="private" virt="non-virtual"><scope>CSingleton</scope><name>_instance</name></member>
+      <member refid="de/daf/class_c_singleton_1a9363c7dab54cf622af286b1732a323a2" prot="private" virt="non-virtual"><scope>CSingleton</scope><name>CSingleton</name></member>
+      <member refid="de/daf/class_c_singleton_1a1a0554b76a53872f9618d7517de697ec" prot="private" virt="non-virtual"><scope>CSingleton</scope><name>CSingleton</name></member>
+      <member refid="de/daf/class_c_singleton_1a336bfe76577199fbe4cffcfb36273f85" prot="public" virt="non-virtual"><scope>CSingleton</scope><name>Instance</name></member>
+      <member refid="de/daf/class_c_singleton_1afd4dd334479cfadcc6c710ede7ebe444" prot="private" virt="non-virtual"><scope>CSingleton</scope><name>isInitialized</name></member>
+      <member refid="de/daf/class_c_singleton_1a91b399c9e024add7a5283f7e3c7b7cdc" prot="private" virt="non-virtual"><scope>CSingleton</scope><name>operator=</name></member>
+      <member refid="de/daf/class_c_singleton_1a922fb42fefc56df7e4d23ae9ac718d45" prot="private" virt="non-virtual"><scope>CSingleton</scope><name>~CSingleton</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,195 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/d88/classsgns_1_1storage_1_1trie_1_1_trie_batch" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::storage::trie::TrieBatch</compoundname>
+    <basecompoundref refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable" prot="public" virt="non-virtual">sgns::storage::face::Readable&lt; Buffer, Buffer &gt;</basecompoundref>
+    <basecompoundref refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable" prot="public" virt="non-virtual">sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</basecompoundref>
+    <basecompoundref refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable" prot="public" virt="non-virtual">sgns::storage::face::Iterable&lt; Buffer, Buffer &gt;</basecompoundref>
+    <derivedcompoundref refid="de/d05/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch" prot="public" virt="non-virtual">sgns::storage::trie::EphemeralTrieBatch</derivedcompoundref>
+    <derivedcompoundref refid="db/d71/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch" prot="public" virt="non-virtual">sgns::storage::trie::PersistentTrieBatch</derivedcompoundref>
+    <derivedcompoundref refid="d2/d7a/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch" prot="public" virt="non-virtual">sgns::storage::trie::TopperTrieBatch</derivedcompoundref>
+    <includes refid="dc/d8a/trie__batches_8hpp" local="no">trie_batches.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dc/d88/classsgns_1_1storage_1_1trie_1_1_trie_batch_1ac77f098527a6c04f28f593e5d6881741" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::TrieBatch::~TrieBatch</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~TrieBatch</name>
+        <qualifiedname>sgns::storage::trie::TrieBatch::~TrieBatch</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/trie_batches.hpp" line="14" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d88/classsgns_1_1storage_1_1trie_1_1_trie_batch_1af3a6d09746fc3ca5dbe79b3ae1a1ae60" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::storage::trie::TrieBatch::clearPrefix</definition>
+        <argsstring>(const Buffer &amp;prefix)=0</argsstring>
+        <name>clearPrefix</name>
+        <qualifiedname>sgns::storage::trie::TrieBatch::clearPrefix</qualifiedname>
+        <reimplementedby refid="d7/d40/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch_impl_1aecef4d31af30980969575c7793447429">clearPrefix</reimplementedby>
+        <reimplementedby refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a6cedd358357eb0f89acebe2b5c90e0ca">clearPrefix</reimplementedby>
+        <reimplementedby refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1af7c3a65846cf1c48fe980757820e7364">clearPrefix</reimplementedby>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>prefix</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Remove all trie entries which key begins with the supplied prefix </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/trie_batches.hpp" line="19" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="7">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="6">
+        <label>sgns::storage::face::Iterable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="2">
+        <label>sgns::storage::face::Readable&lt; Buffer, Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="4">
+        <label>sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>sgns::storage::trie::EphemeralTrieBatch</label>
+        <link refid="de/d05/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::storage::trie::EphemeralTrieBatchImpl</label>
+        <link refid="d7/d40/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch_impl"/>
+        <childnode refid="8" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>sgns::storage::trie::PersistentTrieBatch</label>
+        <link refid="db/d71/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::storage::trie::PersistentTrieBatchImpl</label>
+        <link refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl"/>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>sgns::storage::trie::TopperTrieBatch</label>
+        <link refid="d2/d7a/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>sgns::storage::trie::TopperTrieBatchImpl</label>
+        <link refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl"/>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::TrieBatch</label>
+        <link refid="dc/d88/classsgns_1_1storage_1_1trie_1_1_trie_batch"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="7">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="6">
+        <label>sgns::storage::face::Iterable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="2">
+        <label>sgns::storage::face::Readable&lt; Buffer, Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="4">
+        <label>sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::TrieBatch</label>
+        <link refid="dc/d88/classsgns_1_1storage_1_1trie_1_1_trie_batch"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/trie/trie_batches.hpp" line="10" column="3" bodyfile="src/storage/trie/trie_batches.hpp" bodystart="12" bodyend="20"/>
+    <listofallmembers>
+      <member refid="dc/d88/classsgns_1_1storage_1_1trie_1_1_trie_batch_1af3a6d09746fc3ca5dbe79b3ae1a1ae60" prot="public" virt="pure-virtual"><scope>sgns::storage::trie::TrieBatch</scope><name>clearPrefix</name></member>
+      <member refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a0d7d1047789a450de21caff78afc5c37" prot="public" virt="pure-virtual"><scope>sgns::storage::trie::TrieBatch</scope><name>contains</name></member>
+      <member refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable_1a44ca82af98f642669b5237f535b58001" prot="public" virt="pure-virtual"><scope>sgns::storage::trie::TrieBatch</scope><name>cursor</name></member>
+      <member refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a829c8fbd3e864503defcaa43c8c2699b" prot="public" virt="pure-virtual"><scope>sgns::storage::trie::TrieBatch</scope><name>empty</name></member>
+      <member refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a0aeb44c506c0f66a5d7bf3f3be4baebe" prot="public" virt="pure-virtual"><scope>sgns::storage::trie::TrieBatch</scope><name>get</name></member>
+      <member refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a6c94f5ac466050295a32f93aeb5a0e8c" prot="public" virt="pure-virtual"><scope>sgns::storage::trie::TrieBatch</scope><name>put</name></member>
+      <member refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a13a83e4a2fa9540c366e277871701ac3" prot="public" virt="pure-virtual"><scope>sgns::storage::trie::TrieBatch</scope><name>remove</name></member>
+      <member refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable_1ad46259be5d5a46afb966c0ddfb78fa45" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieBatch</scope><name>~Iterable</name></member>
+      <member refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a481cee90de071b4bc04fae066e25236f" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieBatch</scope><name>~Readable</name></member>
+      <member refid="dc/d88/classsgns_1_1storage_1_1trie_1_1_trie_batch_1ac77f098527a6c04f28f593e5d6881741" prot="public" virt="non-virtual"><scope>sgns::storage::trie::TrieBatch</scope><name>~TrieBatch</name></member>
+      <member refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1adb986d79f420f5829cae3d6659430a00" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieBatch</scope><name>~Writeable</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_b2c4bcb78fca9f082a8ac22247d78df2" kind="dir">
+    <compoundname>src/coinprices</compoundname>
+    <innerfile refid="d4/d1b/coinprices_8cpp">coinprices.cpp</innerfile>
+    <innerfile refid="d2/d97/coinprices_8hpp">coinprices.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/coinprices/"/>
+  </compounddef>
+</doxygen>

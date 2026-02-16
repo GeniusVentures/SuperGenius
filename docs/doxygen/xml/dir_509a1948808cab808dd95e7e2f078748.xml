@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_509a1948808cab808dd95e7e2f078748" kind="dir">
+    <compoundname>src/runtime/binaryen/module</compoundname>
+    <innerfile refid="dd/dbc/wasm__module_8hpp">wasm_module.hpp</innerfile>
+    <innerfile refid="d4/dc9/wasm__module__factory_8hpp">wasm_module_factory.hpp</innerfile>
+    <innerfile refid="d5/def/wasm__module__factory__impl_8cpp">wasm_module_factory_impl.cpp</innerfile>
+    <innerfile refid="d8/d01/wasm__module__factory__impl_8hpp">wasm_module_factory_impl.hpp</innerfile>
+    <innerfile refid="d9/df2/wasm__module__impl_8cpp">wasm_module_impl.cpp</innerfile>
+    <innerfile refid="d5/d13/wasm__module__impl_8hpp">wasm_module_impl.hpp</innerfile>
+    <innerfile refid="d9/da6/wasm__module__instance_8hpp">wasm_module_instance.hpp</innerfile>
+    <innerfile refid="d7/d13/wasm__module__instance__impl_8cpp">wasm_module_instance_impl.cpp</innerfile>
+    <innerfile refid="da/d86/wasm__module__instance__impl_8hpp">wasm_module_instance_impl.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/runtime/binaryen/module/"/>
+  </compounddef>
+</doxygen>

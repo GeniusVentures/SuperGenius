@@ -1,0 +1,358 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/daf/persistent__trie__batch__impl_8hpp" kind="file" language="C++">
+    <compoundname>persistent_trie_batch_impl.hpp</compoundname>
+    <includes refid="d3/d51/changes__tracker_8hpp" local="yes">storage/changes_trie/changes_tracker.hpp</includes>
+    <includes refid="d6/d58/codec_8hpp" local="yes">storage/trie/codec.hpp</includes>
+    <includes refid="d9/d67/trie__serializer_8hpp" local="yes">storage/trie/serialization/trie_serializer.hpp</includes>
+    <includes refid="dc/d8a/trie__batches_8hpp" local="yes">storage/trie/trie_batches.hpp</includes>
+    <includedby refid="dd/dda/persistent__trie__batch__impl_8cpp" local="yes">src/storage/trie/impl/persistent_trie_batch_impl.cpp</includedby>
+    <includedby refid="db/dc1/trie__storage__impl_8cpp" local="yes">src/storage/trie/impl/trie_storage_impl.cpp</includedby>
+    <incdepgraph>
+      <node id="13">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>primitives/common.hpp</label>
+        <link refid="d4/d26/src_2primitives_2common_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="39">
+        <label>storage/buffer_map_types.hpp</label>
+        <link refid="d8/dcc/buffer__map__types_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>storage/changes_trie/changes_tracker.hpp</label>
+        <link refid="d3/d51/changes__tracker_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>storage/changes_trie/changes_trie_config.hpp</label>
+        <link refid="da/d9b/changes__trie__config_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>storage/face/batchable.hpp</label>
+        <link refid="de/d87/batchable_8hpp"/>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>storage/face/generic_maps.hpp</label>
+        <link refid="d9/daa/generic__maps_8hpp"/>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+      </node>
+      <node id="40">
+        <label>storage/face/generic_storage.hpp</label>
+        <link refid="d6/d4e/generic__storage_8hpp"/>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>storage/face/iterable.hpp</label>
+        <link refid="db/d3e/iterable_8hpp"/>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="34">
+        <label>storage/face/map_cursor.hpp</label>
+        <link refid="d9/d4b/map__cursor_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="35">
+        <label>storage/face/readable.hpp</label>
+        <link refid="d5/dd2/readable_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>storage/face/write_batch.hpp</label>
+        <link refid="d2/d76/write__batch_8hpp"/>
+        <childnode refid="32" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>storage/face/writeable.hpp</label>
+        <link refid="dc/da4/writeable_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>storage/trie/codec.hpp</label>
+        <link refid="d6/d58/codec_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/storage/trie/impl/persistent_trie_batch_impl.hpp</label>
+        <link refid="d7/daf/persistent__trie__batch__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>storage/trie/node.hpp</label>
+        <link refid="df/dc8/src_2storage_2trie_2node_8hpp"/>
+      </node>
+      <node id="25">
+        <label>storage/trie/serialization/trie_serializer.hpp</label>
+        <link refid="d9/d67/trie__serializer_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="36">
+        <label>storage/trie/supergenius_trie/supergenius_node.hpp</label>
+        <link refid="d0/d2c/supergenius__node_8hpp"/>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>storage/trie/supergenius_trie/supergenius_trie.hpp</label>
+        <link refid="d5/d9e/supergenius__trie_8hpp"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+      </node>
+      <node id="38">
+        <label>storage/trie/trie_batches.hpp</label>
+        <link refid="dc/d8a/trie__batches_8hpp"/>
+        <childnode refid="39" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>array</label>
+      </node>
+      <node id="6">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="16">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="7">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="37">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="14">
+        <label>cstddef</label>
+      </node>
+      <node id="12">
+        <label>cstdint</label>
+      </node>
+      <node id="8">
+        <label>gsl/span</label>
+      </node>
+      <node id="18">
+        <label>iostream</label>
+      </node>
+      <node id="10">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="27">
+        <label>list</label>
+      </node>
+      <node id="30">
+        <label>memory</label>
+      </node>
+      <node id="22">
+        <label>string</label>
+      </node>
+      <node id="4">
+        <label>string_view</label>
+      </node>
+      <node id="20">
+        <label>type_traits</label>
+      </node>
+      <node id="5">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/storage/trie/impl/persistent_trie_batch_impl.cpp</label>
+        <link refid="dd/dda/persistent__trie__batch__impl_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/storage/trie/impl/persistent_trie_batch_impl.hpp</label>
+        <link refid="d7/daf/persistent__trie__batch__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>src/storage/trie/impl/trie_storage_impl.cpp</label>
+        <link refid="db/dc1/trie__storage__impl_8cpp"/>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl" prot="public">sgns::storage::trie::PersistentTrieBatchImpl</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d0/dbf/namespacesgns_1_1storage">sgns::storage</innernamespace>
+    <innernamespace refid="d2/db5/namespacesgns_1_1storage_1_1trie">sgns::storage::trie</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_STORAGE_TRIE_IMPL_PERSISTENT_TRIE_BATCH</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_STORAGE_TRIE_IMPL_PERSISTENT_TRIE_BATCH</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d3/d51/changes__tracker_8hpp" kindref="compound">storage/changes_trie/changes_tracker.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/d58/codec_8hpp" kindref="compound">storage/trie/codec.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d9/d67/trie__serializer_8hpp" kindref="compound">storage/trie/serialization/trie_serializer.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dc/d8a/trie__batches_8hpp" kindref="compound">storage/trie/trie_batches.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/db5/namespacesgns_1_1storage_1_1trie" kindref="compound">sgns::storage::trie</ref><sp/>{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13" refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1ac31f107cd48ced812097a7c04b76eb1b" kindref="member">PersistentTrieBatchImpl</ref>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="db/d71/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch" kindref="compound">PersistentTrieBatch</ref><sp/>{</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="15" refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1aae5db2831febbdff22e8884cf5150401" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1aae5db2831febbdff22e8884cf5150401" kindref="member">RootChangedEventHandler</ref><sp/>=<sp/>std::function&lt;void(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;)&gt;;</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1ac31f107cd48ced812097a7c04b76eb1b" kindref="member">PersistentTrieBatchImpl</ref>(</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;Codec&gt;<sp/>codec,</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;TrieSerializer&gt;<sp/>serializer,</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boost::optional&lt;std::shared_ptr&lt;changes_trie::ChangesTracker&gt;&gt;<sp/>changes,</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::unique_ptr&lt;SuperGeniusTrie&gt;<sp/><ref refid="d2/db5/namespacesgns_1_1storage_1_1trie" kindref="compound">trie</ref>,</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1aae5db2831febbdff22e8884cf5150401" kindref="member">RootChangedEventHandler</ref><sp/>&amp;&amp;handler);</highlight></codeline>
+<codeline lineno="23" refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1ae76cc7d9edeb709fceafb8d212e795b3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1ae76cc7d9edeb709fceafb8d212e795b3" kindref="member">~PersistentTrieBatchImpl</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;Buffer&gt;<sp/><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a9c7e947b63951d35327942d3b488ee08" kindref="member">commit</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/>std::unique_ptr&lt;TopperTrieBatch&gt;<sp/><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1aec92bdfe519553706a3f47fd7a065dfd" kindref="member">batchOnTop</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;Buffer&gt;<sp/><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a6870a20efd581632ee1f6bf031c0f342" kindref="member">get</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/>std::unique_ptr&lt;BufferMapCursor&gt;<sp/><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a67e8d0cf66f03dcc9c4f2815d57d5ebc" kindref="member">cursor</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a6e1bf96c765bd1009f95c8ff4b49dffb" kindref="member">contains</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a94168acb03daeef6cb889ee49c0bb76c" kindref="member">empty</ref>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a6cedd358357eb0f89acebe2b5c90e0ca" kindref="member">clearPrefix</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;prefix)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a4963f2832b0765f607a4bf8418c02155" kindref="member">put</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;value)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a4963f2832b0765f607a4bf8418c02155" kindref="member">put</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key,<sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;&amp;value)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a7b833dbee413838243003052e75d4f37" kindref="member">remove</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="38" refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a7f71ae10f061a958a0902986b8d15a02" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;Codec&gt;<sp/><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a7f71ae10f061a958a0902986b8d15a02" kindref="member">codec_</ref>;</highlight></codeline>
+<codeline lineno="39" refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a86835bf2c465b218e4cd43c47c8eb0b6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;TrieSerializer&gt;<sp/><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a86835bf2c465b218e4cd43c47c8eb0b6" kindref="member">serializer_</ref>;</highlight></codeline>
+<codeline lineno="40" refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a2649c400f07c0dc750fed3d1548a5e93" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>boost::optional&lt;std::shared_ptr&lt;changes_trie::ChangesTracker&gt;&gt;<sp/><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a2649c400f07c0dc750fed3d1548a5e93" kindref="member">changes_</ref>;</highlight></codeline>
+<codeline lineno="41" refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a944f375e7cae4aa03888a5945fe5ca41" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::unique_ptr&lt;SuperGeniusTrie&gt;<sp/><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a944f375e7cae4aa03888a5945fe5ca41" kindref="member">trie_</ref>;</highlight></codeline>
+<codeline lineno="42" refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a346e271aba4482f5f1c95f9d909e490c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1aae5db2831febbdff22e8884cf5150401" kindref="member">RootChangedEventHandler</ref><sp/><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a346e271aba4482f5f1c95f9d909e490c" kindref="member">root_changed_handler_</ref>;</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::storage::trie</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_STORAGE_TRIE_IMPL_PERSISTENT_TRIE_BATCH</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp"/>
+  </compounddef>
+</doxygen>

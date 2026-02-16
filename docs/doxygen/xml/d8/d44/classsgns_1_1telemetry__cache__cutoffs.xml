@@ -1,0 +1,91 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d8/d44/classsgns_1_1telemetry__cache__cutoffs" kind="class" language="C++" prot="public">
+    <compoundname>sgns::telemetry_cache_cutoffs</compoundname>
+    <includes refid="da/d8d/node_2common_8hpp" local="no">common.hpp</includes>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="d8/d44/classsgns_1_1telemetry__cache__cutoffs_1a00c521d985a1b8585120a4f3e1925954" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>std::chrono::seconds constexpr</type>
+        <definition>std::chrono::seconds constexpr sgns::telemetry_cache_cutoffs::test</definition>
+        <argsstring></argsstring>
+        <name>test</name>
+        <qualifiedname>sgns::telemetry_cache_cutoffs::test</qualifiedname>
+        <initializer>{ 3 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="478" column="39" bodyfile="node/common.hpp" bodystart="478" bodyend="478"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d44/classsgns_1_1telemetry__cache__cutoffs_1ae942ba3979cc7c986567ed9fd6b54f59" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>std::chrono::seconds constexpr</type>
+        <definition>std::chrono::seconds constexpr sgns::telemetry_cache_cutoffs::beta</definition>
+        <argsstring></argsstring>
+        <name>beta</name>
+        <qualifiedname>sgns::telemetry_cache_cutoffs::beta</qualifiedname>
+        <initializer>{ 15 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="479" column="39" bodyfile="node/common.hpp" bodystart="479" bodyend="479"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d44/classsgns_1_1telemetry__cache__cutoffs_1a2c40bef8af2ee1dc8c9ef6e06cd94428" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>std::chrono::seconds constexpr</type>
+        <definition>std::chrono::seconds constexpr sgns::telemetry_cache_cutoffs::live</definition>
+        <argsstring></argsstring>
+        <name>live</name>
+        <qualifiedname>sgns::telemetry_cache_cutoffs::live</qualifiedname>
+        <initializer>{ 60 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="480" column="39" bodyfile="node/common.hpp" bodystart="480" bodyend="480"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d8/d44/classsgns_1_1telemetry__cache__cutoffs_1a004c1106c882755289a10e6956cb94ef" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::chrono::seconds</type>
+        <definition>std::chrono::seconds sgns::telemetry_cache_cutoffs::network_to_time</definition>
+        <argsstring>(network_constants const &amp;network_constants)</argsstring>
+        <name>network_to_time</name>
+        <qualifiedname>sgns::telemetry_cache_cutoffs::network_to_time</qualifiedname>
+        <param>
+          <type>network_constants const &amp;</type>
+          <declname>network_constants</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="482" column="29" bodyfile="node/common.cpp" bodystart="1525" bodyend="1528"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::telemetry_cache_cutoffs</label>
+        <link refid="d8/d44/classsgns_1_1telemetry__cache__cutoffs"/>
+      </node>
+    </collaborationgraph>
+    <location file="node/common.hpp" line="475" column="1" bodyfile="node/common.hpp" bodystart="476" bodyend="483"/>
+    <listofallmembers>
+      <member refid="d8/d44/classsgns_1_1telemetry__cache__cutoffs_1ae942ba3979cc7c986567ed9fd6b54f59" prot="public" virt="non-virtual"><scope>sgns::telemetry_cache_cutoffs</scope><name>beta</name></member>
+      <member refid="d8/d44/classsgns_1_1telemetry__cache__cutoffs_1a2c40bef8af2ee1dc8c9ef6e06cd94428" prot="public" virt="non-virtual"><scope>sgns::telemetry_cache_cutoffs</scope><name>live</name></member>
+      <member refid="d8/d44/classsgns_1_1telemetry__cache__cutoffs_1a004c1106c882755289a10e6956cb94ef" prot="public" virt="non-virtual"><scope>sgns::telemetry_cache_cutoffs</scope><name>network_to_time</name></member>
+      <member refid="d8/d44/classsgns_1_1telemetry__cache__cutoffs_1a00c521d985a1b8585120a4f3e1925954" prot="public" virt="non-virtual"><scope>sgns::telemetry_cache_cutoffs</scope><name>test</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

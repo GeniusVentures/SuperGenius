@@ -1,0 +1,478 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::subscription::SubscriptionEngine</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">std::enable_shared_from_this&lt; SubscriptionEngine&lt; Key, Type, Arguments... &gt; &gt;</basecompoundref>
+    <includes refid="d1/d9c/subscription__engine_8hpp" local="no">subscription_engine.hpp</includes>
+    <templateparamlist>
+      <param>
+        <type>typename Key</type>
+      </param>
+      <param>
+        <type>typename Type</type>
+      </param>
+      <param>
+        <type>typename...</type>
+        <declname>Arguments</declname>
+        <defname>Arguments</defname>
+      </param>
+    </templateparamlist>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ae3ea3c28abb9da4ffb8cc7a27ce08add" prot="public" static="no">
+        <type>Key</type>
+        <definition>using sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::KeyType = Key</definition>
+        <argsstring></argsstring>
+        <name>KeyType</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::KeyType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="20" column="5" bodyfile="src/subscription/subscription_engine.hpp" bodystart="20" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1abd8e9c644bd0be5ba90907f80ff7b05b" prot="public" static="no">
+        <type>Type</type>
+        <definition>using sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::ValueType = Type</definition>
+        <argsstring></argsstring>
+        <name>ValueType</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::ValueType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="21" column="5" bodyfile="src/subscription/subscription_engine.hpp" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1af4fde1dc1c04655ca43111289e39c6dd" prot="public" static="no">
+        <type><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a022be5b7686f2ed57fc5e7eea5fa8a02" kindref="member">Subscriber</ref>&lt; <ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ae3ea3c28abb9da4ffb8cc7a27ce08add" kindref="member">KeyType</ref>, <ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1abd8e9c644bd0be5ba90907f80ff7b05b" kindref="member">ValueType</ref>, Arguments... &gt;</type>
+        <definition>using sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::SubscriberType = Subscriber&lt;KeyType, ValueType, Arguments...&gt;</definition>
+        <argsstring></argsstring>
+        <name>SubscriberType</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::SubscriberType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="22" column="5" bodyfile="src/subscription/subscription_engine.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a22b345290e2ace94a52c6f7d6a8e92ca" prot="public" static="no">
+        <type>std::shared_ptr&lt; <ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1af4fde1dc1c04655ca43111289e39c6dd" kindref="member">SubscriberType</ref> &gt;</type>
+        <definition>using sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::SubscriberPtr = std::shared_ptr&lt;SubscriberType&gt;</definition>
+        <argsstring></argsstring>
+        <name>SubscriberPtr</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::SubscriberPtr</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="23" column="5" bodyfile="src/subscription/subscription_engine.hpp" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a52637fcf02c441b1d9812b985dd9cbeb" prot="public" static="no">
+        <type>std::weak_ptr&lt; <ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1af4fde1dc1c04655ca43111289e39c6dd" kindref="member">SubscriberType</ref> &gt;</type>
+        <definition>using sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::SubscriberWPtr = std::weak_ptr&lt;SubscriberType&gt;</definition>
+        <argsstring></argsstring>
+        <name>SubscriberWPtr</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::SubscriberWPtr</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="24" column="5" bodyfile="src/subscription/subscription_engine.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a7ba39b25f8a3266548f0fca01b408fdd" prot="public" static="no">
+        <type>std::list&lt; <ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a52637fcf02c441b1d9812b985dd9cbeb" kindref="member">SubscriberWPtr</ref> &gt;</type>
+        <definition>using sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::SubscribersContainer = std::list&lt;SubscriberWPtr&gt;</definition>
+        <argsstring></argsstring>
+        <name>SubscribersContainer</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::SubscribersContainer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>List is preferable here because this container iterators remain alive after removal from the middle of the container TODO(iceseer): PRE-476 remove processor cache penalty, while iterating, using custom allocator </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="30" column="5" bodyfile="src/subscription/subscription_engine.hpp" bodystart="30" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a80f89a9fad317ee85b14db67f9b4b204" prot="public" static="no">
+        <type>typename SubscribersContainer::iterator</type>
+        <definition>using sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::IteratorType = typename SubscribersContainer::iterator</definition>
+        <argsstring></argsstring>
+        <name>IteratorType</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::IteratorType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="31" column="5" bodyfile="src/subscription/subscription_engine.hpp" bodystart="31" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-type">
+      <memberdef kind="typedef" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1aa6910db8feb6b804d4bb6518f2cbcc5d" prot="private" static="no">
+        <type>std::unordered_map&lt; <ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ae3ea3c28abb9da4ffb8cc7a27ce08add" kindref="member">KeyType</ref>, <ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a7ba39b25f8a3266548f0fca01b408fdd" kindref="member">SubscribersContainer</ref> &gt;</type>
+        <definition>using sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::KeyValueContainer = std::unordered_map&lt;KeyType, SubscribersContainer&gt;</definition>
+        <argsstring></argsstring>
+        <name>KeyValueContainer</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::KeyValueContainer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="36" column="5" bodyfile="src/subscription/subscription_engine.hpp" bodystart="36" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="friend">
+      <memberdef kind="friend" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a022be5b7686f2ed57fc5e7eea5fa8a02" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename <ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ae3ea3c28abb9da4ffb8cc7a27ce08add" kindref="member">KeyType</ref></type>
+          </param>
+          <param>
+            <type>typename <ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1abd8e9c644bd0be5ba90907f80ff7b05b" kindref="member">ValueType</ref></type>
+          </param>
+          <param>
+            <type>typename...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type>class</type>
+        <definition>friend class Subscriber</definition>
+        <argsstring></argsstring>
+        <name>Subscriber</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::Subscriber</qualifiedname>
+        <param>
+          <type>Subscriber</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="35" column="18" bodyfile="src/subscription/subscription_engine.hpp" bodystart="35" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a11fdfb20fed24990a75ae4bbdde640dc" prot="private" static="no" mutable="yes">
+        <type>std::shared_mutex</type>
+        <definition>std::shared_mutex sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::subscribers_map_cs_</definition>
+        <argsstring></argsstring>
+        <name>subscribers_map_cs_</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::subscribers_map_cs_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="38" column="31" bodyfile="src/subscription/subscription_engine.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ac7cab7bd3408c31c50cef55c0510c4d3" prot="private" static="no" mutable="no">
+        <type><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1aa6910db8feb6b804d4bb6518f2cbcc5d" kindref="member">KeyValueContainer</ref></type>
+        <definition>KeyValueContainer sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::subscribers_map_</definition>
+        <argsstring></argsstring>
+        <name>subscribers_map_</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::subscribers_map_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="39" column="23" bodyfile="src/subscription/subscription_engine.hpp" bodystart="39" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1adf18101cad133f17cf94bc2e156c5239" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::SubscriptionEngine</definition>
+        <argsstring>()=default</argsstring>
+        <name>SubscriptionEngine</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::SubscriptionEngine</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="42" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a0bd801869b75c90cdfa289ad47abcfd0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::~SubscriptionEngine</definition>
+        <argsstring>()=default</argsstring>
+        <name>~SubscriptionEngine</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::~SubscriptionEngine</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="43" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ab4716d6a4300400e8cfed334f1997dc4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::SubscriptionEngine</definition>
+        <argsstring>(SubscriptionEngine &amp;&amp;)=default</argsstring>
+        <name>SubscriptionEngine</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::SubscriptionEngine</qualifiedname>
+        <param>
+          <type>SubscriptionEngine &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="45" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1afca7f965be3f45c21b03668deef38ea7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1adf18101cad133f17cf94bc2e156c5239" kindref="member">SubscriptionEngine</ref> &amp;</type>
+        <definition>SubscriptionEngine &amp; sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::operator=</definition>
+        <argsstring>(SubscriptionEngine &amp;&amp;)=default</argsstring>
+        <name>operator=</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::operator=</qualifiedname>
+        <param>
+          <type><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1adf18101cad133f17cf94bc2e156c5239" kindref="member">SubscriptionEngine</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="46" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a0a6202dc3652417249ec47ee74b81259" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::SubscriptionEngine</definition>
+        <argsstring>(const SubscriptionEngine &amp;)=delete</argsstring>
+        <name>SubscriptionEngine</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::SubscriptionEngine</qualifiedname>
+        <param>
+          <type>const SubscriptionEngine &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="48" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a25a7e70fbc0ea4bda7672dc3ec8805f1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1adf18101cad133f17cf94bc2e156c5239" kindref="member">SubscriptionEngine</ref> &amp;</type>
+        <definition>SubscriptionEngine &amp; sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::operator=</definition>
+        <argsstring>(const SubscriptionEngine &amp;)=delete</argsstring>
+        <name>operator=</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::operator=</qualifiedname>
+        <param>
+          <type>const <ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1adf18101cad133f17cf94bc2e156c5239" kindref="member">SubscriptionEngine</ref> &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="49" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a6d63d7d1132becdda6efe4933cfb1018" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::size</definition>
+        <argsstring>(const KeyType &amp;key) const</argsstring>
+        <name>size</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::size</qualifiedname>
+        <param>
+          <type>const <ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ae3ea3c28abb9da4ffb8cc7a27ce08add" kindref="member">KeyType</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="68" column="12" bodyfile="src/subscription/subscription_engine.hpp" bodystart="68" bodyend="74"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a1421dff12271ea9a753e78e527053816" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::notify</definition>
+        <argsstring>(const KeyType &amp;key, const Arguments &amp;... args)</argsstring>
+        <name>notify</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::notify</qualifiedname>
+        <param>
+          <type>const <ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ae3ea3c28abb9da4ffb8cc7a27ce08add" kindref="member">KeyType</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type>const Arguments &amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="76" column="10" bodyfile="src/subscription/subscription_engine.hpp" bodystart="76" bodyend="91"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1aacfd8c39dfd7c945b133c15e80212682" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a80f89a9fad317ee85b14db67f9b4b204" kindref="member">IteratorType</ref></type>
+        <definition>IteratorType sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::subscribe</definition>
+        <argsstring>(const KeyType &amp;key, SubscriberWPtr ptr)</argsstring>
+        <name>subscribe</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::subscribe</qualifiedname>
+        <param>
+          <type>const <ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ae3ea3c28abb9da4ffb8cc7a27ce08add" kindref="member">KeyType</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a52637fcf02c441b1d9812b985dd9cbeb" kindref="member">SubscriberWPtr</ref></type>
+          <declname>ptr</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="52" column="18" bodyfile="src/subscription/subscription_engine.hpp" bodystart="52" bodyend="56"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1aa37a493e45f7c04531d7b4ba7601b639" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;::unsubscribe</definition>
+        <argsstring>(const KeyType &amp;key, const IteratorType &amp;it_remove)</argsstring>
+        <name>unsubscribe</name>
+        <qualifiedname>sgns::subscription::SubscriptionEngine::unsubscribe</qualifiedname>
+        <param>
+          <type>const <ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ae3ea3c28abb9da4ffb8cc7a27ce08add" kindref="member">KeyType</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a80f89a9fad317ee85b14db67f9b4b204" kindref="member">IteratorType</ref> &amp;</type>
+          <declname>it_remove</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/subscription/subscription_engine.hpp" line="58" column="10" bodyfile="src/subscription/subscription_engine.hpp" bodystart="58" bodyend="65"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;</label>
+        <link refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::subscription::SubscriptionEngine&lt; KeyType, ValueType, Arguments... &gt;</label>
+        <link refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine"/>
+        <childnode refid="1" relation="template-instance">
+          <edgelabel>&lt; KeyType, ValueType, Arguments... &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::subscription::SubscriptionEngine&lt; base::Buffer, SessionPtr, base::Buffer, primitives::BlockHash &gt;</label>
+        <link refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine"/>
+        <childnode refid="1" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, SessionPtr, base::Buffer, primitives::BlockHash &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; SubscriptionEngine&lt; Key, Type, Arguments... &gt; &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="6">
+        <label>K</label>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::subscription::SubscriptionEngine&lt; Key, Type, Arguments &gt;</label>
+        <link refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-subscribers_map_cs_</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-subscribers_map_</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; SubscriptionEngine&lt; Key, Type, Arguments... &gt; &gt;</label>
+      </node>
+      <node id="3">
+        <label>std::shared_mutex</label>
+      </node>
+      <node id="5">
+        <label>std::unordered_map&lt; K, T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::unordered_map&lt; KeyType, SubscribersContainer &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; KeyType, SubscribersContainer &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/subscription/subscription_engine.hpp" line="16" column="3" bodyfile="src/subscription/subscription_engine.hpp" bodystart="18" bodyend="92"/>
+    <listofallmembers>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a80f89a9fad317ee85b14db67f9b4b204" prot="public" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>IteratorType</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ae3ea3c28abb9da4ffb8cc7a27ce08add" prot="public" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>KeyType</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1aa6910db8feb6b804d4bb6518f2cbcc5d" prot="private" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>KeyValueContainer</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a1421dff12271ea9a753e78e527053816" prot="public" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>notify</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1afca7f965be3f45c21b03668deef38ea7" prot="public" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>operator=</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a25a7e70fbc0ea4bda7672dc3ec8805f1" prot="public" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>operator=</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a6d63d7d1132becdda6efe4933cfb1018" prot="public" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>size</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1aacfd8c39dfd7c945b133c15e80212682" prot="private" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>subscribe</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a022be5b7686f2ed57fc5e7eea5fa8a02" prot="private" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>Subscriber</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a22b345290e2ace94a52c6f7d6a8e92ca" prot="public" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>SubscriberPtr</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ac7cab7bd3408c31c50cef55c0510c4d3" prot="private" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>subscribers_map_</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a11fdfb20fed24990a75ae4bbdde640dc" prot="private" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>subscribers_map_cs_</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a7ba39b25f8a3266548f0fca01b408fdd" prot="public" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>SubscribersContainer</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1af4fde1dc1c04655ca43111289e39c6dd" prot="public" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>SubscriberType</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a52637fcf02c441b1d9812b985dd9cbeb" prot="public" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>SubscriberWPtr</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1adf18101cad133f17cf94bc2e156c5239" prot="public" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>SubscriptionEngine</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ab4716d6a4300400e8cfed334f1997dc4" prot="public" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>SubscriptionEngine</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a0a6202dc3652417249ec47ee74b81259" prot="public" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>SubscriptionEngine</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1aa37a493e45f7c04531d7b4ba7601b639" prot="private" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>unsubscribe</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1abd8e9c644bd0be5ba90907f80ff7b05b" prot="public" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>ValueType</name></member>
+      <member refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a0bd801869b75c90cdfa289ad47abcfd0" prot="public" virt="non-virtual"><scope>sgns::subscription::SubscriptionEngine</scope><name>~SubscriptionEngine</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

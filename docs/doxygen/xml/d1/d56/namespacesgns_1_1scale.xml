@@ -1,0 +1,318 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/d56/namespacesgns_1_1scale" kind="namespace" language="C++">
+    <compoundname>sgns::scale</compoundname>
+    <innerclass refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream" prot="public">sgns::scale::ScaleDecoderStream</innerclass>
+    <innerclass refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" prot="public">sgns::scale::ScaleEncoderStream</innerclass>
+    <innernamespace refid="d4/da8/namespacesgns_1_1scale_1_1detail">sgns::scale::detail</innernamespace>
+    <innernamespace refid="d9/d9a/namespacesgns_1_1scale_1_1compact">sgns::scale::compact</innernamespace>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="d1/d56/namespacesgns_1_1scale_1a3394ed761bbfb57cf4f53ebff0b555e1" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>EncodeError</name>
+        <qualifiedname>sgns::scale::EncodeError</qualifiedname>
+        <enumvalue id="d1/d56/namespacesgns_1_1scale_1a3394ed761bbfb57cf4f53ebff0b555e1a0692f4668dd1c8d0fd76b73649d4703b" prot="public">
+          <name>COMPACT_INTEGER_TOO_BIG</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+<para>compact integer can&apos;t be more than 2**536 </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d1/d56/namespacesgns_1_1scale_1a3394ed761bbfb57cf4f53ebff0b555e1a78a55958b7491d5d94d3ea269025e6af" prot="public">
+          <name>NEGATIVE_COMPACT_INTEGER</name>
+          <briefdescription>
+<para>cannot compact-encode negative integers </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d1/d56/namespacesgns_1_1scale_1a3394ed761bbfb57cf4f53ebff0b555e1acec62d715959b8a8be053b4b64f17a16" prot="public">
+          <name>WRONG_CATEGORY</name>
+          <briefdescription>
+<para>wrong compact category </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d1/d56/namespacesgns_1_1scale_1a3394ed761bbfb57cf4f53ebff0b555e1ae7b5de6dc7f6d37c4367101636896f78" prot="public">
+          <name>WRONG_ALTERNATIVE</name>
+          <briefdescription>
+<para>wrong cast to alternative </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d1/d56/namespacesgns_1_1scale_1a3394ed761bbfb57cf4f53ebff0b555e1aca122e49ebe846859125b1dd47795cbe" prot="public">
+          <name>DEREF_NULLPOINTER</name>
+          <briefdescription>
+<para>dereferencing a null pointer </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para><ref refid="d1/d56/namespacesgns_1_1scale_1a3394ed761bbfb57cf4f53ebff0b555e1" kindref="member">EncodeError</ref> enum provides error codes for Encode methods. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_error.hpp" line="12" column="3" bodyfile="src/scale/scale_error.hpp" bodystart="12" bodyend="18"/>
+      </memberdef>
+      <memberdef kind="enum" id="d1/d56/namespacesgns_1_1scale_1a0d667fc03d973094b2b7a257ecf074af" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>DecodeError</name>
+        <qualifiedname>sgns::scale::DecodeError</qualifiedname>
+        <enumvalue id="d1/d56/namespacesgns_1_1scale_1a0d667fc03d973094b2b7a257ecf074afa8ee997b2d3ac255438ce2934dfd9c102" prot="public">
+          <name>NOT_ENOUGH_DATA</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+<para>not enough data to decode value </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d1/d56/namespacesgns_1_1scale_1a0d667fc03d973094b2b7a257ecf074afaded53093f15fd3aacd7601dbd7a80968" prot="public">
+          <name>UNEXPECTED_VALUE</name>
+          <briefdescription>
+<para>unexpected value </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d1/d56/namespacesgns_1_1scale_1a0d667fc03d973094b2b7a257ecf074afa6421bfdc5ba473a906814bd361d714c4" prot="public">
+          <name>TOO_MANY_ITEMS</name>
+          <briefdescription>
+<para>too many items, cannot address them in memory </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d1/d56/namespacesgns_1_1scale_1a0d667fc03d973094b2b7a257ecf074aface270dd59be11475cfa5dbc6d2412cca" prot="public">
+          <name>WRONG_TYPE_INDEX</name>
+          <briefdescription>
+<para>wrong type index, cannot decode variant </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d1/d56/namespacesgns_1_1scale_1a0d667fc03d973094b2b7a257ecf074afaf398c942626ee04721403508d08719c8" prot="public">
+          <name>INVALID_DATA</name>
+          <briefdescription>
+<para>invalid data </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d1/d56/namespacesgns_1_1scale_1a0d667fc03d973094b2b7a257ecf074afa70e191dc52e8f6ac23508c6bd148504f" prot="public">
+          <name>OUT_OF_BOUNDARIES</name>
+          <briefdescription>
+<para>advance went out of boundaries </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>DecoderError enum provides codes of errors for Decoder methods. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_error.hpp" line="23" column="3" bodyfile="src/scale/scale_error.hpp" bodystart="23" bodyend="30"/>
+      </memberdef>
+      <memberdef kind="enum" id="d1/d56/namespacesgns_1_1scale_1aa1ec1fe4a107e5d0466e9e0b43ed90e0" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>CommonError</name>
+        <qualifiedname>sgns::scale::CommonError</qualifiedname>
+        <enumvalue id="d1/d56/namespacesgns_1_1scale_1aa1ec1fe4a107e5d0466e9e0b43ed90e0a9a10f345b0f755d461a8673a5e9ef6b4" prot="public">
+          <name>UNKNOWN_ERROR</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+<para>unknown error </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>base errors </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_error.hpp" line="35" column="3" bodyfile="src/scale/scale_error.hpp" bodystart="35" bodyend="37"/>
+      </memberdef>
+      <memberdef kind="enum" id="d1/d56/namespacesgns_1_1scale_1a8d472432eeb5c5a0bf46196dc3a8bb16" prot="public" static="no" strong="yes">
+        <type>uint8_t</type>
+        <name>OptionalBool</name>
+        <qualifiedname>sgns::scale::OptionalBool</qualifiedname>
+        <enumvalue id="d1/d56/namespacesgns_1_1scale_1a8d472432eeb5c5a0bf46196dc3a8bb16a558c49fe6b2a8ffb916805ec4403488c" prot="public">
+          <name>NONE_</name>
+          <initializer>= 0u</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d1/d56/namespacesgns_1_1scale_1a8d472432eeb5c5a0bf46196dc3a8bb16a79844da1e31ce393f7919e7e103a379f" prot="public">
+          <name>FALSE_</name>
+          <initializer>= 1u</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d1/d56/namespacesgns_1_1scale_1a8d472432eeb5c5a0bf46196dc3a8bb16a6f7a7af4f53ecc1010a4ff4f9960a008" prot="public">
+          <name>TRUE_</name>
+          <initializer>= 2u</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para><ref refid="d1/d56/namespacesgns_1_1scale_1a8d472432eeb5c5a0bf46196dc3a8bb16" kindref="member">OptionalBool</ref> is internal extended bool type. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/types.hpp" line="21" column="3" bodyfile="src/scale/types.hpp" bodystart="21" bodyend="21"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="d1/d56/namespacesgns_1_1scale_1a5dfaa1d4f83677c0074ffc18021503cc" prot="public" static="no">
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>using sgns::scale::ByteArray = std::vector&lt;uint8_t&gt;</definition>
+        <argsstring></argsstring>
+        <name>ByteArray</name>
+        <qualifiedname>sgns::scale::ByteArray</qualifiedname>
+        <briefdescription>
+<para>convenience alias for arrays of bytes </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/types.hpp" line="14" column="3" bodyfile="src/scale/types.hpp" bodystart="14" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d1/d56/namespacesgns_1_1scale_1ac1997d51bb44310de23a0fd42d42aac0" prot="public" static="no">
+        <type>boost::multiprecision::cpp_int</type>
+        <definition>using sgns::scale::CompactInteger = boost::multiprecision::cpp_int</definition>
+        <argsstring></argsstring>
+        <name>CompactInteger</name>
+        <qualifiedname>sgns::scale::CompactInteger</qualifiedname>
+        <briefdescription>
+<para>represents compact integer value </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/types.hpp" line="18" column="3" bodyfile="src/scale/types.hpp" bodystart="18" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d1/d56/namespacesgns_1_1scale_1abb9671741457166ff4d8e2174d9d6388" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type>outcome::result&lt; std::vector&lt; uint8_t &gt; &gt;</type>
+        <definition>outcome::result&lt; std::vector&lt; uint8_t &gt; &gt; sgns::scale::encode</definition>
+        <argsstring>(Args &amp;&amp;... args)</argsstring>
+        <name>encode</name>
+        <qualifiedname>sgns::scale::encode</qualifiedname>
+        <param>
+          <type>Args &amp;&amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+<para>convenience function for encoding primitives data to stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Args</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>primitive types to be encoded </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>args</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>data to encode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>encoded data </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale.hpp" line="24" column="19" bodyfile="src/scale/scale.hpp" bodystart="24" bodyend="32"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d56/namespacesgns_1_1scale_1a96d6e97850c2835b935122c2698af51a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type>outcome::result&lt; T &gt;</type>
+        <definition>outcome::result&lt; T &gt; sgns::scale::decode</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; span)</argsstring>
+        <name>decode</name>
+        <qualifiedname>sgns::scale::decode</qualifiedname>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>span</declname>
+        </param>
+        <briefdescription>
+<para>convenience function for decoding primitives data from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>primitive type that is decoded from provided span </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>span</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>of bytes with encoded data </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>decoded T </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale.hpp" line="41" column="19" bodyfile="src/scale/scale.hpp" bodystart="41" bodyend="51"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/scale/detail/fixed_witdh_integer.hpp" line="13" column="1"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,239 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/d83/configuration__storage_8hpp" kind="file" language="C++">
+    <compoundname>configuration_storage.hpp</compoundname>
+    <includes local="no">set</includes>
+    <includes local="no">libp2p/peer/peer_info.hpp</includes>
+    <includes refid="db/dd2/genesis__raw__config_8hpp" local="yes">application/genesis_raw_config.hpp</includes>
+    <includes local="yes">network/types/peer_list.hpp</includes>
+    <includes refid="df/dec/_i_component_8hpp" local="yes">singleton/IComponent.hpp</includes>
+    <includes refid="d4/d26/src_2primitives_2common_8hpp" local="yes">primitives/common.hpp</includes>
+    <includedby refid="d9/d22/configuration__storage__impl_8hpp" local="yes">src/application/impl/configuration_storage_impl.hpp</includedby>
+    <includedby refid="d6/dce/validating__node__application_8hpp" local="yes">src/application/impl/validating_node_application.hpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/application/configuration_storage.hpp</label>
+        <link refid="d1/d83/configuration__storage_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>application/genesis_raw_config.hpp</label>
+        <link refid="db/dd2/genesis__raw__config_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>primitives/common.hpp</label>
+        <link refid="d4/d26/src_2primitives_2common_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>array</label>
+      </node>
+      <node id="8">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="21">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="9">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="19">
+        <label>cstddef</label>
+      </node>
+      <node id="17">
+        <label>cstdint</label>
+      </node>
+      <node id="10">
+        <label>gsl/span</label>
+      </node>
+      <node id="23">
+        <label>iostream</label>
+      </node>
+      <node id="12">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="3">
+        <label>libp2p/peer/peer_info.hpp</label>
+      </node>
+      <node id="13">
+        <label>network/types/peer_list.hpp</label>
+      </node>
+      <node id="2">
+        <label>set</label>
+      </node>
+      <node id="15">
+        <label>string</label>
+      </node>
+      <node id="6">
+        <label>string_view</label>
+      </node>
+      <node id="7">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="5">
+        <label>node/app_delegate.cpp</label>
+        <link refid="d5/df0/app__delegate_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/application/configuration_storage.hpp</label>
+        <link refid="d1/d83/configuration__storage_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>src/application/impl/configuration_storage_impl.cpp</label>
+        <link refid="d1/d90/configuration__storage__impl_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/application/impl/configuration_storage_impl.hpp</label>
+        <link refid="d9/d22/configuration__storage__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>src/application/impl/validating_node_application.cpp</label>
+        <link refid="d3/d34/validating__node__application_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/application/impl/validating_node_application.hpp</label>
+        <link refid="d6/dce/validating__node__application_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d7/de2/classsgns_1_1application_1_1_configuration_storage" prot="public">sgns::application::ConfigurationStorage</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="db/d40/namespacesgns_1_1application">sgns::application</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_CONFIGURATION_STORAGE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_CONFIGURATION_STORAGE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;set&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libp2p/peer/peer_info.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="db/dd2/genesis__raw__config_8hpp" kindref="compound">application/genesis_raw_config.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;network/types/peer_list.hpp&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="df/dec/_i_component_8hpp" kindref="compound">singleton/IComponent.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d4/d26/src_2primitives_2common_8hpp" kindref="compound">primitives/common.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="db/d40/namespacesgns_1_1application" kindref="compound">sgns::application</ref><sp/>{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18" refid="d7/de2/classsgns_1_1application_1_1_configuration_storage" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d7/de2/classsgns_1_1application_1_1_configuration_storage" kindref="compound">ConfigurationStorage</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d1/dbf/class_i_component" kindref="compound">IComponent</ref><sp/>{</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="20" refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a5ef0ee183f63afff0551bf71da92615e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a5ef0ee183f63afff0551bf71da92615e" kindref="member">~ConfigurationStorage</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22" refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1af3604b6873822b48594eddee1b4fb025" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<ref refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1af3604b6873822b48594eddee1b4fb025" kindref="member">name</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24" refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a1b93ab2ac4714aa4431e5abb8f93cf65" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<ref refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a1b93ab2ac4714aa4431e5abb8f93cf65" kindref="member">id</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26" refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a79a805498872dff06d3b60b79d35bfd2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<ref refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a79a805498872dff06d3b60b79d35bfd2" kindref="member">chainType</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29" refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1ac967cac7384da26af08e3e01edba5bcc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>network::PeerList<sp/><ref refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1ac967cac7384da26af08e3e01edba5bcc" kindref="member">getBootNodes</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31" refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a37b697566a7faab3fe9ba2af421ba600" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;std::pair&lt;std::string,<sp/>size_t&gt;&gt;<sp/>&amp;<ref refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a37b697566a7faab3fe9ba2af421ba600" kindref="member">telemetryEndpoints</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33" refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a71f55d85f870cb600c54eee2c330c4f2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<ref refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a71f55d85f870cb600c54eee2c330c4f2" kindref="member">protocolId</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="35" refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a07c22bf95d8f8b003de112d51bffd8eb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::map&lt;std::string,<sp/>std::string&gt;<sp/>&amp;<ref refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a07c22bf95d8f8b003de112d51bffd8eb" kindref="member">properties</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37" refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1af7f60ed37720bdf9518d5b772f604e13" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>boost::optional&lt;std::reference_wrapper&lt;const<sp/>std::string&gt;&gt;<sp/><ref refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1af7f60ed37720bdf9518d5b772f604e13" kindref="member">getProperty</ref>(</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;property<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40" refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a6f8b973c1abb9eacfed2c8363612f353" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::set&lt;primitives::BlockHash&gt;<sp/>&amp;<ref refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a6f8b973c1abb9eacfed2c8363612f353" kindref="member">forkBlocks</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="42" refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a038495de9dd6af399bd82ea4d445a30c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::set&lt;primitives::BlockHash&gt;<sp/>&amp;<ref refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a038495de9dd6af399bd82ea4d445a30c" kindref="member">badBlocks</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44" refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1ad9528d8c470a6322c98d5e354b52d6db" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>boost::optional&lt;std::string&gt;<sp/><ref refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1ad9528d8c470a6322c98d5e354b52d6db" kindref="member">verificationEngine</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight></codeline>
+<codeline lineno="49" refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1aa932a25a08fc6535e8f88f32a7ca3f9f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="db/d40/namespacesgns_1_1application_1a8d33b5b411fb63cf4d022159053924a5" kindref="member">GenesisRawConfig</ref><sp/><ref refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1aa932a25a08fc6535e8f88f32a7ca3f9f" kindref="member">getGenesis</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"></highlight></codeline>
+<codeline lineno="52"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::application</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="53"><highlight class="normal"></highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_CONFIGURATION_STORAGE_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/application/configuration_storage.hpp"/>
+  </compounddef>
+</doxygen>

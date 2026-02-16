@@ -1,0 +1,245 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/d9f/classsgns_1_1keepalive" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::keepalive</compoundname>
+    <basecompoundref refid="db/da6/classsgns_1_1message" prot="public" virt="non-virtual">sgns::message</basecompoundref>
+    <includes refid="da/d8d/node_2common_8hpp" local="no">common.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d2/d9f/classsgns_1_1keepalive_1a1af3c1e2a56c061ff229984fd0a015ab" prot="public" static="no" mutable="no">
+        <type>std::array&lt; <ref refid="d2/d2b/namespacesgns_1aa38696c91743d80c510521ceaf06a591" kindref="member">sgns::endpoint</ref>, 8 &gt;</type>
+        <definition>std::array&lt;sgns::endpoint, 8&gt; sgns::keepalive::peers</definition>
+        <argsstring></argsstring>
+        <name>peers</name>
+        <qualifiedname>sgns::keepalive::peers</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="288" column="12" bodyfile="node/common.hpp" bodystart="288" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="d2/d9f/classsgns_1_1keepalive_1a793e6d28f0b07a24c3996fbb29dd200e" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>size_t constexpr</type>
+        <definition>size_t constexpr sgns::keepalive::size</definition>
+        <argsstring></argsstring>
+        <name>size</name>
+        <qualifiedname>sgns::keepalive::size</qualifiedname>
+        <initializer>= 8 * (16 + 2)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="289" column="25" bodyfile="node/common.hpp" bodystart="289" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d2/d9f/classsgns_1_1keepalive_1a3908703fc785ad8d5325556ed4e004aa" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::keepalive::keepalive</definition>
+        <argsstring>()</argsstring>
+        <name>keepalive</name>
+        <qualifiedname>sgns::keepalive::keepalive</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="282" column="1" bodyfile="node/common.cpp" bodystart="554" bodyend="562"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d9f/classsgns_1_1keepalive_1aa8863f7919e12aa67fd61af1518e4ed9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::keepalive::keepalive</definition>
+        <argsstring>(bool &amp;, sgns::stream &amp;, sgns::message_header const &amp;)</argsstring>
+        <name>keepalive</name>
+        <qualifiedname>sgns::keepalive::keepalive</qualifiedname>
+        <param>
+          <type>bool &amp;</type>
+          <defname>error_a</defname>
+        </param>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type><ref refid="de/d6d/classsgns_1_1message__header" kindref="compound">sgns::message_header</ref> const &amp;</type>
+          <defname>header_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="283" column="1" bodyfile="node/common.cpp" bodystart="564" bodyend="571"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d9f/classsgns_1_1keepalive_1a35cc435a544169f64c2b6c4fc4962f72" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::keepalive::visit</definition>
+        <argsstring>(sgns::message_visitor &amp;) const override</argsstring>
+        <name>visit</name>
+        <qualifiedname>sgns::keepalive::visit</qualifiedname>
+        <reimplements refid="db/da6/classsgns_1_1message_1a85e15104bd6bb3f97732067f4a31b418">visit</reimplements>
+        <param>
+          <type><ref refid="dd/d84/classsgns_1_1message__visitor" kindref="compound">sgns::message_visitor</ref> &amp;</type>
+          <defname>visitor_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="284" column="6" bodyfile="node/common.cpp" bodystart="573" bodyend="576"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d9f/classsgns_1_1keepalive_1a8eaa5a23d7c92046776b69c12592a1dd" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::keepalive::serialize</definition>
+        <argsstring>(sgns::stream &amp;, bool) const override</argsstring>
+        <name>serialize</name>
+        <qualifiedname>sgns::keepalive::serialize</qualifiedname>
+        <reimplements refid="db/da6/classsgns_1_1message_1a7caa91e43882d5ce6b2f84e7a180bfd8">serialize</reimplements>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type>bool</type>
+          <defname>use_epoch_2_min_version_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="285" column="6" bodyfile="node/common.cpp" bodystart="578" bodyend="588"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d9f/classsgns_1_1keepalive_1a9b6a50f4ca21f4062625130774a37c21" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::keepalive::deserialize</definition>
+        <argsstring>(sgns::stream &amp;)</argsstring>
+        <name>deserialize</name>
+        <qualifiedname>sgns::keepalive::deserialize</qualifiedname>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="286" column="6" bodyfile="node/common.cpp" bodystart="590" bodyend="608"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d9f/classsgns_1_1keepalive_1a7b1b9de2622b8a6776bbff1bcfc3cc6f" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::keepalive::operator==</definition>
+        <argsstring>(sgns::keepalive const &amp;) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::keepalive::operator==</qualifiedname>
+        <param>
+          <type><ref refid="d2/d9f/classsgns_1_1keepalive" kindref="compound">sgns::keepalive</ref> const &amp;</type>
+          <defname>other_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="287" column="6" bodyfile="node/common.cpp" bodystart="610" bodyend="613"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::keepalive</label>
+        <link refid="d2/d9f/classsgns_1_1keepalive"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::message</label>
+        <link refid="db/da6/classsgns_1_1message"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="8">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::keepalive</label>
+        <link refid="d2/d9f/classsgns_1_1keepalive"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+peers</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::message</label>
+        <link refid="db/da6/classsgns_1_1message"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+header</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::message_header</label>
+        <link refid="de/d6d/classsgns_1_1message__header"/>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+block_type_mask</edgelabel>
+          <edgelabel>+count_mask</edgelabel>
+          <edgelabel>+extensions</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::array&lt; sgns::endpoint, 8 &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; sgns::endpoint, 8 &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::bitset&lt; Bits &gt;</label>
+      </node>
+      <node id="4">
+        <label>std::bitset&lt; 16 &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; 16 &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="node/common.hpp" line="279" column="1" bodyfile="node/common.hpp" bodystart="280" bodyend="290"/>
+    <listofallmembers>
+      <member refid="d2/d9f/classsgns_1_1keepalive_1a9b6a50f4ca21f4062625130774a37c21" prot="public" virt="non-virtual"><scope>sgns::keepalive</scope><name>deserialize</name></member>
+      <member refid="db/da6/classsgns_1_1message_1abc0de834dc846d1d86110caec8a4b7db" prot="public" virt="non-virtual"><scope>sgns::keepalive</scope><name>header</name></member>
+      <member refid="d2/d9f/classsgns_1_1keepalive_1a3908703fc785ad8d5325556ed4e004aa" prot="public" virt="non-virtual"><scope>sgns::keepalive</scope><name>keepalive</name></member>
+      <member refid="d2/d9f/classsgns_1_1keepalive_1aa8863f7919e12aa67fd61af1518e4ed9" prot="public" virt="non-virtual"><scope>sgns::keepalive</scope><name>keepalive</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a1c0d801d4625dbcc8a9f40a5c6631b2c" prot="public" virt="non-virtual"><scope>sgns::keepalive</scope><name>message</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a2fbf35d959e3532e2ce4675c9c26761e" prot="public" virt="non-virtual"><scope>sgns::keepalive</scope><name>message</name></member>
+      <member refid="d2/d9f/classsgns_1_1keepalive_1a7b1b9de2622b8a6776bbff1bcfc3cc6f" prot="public" virt="non-virtual"><scope>sgns::keepalive</scope><name>operator==</name></member>
+      <member refid="d2/d9f/classsgns_1_1keepalive_1a1af3c1e2a56c061ff229984fd0a015ab" prot="public" virt="non-virtual"><scope>sgns::keepalive</scope><name>peers</name></member>
+      <member refid="d2/d9f/classsgns_1_1keepalive_1a8eaa5a23d7c92046776b69c12592a1dd" prot="public" virt="virtual"><scope>sgns::keepalive</scope><name>serialize</name></member>
+      <member refid="d2/d9f/classsgns_1_1keepalive_1a793e6d28f0b07a24c3996fbb29dd200e" prot="public" virt="non-virtual"><scope>sgns::keepalive</scope><name>size</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a2ad934099e11461e98605fcb5b001c0b" prot="public" virt="non-virtual"><scope>sgns::keepalive</scope><name>to_bytes</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a5ae4e86a1763a52b65e042caed25ee54" prot="public" virt="non-virtual"><scope>sgns::keepalive</scope><name>to_shared_const_buffer</name></member>
+      <member refid="d2/d9f/classsgns_1_1keepalive_1a35cc435a544169f64c2b6c4fc4962f72" prot="public" virt="virtual"><scope>sgns::keepalive</scope><name>visit</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a144f9f336461eb5a17eac7825ba23b41" prot="public" virt="virtual"><scope>sgns::keepalive</scope><name>~message</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

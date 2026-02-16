@@ -1,0 +1,106 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/d54/bridging__node__application_8hpp" kind="file" language="C++">
+    <compoundname>bridging_node_application.hpp</compoundname>
+    <includes refid="df/d62/sgns__application_8hpp" local="yes">application/sgns_application.hpp</includes>
+    <includes refid="dd/d95/app__config_8hpp" local="yes">application/app_config.hpp</includes>
+    <includes refid="d6/da3/logger_8hpp" local="yes">base/logger.hpp</includes>
+    <includes local="no">memory</includes>
+    <incdepgraph>
+      <node id="3">
+        <label>application/app_config.hpp</label>
+        <link refid="dd/d95/app__config_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/application/impl/bridging_node_application.hpp</label>
+        <link refid="de/d54/bridging__node__application_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>application/sgns_application.hpp</label>
+        <link refid="df/d62/sgns__application_8hpp"/>
+      </node>
+      <node id="8">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>boost/asio/ip/tcp.hpp</label>
+      </node>
+      <node id="6">
+        <label>memory</label>
+      </node>
+      <node id="9">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="4">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="7">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <innerclass refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application" prot="public">sgns::application::BridgingNodeApplication</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="db/d40/namespacesgns_1_1application">sgns::application</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>BRIDGING_NODE_APPLICATION_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>BRIDGING_NODE_APPLICATION_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="df/d62/sgns__application_8hpp" kindref="compound">application/sgns_application.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dd/d95/app__config_8hpp" kindref="compound">application/app_config.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/da3/logger_8hpp" kindref="compound">base/logger.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;memory&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="db/d40/namespacesgns_1_1application" kindref="compound">sgns::application</ref><sp/>{</highlight></codeline>
+<codeline lineno="10" refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a2f15bed2868f186ecf3c0ca25122ae55" kindref="member">BridgingNodeApplication</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="da/d1d/classsgns_1_1application_1_1_sgns_application" kindref="compound">SgnsApplication</ref><sp/>{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a2f15bed2868f186ecf3c0ca25122ae55" kindref="member">BridgingNodeApplication</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;AppConfig&gt;<sp/>&amp;config,</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;AppStateManager&gt;<sp/>&amp;stateManager);</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1ab0849b1c3536f861b7dcb2ed9291fdca" kindref="member">run</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a417f9b623dc5ebcf104f9d4d0a32a8c5" kindref="member">stop</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1acff5269dda711e254512bf6ff3999015" kindref="member">setupWebSocketService</ref>();</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a808555ac994d602fb30ad65709253560" kindref="member">setupRpcService</ref>();</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a77bee7e80e92d15c1a5bcf4b1b39e329" kindref="member">handleMessageArrival</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26" refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a68a56980f0fa27dc566006bcfdafe266" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::unique_ptr&lt;EvmMessagingWatcher&gt;<sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a68a56980f0fa27dc566006bcfdafe266" kindref="member">evmWatcher</ref>;</highlight></codeline>
+<codeline lineno="27" refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1acfbfb4084c4ac2780cca14e314cba804" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;WsContext&gt;<sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1acfbfb4084c4ac2780cca14e314cba804" kindref="member">wsContext</ref>;</highlight></codeline>
+<codeline lineno="28" refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a2da039c265e6620fd0f1d4374b91d898" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;WsThreadPool&gt;<sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a2da039c265e6620fd0f1d4374b91d898" kindref="member">wsThreadPool</ref>;</highlight></codeline>
+<codeline lineno="29" refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1aa50f67f7ee586ec611e7d41e3e06e789" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;RpcService&gt;<sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1aa50f67f7ee586ec611e7d41e3e06e789" kindref="member">rpcService</ref>;</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">//<sp/>BRIDGING_NODE_APPLICATION_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/application/impl/bridging_node_application.hpp"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,284 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node" kind="struct" language="C++" prot="private">
+    <compoundname>sgns::blockchain::BlockTreeImpl::TreeNode</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">std::enable_shared_from_this&lt; TreeNode &gt;</basecompoundref>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1acee135330858b247d627d140066cba91" prot="public" static="no" mutable="no">
+        <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref></type>
+        <definition>primitives::BlockHash sgns::blockchain::BlockTreeImpl::TreeNode::block_hash</definition>
+        <argsstring></argsstring>
+        <name>block_hash</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::TreeNode::block_hash</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="33" column="33" bodyfile="src/blockchain/impl/block_tree_impl.hpp" bodystart="33" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1ac002839359517f80c473bec24b8162e1" prot="public" static="no" mutable="no">
+        <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref></type>
+        <definition>primitives::BlockNumber sgns::blockchain::BlockTreeImpl::TreeNode::depth</definition>
+        <argsstring></argsstring>
+        <name>depth</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::TreeNode::depth</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="34" column="33" bodyfile="src/blockchain/impl/block_tree_impl.hpp" bodystart="34" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a6ba20f1cf4dfc1bc49043b87fbb12c2c" prot="public" static="no" mutable="no">
+        <type>std::weak_ptr&lt; <ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a33199e545e18bcf622de32ed7540fbb6" kindref="member">TreeNode</ref> &gt;</type>
+        <definition>std::weak_ptr&lt;TreeNode&gt; sgns::blockchain::BlockTreeImpl::TreeNode::parent</definition>
+        <argsstring></argsstring>
+        <name>parent</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::TreeNode::parent</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="36" column="23" bodyfile="src/blockchain/impl/block_tree_impl.hpp" bodystart="36" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1ab92277165a37db80222b6801a81ce640" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::blockchain::BlockTreeImpl::TreeNode::finalized</definition>
+        <argsstring></argsstring>
+        <name>finalized</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::TreeNode::finalized</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="38" column="14" bodyfile="src/blockchain/impl/block_tree_impl.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1af6dc458362efbfb92d21f0de7841b840" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; std::shared_ptr&lt; <ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a33199e545e18bcf622de32ed7540fbb6" kindref="member">TreeNode</ref> &gt; &gt;</type>
+        <definition>std::vector&lt;std::shared_ptr&lt;TreeNode&gt; &gt; sgns::blockchain::BlockTreeImpl::TreeNode::children</definition>
+        <argsstring></argsstring>
+        <name>children</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::TreeNode::children</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="40" column="21" bodyfile="src/blockchain/impl/block_tree_impl.hpp" bodystart="40" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a33199e545e18bcf622de32ed7540fbb6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::blockchain::BlockTreeImpl::TreeNode::TreeNode</definition>
+        <argsstring>(primitives::BlockHash hash, primitives::BlockNumber depth, std::shared_ptr&lt; TreeNode &gt; parent, bool finalized=false)</argsstring>
+        <name>TreeNode</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::TreeNode::TreeNode</qualifiedname>
+        <param>
+          <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref></type>
+          <declname>hash</declname>
+        </param>
+        <param>
+          <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref></type>
+          <declname>depth</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; TreeNode &gt;</type>
+          <declname>parent</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>finalized</declname>
+          <defval>false</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="28" column="9" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="30" bodyend="36"/>
+      </memberdef>
+      <memberdef kind="function" id="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1aadf1db744dc68b5141bd6f891e62e737" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a33199e545e18bcf622de32ed7540fbb6" kindref="member">TreeNode</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; BlockTreeImpl::TreeNode &gt; sgns::blockchain::BlockTreeImpl::TreeNode::getByHash</definition>
+        <argsstring>(const primitives::BlockHash &amp;hash)</argsstring>
+        <name>getByHash</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::TreeNode::getByHash</qualifiedname>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &amp;</type>
+          <declname>hash</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get a node of the tree, containing block with the specified hash, if it can be found </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="46" column="25" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="38" bodyend="54"/>
+      </memberdef>
+      <memberdef kind="function" id="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a9c2b9fabce40016c55706782075396d0" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::blockchain::BlockTreeImpl::TreeNode::operator==</definition>
+        <argsstring>(const TreeNode &amp;other) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::TreeNode::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a33199e545e18bcf622de32ed7540fbb6" kindref="member">TreeNode</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="48" column="14" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="56" bodyend="64"/>
+      </memberdef>
+      <memberdef kind="function" id="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a8ff1aa3b1d15c03dcdfd4011378669c5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::blockchain::BlockTreeImpl::TreeNode::operator!=</definition>
+        <argsstring>(const TreeNode &amp;other) const</argsstring>
+        <name>operator!=</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::TreeNode::operator!=</qualifiedname>
+        <param>
+          <type>const <ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a33199e545e18bcf622de32ed7540fbb6" kindref="member">TreeNode</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="49" column="14" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="66" bodyend="68"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>In-memory light representation of the tree, used for efficiency and usage convenience - we would only ask the database for some info, when directly requested </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::blockchain::BlockTreeImpl::TreeNode</label>
+        <link refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; TreeNode &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="5">
+        <label>T</label>
+      </node>
+      <node id="6">
+        <label>sgns::base::Blob&lt; size_ &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::base::Blob&lt; 32 &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; 32 &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::blockchain::BlockTreeImpl::TreeNode</label>
+        <link refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+block_hash</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+parent</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+children</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; TreeNode &gt;</label>
+      </node>
+      <node id="11">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::shared_ptr&lt; sgns::blockchain::BlockTreeImpl::TreeNode &gt;</label>
+        <childnode refid="1" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="11" relation="template-instance">
+          <edgelabel>&lt; sgns::blockchain::BlockTreeImpl::TreeNode &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::vector&lt; std::shared_ptr&lt; sgns::blockchain::BlockTreeImpl::TreeNode &gt; &gt;</label>
+        <childnode refid="10" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="template-instance">
+          <edgelabel>&lt; std::shared_ptr&lt; sgns::blockchain::BlockTreeImpl::TreeNode &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::weak_ptr&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::weak_ptr&lt; sgns::blockchain::BlockTreeImpl::TreeNode &gt;</label>
+        <childnode refid="1" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; sgns::blockchain::BlockTreeImpl::TreeNode &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/blockchain/impl/block_tree_impl.hpp" line="27" column="5" bodyfile="src/blockchain/impl/block_tree_impl.hpp" bodystart="27" bodyend="50"/>
+    <listofallmembers>
+      <member refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1acee135330858b247d627d140066cba91" prot="public" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl::TreeNode</scope><name>block_hash</name></member>
+      <member refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1af6dc458362efbfb92d21f0de7841b840" prot="public" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl::TreeNode</scope><name>children</name></member>
+      <member refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1ac002839359517f80c473bec24b8162e1" prot="public" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl::TreeNode</scope><name>depth</name></member>
+      <member refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1ab92277165a37db80222b6801a81ce640" prot="public" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl::TreeNode</scope><name>finalized</name></member>
+      <member refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1aadf1db744dc68b5141bd6f891e62e737" prot="public" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl::TreeNode</scope><name>getByHash</name></member>
+      <member refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a8ff1aa3b1d15c03dcdfd4011378669c5" prot="public" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl::TreeNode</scope><name>operator!=</name></member>
+      <member refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a9c2b9fabce40016c55706782075396d0" prot="public" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl::TreeNode</scope><name>operator==</name></member>
+      <member refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a6ba20f1cf4dfc1bc49043b87fbb12c2c" prot="public" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl::TreeNode</scope><name>parent</name></member>
+      <member refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a33199e545e18bcf622de32ed7540fbb6" prot="public" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl::TreeNode</scope><name>TreeNode</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

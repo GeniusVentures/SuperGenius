@@ -1,0 +1,396 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable" kind="struct" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::storage::face::Writeable</compoundname>
+    <derivedcompoundref refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map" prot="public" virt="non-virtual">sgns::storage::face::BatchWriteMap&lt; K, V &gt;</derivedcompoundref>
+    <derivedcompoundref refid="d4/d01/structsgns_1_1storage_1_1face_1_1_generic_map" prot="public" virt="non-virtual">sgns::storage::face::GenericMap&lt; K, V &gt;</derivedcompoundref>
+    <derivedcompoundref refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch" prot="public" virt="non-virtual">sgns::storage::face::WriteBatch&lt; K, V &gt;</derivedcompoundref>
+    <includes refid="dc/da4/writeable_8hpp" local="no">writeable.hpp</includes>
+    <templateparamlist>
+      <param>
+        <type>typename K</type>
+      </param>
+      <param>
+        <type>typename V</type>
+      </param>
+    </templateparamlist>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1adb986d79f420f5829cae3d6659430a00" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::storage::face::Writeable&lt; K, V &gt;::~Writeable</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Writeable</name>
+        <qualifiedname>sgns::storage::face::Writeable::~Writeable</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/writeable.hpp" line="15" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a6c94f5ac466050295a32f93aeb5a0e8c" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::storage::face::Writeable&lt; K, V &gt;::put</definition>
+        <argsstring>(const K &amp;key, const V &amp;value)=0</argsstring>
+        <name>put</name>
+        <qualifiedname>sgns::storage::face::Writeable::put</qualifiedname>
+        <reimplementedby refid="de/d30/classsgns_1_1storage_1_1_in_memory_batch_1ac9185f3f1d7aeb29a5c5aaa610448d60">put</reimplementedby>
+        <reimplementedby refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1a08f4b04126179049b6782f76ed093f53">put</reimplementedby>
+        <reimplementedby refid="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch_1a54639f73c47619433b4befb29887700e">put</reimplementedby>
+        <reimplementedby refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1adb3aff8f23568bd166c2df9e70a2f1d2">put</reimplementedby>
+        <reimplementedby refid="d7/d40/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch_impl_1a7f160bd251db738923f644c95159d676">put</reimplementedby>
+        <reimplementedby refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a4963f2832b0765f607a4bf8418c02155">put</reimplementedby>
+        <reimplementedby refid="df/dfd/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_impl_1a3a6142bf46e08edc38a7cae137c2e158">put</reimplementedby>
+        <reimplementedby refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1acb2b93d4895d494727ad8898f52060f5">put</reimplementedby>
+        <reimplementedby refid="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1a93c6dc3f7c6c52a719e4d525a0a5661c">put</reimplementedby>
+        <reimplementedby refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a2304080c0e2458a255c49c554ca8c414">put</reimplementedby>
+        <param>
+          <type>const K &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type>const V &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+<para>Store value by key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>result containing void if put successful, error otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/writeable.hpp" line="23" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a5b99ab81a3b6f8d5732c47b1565f3758" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::storage::face::Writeable&lt; K, V &gt;::put</definition>
+        <argsstring>(const K &amp;key, V &amp;&amp;value)=0</argsstring>
+        <name>put</name>
+        <qualifiedname>sgns::storage::face::Writeable::put</qualifiedname>
+        <param>
+          <type>const K &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type>V &amp;&amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/writeable.hpp" line="24" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a13a83e4a2fa9540c366e277871701ac3" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::storage::face::Writeable&lt; K, V &gt;::remove</definition>
+        <argsstring>(const K &amp;key)=0</argsstring>
+        <name>remove</name>
+        <qualifiedname>sgns::storage::face::Writeable::remove</qualifiedname>
+        <reimplementedby refid="de/d30/classsgns_1_1storage_1_1_in_memory_batch_1a51aa1e19cdea70a8199d987027c9f6a5">remove</reimplementedby>
+        <reimplementedby refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1a277a5cb3355451c936cf5128569555ff">remove</reimplementedby>
+        <reimplementedby refid="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch_1a8c8dfab0e7ea645b49d8d4b7e0d05fa7">remove</reimplementedby>
+        <reimplementedby refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1aa08bc5bf21f634b350ce1242a9eefbe5">remove</reimplementedby>
+        <reimplementedby refid="d7/d40/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch_impl_1af29b2cab4d360b89d1f69ec658cdade5">remove</reimplementedby>
+        <reimplementedby refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a7b833dbee413838243003052e75d4f37">remove</reimplementedby>
+        <reimplementedby refid="df/dfd/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_impl_1af84499573d15bfd9d1cf086b775ce0a2">remove</reimplementedby>
+        <reimplementedby refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aad234930f71ae7634b4f154e2ae26574">remove</reimplementedby>
+        <reimplementedby refid="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1a389c22117802828f9394858803033e21">remove</reimplementedby>
+        <reimplementedby refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ae4492690d22d99f6060724128990e076">remove</reimplementedby>
+        <param>
+          <type>const K &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Remove value by key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>K </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>error code if error happened </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/writeable.hpp" line="31" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>An mixin for modifiable map. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>K</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key type </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>V</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="17">
+        <label>sgns::storage::InMemoryBatch</label>
+        <link refid="de/d30/classsgns_1_1storage_1_1_in_memory_batch"/>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::InMemoryStorage</label>
+        <link refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::storage::face::BatchWriteMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="2" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+        <childnode refid="23" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::storage::face::GenericMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d01/structsgns_1_1storage_1_1face_1_1_generic_map"/>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+        <childnode refid="23" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>sgns::storage::face::GenericMap&lt; K, V &gt;</label>
+        <link refid="d4/d01/structsgns_1_1storage_1_1face_1_1_generic_map"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>sgns::storage::face::GenericMap&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d4/d01/structsgns_1_1storage_1_1face_1_1_generic_map"/>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+        <childnode refid="22" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::storage::face::GenericStorage&lt; Buffer, Buffer &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::face::GenericStorage&lt; K, V &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>sgns::storage::face::WriteBatch&lt; Buffer, Buffer &gt;</label>
+        <link refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch"/>
+        <childnode refid="15" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+        <childnode refid="23" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>sgns::storage::face::WriteBatch&lt; K, V &gt;</label>
+        <link refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>sgns::storage::face::WriteBatch&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch"/>
+        <childnode refid="15" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+        <childnode refid="22" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>sgns::storage::face::WriteBatch&lt; sgns::base::Buffer, sgns::base::Buffer &gt;</label>
+        <link refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch"/>
+        <childnode refid="15" relation="template-instance">
+          <edgelabel>&lt; sgns::base::Buffer, sgns::base::Buffer &gt;</edgelabel>
+        </childnode>
+        <childnode refid="31" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="1" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="22">
+        <label>sgns::storage::face::Writeable&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="1" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="31">
+        <label>sgns::storage::face::Writeable&lt; sgns::base::Buffer, sgns::base::Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="1" relation="template-instance">
+          <edgelabel>&lt; sgns::base::Buffer, sgns::base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>sgns::storage::rocksdb</label>
+        <link refid="d5/dbf/classsgns_1_1storage_1_1rocksdb"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>sgns::storage::rocksdb::Batch</label>
+        <link refid="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch"/>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>sgns::storage::trie::EphemeralTrieBatch</label>
+        <link refid="de/d05/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch"/>
+        <childnode refid="24" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>sgns::storage::trie::EphemeralTrieBatchImpl</label>
+        <link refid="d7/d40/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch_impl"/>
+        <childnode refid="25" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>sgns::storage::trie::PersistentTrieBatch</label>
+        <link refid="db/d71/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch"/>
+        <childnode refid="24" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>sgns::storage::trie::PersistentTrieBatchImpl</label>
+        <link refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl"/>
+        <childnode refid="27" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>sgns::storage::trie::SuperGeniusTrie</label>
+        <link refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie"/>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>sgns::storage::trie::SuperGeniusTrieImpl</label>
+        <link refid="df/dfd/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_impl"/>
+        <childnode refid="13" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>sgns::storage::trie::TopperTrieBatch</label>
+        <link refid="d2/d7a/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch"/>
+        <childnode refid="24" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>sgns::storage::trie::TopperTrieBatchImpl</label>
+        <link refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl"/>
+        <childnode refid="29" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>sgns::storage::trie::TrieBatch</label>
+        <link refid="dc/d88/classsgns_1_1storage_1_1trie_1_1_trie_batch"/>
+        <childnode refid="23" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::storage::trie::TrieStorageBackend</label>
+        <link refid="dd/d95/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>sgns::storage::trie::TrieStorageBackendBatch</label>
+        <link refid="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch"/>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>sgns::storage::trie::TrieStorageBackendImpl</label>
+        <link refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl"/>
+        <childnode refid="7" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/face/writeable.hpp" line="14" column="3" bodyfile="src/storage/face/writeable.hpp" bodystart="14" bodyend="32"/>
+    <listofallmembers>
+      <member refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a6c94f5ac466050295a32f93aeb5a0e8c" prot="public" virt="pure-virtual"><scope>sgns::storage::face::Writeable</scope><name>put</name></member>
+      <member refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a5b99ab81a3b6f8d5732c47b1565f3758" prot="public" virt="pure-virtual"><scope>sgns::storage::face::Writeable</scope><name>put</name></member>
+      <member refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a13a83e4a2fa9540c366e277871701ac3" prot="public" virt="pure-virtual"><scope>sgns::storage::face::Writeable</scope><name>remove</name></member>
+      <member refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1adb986d79f420f5829cae3d6659430a00" prot="public" virt="virtual"><scope>sgns::storage::face::Writeable</scope><name>~Writeable</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

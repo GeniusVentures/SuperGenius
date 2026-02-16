@@ -1,0 +1,140 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/d5c/rpc__thread__pool_8cpp" kind="file" language="C++">
+    <compoundname>rpc_thread_pool.cpp</compoundname>
+    <includes refid="d2/d58/rpc__thread__pool_8hpp" local="yes">api/transport/rpc_thread_pool.hpp</includes>
+    <incdepgraph>
+      <node id="7">
+        <label>api/transport/rpc_io_context.hpp</label>
+        <link refid="d7/db2/rpc__io__context_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/api/transport/rpc_thread_pool.cpp</label>
+        <link refid="d7/d5c/rpc__thread__pool_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>api/transport/rpc_thread_pool.hpp</label>
+        <link refid="d2/d58/rpc__thread__pool_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>application/app_state_manager.hpp</label>
+        <link refid="df/d24/app__state__manager_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>boost/asio/io_context.hpp</label>
+      </node>
+      <node id="3">
+        <label>boost/asio/io_service.hpp</label>
+      </node>
+      <node id="4">
+        <label>boost/asio/signal_set.hpp</label>
+      </node>
+      <node id="12">
+        <label>functional</label>
+      </node>
+      <node id="13">
+        <label>memory</label>
+      </node>
+      <node id="5">
+        <label>set</label>
+      </node>
+      <node id="16">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="17">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="14">
+        <label>stdexcept</label>
+      </node>
+      <node id="10">
+        <label>string</label>
+      </node>
+      <node id="6">
+        <label>thread</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d66/namespacesgns_1_1api">sgns::api</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d2/d58/rpc__thread__pool_8hpp" kindref="compound">api/transport/rpc_thread_pool.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d66/namespacesgns_1_1api" kindref="compound">sgns::api</ref><sp/>{</highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6" refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a978d2a2ff3683ca0481125b3cebc73e5" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a978d2a2ff3683ca0481125b3cebc73e5" kindref="member">RpcThreadPool::RpcThreadPool</ref>(std::shared_ptr&lt;Context&gt;<sp/>context,</highlight></codeline>
+<codeline lineno="7"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="da/d10/structsgns_1_1api_1_1_rpc_thread_pool_1_1_configuration" kindref="compound">Configuration</ref><sp/>&amp;configuration)</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/><ref refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1aff7b9650d20f8e55855b05354ad53288" kindref="member">context_</ref>(<ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(context)),<sp/><ref refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a48477a261fb291c20936347e4f44a001" kindref="member">config_</ref>(configuration)<sp/>{</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_ASSERT(<ref refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1aff7b9650d20f8e55855b05354ad53288" kindref="member">context_</ref>);</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12" refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a0caeea9620f8d8e1310cce8c05eda8ba" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a0caeea9620f8d8e1310cce8c05eda8ba" kindref="member">RpcThreadPool::start</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1af00c6b331ab9855d0b24660e2f632c52" kindref="member">threads_</ref>.reserve(<ref refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a48477a261fb291c20936347e4f44a001" kindref="member">config_</ref>.max_thread_number);</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Create<sp/>a<sp/>pool<sp/>of<sp/>threads<sp/>to<sp/>run<sp/>all<sp/>of<sp/>the<sp/>io_contexts.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(std::size_t<sp/>i<sp/>=<sp/>0;<sp/>i<sp/>&lt;<sp/><ref refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a48477a261fb291c20936347e4f44a001" kindref="member">config_</ref>.min_thread_number;<sp/>++i)<sp/>{</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>thread<sp/>=<sp/>std::make_shared&lt;std::thread&gt;(</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[context<sp/>=<sp/><ref refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1aff7b9650d20f8e55855b05354ad53288" kindref="member">context_</ref>]<sp/>{<sp/>context-&gt;run();<sp/>});</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>thread-&gt;detach();</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1af00c6b331ab9855d0b24660e2f632c52" kindref="member">threads_</ref>.emplace_back(std::move(thread));</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a90c08bab41edc1c8869f68c1394a4e8d" kindref="member">logger_</ref>-&gt;debug(</highlight><highlight class="stringliteral">&quot;Thread<sp/>pool<sp/>started&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24" refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a2552706060f8510211a858b13240b683" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a2552706060f8510211a858b13240b683" kindref="member">RpcThreadPool::stop</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1aff7b9650d20f8e55855b05354ad53288" kindref="member">context_</ref>-&gt;stop();</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a90c08bab41edc1c8869f68c1394a4e8d" kindref="member">logger_</ref>-&gt;debug(</highlight><highlight class="stringliteral">&quot;Thread<sp/>pool<sp/>stopped&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::api</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/api/transport/rpc_thread_pool.cpp"/>
+  </compounddef>
+</doxygen>

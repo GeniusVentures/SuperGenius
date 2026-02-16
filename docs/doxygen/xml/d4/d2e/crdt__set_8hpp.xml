@@ -1,0 +1,716 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/d2e/crdt__set_8hpp" kind="file" language="C++">
+    <compoundname>crdt_set.hpp</compoundname>
+    <includes local="no">mutex</includes>
+    <includes refid="d1/d07/rocksdb_8hpp" local="no">storage/rocksdb/rocksdb.hpp</includes>
+    <includes refid="d5/dc7/hierarchical__key_8hpp" local="yes">crdt/hierarchical_key.hpp</includes>
+    <includes local="yes">crdt/proto/delta.pb.h</includes>
+    <includedby refid="d5/d29/crdt__datastore_8hpp" local="yes">src/crdt/crdt_datastore.hpp</includedby>
+    <includedby refid="d4/d84/crdt__set_8cpp" local="yes">src/crdt/impl/crdt_set.cpp</includedby>
+    <incdepgraph>
+      <node id="14">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crdt/crdt_set.hpp</label>
+        <link refid="d4/d2e/crdt__set_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>crdt/hierarchical_key.hpp</label>
+        <link refid="d5/dc7/hierarchical__key_8hpp"/>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="31" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>storage/buffer_map_types.hpp</label>
+        <link refid="d8/dcc/buffer__map__types_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>storage/face/batchable.hpp</label>
+        <link refid="de/d87/batchable_8hpp"/>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>storage/face/generic_maps.hpp</label>
+        <link refid="d9/daa/generic__maps_8hpp"/>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>storage/face/generic_storage.hpp</label>
+        <link refid="d6/d4e/generic__storage_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>storage/face/iterable.hpp</label>
+        <link refid="db/d3e/iterable_8hpp"/>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>storage/face/map_cursor.hpp</label>
+        <link refid="d9/d4b/map__cursor_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>storage/face/readable.hpp</label>
+        <link refid="d5/dd2/readable_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>storage/face/write_batch.hpp</label>
+        <link refid="d2/d76/write__batch_8hpp"/>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>storage/face/writeable.hpp</label>
+        <link refid="dc/da4/writeable_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>storage/rocksdb/rocksdb.hpp</label>
+        <link refid="d1/d07/rocksdb_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="18">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="33">
+        <label>crdt/proto/delta.pb.h</label>
+      </node>
+      <node id="13">
+        <label>gsl/span</label>
+      </node>
+      <node id="20">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="24">
+        <label>memory</label>
+      </node>
+      <node id="2">
+        <label>mutex</label>
+      </node>
+      <node id="5">
+        <label>rocksdb/db.h</label>
+      </node>
+      <node id="7">
+        <label>rocksdb/options.h</label>
+      </node>
+      <node id="4">
+        <label>rocksdb/rocksdb_namespace.h</label>
+      </node>
+      <node id="6">
+        <label>rocksdb/slice.h</label>
+      </node>
+      <node id="8">
+        <label>rocksdb/write_batch.h</label>
+      </node>
+      <node id="10">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="11">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="31">
+        <label>string</label>
+      </node>
+      <node id="15">
+        <label>string_view</label>
+      </node>
+      <node id="16">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="5">
+        <label>src/account/GeniusAccount.cpp</label>
+        <link refid="dd/dd9/_genius_account_8cpp"/>
+      </node>
+      <node id="18">
+        <label>src/account/GeniusNode.cpp</label>
+        <link refid="df/de0/_genius_node_8cpp"/>
+      </node>
+      <node id="20">
+        <label>src/account/GeniusNode.hpp</label>
+        <link refid="d3/d63/_genius_node_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>src/account/Migration0_2_0To1_0_0.cpp</label>
+        <link refid="dc/dfe/_migration0__2__0_to1__0__0_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/account/Migration0_2_0To1_0_0.hpp</label>
+        <link refid="d1/d31/_migration0__2__0_to1__0__0_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>src/account/Migration1_0_0To3_4_0.cpp</label>
+        <link refid="d8/d30/_migration1__0__0_to3__4__0_8cpp"/>
+      </node>
+      <node id="9">
+        <label>src/account/Migration1_0_0To3_4_0.hpp</label>
+        <link refid="dc/db1/_migration1__0__0_to3__4__0_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>src/account/Migration3_4_0To3_5_0.cpp</label>
+        <link refid="d6/d71/_migration3__4__0_to3__5__0_8cpp"/>
+      </node>
+      <node id="11">
+        <label>src/account/Migration3_4_0To3_5_0.hpp</label>
+        <link refid="de/d71/_migration3__4__0_to3__5__0_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>src/account/Migration3_5_0To3_5_1.cpp</label>
+        <link refid="da/d32/_migration3__5__0_to3__5__1_8cpp"/>
+      </node>
+      <node id="13">
+        <label>src/account/Migration3_5_0To3_5_1.hpp</label>
+        <link refid="d6/d6e/_migration3__5__0_to3__5__1_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>src/account/Migration3_5_1To3_6_0.cpp</label>
+        <link refid="db/da7/_migration3__5__1_to3__6__0_8cpp"/>
+      </node>
+      <node id="15">
+        <label>src/account/Migration3_5_1To3_6_0.hpp</label>
+        <link refid="df/dd5/_migration3__5__1_to3__6__0_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>src/account/MigrationManager.cpp</label>
+        <link refid="d2/d4b/_migration_manager_8cpp"/>
+      </node>
+      <node id="17">
+        <label>src/account/MigrationManager.hpp</label>
+        <link refid="dc/d31/_migration_manager_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>src/account/TransactionManager.cpp</label>
+        <link refid="d0/dcc/_transaction_manager_8cpp"/>
+      </node>
+      <node id="19">
+        <label>src/account/TransactionManager.hpp</label>
+        <link refid="de/d54/_transaction_manager_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>src/account/UTXOManager.cpp</label>
+        <link refid="dc/d76/_u_t_x_o_manager_8cpp"/>
+      </node>
+      <node id="22">
+        <label>src/account/UTXOManager.hpp</label>
+        <link refid="d1/dac/_u_t_x_o_manager_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>src/blockchain/Blockchain.hpp</label>
+        <link refid="dc/d59/_blockchain_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>src/blockchain/ValidatorRegistry.cpp</label>
+        <link refid="df/d00/_validator_registry_8cpp"/>
+      </node>
+      <node id="26">
+        <label>src/blockchain/ValidatorRegistry.hpp</label>
+        <link refid="df/df1/_validator_registry_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>src/blockchain/impl/Blockchain.cpp</label>
+        <link refid="da/d8c/_blockchain_8cpp"/>
+      </node>
+      <node id="36">
+        <label>src/blockchain/impl/block_tree_impl.cpp</label>
+        <link refid="d5/df4/block__tree__impl_8cpp"/>
+      </node>
+      <node id="28">
+        <label>src/blockchain/impl/common.hpp</label>
+        <link refid="db/d1e/src_2blockchain_2impl_2common_8hpp"/>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>src/blockchain/impl/key_value_block_header_repository.cpp</label>
+        <link refid="de/d1b/key__value__block__header__repository_8cpp"/>
+      </node>
+      <node id="33">
+        <label>src/blockchain/impl/key_value_block_header_repository.hpp</label>
+        <link refid="dd/dc6/key__value__block__header__repository_8hpp"/>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>src/blockchain/impl/key_value_block_storage.cpp</label>
+        <link refid="de/de9/key__value__block__storage_8cpp"/>
+      </node>
+      <node id="34">
+        <label>src/blockchain/impl/key_value_block_storage.hpp</label>
+        <link refid="d4/d6b/key__value__block__storage_8hpp"/>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>src/blockchain/impl/storage_util.cpp</label>
+        <link refid="d3/d2f/storage__util_8cpp"/>
+      </node>
+      <node id="35">
+        <label>src/blockchain/impl/storage_util.hpp</label>
+        <link refid="dd/d87/storage__util_8hpp"/>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>src/blockchain/impl/types.cpp</label>
+        <link refid="da/ddf/types_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/crdt/crdt_datastore.hpp</label>
+        <link refid="d5/d29/crdt__datastore_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="44" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+        <childnode refid="46" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crdt/crdt_set.hpp</label>
+        <link refid="d4/d2e/crdt__set_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="47" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>src/crdt/globaldb/globaldb.cpp</label>
+        <link refid="d6/de2/globaldb_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/crdt/globaldb/globaldb.hpp</label>
+        <link refid="d0/d0e/globaldb_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+      </node>
+      <node id="43">
+        <label>src/crdt/globaldb/pubsub_broadcaster_ext.cpp</label>
+        <link refid="d1/dc9/pubsub__broadcaster__ext_8cpp"/>
+      </node>
+      <node id="44">
+        <label>src/crdt/globaldb/pubsub_broadcaster_ext.hpp</label>
+        <link refid="d7/db9/pubsub__broadcaster__ext_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+      </node>
+      <node id="45">
+        <label>src/crdt/impl/atomic_transaction.cpp</label>
+        <link refid="d3/db3/atomic__transaction_8cpp"/>
+      </node>
+      <node id="46">
+        <label>src/crdt/impl/crdt_datastore.cpp</label>
+        <link refid="d9/d51/crdt__datastore_8cpp"/>
+      </node>
+      <node id="47">
+        <label>src/crdt/impl/crdt_set.cpp</label>
+        <link refid="d4/d84/crdt__set_8cpp"/>
+      </node>
+      <node id="38">
+        <label>src/processing/impl/processing_core_impl.cpp</label>
+        <link refid="db/d83/processing__core__impl_8cpp"/>
+      </node>
+      <node id="37">
+        <label>src/processing/impl/processing_core_impl.hpp</label>
+        <link refid="dd/da6/processing__core__impl_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+      </node>
+      <node id="40">
+        <label>src/processing/impl/processing_subtask_result_storage_impl.cpp</label>
+        <link refid="d5/d95/processing__subtask__result__storage__impl_8cpp"/>
+      </node>
+      <node id="39">
+        <label>src/processing/impl/processing_subtask_result_storage_impl.hpp</label>
+        <link refid="d6/dd6/processing__subtask__result__storage__impl_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+      </node>
+      <node id="42">
+        <label>src/processing/impl/processing_task_queue_impl.cpp</label>
+        <link refid="d1/dff/processing__task__queue__impl_8cpp"/>
+      </node>
+      <node id="41">
+        <label>src/processing/impl/processing_task_queue_impl.hpp</label>
+        <link refid="d2/d76/processing__task__queue__impl_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set" prot="public">sgns::crdt::CrdtSet</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d4/dd0/namespacesgns_1_1crdt">sgns::crdt</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_CRDT_SET_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_CRDT_SET_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;mutex&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;<ref refid="d1/d07/rocksdb_8hpp" kindref="compound">storage/rocksdb/rocksdb.hpp</ref>&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/dc7/hierarchical__key_8hpp" kindref="compound">crdt/hierarchical_key.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;crdt/proto/delta.pb.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d4/dd0/namespacesgns_1_1crdt" kindref="compound">sgns::crdt</ref></highlight></codeline>
+<codeline lineno="10"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="18" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aee3b2c8e139ffbf2077783310258368d" kindref="member">CrdtSet</ref></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="21" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a3c68254073dc4899c0381648bb2b0d5d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a3c68254073dc4899c0381648bb2b0d5d" kindref="member">Delta</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>pb::Delta;</highlight></codeline>
+<codeline lineno="22" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a714946643028e430c20de60a62f6debf" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a714946643028e430c20de60a62f6debf" kindref="member">Element</ref><sp/><sp/><sp/><sp/><sp/>=<sp/>pb::Element;</highlight></codeline>
+<codeline lineno="23" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a7e8ebf0f3c0554a34554e9403f1ed58e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a7e8ebf0f3c0554a34554e9403f1ed58e" kindref="member">Buffer</ref><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref>;</highlight></codeline>
+<codeline lineno="24" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a10f8dfc0457626df474c0528332e8a28" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a10f8dfc0457626df474c0528332e8a28" kindref="member">DataStore</ref><sp/><sp/><sp/>=<sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb" kindref="compound">storage::rocksdb</ref>;</highlight></codeline>
+<codeline lineno="25" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab08b15d094e1258e65bdbfec872b5e19" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab08b15d094e1258e65bdbfec872b5e19" kindref="member">QueryResult</ref><sp/>=<sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a2c93b11da8a6ebd31ca7512ca2c86b41" kindref="member">DataStore::QueryResult</ref>;</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">enum<sp/>class</highlight><highlight class="normal"><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5" kindref="member">QuerySuffix</ref></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="29" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5a9f9bc38f522e367e0c5bde5252e482be" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5a9f9bc38f522e367e0c5bde5252e482be" kindref="member">QUERY_ALL</ref>,</highlight></codeline>
+<codeline lineno="30" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5af2647f34c723fb3404da1d91fe0f7f45" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5af2647f34c723fb3404da1d91fe0f7f45" kindref="member">QUERY_VALUESUFFIX</ref>,</highlight></codeline>
+<codeline lineno="31" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5ae127acaeedd7818491d8e174d4ae38a1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5ae127acaeedd7818491d8e174d4ae38a1" kindref="member">QUERY_PRIORITYSUFFIX</ref>,</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight></codeline>
+<codeline lineno="38" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a0eab41af5fe517c06de2ced00e2f2075" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a0eab41af5fe517c06de2ced00e2f2075" kindref="member">PutHookPtr</ref><sp/>=<sp/>std::function&lt;void(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;k,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a7e8ebf0f3c0554a34554e9403f1ed58e" kindref="member">Buffer</ref><sp/>&amp;v,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;cid<sp/>)&gt;;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="43" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab0f1b98bec92e94784401368b56149e2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab0f1b98bec92e94784401368b56149e2" kindref="member">DeleteHookPtr</ref><sp/>=<sp/>std::function&lt;void(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;k,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;cid<sp/>)&gt;;</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a52c8b9b3f00e5e2b5db3c4b38b52734e" kindref="member">CrdtSet</ref>(<sp/>std::shared_ptr&lt;DataStore&gt;<sp/>aDatastore,</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref><sp/><sp/><sp/><sp/><sp/>&amp;aNamespace,</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a0eab41af5fe517c06de2ced00e2f2075" kindref="member">PutHookPtr</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>aPutHookPtr<sp/><sp/><sp/><sp/>=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">,</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab0f1b98bec92e94784401368b56149e2" kindref="member">DeleteHookPtr</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>aDeleteHookPtr<sp/>=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"></highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a52c8b9b3f00e5e2b5db3c4b38b52734e" kindref="member">CrdtSet</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aee3b2c8e139ffbf2077783310258368d" kindref="member">CrdtSet</ref><sp/>&amp;<sp/>);</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight></codeline>
+<codeline lineno="62" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ac0c590242c60335dba4b51186b70d78c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ac0c590242c60335dba4b51186b70d78c" kindref="member">~CrdtSet</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"></highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a103fa7e794ba3e7f9869273135385ae9" kindref="member">operator==</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aee3b2c8e139ffbf2077783310258368d" kindref="member">CrdtSet</ref><sp/>&amp;<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"></highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a2cbb8428390c033f3d8e22f72b233721" kindref="member">operator!=</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aee3b2c8e139ffbf2077783310258368d" kindref="member">CrdtSet</ref><sp/>&amp;<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"></highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aee3b2c8e139ffbf2077783310258368d" kindref="member">CrdtSet</ref><sp/>&amp;<ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ae7943a79b7b1096962366d51ddf4d701" kindref="member">operator=</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aee3b2c8e139ffbf2077783310258368d" kindref="member">CrdtSet</ref><sp/>&amp;<sp/>);</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"></highlight></codeline>
+<codeline lineno="80" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1abfbf942a3d04e965b5d4db6f467b7fb1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::string<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1abfbf942a3d04e965b5d4db6f467b7fb1" kindref="member">GetPrioritySuffix</ref>()</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::string(<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aa73c800b6187153a0b68b8d81ea595bc" kindref="member">prioritySuffix_</ref><sp/>);</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"></highlight></codeline>
+<codeline lineno="87" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a2bf5113d447a07c61c29a389cc534744" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::string<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a2bf5113d447a07c61c29a389cc534744" kindref="member">GetValueSuffix</ref>()</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::string(<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1acb045e20cc7f88554a132db8eab458d6" kindref="member">valueSuffix_</ref><sp/>);</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"></highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;std::string&gt;<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a1815525bf64247f1bf75c726e418f9eb" kindref="member">GetValueFromDatastore</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref><sp/>&amp;aKey<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"></highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>outcome::result&lt;std::shared_ptr&lt;Delta&gt;&gt;<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a74e5fbcd365b4e1cb5393d770f885637" kindref="member">CreateDeltaToAdd</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aKey,</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aValue<sp/>);</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"></highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;std::shared_ptr&lt;Delta&gt;&gt;<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1af96668779574ef8996ec587c16c79ef1" kindref="member">CreateDeltaToRemove</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aKey<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"></highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;Buffer&gt;<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1abff7cdd8d9bb587127dcb1cfc1d7615c" kindref="member">GetElement</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aKey<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"></highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;QueryResult&gt;<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a9d47deccadf24bd675864b3fadd1c0ed" kindref="member">QueryElements</ref>(<sp/>std::string_view<sp/><sp/><sp/>aPrefix,</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5" kindref="member">QuerySuffix</ref><sp/>&amp;aSuffix<sp/>=<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5a9f9bc38f522e367e0c5bde5252e482be" kindref="member">QuerySuffix::QUERY_ALL</ref><sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"></highlight></codeline>
+<codeline lineno="135"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;QueryResult&gt;<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a9d47deccadf24bd675864b3fadd1c0ed" kindref="member">QueryElements</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;prefix_base,</highlight></codeline>
+<codeline lineno="136"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;middle_part,</highlight></codeline>
+<codeline lineno="137"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;remainder_prefix,</highlight></codeline>
+<codeline lineno="138"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5" kindref="member">QuerySuffix</ref><sp/>&amp;aSuffix<sp/>=<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a6af448b6c5225fe1047aa186511e54e5a9f9bc38f522e367e0c5bde5252e482be" kindref="member">QuerySuffix::QUERY_ALL</ref><sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="139"><highlight class="normal"></highlight></codeline>
+<codeline lineno="140"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>TODO:<sp/>Need<sp/>to<sp/>implement<sp/>query<sp/>with<sp/>prefix<sp/>from<sp/>datastore</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="141"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//func<sp/>(s<sp/>*set)<sp/>Elements(q<sp/>query.Query)<sp/>(query.Results,<sp/>error)<sp/>{</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="142"><highlight class="normal"></highlight></codeline>
+<codeline lineno="148"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;bool&gt;<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a9276e00323617ff1c8e713f3f586b600" kindref="member">IsValueInSet</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aKey<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="149"><highlight class="normal"></highlight></codeline>
+<codeline lineno="155"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;bool&gt;<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aa76c9ca73919a5c3041fd42a22573a0a" kindref="member">InElemsNotTombstoned</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aKey<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="156"><highlight class="normal"></highlight></codeline>
+<codeline lineno="162"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a09a236a88b68d04bf869fb5241616fba" kindref="member">KeyPrefix</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aKey<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="163"><highlight class="normal"></highlight></codeline>
+<codeline lineno="169"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a9574ad9a47a74b9ac932eb5a80187059" kindref="member">ElemsPrefix</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aKey<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="170"><highlight class="normal"></highlight></codeline>
+<codeline lineno="176"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1abfa53c5f84133459f9dc09d245c5b776" kindref="member">TombsPrefix</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aKey<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="177"><highlight class="normal"></highlight></codeline>
+<codeline lineno="183"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a05a3d2e0996a4c06c41c3fe9ce7331fc" kindref="member">KeysKey</ref>(<sp/>std::string_view<sp/>aKey<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="184"><highlight class="normal"></highlight></codeline>
+<codeline lineno="190"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a4944ddfb602140c09489bc4c3b85eabf" kindref="member">ValueKey</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aKey<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="191"><highlight class="normal"></highlight></codeline>
+<codeline lineno="197"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a36f103b2c0ea142434859e2de75ee37a" kindref="member">PriorityKey</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aKey<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="198"><highlight class="normal"></highlight></codeline>
+<codeline lineno="203"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;uint64_t&gt;<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a57bebd53171f08177ddbe6f5a7160828" kindref="member">GetPriority</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aKey<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="204"><highlight class="normal"></highlight></codeline>
+<codeline lineno="210"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a756b190b07b8d3e725b27eacad7a03a2" kindref="member">SetPriority</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aKey,<sp/>uint64_t<sp/>aPriority<sp/>);</highlight></codeline>
+<codeline lineno="211"><highlight class="normal"></highlight></codeline>
+<codeline lineno="220"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ae55260e21fd4ba2a647adb178e4a476d" kindref="member">SetValue</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aKey,</highlight></codeline>
+<codeline lineno="221"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aID,</highlight></codeline>
+<codeline lineno="222"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref><sp/><sp/><sp/><sp/><sp/><sp/>&amp;aValue,</highlight></codeline>
+<codeline lineno="223"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>aPriority<sp/>);</highlight></codeline>
+<codeline lineno="224"><highlight class="normal"></highlight></codeline>
+<codeline lineno="234"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ae55260e21fd4ba2a647adb178e4a476d" kindref="member">SetValue</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::unique_ptr&lt;storage::BufferBatch&gt;<sp/>&amp;aDataStore,</highlight></codeline>
+<codeline lineno="235"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;aKey,</highlight></codeline>
+<codeline lineno="236"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;aID,</highlight></codeline>
+<codeline lineno="237"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;aValue,</highlight></codeline>
+<codeline lineno="238"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>aPriority<sp/>);</highlight></codeline>
+<codeline lineno="239"><highlight class="normal"></highlight></codeline>
+<codeline lineno="254"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1af7690002bae50aefc3cf7f80a2ed89a7" kindref="member">PutElems</ref>(<sp/>std::vector&lt;Element&gt;<sp/>&amp;aElems,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aID,<sp/>uint64_t<sp/>aPriority<sp/>);</highlight></codeline>
+<codeline lineno="255"><highlight class="normal"></highlight></codeline>
+<codeline lineno="261"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aad3a72856238edeb82bb725a2c3da64b" kindref="member">PutTombs</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;Element&gt;<sp/>&amp;aTombs,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aID<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="262"><highlight class="normal"></highlight></codeline>
+<codeline lineno="268"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a3185ee6939af7dd1f914da82ea671929" kindref="member">Merge</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a3c68254073dc4899c0381648bb2b0d5d" kindref="member">Delta</ref><sp/>&amp;aDelta,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aID<sp/>);</highlight></codeline>
+<codeline lineno="269"><highlight class="normal"></highlight></codeline>
+<codeline lineno="275"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;bool&gt;<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aec5391c272794e5273dc387db7619c02" kindref="member">InTombsKeyID</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aKey,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;aID<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="276"><highlight class="normal"></highlight></codeline>
+<codeline lineno="283"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a7960d9ce94f2ccba221a770996b0bf1d" kindref="member">SetPutHook</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a0eab41af5fe517c06de2ced00e2f2075" kindref="member">PutHookPtr</ref><sp/>&amp;putHookPtr<sp/>);</highlight></codeline>
+<codeline lineno="284"><highlight class="normal"></highlight></codeline>
+<codeline lineno="294"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ad545a9b71d93c0fb834270d8faa538f7" kindref="member">SetDeleteHook</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab0f1b98bec92e94784401368b56149e2" kindref="member">DeleteHookPtr</ref><sp/>&amp;deleteHookPtr<sp/>);</highlight></codeline>
+<codeline lineno="295"><highlight class="normal"></highlight></codeline>
+<codeline lineno="301"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ad8df1342fefe3b2505621c46c7548222" kindref="member">DataStoreSync</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;HierarchicalKey&gt;<sp/>&amp;aKeyList<sp/>);</highlight></codeline>
+<codeline lineno="302"><highlight class="normal"></highlight></codeline>
+<codeline lineno="303"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1af3dddf6c6df46ac65aea9282a6f9fa46" kindref="member">PrintDataStore</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="304"><highlight class="normal"></highlight></codeline>
+<codeline lineno="305"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="306" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a52c8b9b3f00e5e2b5db3c4b38b52734e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a52c8b9b3f00e5e2b5db3c4b38b52734e" kindref="member">CrdtSet</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="307"><highlight class="normal"></highlight></codeline>
+<codeline lineno="308"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a81c984334a19e54921b3f5b97c7d35a3" kindref="member">PrintTombs</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;Element&gt;<sp/>&amp;aTombs<sp/>);</highlight></codeline>
+<codeline lineno="309"><highlight class="normal"></highlight></codeline>
+<codeline lineno="310" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab8b010c8595afcb90dd7dae915b15232" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;DataStore&gt;<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab8b010c8595afcb90dd7dae915b15232" kindref="member">dataStore_</ref><sp/>=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="311" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ae69a448a218970353d2c978909f52782" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ae69a448a218970353d2c978909f52782" kindref="member">namespaceKey_</ref>;</highlight></codeline>
+<codeline lineno="312" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a4fa932fa4281c56b3cc6188af8dd0ff7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::mutex<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a4fa932fa4281c56b3cc6188af8dd0ff7" kindref="member">mutex_</ref>;</highlight></codeline>
+<codeline lineno="313" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab8ff1f252a3f13ca5cf396f3d869c464" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a0eab41af5fe517c06de2ced00e2f2075" kindref="member">PutHookPtr</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab8ff1f252a3f13ca5cf396f3d869c464" kindref="member">putHookFunc_</ref><sp/><sp/><sp/><sp/>=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="314" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a2b5c2a715f309fdc603127c482c82c33" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1ab0f1b98bec92e94784401368b56149e2" kindref="member">DeleteHookPtr</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a2b5c2a715f309fdc603127c482c82c33" kindref="member">deleteHookFunc_</ref><sp/>=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="315"><highlight class="normal"></highlight></codeline>
+<codeline lineno="316" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a307d200dcb6039ebdd00e8696a7055e1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::string_view<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a307d200dcb6039ebdd00e8696a7055e1" kindref="member">elemsNamespace_</ref><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;s&quot;</highlight><highlight class="normal">;<sp/></highlight><highlight class="comment">//<sp/>&quot;s&quot;<sp/>-&gt;<sp/>elements<sp/>namespace<sp/>/set/s/&lt;key&gt;/&lt;block&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="317" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1add6f086cee0f74a3da366c9db5c2d858" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::string_view<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1add6f086cee0f74a3da366c9db5c2d858" kindref="member">tombsNamespace_</ref><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;t&quot;</highlight><highlight class="normal">;<sp/></highlight><highlight class="comment">//<sp/>&quot;t&quot;<sp/>-&gt;<sp/>tombstones<sp/>namespace<sp/>/set/t/&lt;key&gt;/&lt;block&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="318" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a98d7bd761cca31dc611f4209b49f7741" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::string_view<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1a98d7bd761cca31dc611f4209b49f7741" kindref="member">keysNamespace_</ref><sp/><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;k&quot;</highlight><highlight class="normal">;<sp/></highlight><highlight class="comment">//<sp/>&quot;k&quot;<sp/>-&gt;<sp/>keys<sp/>namespace<sp/>/set/k/&lt;key&gt;/{v,p}</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="319" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1acb045e20cc7f88554a132db8eab458d6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::string_view<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1acb045e20cc7f88554a132db8eab458d6" kindref="member">valueSuffix_</ref><sp/><sp/><sp/><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;v&quot;</highlight><highlight class="normal">;<sp/></highlight><highlight class="comment">//<sp/>&quot;v&quot;<sp/>for<sp/>/keys<sp/>namespace</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="320" refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aa73c800b6187153a0b68b8d81ea595bc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::string_view<sp/><ref refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set_1aa73c800b6187153a0b68b8d81ea595bc" kindref="member">prioritySuffix_</ref><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;p&quot;</highlight><highlight class="normal">;<sp/></highlight><highlight class="comment">//<sp/>&quot;p&quot;<sp/>for<sp/>/keys<sp/>namespace</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="321"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="322"><highlight class="normal"></highlight></codeline>
+<codeline lineno="323"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::crdt</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="324"><highlight class="normal"></highlight></codeline>
+<codeline lineno="325"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">//SUPERGENIUS_CRDT_SET_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/crdt/crdt_set.hpp"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,648 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage" kind="class" language="C++" prot="public">
+    <compoundname>sgns::storage::InMemoryStorage</compoundname>
+    <basecompoundref refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage" prot="public" virt="non-virtual">sgns::storage::face::GenericStorage&lt; Buffer, Buffer &gt;</basecompoundref>
+    <includes refid="d0/d03/in__memory__storage_8hpp" local="no">in_memory_storage.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1afbcd7e4a5c586f2bda47abff01a0a5f3" prot="private" static="no" mutable="no">
+        <type>std::map&lt; std::string, <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>std::map&lt;std::string, base::Buffer&gt; sgns::storage::InMemoryStorage::storage</definition>
+        <argsstring></argsstring>
+        <name>storage</name>
+        <qualifiedname>sgns::storage::InMemoryStorage::storage</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/in_memory/in_memory_storage.hpp" line="54" column="14" bodyfile="src/storage/in_memory/in_memory_storage.hpp" bodystart="54" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1aefa2115e55caef714824d99fb7d5875e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::InMemoryStorage::~InMemoryStorage</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~InMemoryStorage</name>
+        <qualifiedname>sgns::storage::InMemoryStorage::~InMemoryStorage</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/in_memory/in_memory_storage.hpp" line="23" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1af7cdb445cc3c02c4f8cc6083fa725d5b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; Buffer &gt; sgns::storage::InMemoryStorage::get</definition>
+        <argsstring>(const base::Buffer &amp;key) const override</argsstring>
+        <name>get</name>
+        <qualifiedname>sgns::storage::InMemoryStorage::get</qualifiedname>
+        <reimplements refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a0aeb44c506c0f66a5d7bf3f3be4baebe">get</reimplements>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Get value by key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>K </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>V </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/in_memory/in_memory_storage.hpp" line="25" column="21" bodyfile="src/storage/in_memory/in_memory_storage.cpp" bodystart="12" bodyend="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1a08f4b04126179049b6782f76ed093f53" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::InMemoryStorage::put</definition>
+        <argsstring>(const base::Buffer &amp;key, const base::Buffer &amp;value) override</argsstring>
+        <name>put</name>
+        <qualifiedname>sgns::storage::InMemoryStorage::put</qualifiedname>
+        <reimplements refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a6c94f5ac466050295a32f93aeb5a0e8c">put</reimplements>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+<para>Store value by key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>result containing void if put successful, error otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/in_memory/in_memory_storage.hpp" line="28" column="21" bodyfile="src/storage/in_memory/in_memory_storage.cpp" bodystart="20" bodyend="24"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1aceb13ee413d3084df7c719cfafddbcfa" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::InMemoryStorage::put</definition>
+        <argsstring>(const base::Buffer &amp;key, base::Buffer &amp;&amp;value) override</argsstring>
+        <name>put</name>
+        <qualifiedname>sgns::storage::InMemoryStorage::put</qualifiedname>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;&amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/in_memory/in_memory_storage.hpp" line="31" column="21" bodyfile="src/storage/in_memory/in_memory_storage.cpp" bodystart="26" bodyend="30"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1a62dd93d64fd9f9fa9ac029961da38063" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>bool</type>
+        <definition>bool sgns::storage::InMemoryStorage::contains</definition>
+        <argsstring>(const base::Buffer &amp;key) const override</argsstring>
+        <name>contains</name>
+        <qualifiedname>sgns::storage::InMemoryStorage::contains</qualifiedname>
+        <reimplements refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a0d7d1047789a450de21caff78afc5c37">contains</reimplements>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Returns true if given key-value binding exists in the storage. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>K </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if key has value, false otherwise. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/in_memory/in_memory_storage.hpp" line="34" column="10" bodyfile="src/storage/in_memory/in_memory_storage.cpp" bodystart="32" bodyend="34"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1a0d899ec73ea7b6f0b6f8d324acba05d0" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>bool</type>
+        <definition>bool sgns::storage::InMemoryStorage::empty</definition>
+        <argsstring>() const override</argsstring>
+        <name>empty</name>
+        <qualifiedname>sgns::storage::InMemoryStorage::empty</qualifiedname>
+        <reimplements refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a829c8fbd3e864503defcaa43c8c2699b">empty</reimplements>
+        <briefdescription>
+<para>Returns true if the storage is empty. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/in_memory/in_memory_storage.hpp" line="36" column="10" bodyfile="src/storage/in_memory/in_memory_storage.cpp" bodystart="36" bodyend="38"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1a277a5cb3355451c936cf5128569555ff" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::InMemoryStorage::remove</definition>
+        <argsstring>(const base::Buffer &amp;key) override</argsstring>
+        <name>remove</name>
+        <qualifiedname>sgns::storage::InMemoryStorage::remove</qualifiedname>
+        <reimplements refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a13a83e4a2fa9540c366e277871701ac3">remove</reimplements>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Remove value by key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>K </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>error code if error happened </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/in_memory/in_memory_storage.hpp" line="38" column="21" bodyfile="src/storage/in_memory/in_memory_storage.cpp" bodystart="40" bodyend="43"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1a46acd24518c3c875e25609acf32bdfa6" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>std::unique_ptr&lt; <ref refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch" kindref="compound">sgns::storage::face::WriteBatch</ref>&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref>, <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt; &gt;</type>
+        <definition>std::unique_ptr&lt; sgns::storage::face::WriteBatch&lt; Buffer, Buffer &gt; &gt; sgns::storage::InMemoryStorage::batch</definition>
+        <argsstring>() override</argsstring>
+        <name>batch</name>
+        <qualifiedname>sgns::storage::InMemoryStorage::batch</qualifiedname>
+        <reimplements refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable_1af8f2ceafd524ec1a2180b3694f541fda">batch</reimplements>
+        <briefdescription>
+<para>Creates new Write Batch - an object, which can be used to efficiently write bulk data. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/in_memory/in_memory_storage.hpp" line="42" column="5" bodyfile="src/storage/in_memory/in_memory_storage.cpp" bodystart="46" bodyend="48"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1ad4c49bd1e281b9028551f9efa3f21d3c" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>std::unique_ptr&lt; <ref refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor" kindref="compound">sgns::storage::face::MapCursor</ref>&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref>, <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt; &gt;</type>
+        <definition>std::unique_ptr&lt; sgns::storage::face::MapCursor&lt; Buffer, Buffer &gt; &gt; sgns::storage::InMemoryStorage::cursor</definition>
+        <argsstring>() override</argsstring>
+        <name>cursor</name>
+        <qualifiedname>sgns::storage::InMemoryStorage::cursor</qualifiedname>
+        <reimplements refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable_1a44ca82af98f642669b5237f535b58001">cursor</reimplements>
+        <briefdescription>
+<para>Returns new key-value iterator. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>kv iterator </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/in_memory/in_memory_storage.hpp" line="46" column="5" bodyfile="src/storage/in_memory/in_memory_storage.cpp" bodystart="51" bodyend="53"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1ae0cb38da5bfe41e13b64831365cfd578" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::storage::InMemoryStorage::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::storage::InMemoryStorage::GetName</qualifiedname>
+        <reimplements refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/in_memory/in_memory_storage.hpp" line="48" column="17" bodyfile="src/storage/in_memory/in_memory_storage.hpp" bodystart="48" bodyend="51"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Simple storage that conforms PersistentMap interface Mostly needed to have an in-memory trie in tests to avoid integration with RocksDB </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="18">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::storage::InMemoryStorage</label>
+        <link refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::storage::face::BatchWriteMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+        <childnode refid="14" relation="public-inheritance">
+        </childnode>
+        <childnode refid="15" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="17">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="19">
+        <label>sgns::storage::face::GenericStorage&lt; K, V &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="20" relation="public-inheritance">
+        </childnode>
+        <childnode refid="21" relation="public-inheritance">
+        </childnode>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="4">
+        <label>sgns::storage::face::Iterable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="8">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::face::ReadOnlyMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="20">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="6">
+        <label>sgns::storage::face::Readable&lt; Buffer, Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="13">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="12">
+        <label>sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="13" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="2">
+        <label>storage::BufferStorage</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+        <childnode refid="19" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="18">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="33">
+        <label>K</label>
+      </node>
+      <node id="31">
+        <label>T</label>
+      </node>
+      <node id="26">
+        <label>boost::equality_comparable&lt; Buffer &gt;</label>
+      </node>
+      <node id="27">
+        <label>boost::equality_comparable&lt; gsl::span&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="28">
+        <label>boost::equality_comparable&lt; std::vector&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="25">
+        <label>sgns::base::Buffer</label>
+        <link refid="de/dd5/classsgns_1_1base_1_1_buffer"/>
+        <childnode refid="26" relation="public-inheritance">
+        </childnode>
+        <childnode refid="27" relation="public-inheritance">
+        </childnode>
+        <childnode refid="28" relation="public-inheritance">
+        </childnode>
+        <childnode refid="29" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::InMemoryStorage</label>
+        <link refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="22" relation="usage">
+          <edgelabel>-storage</edgelabel>
+        </childnode>
+      </node>
+      <node id="15">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::storage::face::BatchWriteMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+        <childnode refid="14" relation="public-inheritance">
+        </childnode>
+        <childnode refid="15" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="17">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="19">
+        <label>sgns::storage::face::GenericStorage&lt; K, V &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="20" relation="public-inheritance">
+        </childnode>
+        <childnode refid="21" relation="public-inheritance">
+        </childnode>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="4">
+        <label>sgns::storage::face::Iterable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="8">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::face::ReadOnlyMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="20">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="6">
+        <label>sgns::storage::face::Readable&lt; Buffer, Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="13">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="12">
+        <label>sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="13" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="24">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="32">
+        <label>std::map&lt; K, T &gt;</label>
+        <childnode refid="33" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="31" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="22">
+        <label>std::map&lt; std::string, sgns::base::Buffer &gt;</label>
+        <childnode refid="23" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="25" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="32" relation="template-instance">
+          <edgelabel>&lt; std::string, sgns::base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="23">
+        <label>std::string</label>
+        <childnode refid="24" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="31" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="29">
+        <label>std::vector&lt; uint8_t &gt;</label>
+        <childnode refid="30" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>storage::BufferStorage</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+        <childnode refid="19" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/in_memory/in_memory_storage.hpp" line="21" column="3" bodyfile="src/storage/in_memory/in_memory_storage.hpp" bodystart="21" bodyend="55"/>
+    <listofallmembers>
+      <member refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1a46acd24518c3c875e25609acf32bdfa6" prot="public" virt="virtual"><scope>sgns::storage::InMemoryStorage</scope><name>batch</name></member>
+      <member refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1a62dd93d64fd9f9fa9ac029961da38063" prot="public" virt="virtual"><scope>sgns::storage::InMemoryStorage</scope><name>contains</name></member>
+      <member refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1ad4c49bd1e281b9028551f9efa3f21d3c" prot="public" virt="virtual"><scope>sgns::storage::InMemoryStorage</scope><name>cursor</name></member>
+      <member refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1a0d899ec73ea7b6f0b6f8d324acba05d0" prot="public" virt="virtual"><scope>sgns::storage::InMemoryStorage</scope><name>empty</name></member>
+      <member refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1af7cdb445cc3c02c4f8cc6083fa725d5b" prot="public" virt="virtual"><scope>sgns::storage::InMemoryStorage</scope><name>get</name></member>
+      <member refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1ae0cb38da5bfe41e13b64831365cfd578" prot="public" virt="virtual"><scope>sgns::storage::InMemoryStorage</scope><name>GetName</name></member>
+      <member refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1a08f4b04126179049b6782f76ed093f53" prot="public" virt="virtual"><scope>sgns::storage::InMemoryStorage</scope><name>put</name></member>
+      <member refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1aceb13ee413d3084df7c719cfafddbcfa" prot="public" virt="non-virtual"><scope>sgns::storage::InMemoryStorage</scope><name>put</name></member>
+      <member refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1a277a5cb3355451c936cf5128569555ff" prot="public" virt="virtual"><scope>sgns::storage::InMemoryStorage</scope><name>remove</name></member>
+      <member refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1afbcd7e4a5c586f2bda47abff01a0a5f3" prot="private" virt="non-virtual"><scope>sgns::storage::InMemoryStorage</scope><name>storage</name></member>
+      <member refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable_1a09ef385308b209ab00cf72ed42897e01" prot="public" virt="virtual"><scope>sgns::storage::InMemoryStorage</scope><name>~Batchable</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::storage::InMemoryStorage</scope><name>~IComponent</name></member>
+      <member refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1aefa2115e55caef714824d99fb7d5875e" prot="public" virt="non-virtual"><scope>sgns::storage::InMemoryStorage</scope><name>~InMemoryStorage</name></member>
+      <member refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable_1ad46259be5d5a46afb966c0ddfb78fa45" prot="public" virt="virtual"><scope>sgns::storage::InMemoryStorage</scope><name>~Iterable</name></member>
+      <member refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a481cee90de071b4bc04fae066e25236f" prot="public" virt="virtual"><scope>sgns::storage::InMemoryStorage</scope><name>~Readable</name></member>
+      <member refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1adb986d79f420f5829cae3d6659430a00" prot="public" virt="virtual"><scope>sgns::storage::InMemoryStorage</scope><name>~Writeable</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

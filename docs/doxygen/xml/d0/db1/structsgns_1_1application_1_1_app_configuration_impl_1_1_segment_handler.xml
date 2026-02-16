@@ -1,0 +1,70 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler" kind="struct" language="C++" prot="private">
+    <compoundname>sgns::application::AppConfigurationImpl::SegmentHandler</compoundname>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler_1aaf5319e9f5f554f05de21bd6e53a724b" prot="public" static="no">
+        <type>void(sgns::application::AppConfigurationImpl::*)( rapidjson::Value &amp;)</type>
+        <definition>using sgns::application::AppConfigurationImpl::SegmentHandler::Handler = void (sgns::application::AppConfigurationImpl::*)(
+         rapidjson::Value &amp;)</definition>
+        <argsstring></argsstring>
+        <name>Handler</name>
+        <qualifiedname>sgns::application::AppConfigurationImpl::SegmentHandler::Handler</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="50" column="7" bodyfile="src/application/impl/app_config_impl.hpp" bodystart="50" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler_1aec2fc5f768bfc81ea2fa9d4f21081f16" prot="public" static="no" mutable="no">
+        <type>char const  *</type>
+        <definition>char const* sgns::application::AppConfigurationImpl::SegmentHandler::segment_name</definition>
+        <argsstring></argsstring>
+        <name>segment_name</name>
+        <qualifiedname>sgns::application::AppConfigurationImpl::SegmentHandler::segment_name</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="52" column="18" bodyfile="src/application/impl/app_config_impl.hpp" bodystart="52" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler_1a52f5407ee9713deb54a7829390d1ad00" prot="public" static="no" mutable="no">
+        <type><ref refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler_1aaf5319e9f5f554f05de21bd6e53a724b" kindref="member">Handler</ref></type>
+        <definition>Handler sgns::application::AppConfigurationImpl::SegmentHandler::handler</definition>
+        <argsstring></argsstring>
+        <name>handler</name>
+        <qualifiedname>sgns::application::AppConfigurationImpl::SegmentHandler::handler</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="53" column="15" bodyfile="src/application/impl/app_config_impl.hpp" bodystart="53" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>TODO(iceseer): make handler calls via lambda-calls, remove member-function ptrs </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::application::AppConfigurationImpl::SegmentHandler</label>
+        <link refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/application/impl/app_config_impl.hpp" line="49" column="5" bodyfile="src/application/impl/app_config_impl.hpp" bodystart="49" bodyend="54"/>
+    <listofallmembers>
+      <member refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler_1aaf5319e9f5f554f05de21bd6e53a724b" prot="public" virt="non-virtual"><scope>sgns::application::AppConfigurationImpl::SegmentHandler</scope><name>Handler</name></member>
+      <member refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler_1a52f5407ee9713deb54a7829390d1ad00" prot="public" virt="non-virtual"><scope>sgns::application::AppConfigurationImpl::SegmentHandler</scope><name>handler</name></member>
+      <member refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler_1aec2fc5f768bfc81ea2fa9d4f21081f16" prot="public" virt="non-virtual"><scope>sgns::application::AppConfigurationImpl::SegmentHandler</scope><name>segment_name</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

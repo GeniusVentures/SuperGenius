@@ -1,0 +1,91 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/d66/namespacesgns_1_1api" kind="namespace" language="C++">
+    <compoundname>sgns::api</compoundname>
+    <innerclass refid="dd/d62/classsgns_1_1api_1_1_author_api" prot="public">sgns::api::AuthorApi</innerclass>
+    <innerclass refid="db/de6/classsgns_1_1api_1_1_http_listener_impl" prot="public">sgns::api::HttpListenerImpl</innerclass>
+    <innerclass refid="de/d31/classsgns_1_1api_1_1_http_session" prot="public">sgns::api::HttpSession</innerclass>
+    <innerclass refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl" prot="public">sgns::api::WsClientImpl</innerclass>
+    <innerclass refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl" prot="public">sgns::api::WsListenerImpl</innerclass>
+    <innerclass refid="da/dc7/classsgns_1_1api_1_1_ws_session" prot="public">sgns::api::WsSession</innerclass>
+    <innerclass refid="d6/d3f/classsgns_1_1api_1_1_listener" prot="public">sgns::api::Listener</innerclass>
+    <innerclass refid="dd/d46/classsgns_1_1api_1_1_rpc_context" prot="public">sgns::api::RpcContext</innerclass>
+    <innerclass refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool" prot="public">sgns::api::RpcThreadPool</innerclass>
+    <innerclass refid="db/d02/classsgns_1_1api_1_1_session" prot="public">sgns::api::Session</innerclass>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="df/d66/namespacesgns_1_1api_1aa5d7dac5f23932d4109957377d37d205" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>ApiTransportError</name>
+        <qualifiedname>sgns::api::ApiTransportError</qualifiedname>
+        <enumvalue id="df/d66/namespacesgns_1_1api_1aa5d7dac5f23932d4109957377d37d205a3b1ab25b106217546ec5ff7a8a066f5d" prot="public">
+          <name>FAILED_SET_OPTION</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d66/namespacesgns_1_1api_1aa5d7dac5f23932d4109957377d37d205aed8162ac483a1c5734e3d6ce624dbb9a" prot="public">
+          <name>FAILED_START_LISTENING</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d66/namespacesgns_1_1api_1aa5d7dac5f23932d4109957377d37d205a636536cd30190ed7784b91f6f2bc3490" prot="public">
+          <name>LISTENER_ALREADY_STARTED</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d66/namespacesgns_1_1api_1aa5d7dac5f23932d4109957377d37d205a3b3662ef6ca05efbe1c801da8d5e0283" prot="public">
+          <name>CANNOT_ACCEPT_LISTENER_NOT_WORKING</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/error.hpp" line="8" column="3" bodyfile="src/api/transport/error.hpp" bodystart="8" bodyend="15"/>
+      </memberdef>
+      <memberdef kind="enum" id="df/d66/namespacesgns_1_1api_1a581f7e82b9cfa3fb5262a71984f54a1f" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>SessionType</name>
+        <qualifiedname>sgns::api::SessionType</qualifiedname>
+        <enumvalue id="df/d66/namespacesgns_1_1api_1a581f7e82b9cfa3fb5262a71984f54a1fa229dd4950a378fb615da98c010e81b08" prot="public">
+          <name>kHttp</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d66/namespacesgns_1_1api_1a581f7e82b9cfa3fb5262a71984f54a1fa965669c68bbda71f4387510edb152ba2" prot="public">
+          <name>kWs</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/session.hpp" line="15" column="3" bodyfile="src/api/transport/session.hpp" bodystart="15" bodyend="18"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/api/service/author/author_api.hpp" line="10" column="1"/>
+  </compounddef>
+</doxygen>

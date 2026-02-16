@@ -1,0 +1,136 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d3/d74/_c_component_factory_8hpp" kind="file" language="C++">
+    <compoundname>CComponentFactory.hpp</compoundname>
+    <includes local="no">unordered_map</includes>
+    <includes refid="d3/d4b/_i_component_factory_8hpp" local="yes">singleton/IComponentFactory.hpp</includes>
+    <includes refid="d3/d91/_singleton_8hpp" local="yes">singleton/Singleton.hpp</includes>
+    <includedby refid="dd/dd9/_genius_account_8cpp" local="yes">src/account/GeniusAccount.cpp</includedby>
+    <includedby refid="d3/d34/validating__node__application_8cpp" local="yes">src/application/impl/validating_node_application.cpp</includedby>
+    <includedby refid="d7/d37/_j_s_o_n_secure_storage_8cpp" local="yes">src/local_secure_storage/impl/json/JSONSecureStorage.cpp</includedby>
+    <includedby refid="d8/db2/_c_component_factory_8cpp" local="yes">src/singleton/CComponentFactory.cpp</includedby>
+    <incdepgraph>
+      <node id="8">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/singleton/CComponentFactory.hpp</label>
+        <link refid="d3/d74/_c_component_factory_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>singleton/IComponentFactory.hpp</label>
+        <link refid="d3/d4b/_i_component_factory_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>singleton/Singleton.hpp</label>
+        <link refid="d3/d91/_singleton_8hpp"/>
+      </node>
+      <node id="5">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="9">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="4">
+        <label>memory</label>
+      </node>
+      <node id="7">
+        <label>string</label>
+      </node>
+      <node id="2">
+        <label>unordered_map</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/account/GeniusAccount.cpp</label>
+        <link refid="dd/dd9/_genius_account_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/application/impl/validating_node_application.cpp</label>
+        <link refid="d3/d34/validating__node__application_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/local_secure_storage/impl/json/JSONSecureStorage.cpp</label>
+        <link refid="d7/d37/_j_s_o_n_secure_storage_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/singleton/CComponentFactory.cpp</label>
+        <link refid="d8/db2/_c_component_factory_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/singleton/CComponentFactory.hpp</label>
+        <link refid="d3/d74/_c_component_factory_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="df/d07/class_c_component_factory" prot="public">CComponentFactory</innerclass>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="date"><para>2024-02-23 </para>
+</simplesect>
+<simplesect kind="author"><para>Henrique A. Klein (<ulink url="mailto:hklein@gnus.ai">hklein@gnus.ai</ulink>) </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>_CCOMPONENT_FACTORY_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>_CCOMPONENT_FACTORY_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;unordered_map&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d3/d4b/_i_component_factory_8hpp" kindref="compound">singleton/IComponentFactory.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d3/d91/_singleton_8hpp" kindref="compound">singleton/Singleton.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14" refid="df/d07/class_c_component_factory" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="df/d07/class_c_component_factory" kindref="compound">CComponentFactory</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d0/d47/class_i_component_factory" kindref="compound">IComponentFactory</ref></highlight></codeline>
+<codeline lineno="15"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="16" refid="df/d07/class_c_component_factory_1a8d3f11114af80c1f63beb2cf8a4d9ead" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="df/d07/class_c_component_factory_1a8d3f11114af80c1f63beb2cf8a4d9ead" kindref="member">SINGLETON</ref>(<sp/><ref refid="df/d07/class_c_component_factory" kindref="compound">CComponentFactory</ref><sp/>);</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="19" refid="df/d07/class_c_component_factory_1a95b0845cb1ad2fe6ad922d1be4a8c11b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::unordered_map&lt;std::string,<sp/>std::shared_ptr&lt;IComponent&gt;&gt;<sp/><ref refid="df/d07/class_c_component_factory_1a95b0845cb1ad2fe6ad922d1be4a8c11b" kindref="member">ComponentTable</ref>;</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="df/d07/class_c_component_factory_1a271de54756a5a68b276568d3c2ae8f10" kindref="member">Register</ref>(<sp/>std::shared_ptr&lt;IComponent&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>component,</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;type,</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::optional&lt;std::string&gt;<sp/>&amp;variant<sp/>=<sp/>boost::none<sp/>)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;std::shared_ptr&lt;IComponent&gt;&gt;<sp/><ref refid="df/d07/class_c_component_factory_1a813c77f491916e3344885cb2c0b06250" kindref="member">GetComponent</ref>(</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;type,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::optional&lt;std::string&gt;<sp/>&amp;variant<sp/>=<sp/>boost::none<sp/>)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="28"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/singleton/CComponentFactory.hpp"/>
+  </compounddef>
+</doxygen>

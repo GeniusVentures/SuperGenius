@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/dc3/namespacerapidjson" kind="namespace" language="C++">
+    <compoundname>rapidjson</compoundname>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="d1/dc3/namespacerapidjson_1ab6f8ee1a93ec9591e842a5d266b170ab" prot="public" static="no">
+        <type>::std::size_t</type>
+        <definition>using rapidjson::SizeType = ::std::size_t</definition>
+        <argsstring></argsstring>
+        <name>SizeType</name>
+        <qualifiedname>rapidjson::SizeType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="8" column="3" bodyfile="src/application/impl/app_config_impl.hpp" bodystart="8" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/application/impl/app_config_impl.hpp" line="7" column="1"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,299 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool" kind="class" language="C++" prot="public">
+    <compoundname>sgns::api::RpcThreadPool</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">std::enable_shared_from_this&lt; RpcThreadPool &gt;</basecompoundref>
+    <basecompoundref refid="d1/dbf/class_i_component" prot="public" virt="non-virtual">IComponent</basecompoundref>
+    <includes refid="d2/d58/rpc__thread__pool_8hpp" local="no">rpc_thread_pool.hpp</includes>
+    <innerclass refid="da/d10/structsgns_1_1api_1_1_rpc_thread_pool_1_1_configuration" prot="public">sgns::api::RpcThreadPool::Configuration</innerclass>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a979903c07d14dd2d4190f7c0e4f26b2a" prot="public" static="no">
+        <type><ref refid="dd/d46/classsgns_1_1api_1_1_rpc_context" kindref="compound">RpcContext</ref></type>
+        <definition>using sgns::api::RpcThreadPool::Context = RpcContext</definition>
+        <argsstring></argsstring>
+        <name>Context</name>
+        <qualifiedname>sgns::api::RpcThreadPool::Context</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/rpc_thread_pool.hpp" line="24" column="5" bodyfile="src/api/transport/rpc_thread_pool.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1aff7b9650d20f8e55855b05354ad53288" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a979903c07d14dd2d4190f7c0e4f26b2a" kindref="member">Context</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Context&gt; sgns::api::RpcThreadPool::context_</definition>
+        <argsstring></argsstring>
+        <name>context_</name>
+        <qualifiedname>sgns::api::RpcThreadPool::context_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/rpc_thread_pool.hpp" line="52" column="21" bodyfile="src/api/transport/rpc_thread_pool.hpp" bodystart="52" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a48477a261fb291c20936347e4f44a001" prot="private" static="no" mutable="no">
+        <type>const <ref refid="da/d10/structsgns_1_1api_1_1_rpc_thread_pool_1_1_configuration" kindref="compound">Configuration</ref></type>
+        <definition>const Configuration sgns::api::RpcThreadPool::config_</definition>
+        <argsstring></argsstring>
+        <name>config_</name>
+        <qualifiedname>sgns::api::RpcThreadPool::config_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/rpc_thread_pool.hpp" line="53" column="25" bodyfile="src/api/transport/rpc_thread_pool.hpp" bodystart="53" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1af00c6b331ab9855d0b24660e2f632c52" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; std::shared_ptr&lt; std::thread &gt; &gt;</type>
+        <definition>std::vector&lt;std::shared_ptr&lt;std::thread&gt; &gt; sgns::api::RpcThreadPool::threads_</definition>
+        <argsstring></argsstring>
+        <name>threads_</name>
+        <qualifiedname>sgns::api::RpcThreadPool::threads_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/rpc_thread_pool.hpp" line="55" column="17" bodyfile="src/api/transport/rpc_thread_pool.hpp" bodystart="55" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a90c08bab41edc1c8869f68c1394a4e8d" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::api::RpcThreadPool::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::api::RpcThreadPool::logger_</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>(&quot;RPC thread pool&quot;)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/rpc_thread_pool.hpp" line="57" column="18" bodyfile="src/api/transport/rpc_thread_pool.hpp" bodystart="57" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a978d2a2ff3683ca0481125b3cebc73e5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::api::RpcThreadPool::RpcThreadPool</definition>
+        <argsstring>(std::shared_ptr&lt; Context &gt; context, const Configuration &amp;configuration)</argsstring>
+        <name>RpcThreadPool</name>
+        <qualifiedname>sgns::api::RpcThreadPool::RpcThreadPool</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a979903c07d14dd2d4190f7c0e4f26b2a" kindref="member">Context</ref> &gt;</type>
+          <declname>context</declname>
+        </param>
+        <param>
+          <type>const <ref refid="da/d10/structsgns_1_1api_1_1_rpc_thread_pool_1_1_configuration" kindref="compound">Configuration</ref> &amp;</type>
+          <declname>configuration</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/rpc_thread_pool.hpp" line="31" column="5" bodyfile="src/api/transport/rpc_thread_pool.cpp" bodystart="6" bodyend="10"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a98be9b5034aac93509208fca8a6ef379" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::api::RpcThreadPool::~RpcThreadPool</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~RpcThreadPool</name>
+        <qualifiedname>sgns::api::RpcThreadPool::~RpcThreadPool</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/rpc_thread_pool.hpp" line="34" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a0caeea9620f8d8e1310cce8c05eda8ba" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::RpcThreadPool::start</definition>
+        <argsstring>()</argsstring>
+        <name>start</name>
+        <qualifiedname>sgns::api::RpcThreadPool::start</qualifiedname>
+        <briefdescription>
+<para>starts pool </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/rpc_thread_pool.hpp" line="39" column="10" bodyfile="src/api/transport/rpc_thread_pool.cpp" bodystart="12" bodyend="22"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a2552706060f8510211a858b13240b683" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::RpcThreadPool::stop</definition>
+        <argsstring>()</argsstring>
+        <name>stop</name>
+        <qualifiedname>sgns::api::RpcThreadPool::stop</qualifiedname>
+        <briefdescription>
+<para>stops pool </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/rpc_thread_pool.hpp" line="44" column="10" bodyfile="src/api/transport/rpc_thread_pool.cpp" bodystart="24" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1ae0cbffdf6463cc0761f069c65d698f46" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::api::RpcThreadPool::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::api::RpcThreadPool::GetName</qualifiedname>
+        <reimplements refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/rpc_thread_pool.hpp" line="46" column="17" bodyfile="src/api/transport/rpc_thread_pool.hpp" bodystart="46" bodyend="49"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>thread pool for serve RPC calls </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::api::RpcThreadPool</label>
+        <link refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; RpcThreadPool &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="8">
+        <label>T</label>
+      </node>
+      <node id="6">
+        <label>boost::asio::io_context</label>
+      </node>
+      <node id="5">
+        <label>sgns::api::RpcContext</label>
+        <link refid="dd/d46/classsgns_1_1api_1_1_rpc_context"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::api::RpcThreadPool</label>
+        <link refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-context_</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-config_</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>-threads_</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::api::RpcThreadPool::Configuration</label>
+        <link refid="da/d10/structsgns_1_1api_1_1_rpc_thread_pool_1_1_configuration"/>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; RpcThreadPool &gt;</label>
+      </node>
+      <node id="7">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::shared_ptr&lt; sgns::api::RpcContext &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; sgns::api::RpcContext &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="14">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::shared_ptr&lt; std::thread &gt;</label>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; std::thread &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::thread</label>
+      </node>
+      <node id="13">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::vector&lt; std::shared_ptr&lt; std::thread &gt; &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="13" relation="template-instance">
+          <edgelabel>&lt; std::shared_ptr&lt; std::thread &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/api/transport/rpc_thread_pool.hpp" line="22" column="3" bodyfile="src/api/transport/rpc_thread_pool.hpp" bodystart="22" bodyend="58"/>
+    <listofallmembers>
+      <member refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a48477a261fb291c20936347e4f44a001" prot="private" virt="non-virtual"><scope>sgns::api::RpcThreadPool</scope><name>config_</name></member>
+      <member refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a979903c07d14dd2d4190f7c0e4f26b2a" prot="public" virt="non-virtual"><scope>sgns::api::RpcThreadPool</scope><name>Context</name></member>
+      <member refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1aff7b9650d20f8e55855b05354ad53288" prot="private" virt="non-virtual"><scope>sgns::api::RpcThreadPool</scope><name>context_</name></member>
+      <member refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1ae0cbffdf6463cc0761f069c65d698f46" prot="public" virt="virtual"><scope>sgns::api::RpcThreadPool</scope><name>GetName</name></member>
+      <member refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a90c08bab41edc1c8869f68c1394a4e8d" prot="private" virt="non-virtual"><scope>sgns::api::RpcThreadPool</scope><name>logger_</name></member>
+      <member refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a978d2a2ff3683ca0481125b3cebc73e5" prot="public" virt="non-virtual"><scope>sgns::api::RpcThreadPool</scope><name>RpcThreadPool</name></member>
+      <member refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a0caeea9620f8d8e1310cce8c05eda8ba" prot="public" virt="non-virtual"><scope>sgns::api::RpcThreadPool</scope><name>start</name></member>
+      <member refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a2552706060f8510211a858b13240b683" prot="public" virt="non-virtual"><scope>sgns::api::RpcThreadPool</scope><name>stop</name></member>
+      <member refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1af00c6b331ab9855d0b24660e2f632c52" prot="private" virt="non-virtual"><scope>sgns::api::RpcThreadPool</scope><name>threads_</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::api::RpcThreadPool</scope><name>~IComponent</name></member>
+      <member refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1a98be9b5034aac93509208fca8a6ef379" prot="public" virt="non-virtual"><scope>sgns::api::RpcThreadPool</scope><name>~RpcThreadPool</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

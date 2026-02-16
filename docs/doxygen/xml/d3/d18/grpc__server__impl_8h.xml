@@ -1,0 +1,104 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d3/d18/grpc__server__impl_8h" kind="file" language="C++">
+    <compoundname>grpc_server_impl.h</compoundname>
+    <includes local="no">iostream</includes>
+    <includes local="no">memory</includes>
+    <includes local="no">string</includes>
+    <includes local="no">grpcpp/grpcpp.h</includes>
+    <includes local="yes">SuperGenius_OpenAPI.grpc.pb.h</includes>
+    <incdepgraph>
+      <node id="1">
+        <label>src/api/grpc/grpc_server_impl.h</label>
+        <link refid="d3/d18/grpc__server__impl_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>SuperGenius_OpenAPI.grpc.pb.h</label>
+      </node>
+      <node id="5">
+        <label>grpcpp/grpcpp.h</label>
+      </node>
+      <node id="2">
+        <label>iostream</label>
+      </node>
+      <node id="3">
+        <label>memory</label>
+      </node>
+      <node id="4">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <innerclass refid="db/dee/class_super_genius___open_a_p_i_impl" prot="public">SuperGenius_OpenAPIImpl</innerclass>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&lt;iostream&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;memory&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;grpcpp/grpcpp.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;SuperGenius_OpenAPI.grpc.pb.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">grpc::Channel;</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">grpc::ClientContext;</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">grpc::Status;</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Model<sp/>messages</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">sgns::BalanceInfo;</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">sgns::BlockCountInfo;</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">sgns::Account;</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">sgns::History;</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">sgns::AccountHistory;</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">sgns::AccountInfo;</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">sgns::Key;</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">sgns::Accounts;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">sgns::Status;</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">sgns::Representative;</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">sgns::BlockHash;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">sgns::Weight;</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">sgns::AccountBalanceInfoPairs;</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">sgns::AccountBalancePairs;</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">sgns::AccountFrontierPairs;</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">sgns::Count;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">sgns::AccountHashPairs;</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Logic<sp/>and<sp/>data<sp/>behind<sp/>the<sp/>server&apos;s<sp/>behavior.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="34" refid="db/dee/class_super_genius___open_a_p_i_impl" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="db/dee/class_super_genius___open_a_p_i_impl" kindref="compound">SuperGenius_OpenAPIImpl</ref><sp/>final<sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>sgns::SuperGenius_OpenAPI<sp/>{</highlight></codeline>
+<codeline lineno="35" refid="db/dee/class_super_genius___open_a_p_i_impl_1a5f298f2e9f00d5fb88a6be4268c37641" refkind="member"><highlight class="normal"><sp/><sp/>Status<sp/><ref refid="db/dee/class_super_genius___open_a_p_i_impl_1a5f298f2e9f00d5fb88a6be4268c37641" kindref="member">GETAccountBalance</ref><sp/>(ServerContext*<sp/>context,<sp/>GETAccountBalanceParameters<sp/>*<sp/>request,<sp/>BalanceInfo<sp/>*<sp/>response)<sp/>{</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="38" refid="db/dee/class_super_genius___open_a_p_i_impl_1afb17741cbc635224bd2ef42d3a296416" refkind="member"><highlight class="normal"><sp/><sp/>Status<sp/><ref refid="db/dee/class_super_genius___open_a_p_i_impl_1afb17741cbc635224bd2ef42d3a296416" kindref="member">GETAccountBlockCount</ref>(ServerContext*<sp/>context,<sp/>GETAccountBlockCountParameters<sp/>*request,<sp/>BlockCountInfo*<sp/>response){</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="41" refid="db/dee/class_super_genius___open_a_p_i_impl_1aba593bfe5e39310f2101016470c18bcd" refkind="member"><highlight class="normal"><sp/><sp/>Status<sp/><ref refid="db/dee/class_super_genius___open_a_p_i_impl_1aba593bfe5e39310f2101016470c18bcd" kindref="member">GETAccountCreate</ref><sp/>(ServerContext*<sp/>context,<sp/>GETAccountCreateParameters*<sp/>request,<sp/>Account*<sp/>response<sp/>)<sp/>{</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44" refid="db/dee/class_super_genius___open_a_p_i_impl_1af78edd5582453f55a4d0393a373deb1f" refkind="member"><highlight class="normal"><sp/><sp/>Status<sp/><ref refid="db/dee/class_super_genius___open_a_p_i_impl_1af78edd5582453f55a4d0393a373deb1f" kindref="member">GETTotalSupply</ref><sp/>(ServerContext*<sp/>context,<sp/>AvailableSupply<sp/>*response)<sp/>{</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="46" refid="db/dee/class_super_genius___open_a_p_i_impl_1ae39b0d1e2faf459539a3c7da95348970" refkind="member"><highlight class="normal"><sp/><sp/>Status<sp/><ref refid="db/dee/class_super_genius___open_a_p_i_impl_1ae39b0d1e2faf459539a3c7da95348970" kindref="member">GETBlock</ref><sp/>(ServerContext*<sp/>context,<sp/>GETBlockParameters<sp/>*reuest,<sp/>Block<sp/>*response)<sp/>{</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="48" refid="db/dee/class_super_genius___open_a_p_i_impl_1aad3f048ffd76747b609a0d431e64af66" refkind="member"><highlight class="normal"><sp/><sp/>Status<sp/><ref refid="db/dee/class_super_genius___open_a_p_i_impl_1aad3f048ffd76747b609a0d431e64af66" kindref="member">GETBlockCount</ref><sp/>(ServerContext*<sp/>context,<sp/>BlockCountInfo<sp/>*response)<sp/>{</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="50" refid="db/dee/class_super_genius___open_a_p_i_impl_1a2fbd122489f552edfce31f350c7716d6" refkind="member"><highlight class="normal"><sp/><sp/>Status<sp/><ref refid="db/dee/class_super_genius___open_a_p_i_impl_1a2fbd122489f552edfce31f350c7716d6" kindref="member">GETPeers</ref><sp/>(ServerContext*<sp/>context,<sp/><sp/>PeerPortPairs<sp/>*response<sp/>)<sp/>{</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/></highlight></codeline>
+<codeline lineno="53"><highlight class="normal"></highlight></codeline>
+<codeline lineno="54"><highlight class="normal">};</highlight></codeline>
+    </programlisting>
+    <location file="src/api/grpc/grpc_server_impl.h"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/d0f/namespacesgns_1_1crypto_1_1bip39_1_1_0d020162067001276105366110027163030166247301301224" kind="namespace" language="C++">
+    <compoundname>sgns::crypto::bip39::@020162067001276105366110027163030166247301301224</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/bip39/mnemonic.cpp" line="14" column="3"/>
+  </compounddef>
+</doxygen>

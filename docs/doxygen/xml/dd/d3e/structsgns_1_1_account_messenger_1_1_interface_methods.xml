@@ -1,0 +1,103 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/d3e/structsgns_1_1_account_messenger_1_1_interface_methods" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::AccountMessenger::InterfaceMethods</compoundname>
+    <includes refid="d8/d7a/_account_messenger_8hpp" local="no">AccountMessenger.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="dd/d3e/structsgns_1_1_account_messenger_1_1_interface_methods_1ac4792e4a373b70b229531cbc788e43b2" prot="public" static="no" mutable="no">
+        <type>std::function&lt; outcome::result&lt; std::vector&lt; uint8_t &gt; &gt;(std::vector&lt; uint8_t &gt; data)&gt;</type>
+        <definition>std::function&lt;outcome::result&lt;std::vector&lt;uint8_t&gt; &gt;( std::vector&lt;uint8_t&gt; data )&gt; sgns::AccountMessenger::InterfaceMethods::sign_</definition>
+        <argsstring></argsstring>
+        <name>sign_</name>
+        <qualifiedname>sgns::AccountMessenger::InterfaceMethods::sign_</qualifiedname>
+        <briefdescription>
+<para>Signing method. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="56" column="29" bodyfile="src/account/AccountMessenger.hpp" bodystart="56" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d3e/structsgns_1_1_account_messenger_1_1_interface_methods_1abc0c4912ef37fbede5011e53b5cb15a1" prot="public" static="no" mutable="no">
+        <type>std::function&lt; outcome::result&lt; bool &gt;(std::string address, std::string sig, std::vector&lt; uint8_t &gt; data)&gt;</type>
+        <definition>std::function&lt;outcome::result&lt;bool&gt;( std::string address, std::string sig, std::vector&lt;uint8_t&gt; data )&gt; sgns::AccountMessenger::InterfaceMethods::verify_signature_</definition>
+        <argsstring></argsstring>
+        <name>verify_signature_</name>
+        <qualifiedname>sgns::AccountMessenger::InterfaceMethods::verify_signature_</qualifiedname>
+        <briefdescription>
+<para>Verify signature method. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="60" column="17" bodyfile="src/account/AccountMessenger.hpp" bodystart="60" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d3e/structsgns_1_1_account_messenger_1_1_interface_methods_1ac3a12d32fda7275b8eb610df0a4b0fe4" prot="public" static="no" mutable="no">
+        <type>std::function&lt; outcome::result&lt; uint64_t &gt;(std::string address)&gt;</type>
+        <definition>std::function&lt;outcome::result&lt;uint64_t&gt;( std::string address )&gt; sgns::AccountMessenger::InterfaceMethods::get_local_nonce_</definition>
+        <argsstring></argsstring>
+        <name>get_local_nonce_</name>
+        <qualifiedname>sgns::AccountMessenger::InterfaceMethods::get_local_nonce_</qualifiedname>
+        <briefdescription>
+<para>Get local nonce method. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="63" column="29" bodyfile="src/account/AccountMessenger.hpp" bodystart="63" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d3e/structsgns_1_1_account_messenger_1_1_interface_methods_1a1d2baf9ee2d5be90b5224b25cd175f0a" prot="public" static="no" mutable="no">
+        <type>std::function&lt; outcome::result&lt; std::string &gt;(uint8_t block_index, const std::string &amp;address)&gt;</type>
+        <definition>std::function&lt;outcome::result&lt;std::string&gt;( uint8_t block_index, const std::string &amp;address )&gt; sgns::AccountMessenger::InterfaceMethods::get_block_cid_</definition>
+        <argsstring></argsstring>
+        <name>get_block_cid_</name>
+        <qualifiedname>sgns::AccountMessenger::InterfaceMethods::get_block_cid_</qualifiedname>
+        <briefdescription>
+<para>Get local genesis block method. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="67" column="17" bodyfile="src/account/AccountMessenger.hpp" bodystart="67" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d3e/structsgns_1_1_account_messenger_1_1_interface_methods_1acff81209a019e7bb0eef37fcedf8c500" prot="public" static="no" mutable="no">
+        <type>std::function&lt; outcome::result&lt; bool &gt;(const std::string &amp;cid)&gt;</type>
+        <definition>std::function&lt;outcome::result&lt;bool&gt;( const std::string &amp;cid )&gt; sgns::AccountMessenger::InterfaceMethods::has_block_cid_</definition>
+        <argsstring></argsstring>
+        <name>has_block_cid_</name>
+        <qualifiedname>sgns::AccountMessenger::InterfaceMethods::has_block_cid_</qualifiedname>
+        <briefdescription>
+<para>Check if a CID is locally available. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="70" column="29" bodyfile="src/account/AccountMessenger.hpp" bodystart="70" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Interface methods the user needs to define. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::AccountMessenger::InterfaceMethods</label>
+        <link refid="dd/d3e/structsgns_1_1_account_messenger_1_1_interface_methods"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/account/AccountMessenger.hpp" line="53" column="9" bodyfile="src/account/AccountMessenger.hpp" bodystart="54" bodyend="71"/>
+    <listofallmembers>
+      <member refid="dd/d3e/structsgns_1_1_account_messenger_1_1_interface_methods_1a1d2baf9ee2d5be90b5224b25cd175f0a" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger::InterfaceMethods</scope><name>get_block_cid_</name></member>
+      <member refid="dd/d3e/structsgns_1_1_account_messenger_1_1_interface_methods_1ac3a12d32fda7275b8eb610df0a4b0fe4" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger::InterfaceMethods</scope><name>get_local_nonce_</name></member>
+      <member refid="dd/d3e/structsgns_1_1_account_messenger_1_1_interface_methods_1acff81209a019e7bb0eef37fcedf8c500" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger::InterfaceMethods</scope><name>has_block_cid_</name></member>
+      <member refid="dd/d3e/structsgns_1_1_account_messenger_1_1_interface_methods_1ac4792e4a373b70b229531cbc788e43b2" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger::InterfaceMethods</scope><name>sign_</name></member>
+      <member refid="dd/d3e/structsgns_1_1_account_messenger_1_1_interface_methods_1abc0c4912ef37fbede5011e53b5cb15a1" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger::InterfaceMethods</scope><name>verify_signature_</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

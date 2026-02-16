@@ -1,0 +1,182 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="db/d24/classsgns_1_1_windows_secure_storage" kind="class" language="C++" prot="public">
+    <compoundname>sgns::WindowsSecureStorage</compoundname>
+    <basecompoundref refid="d9/d71/classsgns_1_1_j_s_o_n_backend" prot="public" virt="non-virtual">sgns::JSONBackend</basecompoundref>
+    <includes refid="db/d97/_windows_8hpp" local="no">Windows.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="db/d24/classsgns_1_1_windows_secure_storage_1acf7da8db3bbbddd6ff5abc2896443d78" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::WindowsSecureStorage::identifier_</definition>
+        <argsstring></argsstring>
+        <name>identifier_</name>
+        <qualifiedname>sgns::WindowsSecureStorage::identifier_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Windows.hpp" line="24" column="21" bodyfile="src/local_secure_storage/impl/Windows.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="db/d24/classsgns_1_1_windows_secure_storage_1a157980ffdcf8d4f6895e7dd0663c45f3" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::WindowsSecureStorage::WindowsSecureStorage</definition>
+        <argsstring>(std::string identifier)</argsstring>
+        <name>WindowsSecureStorage</name>
+        <qualifiedname>sgns::WindowsSecureStorage::WindowsSecureStorage</qualifiedname>
+        <param>
+          <type>std::string</type>
+          <declname>identifier</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Windows.hpp" line="12" column="18" bodyfile="src/local_secure_storage/impl/Windows.cpp" bodystart="15" bodyend="15"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d24/classsgns_1_1_windows_secure_storage_1a45dce53c507a2304198f3451be5ecdd9" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::WindowsSecureStorage::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::WindowsSecureStorage::GetName</qualifiedname>
+        <reimplements refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a5e2595afc441ef277e89c6ed13fc3495">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Windows.hpp" line="14" column="21" bodyfile="src/local_secure_storage/impl/Windows.hpp" bodystart="14" bodyend="17"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d24/classsgns_1_1_windows_secure_storage_1a97a1ed63cfecff13c61564999109ad29" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; rapidjson::Document &gt;</type>
+        <definition>outcome::result&lt; rapidjson::Document &gt; sgns::WindowsSecureStorage::LoadJSON</definition>
+        <argsstring>() const override</argsstring>
+        <name>LoadJSON</name>
+        <qualifiedname>sgns::WindowsSecureStorage::LoadJSON</qualifiedname>
+        <reimplements refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1aa20b2995d7c4d206ae8217b08ee94fc1">LoadJSON</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Windows.hpp" line="19" column="25" bodyfile="src/local_secure_storage/impl/Windows.cpp" bodystart="17" bodyend="46"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d24/classsgns_1_1_windows_secure_storage_1af73ddd7b05f529f915c2a8ce76593d0e" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::WindowsSecureStorage::SaveJSON</definition>
+        <argsstring>(rapidjson::Document document) override</argsstring>
+        <name>SaveJSON</name>
+        <qualifiedname>sgns::WindowsSecureStorage::SaveJSON</qualifiedname>
+        <reimplements refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a7ec4c317139903bcb835bb3d33a4ae07">SaveJSON</reimplements>
+        <param>
+          <type>rapidjson::Document</type>
+          <declname>document</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Windows.hpp" line="21" column="25" bodyfile="src/local_secure_storage/impl/Windows.cpp" bodystart="48" bodyend="67"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="4">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="3">
+        <label>sgns::ISecureStorage</label>
+        <link refid="d5/db7/classsgns_1_1_i_secure_storage"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::JSONBackend</label>
+        <link refid="d9/d71/classsgns_1_1_j_s_o_n_backend"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::WindowsSecureStorage</label>
+        <link refid="db/d24/classsgns_1_1_windows_secure_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::enable_shared_from_this&lt; ISecureStorage &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="4">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="3">
+        <label>sgns::ISecureStorage</label>
+        <link refid="d5/db7/classsgns_1_1_i_secure_storage"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::JSONBackend</label>
+        <link refid="d9/d71/classsgns_1_1_j_s_o_n_backend"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::WindowsSecureStorage</label>
+        <link refid="db/d24/classsgns_1_1_windows_secure_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>-identifier_</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="5">
+        <label>std::enable_shared_from_this&lt; ISecureStorage &gt;</label>
+      </node>
+      <node id="6">
+        <label>std::string</label>
+        <childnode refid="7" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/local_secure_storage/impl/Windows.hpp" line="9" column="5" bodyfile="src/local_secure_storage/impl/Windows.hpp" bodystart="10" bodyend="25"/>
+    <listofallmembers>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a041dd45b9e2196bb757d23d2934876e4" prot="public" virt="virtual"><scope>sgns::WindowsSecureStorage</scope><name>DeleteKey</name></member>
+      <member refid="db/d24/classsgns_1_1_windows_secure_storage_1a45dce53c507a2304198f3451be5ecdd9" prot="public" virt="virtual"><scope>sgns::WindowsSecureStorage</scope><name>GetName</name></member>
+      <member refid="db/d24/classsgns_1_1_windows_secure_storage_1acf7da8db3bbbddd6ff5abc2896443d78" prot="private" virt="non-virtual"><scope>sgns::WindowsSecureStorage</scope><name>identifier_</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a9e536564914936ba39ee7d67dfa1a316" prot="public" virt="non-virtual"><scope>sgns::WindowsSecureStorage</scope><name>JSONBackend</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a40da14b3444d1b03eac8164f59a3c347" prot="public" virt="virtual"><scope>sgns::WindowsSecureStorage</scope><name>Load</name></member>
+      <member refid="db/d24/classsgns_1_1_windows_secure_storage_1a97a1ed63cfecff13c61564999109ad29" prot="public" virt="virtual"><scope>sgns::WindowsSecureStorage</scope><name>LoadJSON</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a00f62ecffae03504a180358b004d61e4" prot="public" virt="virtual"><scope>sgns::WindowsSecureStorage</scope><name>Save</name></member>
+      <member refid="db/d24/classsgns_1_1_windows_secure_storage_1af73ddd7b05f529f915c2a8ce76593d0e" prot="public" virt="virtual"><scope>sgns::WindowsSecureStorage</scope><name>SaveJSON</name></member>
+      <member refid="d5/db7/classsgns_1_1_i_secure_storage_1a5a10a540c9551ccad7d9c8e44cfd14d1" prot="public" virt="non-virtual"><scope>sgns::WindowsSecureStorage</scope><name>SecureBufferType</name></member>
+      <member refid="db/d24/classsgns_1_1_windows_secure_storage_1a157980ffdcf8d4f6895e7dd0663c45f3" prot="public" virt="non-virtual"><scope>sgns::WindowsSecureStorage</scope><name>WindowsSecureStorage</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::WindowsSecureStorage</scope><name>~IComponent</name></member>
+      <member refid="d5/db7/classsgns_1_1_i_secure_storage_1a941b5c4bbea8622d949ef341b129f55c" prot="public" virt="non-virtual"><scope>sgns::WindowsSecureStorage</scope><name>~ISecureStorage</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a8b69c80e8af12d7c16ada35f6ae2d170" prot="public" virt="non-virtual"><scope>sgns::WindowsSecureStorage</scope><name>~JSONBackend</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

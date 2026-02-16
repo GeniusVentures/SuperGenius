@@ -1,0 +1,126 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/dc0/blob_8cpp" kind="file" language="C++">
+    <compoundname>blob.cpp</compoundname>
+    <includes refid="d4/d16/blob_8hpp" local="yes">base/blob.hpp</includes>
+    <incdepgraph>
+      <node id="1">
+        <label>src/base/blob.cpp</label>
+        <link refid="dd/dc0/blob_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>array</label>
+      </node>
+      <node id="5">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="3">
+        <label>cstddef</label>
+      </node>
+      <node id="9">
+        <label>gsl/span</label>
+      </node>
+      <node id="12">
+        <label>iostream</label>
+      </node>
+      <node id="11">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="7">
+        <label>string_view</label>
+      </node>
+      <node id="8">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d4/dcb/namespacesgns_1_1base">sgns::base</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="dd/dc0/blob_8cpp_1abf316ad55b239ce31b1b1d64bc33ff97" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>OUTCOME_CPP_DEFINE_CATEGORY_3</definition>
+        <argsstring>(sgns::base, BlobError, e)</argsstring>
+        <name>OUTCOME_CPP_DEFINE_CATEGORY_3</name>
+        <param>
+          <type><ref refid="d4/dcb/namespacesgns_1_1base" kindref="compound">sgns::base</ref></type>
+        </param>
+        <param>
+          <type>BlobError</type>
+        </param>
+        <param>
+          <type>e</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/blob.cpp" line="3" column="1" bodyfile="src/base/blob.cpp" bodystart="3" bodyend="12"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d4/d16/blob_8hpp" kindref="compound">base/blob.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3" refid="dd/dc0/blob_8cpp_1abf316ad55b239ce31b1b1d64bc33ff97" refkind="member"><highlight class="normal"><ref refid="dd/dc0/blob_8cpp_1abf316ad55b239ce31b1b1d64bc33ff97" kindref="member">OUTCOME_CPP_DEFINE_CATEGORY_3</ref>(<ref refid="d4/dcb/namespacesgns_1_1base" kindref="compound">sgns::base</ref>,<sp/>BlobError,<sp/>e)<sp/>{</highlight></codeline>
+<codeline lineno="4"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d4/dcb/namespacesgns_1_1base_1add32f7e036f3f2eeb7b517e1d5dfcf6f" kindref="member">sgns::base::BlobError</ref>;</highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">switch</highlight><highlight class="normal">(e)<sp/>{</highlight></codeline>
+<codeline lineno="7"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/>BlobError::INCORRECT_LENGTH:</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;Input<sp/>string<sp/>has<sp/>incorrect<sp/>length,<sp/>not<sp/>matching<sp/>the<sp/>blob<sp/>size&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;Unknown<sp/>error&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="12"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14" refid="d4/dcb/namespacesgns_1_1base" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d4/dcb/namespacesgns_1_1base" kindref="compound">sgns::base</ref><sp/>{</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>explicit<sp/>instantiations<sp/>for<sp/>the<sp/>most<sp/>frequently<sp/>used<sp/>blobs</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">Blob&lt;8ul&gt;</ref>;</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">Blob&lt;16ul&gt;</ref>;</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">Blob&lt;32ul&gt;</ref>;</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">Blob&lt;64ul&gt;</ref>;</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::base</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/base/blob.cpp"/>
+  </compounddef>
+</doxygen>

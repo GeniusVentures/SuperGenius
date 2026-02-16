@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_d8c7158a8cbf4ead7b56ff7c404a504a" kind="dir">
+    <compoundname>src/local_secure_storage</compoundname>
+    <innerdir refid="dir_3f4e05caef7dcee5db5ea0ea59094e5c">src/local_secure_storage/impl</innerdir>
+    <innerfile refid="dd/d1a/_i_secure_storage_8hpp">ISecureStorage.hpp</innerfile>
+    <innerfile refid="da/d8f/_secure_storage_8hpp">SecureStorage.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/local_secure_storage/"/>
+  </compounddef>
+</doxygen>

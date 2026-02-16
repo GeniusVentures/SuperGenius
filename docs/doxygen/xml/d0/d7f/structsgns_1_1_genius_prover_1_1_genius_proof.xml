@@ -1,0 +1,96 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/d7f/structsgns_1_1_genius_prover_1_1_genius_proof" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::GeniusProver::GeniusProof</compoundname>
+    <includes refid="d9/d35/_genius_prover_8hpp" local="no">GeniusProver.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d0/d7f/structsgns_1_1_genius_prover_1_1_genius_proof_1a57b6d7568ed8d909d67f9d4bb6206adc" prot="public" static="no" mutable="no">
+        <type><ref refid="da/da5/classsgns_1_1_genius_prover_1a0a276b8954f36811668b4c1f45a7b960" kindref="member">ProofType</ref></type>
+        <definition>ProofType sgns::GeniusProver::GeniusProof::proof</definition>
+        <argsstring></argsstring>
+        <name>proof</name>
+        <qualifiedname>sgns::GeniusProver::GeniusProof::proof</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="118" column="39" bodyfile="src/proof/GeniusProver.hpp" bodystart="118" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d7f/structsgns_1_1_genius_prover_1_1_genius_proof_1a62c3669a5b63221da94aff012ca79428" prot="public" static="no" mutable="no">
+        <type><ref refid="da/da5/classsgns_1_1_genius_prover_1ab388b26629bf69e5fc336c0ddf1f057f" kindref="member">ConstraintMarshallingType</ref></type>
+        <definition>ConstraintMarshallingType sgns::GeniusProver::GeniusProof::constrains</definition>
+        <argsstring></argsstring>
+        <name>constrains</name>
+        <qualifiedname>sgns::GeniusProver::GeniusProof::constrains</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="119" column="39" bodyfile="src/proof/GeniusProver.hpp" bodystart="119" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d7f/structsgns_1_1_genius_prover_1_1_genius_proof_1a49c50c770eedbf48b04663d91fedd4e6" prot="public" static="no" mutable="no">
+        <type><ref refid="da/da5/classsgns_1_1_genius_prover_1a2c3060352a7937dec3936afeaaf7c5e9" kindref="member">PlonkMarshalledTableType</ref></type>
+        <definition>PlonkMarshalledTableType sgns::GeniusProver::GeniusProof::table</definition>
+        <argsstring></argsstring>
+        <name>table</name>
+        <qualifiedname>sgns::GeniusProver::GeniusProof::table</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="120" column="39" bodyfile="src/proof/GeniusProver.hpp" bodystart="120" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d0/d7f/structsgns_1_1_genius_prover_1_1_genius_proof_1afcf9127461067405e67949afbd05e950" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::GeniusProver::GeniusProof::GeniusProof</definition>
+        <argsstring>(ProofType new_proof, ConstraintMarshallingType new_constrains, PlonkMarshalledTableType new_table)</argsstring>
+        <name>GeniusProof</name>
+        <qualifiedname>sgns::GeniusProver::GeniusProof::GeniusProof</qualifiedname>
+        <param>
+          <type><ref refid="da/da5/classsgns_1_1_genius_prover_1a0a276b8954f36811668b4c1f45a7b960" kindref="member">ProofType</ref></type>
+          <declname>new_proof</declname>
+        </param>
+        <param>
+          <type><ref refid="da/da5/classsgns_1_1_genius_prover_1ab388b26629bf69e5fc336c0ddf1f057f" kindref="member">ConstraintMarshallingType</ref></type>
+          <declname>new_constrains</declname>
+        </param>
+        <param>
+          <type><ref refid="da/da5/classsgns_1_1_genius_prover_1a2c3060352a7937dec3936afeaaf7c5e9" kindref="member">PlonkMarshalledTableType</ref></type>
+          <declname>new_table</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="109" column="13" bodyfile="src/proof/GeniusProver.hpp" bodystart="109" bodyend="116"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::GeniusProver::GeniusProof</label>
+        <link refid="d0/d7f/structsgns_1_1_genius_prover_1_1_genius_proof"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/proof/GeniusProver.hpp" line="107" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="108" bodyend="121"/>
+    <listofallmembers>
+      <member refid="d0/d7f/structsgns_1_1_genius_prover_1_1_genius_proof_1a62c3669a5b63221da94aff012ca79428" prot="public" virt="non-virtual"><scope>sgns::GeniusProver::GeniusProof</scope><name>constrains</name></member>
+      <member refid="d0/d7f/structsgns_1_1_genius_prover_1_1_genius_proof_1afcf9127461067405e67949afbd05e950" prot="public" virt="non-virtual"><scope>sgns::GeniusProver::GeniusProof</scope><name>GeniusProof</name></member>
+      <member refid="d0/d7f/structsgns_1_1_genius_prover_1_1_genius_proof_1a57b6d7568ed8d909d67f9d4bb6206adc" prot="public" virt="non-virtual"><scope>sgns::GeniusProver::GeniusProof</scope><name>proof</name></member>
+      <member refid="d0/d7f/structsgns_1_1_genius_prover_1_1_genius_proof_1a49c50c770eedbf48b04663d91fedd4e6" prot="public" virt="non-virtual"><scope>sgns::GeniusProver::GeniusProof</scope><name>table</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,167 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/dd6/_r_e_a_d_m_e_8md" kind="file" language="Markdown">
+    <compoundname>README.md</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline><highlight class="normal">#<sp/>SCALE<sp/>codec<sp/>C++<sp/>implementation</highlight></codeline>
+<codeline><highlight class="normal">fully<sp/>meets<sp/>polkadot<sp/>specification.\</highlight></codeline>
+<codeline><highlight class="normal">It<sp/>allows<sp/>encoding<sp/>and<sp/>decoding<sp/>following<sp/>data<sp/>types:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Built-in<sp/>integer<sp/>types<sp/>specified<sp/>by<sp/>size:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>*<sp/>```uint8_t```,<sp/>```int8_t```</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>*<sp/>```uint16_t```,<sp/>```int16_t```</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>*<sp/>```uint32_t```,<sp/>```int32_t```</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>*<sp/>```uint64_t```,<sp/>```int64_t```</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>bool<sp/>values</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>pairs<sp/>of<sp/>types<sp/>represented<sp/>by<sp/>```std::pair&lt;T1,<sp/>T2&gt;```</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>compact<sp/>integers<sp/>represented<sp/>by<sp/>CompactInteger<sp/>type</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>optional<sp/>values<sp/>represented<sp/>by<sp/>```boost::optional&lt;T&gt;```</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>*<sp/>as<sp/>special<sp/>case<sp/>of<sp/>optional<sp/>values<sp/>```boost::optional&lt;bool&gt;```<sp/>is<sp/>encoded<sp/>using<sp/>one<sp/>byte<sp/>following<sp/>specification.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>collections<sp/>of<sp/>items<sp/>represented<sp/>by<sp/>```std::vector&lt;T&gt;```</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>variants<sp/>represented<sp/>by<sp/>```boost::variant&lt;T...&gt;```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>ScaleEncoderStream</highlight></codeline>
+<codeline><highlight class="normal">class<sp/>ScaleEncoderStream<sp/>is<sp/>in<sp/>charge<sp/>of<sp/>encoding<sp/>data</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```c++</highlight></codeline>
+<codeline><highlight class="normal">ScaleEncoderStream<sp/>s;</highlight></codeline>
+<codeline><highlight class="normal">uint32_t<sp/>ui32<sp/>=<sp/>123u;</highlight></codeline>
+<codeline><highlight class="normal">uint8_t<sp/>ui8<sp/>=<sp/>234u;</highlight></codeline>
+<codeline><highlight class="normal">std::string<sp/>str<sp/>=<sp/>&quot;asdasdasd&quot;;</highlight></codeline>
+<codeline><highlight class="normal">auto<sp/>*<sp/>raw_str<sp/>=<sp/>&quot;zxczxczx&quot;;</highlight></codeline>
+<codeline><highlight class="normal">bool<sp/>b<sp/>=<sp/>true;</highlight></codeline>
+<codeline><highlight class="normal">CompactInteger<sp/>ci<sp/>=<sp/>123456789;</highlight></codeline>
+<codeline><highlight class="normal">boost::variant&lt;uint8_t,<sp/>uint32_t,<sp/>CompactInteger&gt;<sp/>vint<sp/>=<sp/>CompactInteger(12345);</highlight></codeline>
+<codeline><highlight class="normal">boost::optional&lt;std::string&gt;<sp/>opt_str<sp/>=<sp/>&quot;asdfghjkl&quot;;</highlight></codeline>
+<codeline><highlight class="normal">boost::optional&lt;bool&gt;<sp/>opt_bool<sp/>=<sp/>false;</highlight></codeline>
+<codeline><highlight class="normal">std::pair&lt;uint8_t,<sp/>uint32_t&gt;<sp/>pair{1u,<sp/>2u};</highlight></codeline>
+<codeline><highlight class="normal">std::vector&lt;uint32_t&gt;<sp/>coll_ui32<sp/>=<sp/>{1u,<sp/>2u,<sp/>3u,<sp/>4u};</highlight></codeline>
+<codeline><highlight class="normal">std::vector&lt;std::string&gt;<sp/>coll_str<sp/>=<sp/>{&quot;asd&quot;,<sp/>&quot;fgh&quot;,<sp/>&quot;jkl&quot;};</highlight></codeline>
+<codeline><highlight class="normal">std::vector&lt;std::vector&lt;int32_t&gt;&gt;<sp/>coll_coll_i32<sp/>=<sp/>{{1,<sp/>2,<sp/>3},<sp/>{4,<sp/>5,<sp/>6,<sp/>7}};</highlight></codeline>
+<codeline><highlight class="normal">try<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>s<sp/>&lt;&lt;<sp/>ui32<sp/>&lt;&lt;<sp/>ui8<sp/>&lt;&lt;<sp/>str<sp/>&lt;&lt;<sp/>raw_str<sp/>&lt;&lt;<sp/>b<sp/>&lt;&lt;<sp/>ci<sp/>&lt;&lt;<sp/>vint;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>s<sp/>&lt;&lt;<sp/>opt_str<sp/>&lt;&lt;<sp/>opt_bool<sp/>&lt;&lt;<sp/>pair<sp/>&lt;&lt;<sp/>coll_ui32<sp/>&lt;&lt;<sp/>coll_str<sp/>&lt;&lt;<sp/>coll_coll_i32;</highlight></codeline>
+<codeline><highlight class="normal">}<sp/>catch<sp/>(std::runtime_error<sp/>&amp;e)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>//<sp/>handle<sp/>error</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>//<sp/>for<sp/>example<sp/>make<sp/>and<sp/>return<sp/>outcome::result</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>return<sp/>outcome::failure(e.code());</highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline><highlight class="normal">You<sp/>can<sp/>now<sp/>get<sp/>encoded<sp/>data:</highlight></codeline>
+<codeline><highlight class="normal">```c++</highlight></codeline>
+<codeline><highlight class="normal">ByteArray<sp/>data<sp/>=<sp/>s.data();</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>ScaleDecoderStream</highlight></codeline>
+<codeline><highlight class="normal">class<sp/>ScaleEncoderStream<sp/>is<sp/>in<sp/>charge<sp/>of<sp/>encoding<sp/>data</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```c++</highlight></codeline>
+<codeline><highlight class="normal">ByteArray<sp/>bytes<sp/>=<sp/>{...};</highlight></codeline>
+<codeline><highlight class="normal">ScaleEncoderStream<sp/>s(bytes);</highlight></codeline>
+<codeline><highlight class="normal">uint32_t<sp/>ui32<sp/>=<sp/>0u;</highlight></codeline>
+<codeline><highlight class="normal">uint8_t<sp/>ui8<sp/>=<sp/>0u;</highlight></codeline>
+<codeline><highlight class="normal">std::string<sp/>str;</highlight></codeline>
+<codeline><highlight class="normal">bool<sp/>b<sp/>=<sp/>true;</highlight></codeline>
+<codeline><highlight class="normal">CompactInteger<sp/>ci;</highlight></codeline>
+<codeline><highlight class="normal">boost::variant&lt;uint8_t,<sp/>uint32_t,<sp/>CompactInteger&gt;<sp/>vint;</highlight></codeline>
+<codeline><highlight class="normal">boost::optional&lt;std::string&gt;<sp/>opt_str;</highlight></codeline>
+<codeline><highlight class="normal">boost::optional&lt;bool&gt;<sp/>opt_bool;</highlight></codeline>
+<codeline><highlight class="normal">std::pair&lt;uint8_t,<sp/>uint32_t&gt;<sp/>pair{};</highlight></codeline>
+<codeline><highlight class="normal">std::vector&lt;uint32_t&gt;<sp/>coll_ui32;</highlight></codeline>
+<codeline><highlight class="normal">std::vector&lt;std::string&gt;<sp/>coll_str;</highlight></codeline>
+<codeline><highlight class="normal">std::vector&lt;std::vector&lt;int32_t&gt;&gt;<sp/>coll_coll_i32;</highlight></codeline>
+<codeline><highlight class="normal">try<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>s<sp/>&gt;&gt;<sp/>ui32<sp/>&gt;&gt;<sp/>ui8<sp/>&gt;&gt;<sp/>str<sp/>&gt;&gt;<sp/>b<sp/>&gt;&gt;<sp/>ci<sp/>&gt;&gt;<sp/>vint;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>s<sp/>&gt;&gt;<sp/>opt_str<sp/>&gt;&gt;<sp/>opt_bool<sp/>&gt;&gt;<sp/>pair<sp/>&gt;&gt;<sp/>coll_ui32<sp/>&gt;&gt;<sp/>coll_str<sp/>&gt;&gt;<sp/>coll_coll_i32;</highlight></codeline>
+<codeline><highlight class="normal">}<sp/>catch<sp/>(std::system_error<sp/>&amp;e)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>//<sp/>handle<sp/>error</highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Custom<sp/>types</highlight></codeline>
+<codeline><highlight class="normal">You<sp/>may<sp/>need<sp/>to<sp/>encode<sp/>or<sp/>decode<sp/>custom<sp/>data<sp/>types,<sp/>you<sp/>have<sp/>to<sp/>define<sp/>custom<sp/>&lt;&lt;<sp/>and<sp/>&gt;&gt;<sp/>operators.</highlight></codeline>
+<codeline><highlight class="normal">Please<sp/>note,<sp/>that<sp/>your<sp/>custom<sp/>data<sp/>types<sp/>must<sp/>be<sp/>default-constructible.</highlight></codeline>
+<codeline><highlight class="normal">```c++</highlight></codeline>
+<codeline><highlight class="normal">struct<sp/>MyType<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>int<sp/>a<sp/>=<sp/>0;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>std::string<sp/>b;</highlight></codeline>
+<codeline><highlight class="normal">};</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">ScaleEncoderStream<sp/>&amp;operator&lt;&lt;(ScaleEncoderStream<sp/>&amp;s,<sp/>const<sp/>MyType<sp/>&amp;v)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>return<sp/>s<sp/>&lt;&lt;<sp/>v.a<sp/>&lt;&lt;<sp/>v.b;</highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">ScaleDecoderStream<sp/>&amp;operator&gt;&gt;(ScaleDecoderStream<sp/>&amp;s,<sp/>MyType<sp/>&amp;v)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>return<sp/>s<sp/>&gt;&gt;<sp/>v.a<sp/>&gt;&gt;<sp/>v.b;</highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline><highlight class="normal">Now<sp/>you<sp/>can<sp/>use<sp/>them<sp/>in<sp/>collections,<sp/>optionals<sp/>and<sp/>variants</highlight></codeline>
+<codeline><highlight class="normal">```c++</highlight></codeline>
+<codeline><highlight class="normal">std::vector&lt;MyType&gt;<sp/>v<sp/>=<sp/>{{1,<sp/>&quot;asd&quot;},<sp/>{2,<sp/>&quot;qwe&quot;}};</highlight></codeline>
+<codeline><highlight class="normal">ScaleEncoderStream<sp/>s;</highlight></codeline>
+<codeline><highlight class="normal">try<sp/>{<sp/></highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>s<sp/>&lt;&lt;<sp/>v;</highlight></codeline>
+<codeline><highlight class="normal">}<sp/>catch<sp/>(...)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>//<sp/>handle<sp/>error</highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline><highlight class="normal">The<sp/>same<sp/>for<sp/>```ScaleDecoderStream```</highlight></codeline>
+<codeline><highlight class="normal">```c++</highlight></codeline>
+<codeline><highlight class="normal">ByteArray<sp/>data<sp/>=<sp/>{...};</highlight></codeline>
+<codeline><highlight class="normal">std::vector&lt;MyType&gt;<sp/>v;</highlight></codeline>
+<codeline><highlight class="normal">ScaleDecoderStream<sp/>s{data};</highlight></codeline>
+<codeline><highlight class="normal">try<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>s<sp/>&gt;&gt;<sp/>v;</highlight></codeline>
+<codeline><highlight class="normal">}<sp/>catch<sp/>(...)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>//<sp/>handle<sp/>error</highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Convenience<sp/>functions</highlight></codeline>
+<codeline><highlight class="normal">Convenience<sp/>functions<sp/></highlight></codeline>
+<codeline><highlight class="normal">```c++</highlight></codeline>
+<codeline><highlight class="normal">template&lt;class<sp/>T&gt;<sp/></highlight></codeline>
+<codeline><highlight class="normal">outcome::result&lt;std::vector&lt;uint8_t&gt;&gt;<sp/>encode(T<sp/>&amp;&amp;t);</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">template<sp/>&lt;class<sp/>T&gt;</highlight></codeline>
+<codeline><highlight class="normal">outcome::result&lt;T&gt;<sp/>decode(gsl::span&lt;const<sp/>uint8_t&gt;<sp/>span)</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">template<sp/>&lt;class<sp/>T&gt;</highlight></codeline>
+<codeline><highlight class="normal">outcome::result&lt;T&gt;<sp/>decode(ScaleDecoderStream<sp/>&amp;s)<sp/><sp/></highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline><highlight class="normal">are<sp/>wrappers<sp/>over<sp/>```&lt;&lt;```<sp/>and<sp/>```&gt;&gt;```<sp/>operators<sp/>described<sp/>above.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Encoding<sp/>data<sp/>using<sp/>```encode```<sp/>convenience<sp/>function<sp/>looks<sp/>as<sp/>follows:</highlight></codeline>
+<codeline><highlight class="normal">```c++</highlight></codeline>
+<codeline><highlight class="normal">std::vector&lt;uint32_t&gt;<sp/>v<sp/>=<sp/>{1u,<sp/>2u,<sp/>3u,<sp/>4u};</highlight></codeline>
+<codeline><highlight class="normal">auto<sp/>&amp;&amp;result<sp/>=<sp/>encode(v);</highlight></codeline>
+<codeline><highlight class="normal">if<sp/>(!res)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>//<sp/>handle<sp/>error</highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Decoding<sp/>data<sp/>using<sp/>```decode```<sp/>convenience<sp/>function<sp/>looks<sp/>as<sp/>follows:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```c++</highlight></codeline>
+<codeline><highlight class="normal">ByteArray<sp/>bytes<sp/>=<sp/>{...};</highlight></codeline>
+<codeline><highlight class="normal">outcome::result&lt;MyType&gt;<sp/>result<sp/>=<sp/>decode&lt;MyType&gt;(bytes);</highlight></codeline>
+<codeline><highlight class="normal">if<sp/>(!result)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>//<sp/>handle<sp/>error</highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline><highlight class="normal">or</highlight></codeline>
+<codeline><highlight class="normal">```c++</highlight></codeline>
+<codeline><highlight class="normal">ByteArray<sp/>bytes<sp/>=<sp/>{...};</highlight></codeline>
+<codeline><highlight class="normal">ScaleDecoderStream<sp/>s(bytes);</highlight></codeline>
+<codeline><highlight class="normal">outcome::result&lt;MyType&gt;<sp/>result<sp/>=<sp/>decode&lt;MyType&gt;(s);</highlight></codeline>
+<codeline><highlight class="normal">if<sp/>(!result)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>//<sp/>handle<sp/>error</highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+    </programlisting>
+    <location file="src/scale/README.md"/>
+  </compounddef>
+</doxygen>

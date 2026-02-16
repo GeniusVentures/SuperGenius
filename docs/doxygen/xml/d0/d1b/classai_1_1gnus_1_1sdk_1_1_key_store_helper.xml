@@ -1,0 +1,446 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper" kind="class" language="Java" prot="public">
+    <compoundname>ai::gnus::sdk::KeyStoreHelper</compoundname>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a9160b3eb04a0c413f26c9e2d186ded67" prot="private" static="yes" mutable="no">
+        <type>final String</type>
+        <definition>final String ai.gnus.sdk.KeyStoreHelper.TAG</definition>
+        <argsstring></argsstring>
+        <name>TAG</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.TAG</qualifiedname>
+        <initializer>= &quot;KeyStoreHelper&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="19" column="33" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="19" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a871e8261e4b70ce98577b701d8b698ba" prot="private" static="yes" mutable="no">
+        <type>final String</type>
+        <definition>final String ai.gnus.sdk.KeyStoreHelper.ANDROID_KEYSTORE</definition>
+        <argsstring></argsstring>
+        <name>ANDROID_KEYSTORE</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.ANDROID_KEYSTORE</qualifiedname>
+        <initializer>= &quot;AndroidKeyStore&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="20" column="33" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="20" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1af81dbf306d1cc2d814c350efa99860ab" prot="private" static="yes" mutable="no">
+        <type>final String</type>
+        <definition>final String ai.gnus.sdk.KeyStoreHelper.KEY_ALIAS</definition>
+        <argsstring></argsstring>
+        <name>KEY_ALIAS</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.KEY_ALIAS</qualifiedname>
+        <initializer>= &quot;SuperGeniusSecureStorage&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="21" column="33" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a1453d8bc14729600dd0c808d067de9e0" prot="private" static="yes" mutable="no">
+        <type>final String</type>
+        <definition>final String ai.gnus.sdk.KeyStoreHelper.TRANSFORMATION</definition>
+        <argsstring></argsstring>
+        <name>TRANSFORMATION</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.TRANSFORMATION</qualifiedname>
+        <initializer>= &quot;AES/GCM/NoPadding&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="22" column="33" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a18993de4a77993851225cbdc8702daf5" prot="private" static="yes" mutable="no">
+        <type>final int</type>
+        <definition>final int ai.gnus.sdk.KeyStoreHelper.GCM_TAG_LENGTH</definition>
+        <argsstring></argsstring>
+        <name>GCM_TAG_LENGTH</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.GCM_TAG_LENGTH</qualifiedname>
+        <initializer>= 128</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="23" column="30" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1aac1bb07b9135c5929793539418ad0d12" prot="private" static="yes" mutable="no">
+        <type>final String</type>
+        <definition>final String ai.gnus.sdk.KeyStoreHelper.PREFS_NAME</definition>
+        <argsstring></argsstring>
+        <name>PREFS_NAME</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.PREFS_NAME</qualifiedname>
+        <initializer>= &quot;SuperGeniusSecurePrefs&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="24" column="33" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a7b9b08c8febcc46f23af4a1858c4b443" prot="private" static="yes" mutable="no">
+        <type>final String</type>
+        <definition>final String ai.gnus.sdk.KeyStoreHelper.PREFS_KEY</definition>
+        <argsstring></argsstring>
+        <name>PREFS_KEY</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.PREFS_KEY</qualifiedname>
+        <initializer>= &quot;encrypted_data&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="25" column="33" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ad0f688008426f6693351fe0110080a7d" prot="private" static="yes" mutable="no">
+        <type><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a107d99cd91c39d766dd2c68fb426e8f7" kindref="member">KeyStoreHelper</ref></type>
+        <definition>KeyStoreHelper ai.gnus.sdk.KeyStoreHelper.sInstance</definition>
+        <argsstring></argsstring>
+        <name>sInstance</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.sInstance</qualifiedname>
+        <initializer>= null</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="28" column="35" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="28" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ae245507ec1dfe6185ccbcc63d53a4524" prot="private" static="yes" mutable="no">
+        <type>final Object</type>
+        <definition>final Object ai.gnus.sdk.KeyStoreHelper.sLock</definition>
+        <argsstring></argsstring>
+        <name>sLock</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.sLock</qualifiedname>
+        <initializer>= new Object()</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="29" column="33" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="29" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a7e9499e35392ab776114224d70c2c91d" prot="private" static="no" mutable="no">
+        <type>final Context</type>
+        <definition>final Context ai.gnus.sdk.KeyStoreHelper.context</definition>
+        <argsstring></argsstring>
+        <name>context</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.context</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="31" column="27" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="31" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a107d99cd91c39d766dd2c68fb426e8f7" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>ai.gnus.sdk.KeyStoreHelper.KeyStoreHelper</definition>
+        <argsstring>(Context context)</argsstring>
+        <name>KeyStoreHelper</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.KeyStoreHelper</qualifiedname>
+        <param>
+          <type>Context</type>
+          <declname>context</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="34" column="13" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="34" bodyend="37"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ae63863c8bf969835342619e82659eff5" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void ai.gnus.sdk.KeyStoreHelper.initializeKeyStore</definition>
+        <argsstring>()</argsstring>
+        <name>initializeKeyStore</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.initializeKeyStore</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="79" column="18" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="79" bodyend="105"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1adac64ab03b9980aecb1d6c1f3818f082" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>SecretKey</type>
+        <definition>SecretKey ai.gnus.sdk.KeyStoreHelper.getSecretKey</definition>
+        <argsstring>()</argsstring>
+        <name>getSecretKey</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.getSecretKey</qualifiedname>
+        <exceptions> throws Exception </exceptions>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="107" column="23" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="107" bodyend="111"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a2d767a691229d96f427f9f9dd6d31627" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>String</type>
+        <definition>String ai.gnus.sdk.KeyStoreHelper.loadInternal</definition>
+        <argsstring>()</argsstring>
+        <name>loadInternal</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.loadInternal</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="127" column="20" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="127" bodyend="141"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a611fd27fd90f5b0870ead8257e87d910" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>boolean</type>
+        <definition>boolean ai.gnus.sdk.KeyStoreHelper.saveInternal</definition>
+        <argsstring>(String data)</argsstring>
+        <name>saveInternal</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.saveInternal</qualifiedname>
+        <param>
+          <type>String</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="143" column="21" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="143" bodyend="153"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a20b1d3e8a0ffc314ba0d5746f266cc0a" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>boolean</type>
+        <definition>boolean ai.gnus.sdk.KeyStoreHelper.deleteInternal</definition>
+        <argsstring>(String key)</argsstring>
+        <name>deleteInternal</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.deleteInternal</qualifiedname>
+        <param>
+          <type>String</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="155" column="21" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="155" bodyend="163"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a2615fc93ac5fc5b3ebf9be534ea1339b" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>String</type>
+        <definition>String ai.gnus.sdk.KeyStoreHelper.encrypt</definition>
+        <argsstring>(String data)</argsstring>
+        <name>encrypt</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.encrypt</qualifiedname>
+        <param>
+          <type>String</type>
+          <declname>data</declname>
+        </param>
+        <exceptions> throws Exception </exceptions>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="165" column="20" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="165" bodyend="178"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a96422bbf9a47a288c050a7dd3335082b" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>String</type>
+        <definition>String ai.gnus.sdk.KeyStoreHelper.decrypt</definition>
+        <argsstring>(String encryptedData)</argsstring>
+        <name>decrypt</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.decrypt</qualifiedname>
+        <param>
+          <type>String</type>
+          <declname>encryptedData</declname>
+        </param>
+        <exceptions> throws Exception </exceptions>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="180" column="20" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="180" bodyend="194"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a2a232a069ce43706233e07d5b7c7df41" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>static void ai.gnus.sdk.KeyStoreHelper.initialize</definition>
+        <argsstring>(Context context)</argsstring>
+        <name>initialize</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.initialize</qualifiedname>
+        <param>
+          <type>Context</type>
+          <declname>context</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Initialize the <ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper" kindref="compound">KeyStoreHelper</ref> with application context. Must be called once before using load/save/delete methods. Typically called in Application.onCreate() </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="44" column="24" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="44" bodyend="53"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a9c59b1ee3c01f74b44fc4708b3042821" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>boolean</type>
+        <definition>static boolean ai.gnus.sdk.KeyStoreHelper.isInitialized</definition>
+        <argsstring>()</argsstring>
+        <name>isInitialized</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.isInitialized</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Check if <ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper" kindref="compound">KeyStoreHelper</ref> has been initialized. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="73" column="27" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="73" bodyend="77"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a96988e4aa1d880c9de4b0bde1915874f" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>String</type>
+        <definition>static String ai.gnus.sdk.KeyStoreHelper.load</definition>
+        <argsstring>()</argsstring>
+        <name>load</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.load</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="114" column="26" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="114" bodyend="116"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1af13a6b5404967455e18507ae20118e80" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>boolean</type>
+        <definition>static boolean ai.gnus.sdk.KeyStoreHelper.save</definition>
+        <argsstring>(String data)</argsstring>
+        <name>save</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.save</qualifiedname>
+        <param>
+          <type>String</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="118" column="27" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="118" bodyend="120"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ab06fa63f3ecf689d9dc2bca5182c3fc9" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>boolean</type>
+        <definition>static boolean ai.gnus.sdk.KeyStoreHelper.delete</definition>
+        <argsstring>(String key)</argsstring>
+        <name>delete</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.delete</qualifiedname>
+        <param>
+          <type>String</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="122" column="27" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="122" bodyend="124"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ae4335e5192cd6b8517e9f982c4edaee0" prot="private" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a107d99cd91c39d766dd2c68fb426e8f7" kindref="member">KeyStoreHelper</ref></type>
+        <definition>static KeyStoreHelper ai.gnus.sdk.KeyStoreHelper.getInstance</definition>
+        <argsstring>()</argsstring>
+        <name>getInstance</name>
+        <qualifiedname>ai.gnus.sdk.KeyStoreHelper.getInstance</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get the singleton instance. Throws IllegalStateException if not initialized. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="59" column="35" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="59" bodyend="68"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>ai.gnus.sdk.KeyStoreHelper</label>
+        <link refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-sInstance</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>ai.gnus.sdk.KeyStoreHelper</label>
+        <link refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-sInstance</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/local_secure_storage/impl/KeyStoreHelper.java" line="18" column="7" bodyfile="src/local_secure_storage/impl/KeyStoreHelper.java" bodystart="18" bodyend="195"/>
+    <listofallmembers>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a871e8261e4b70ce98577b701d8b698ba" prot="private" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>ANDROID_KEYSTORE</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a7e9499e35392ab776114224d70c2c91d" prot="private" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>context</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a96422bbf9a47a288c050a7dd3335082b" prot="private" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>decrypt</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ab06fa63f3ecf689d9dc2bca5182c3fc9" prot="public" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>delete</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a20b1d3e8a0ffc314ba0d5746f266cc0a" prot="private" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>deleteInternal</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a2615fc93ac5fc5b3ebf9be534ea1339b" prot="private" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>encrypt</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a18993de4a77993851225cbdc8702daf5" prot="private" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>GCM_TAG_LENGTH</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ae4335e5192cd6b8517e9f982c4edaee0" prot="private" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>getInstance</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1adac64ab03b9980aecb1d6c1f3818f082" prot="private" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>getSecretKey</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a2a232a069ce43706233e07d5b7c7df41" prot="public" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>initialize</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ae63863c8bf969835342619e82659eff5" prot="private" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>initializeKeyStore</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a9c59b1ee3c01f74b44fc4708b3042821" prot="public" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>isInitialized</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1af81dbf306d1cc2d814c350efa99860ab" prot="private" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>KEY_ALIAS</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a107d99cd91c39d766dd2c68fb426e8f7" prot="private" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>KeyStoreHelper</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a96988e4aa1d880c9de4b0bde1915874f" prot="public" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>load</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a2d767a691229d96f427f9f9dd6d31627" prot="private" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>loadInternal</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a7b9b08c8febcc46f23af4a1858c4b443" prot="private" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>PREFS_KEY</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1aac1bb07b9135c5929793539418ad0d12" prot="private" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>PREFS_NAME</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1af13a6b5404967455e18507ae20118e80" prot="public" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>save</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a611fd27fd90f5b0870ead8257e87d910" prot="private" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>saveInternal</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ad0f688008426f6693351fe0110080a7d" prot="private" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>sInstance</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ae245507ec1dfe6185ccbcc63d53a4524" prot="private" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>sLock</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a9160b3eb04a0c413f26c9e2d186ded67" prot="private" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>TAG</name></member>
+      <member refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a1453d8bc14729600dd0c808d067de9e0" prot="private" virt="non-virtual"><scope>ai::gnus::sdk::KeyStoreHelper</scope><name>TRANSFORMATION</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

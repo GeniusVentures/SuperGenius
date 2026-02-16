@@ -1,0 +1,247 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface" kind="class" language="C++" prot="public">
+    <compoundname>sgns::runtime::binaryen::RuntimeExternalInterface</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">wasm::ShellExternalInterface</basecompoundref>
+    <includes refid="d0/d78/runtime__external__interface_8hpp" local="no">runtime_external_interface.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface_1a61482865d7118913c07b94e10378b656" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; extensions::Extension &gt;</type>
+        <definition>std::unique_ptr&lt;extensions::Extension&gt; sgns::runtime::binaryen::RuntimeExternalInterface::extension_</definition>
+        <argsstring></argsstring>
+        <name>extension_</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeExternalInterface::extension_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.hpp" line="36" column="21" bodyfile="src/runtime/binaryen/runtime_external_interface.hpp" bodystart="36" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface_1aa4546eb7eb60fc3ee7593728f5da7ef5" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::runtime::binaryen::RuntimeExternalInterface::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeExternalInterface::logger_</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>(<ref refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface_1af72e4de47dbda1a4e7026bcf6099f894" kindref="member">kDefaultLoggerTag</ref>)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.hpp" line="37" column="18" bodyfile="src/runtime/binaryen/runtime_external_interface.hpp" bodystart="37" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface_1af72e4de47dbda1a4e7026bcf6099f894" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>auto</type>
+        <definition>auto sgns::runtime::binaryen::RuntimeExternalInterface::kDefaultLoggerTag</definition>
+        <argsstring></argsstring>
+        <name>kDefaultLoggerTag</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeExternalInterface::kDefaultLoggerTag</qualifiedname>
+        <initializer>= &quot;Runtime external interface&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.hpp" line="39" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.hpp" bodystart="39" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface_1afd1eb7de2354f994730768805d14161e" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::binaryen::RuntimeExternalInterface::RuntimeExternalInterface</definition>
+        <argsstring>(const std::shared_ptr&lt; extensions::ExtensionFactory &gt; &amp;extension_factory, std::shared_ptr&lt; TrieStorageProvider &gt; storage_provider)</argsstring>
+        <name>RuntimeExternalInterface</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeExternalInterface::RuntimeExternalInterface</qualifiedname>
+        <param>
+          <type>const std::shared_ptr&lt; extensions::ExtensionFactory &gt; &amp;</type>
+          <declname>extension_factory</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider" kindref="compound">TrieStorageProvider</ref> &gt;</type>
+          <declname>storage_provider</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>: some implementation details were taken from <ulink url="https://github.com/WebAssembly/binaryen/blob/master/src/shell-interface.h">https://github.com/WebAssembly/binaryen/blob/master/src/shell-interface.h</ulink> </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.hpp" line="16" column="14" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="80" bodyend="91"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface_1adc4a944ba5135ea19a0dc704ae0dccf7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>wasm::Literal</type>
+        <definition>wasm::Literal sgns::runtime::binaryen::RuntimeExternalInterface::callImport</definition>
+        <argsstring>(wasm::Function *import, wasm::LiteralList &amp;arguments) override</argsstring>
+        <name>callImport</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeExternalInterface::callImport</qualifiedname>
+        <param>
+          <type>wasm::Function *</type>
+          <declname>import</declname>
+        </param>
+        <param>
+          <type>wasm::LiteralList &amp;</type>
+          <declname>arguments</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+<para>memory externals ext_malloc</para>
+<para>ext_free</para>
+<para>storage externals</para>
+<para>ext_clear_prefix</para>
+<para>ext_clear_storage</para>
+<para>ext_exists_storage</para>
+<para>ext_get_allocated_storage</para>
+<para>ext_get_storage_into</para>
+<para>ext_storage_read_version_1</para>
+<para>ext_set_storage</para>
+<para>ext_blake2_256_enumerated_trie_root</para>
+<para>ext_storage_changes_root</para>
+<para>ext_storage_root</para>
+<para>IO extensions</para>
+<para>ext_print_hex</para>
+<para>ext_logging_log_version_1</para>
+<para>ext_print_num</para>
+<para>ext_print_utf8</para>
+<para>Cryptographic extensions ext_blake2_128</para>
+<para>ext_blake2_256</para>
+<para>ext_keccak_256</para>
+<para>ext_ed25519_verify</para>
+<para>ext_sr25519_verify</para>
+<para>ext_twox_64</para>
+<para>ext_twox_128</para>
+<para>ext_twox_256</para>
+<para>ext_chain_id</para>
+<para>crypto version 1</para>
+<para>ext_secp256k1_ecdsa_recover_v1</para>
+<para>ext_secp256k1_ecdsa_recover_compressed_v1</para>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.hpp" line="20" column="19" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="93" bodyend="383"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface_1a0ca931aa5407daf0231701115b9fa292" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory" kindref="compound">WasmMemory</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; WasmMemory &gt; sgns::runtime::binaryen::RuntimeExternalInterface::memory</definition>
+        <argsstring>() const</argsstring>
+        <name>memory</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeExternalInterface::memory</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.hpp" line="23" column="28" bodyfile="src/runtime/binaryen/runtime_external_interface.hpp" bodystart="23" bodyend="25"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface_1a3fda44107c3370166d4097a0cd943e27" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::runtime::binaryen::RuntimeExternalInterface::checkArguments</definition>
+        <argsstring>(std::string_view extern_name, size_t expected, size_t actual)</argsstring>
+        <name>checkArguments</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeExternalInterface::checkArguments</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>extern_name</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>expected</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>actual</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Checks that the number of arguments is as expected and terminates the program if it is not </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.hpp" line="32" column="10" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="385" bodyend="396"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::runtime::binaryen::RuntimeExternalInterface</label>
+        <link refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>wasm::ShellExternalInterface</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="5">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::binaryen::RuntimeExternalInterface</label>
+        <link refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-extension_</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::unique_ptr&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::unique_ptr&lt; extensions::Extension &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; extensions::Extension &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>wasm::ShellExternalInterface</label>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/binaryen/runtime_external_interface.hpp" line="14" column="3" bodyfile="src/runtime/binaryen/runtime_external_interface.hpp" bodystart="14" bodyend="40"/>
+    <listofallmembers>
+      <member refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface_1adc4a944ba5135ea19a0dc704ae0dccf7" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeExternalInterface</scope><name>callImport</name></member>
+      <member refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface_1a3fda44107c3370166d4097a0cd943e27" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeExternalInterface</scope><name>checkArguments</name></member>
+      <member refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface_1a61482865d7118913c07b94e10378b656" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeExternalInterface</scope><name>extension_</name></member>
+      <member refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface_1af72e4de47dbda1a4e7026bcf6099f894" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeExternalInterface</scope><name>kDefaultLoggerTag</name></member>
+      <member refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface_1aa4546eb7eb60fc3ee7593728f5da7ef5" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeExternalInterface</scope><name>logger_</name></member>
+      <member refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface_1a0ca931aa5407daf0231701115b9fa292" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeExternalInterface</scope><name>memory</name></member>
+      <member refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface_1afd1eb7de2354f994730768805d14161e" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeExternalInterface</scope><name>RuntimeExternalInterface</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

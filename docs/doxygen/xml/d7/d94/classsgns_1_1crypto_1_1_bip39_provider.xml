@@ -1,0 +1,129 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/d94/classsgns_1_1crypto_1_1_bip39_provider" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::crypto::Bip39Provider</compoundname>
+    <derivedcompoundref refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl" prot="public" virt="non-virtual">sgns::crypto::Bip39ProviderImpl</derivedcompoundref>
+    <includes refid="d0/d59/bip39__provider_8hpp" local="no">bip39_provider.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d7/d94/classsgns_1_1crypto_1_1_bip39_provider_1aedd0b0334779355b90823d4516dbe4b3" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::crypto::Bip39Provider::~Bip39Provider</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Bip39Provider</name>
+        <qualifiedname>sgns::crypto::Bip39Provider::~Bip39Provider</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/bip39_provider.hpp" line="14" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d94/classsgns_1_1crypto_1_1_bip39_provider_1a5d848ec8d2e53e15d85691143cd277d7" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; std::vector&lt; uint8_t &gt; &gt;</type>
+        <definition>virtual outcome::result&lt; std::vector&lt; uint8_t &gt; &gt; sgns::crypto::Bip39Provider::calculateEntropy</definition>
+        <argsstring>(const std::vector&lt; std::string &gt; &amp;word_list)=0</argsstring>
+        <name>calculateEntropy</name>
+        <qualifiedname>sgns::crypto::Bip39Provider::calculateEntropy</qualifiedname>
+        <reimplementedby refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a54cd018fe1aed260b1c901a548c96f97">calculateEntropy</reimplementedby>
+        <param>
+          <type>const std::vector&lt; std::string &gt; &amp;</type>
+          <declname>word_list</declname>
+        </param>
+        <briefdescription>
+<para>Calculates entropy from a mnemonic word list. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>word_list</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Mnemonic words in order. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Entropy value. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/bip39_provider.hpp" line="21" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d94/classsgns_1_1crypto_1_1_bip39_provider_1ae99f65fe4cb057fa008edcc954cb7d4b" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39_1a543a047169289887fc9c5545af736954" kindref="member">bip39::Bip39Seed</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; bip39::Bip39Seed &gt; sgns::crypto::Bip39Provider::makeSeed</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; entropy, std::string_view password)=0</argsstring>
+        <name>makeSeed</name>
+        <qualifiedname>sgns::crypto::Bip39Provider::makeSeed</qualifiedname>
+        <reimplementedby refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl_1a120358b0f7b8b6f3fa63ed46a26cf4ff">makeSeed</reimplementedby>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>entropy</declname>
+        </param>
+        <param>
+          <type>std::string_view</type>
+          <declname>password</declname>
+        </param>
+        <briefdescription>
+<para>Derives a seed from entropy and an optional password. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>entropy</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Entropy bytes. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>password</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional passphrase used for seed derivation. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Seed bytes. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/bip39_provider.hpp" line="30" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Interface for creating BIP-39 entropy and seeds from mnemonic wordlists. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::crypto::Bip39Provider</label>
+        <link refid="d7/d94/classsgns_1_1crypto_1_1_bip39_provider"/>
+      </node>
+      <node id="2">
+        <label>sgns::crypto::Bip39ProviderImpl</label>
+        <link refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::crypto::Bip39Provider</label>
+        <link refid="d7/d94/classsgns_1_1crypto_1_1_bip39_provider"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/crypto/bip39/bip39_provider.hpp" line="12" column="3" bodyfile="src/crypto/bip39/bip39_provider.hpp" bodystart="12" bodyend="32"/>
+    <listofallmembers>
+      <member refid="d7/d94/classsgns_1_1crypto_1_1_bip39_provider_1a5d848ec8d2e53e15d85691143cd277d7" prot="public" virt="pure-virtual"><scope>sgns::crypto::Bip39Provider</scope><name>calculateEntropy</name></member>
+      <member refid="d7/d94/classsgns_1_1crypto_1_1_bip39_provider_1ae99f65fe4cb057fa008edcc954cb7d4b" prot="public" virt="pure-virtual"><scope>sgns::crypto::Bip39Provider</scope><name>makeSeed</name></member>
+      <member refid="d7/d94/classsgns_1_1crypto_1_1_bip39_provider_1aedd0b0334779355b90823d4516dbe4b3" prot="public" virt="virtual"><scope>sgns::crypto::Bip39Provider</scope><name>~Bip39Provider</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,890 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/dcb/namespacesgns_1_1base" kind="namespace" language="C++">
+    <compoundname>sgns::base</compoundname>
+    <innerclass refid="d4/dc6/classsgns_1_1base_1_1_blob" prot="public">sgns::base::Blob</innerclass>
+    <innerclass refid="de/dd5/classsgns_1_1base_1_1_buffer" prot="public">sgns::base::Buffer</innerclass>
+    <innerclass refid="df/d5a/structsgns_1_1base_1_1_wrapper" prot="public">sgns::base::Wrapper</innerclass>
+    <innernamespace refid="d0/d3c/namespacesgns_1_1base_1_1detail">sgns::base::detail</innernamespace>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="d4/dcb/namespacesgns_1_1base_1add32f7e036f3f2eeb7b517e1d5dfcf6f" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>BlobError</name>
+        <qualifiedname>sgns::base::BlobError</qualifiedname>
+        <enumvalue id="d4/dcb/namespacesgns_1_1base_1add32f7e036f3f2eeb7b517e1d5dfcf6faa64b123cf90c0ed925ae74d79dff91c7" prot="public">
+          <name>INCORRECT_LENGTH</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Error codes for exceptions that may occur during blob initialization </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/blob.hpp" line="16" column="3" bodyfile="src/base/blob.hpp" bodystart="16" bodyend="16"/>
+      </memberdef>
+      <memberdef kind="enum" id="d4/dcb/namespacesgns_1_1base_1a691290f03df0ca5a20c01436a710055b" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>UnhexError</name>
+        <qualifiedname>sgns::base::UnhexError</qualifiedname>
+        <enumvalue id="d4/dcb/namespacesgns_1_1base_1a691290f03df0ca5a20c01436a710055ba2dc572dbbce7eadb587f959a5830cacb" prot="public">
+          <name>NOT_ENOUGH_INPUT</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d4/dcb/namespacesgns_1_1base_1a691290f03df0ca5a20c01436a710055ba0f3a6a294ca51e5b086b1a967397f9ad" prot="public">
+          <name>NON_HEX_INPUT</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d4/dcb/namespacesgns_1_1base_1a691290f03df0ca5a20c01436a710055baa4cc566642dfcc62a204b2e89e3cae3b" prot="public">
+          <name>VALUE_OUT_OF_RANGE</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d4/dcb/namespacesgns_1_1base_1a691290f03df0ca5a20c01436a710055ba1679f9211f2844dcb3ded4b2b1a6bfc7" prot="public">
+          <name>MISSING_0X_PREFIX</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d4/dcb/namespacesgns_1_1base_1a691290f03df0ca5a20c01436a710055ba696b031073e74bf2cb98e5ef201d4aa3" prot="public">
+          <name>UNKNOWN</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>error codes for exceptions that may occur during unhexing </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/hexutil.hpp" line="15" column="3" bodyfile="src/base/hexutil.hpp" bodystart="15" bodyend="21"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="d4/dcb/namespacesgns_1_1base_1a6fcc14244fc08a51e93f6c85d24f3562" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">Blob</ref>&lt; 8 &gt;</type>
+        <definition>using sgns::base::Hash64 = Blob&lt;8&gt;</definition>
+        <argsstring></argsstring>
+        <name>Hash64</name>
+        <qualifiedname>sgns::base::Hash64</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/blob.hpp" line="173" column="3" bodyfile="src/base/blob.hpp" bodystart="173" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d4/dcb/namespacesgns_1_1base_1a13f0ff8307c68dd02b7474681fffbe98" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">Blob</ref>&lt; 16 &gt;</type>
+        <definition>using sgns::base::Hash128 = Blob&lt;16&gt;</definition>
+        <argsstring></argsstring>
+        <name>Hash128</name>
+        <qualifiedname>sgns::base::Hash128</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/blob.hpp" line="174" column="3" bodyfile="src/base/blob.hpp" bodystart="174" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">Blob</ref>&lt; 32 &gt;</type>
+        <definition>using sgns::base::Hash256 = Blob&lt;32&gt;</definition>
+        <argsstring></argsstring>
+        <name>Hash256</name>
+        <qualifiedname>sgns::base::Hash256</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/blob.hpp" line="175" column="3" bodyfile="src/base/blob.hpp" bodystart="175" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d4/dcb/namespacesgns_1_1base_1a6f30185e0928ab4bb5d464974a11c91f" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">Blob</ref>&lt; 64 &gt;</type>
+        <definition>using sgns::base::Hash512 = Blob&lt;64&gt;</definition>
+        <argsstring></argsstring>
+        <name>Hash512</name>
+        <qualifiedname>sgns::base::Hash512</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/blob.hpp" line="176" column="3" bodyfile="src/base/blob.hpp" bodystart="176" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" prot="public" static="no">
+        <type>std::shared_ptr&lt; spdlog::logger &gt;</type>
+        <definition>using sgns::base::Logger = std::shared_ptr&lt;spdlog::logger&gt;</definition>
+        <argsstring></argsstring>
+        <name>Logger</name>
+        <qualifiedname>sgns::base::Logger</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/logger.hpp" line="13" column="5" bodyfile="src/base/logger.hpp" bodystart="13" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a2a958e798c8b8b488d7f143d589d1013" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>size_t</type>
+            <declname>size</declname>
+            <defname>size</defname>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::base::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const Blob&lt; size &gt; &amp;blob)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::base::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">Blob</ref>&lt; size &gt; &amp;</type>
+          <declname>blob</declname>
+        </param>
+        <briefdescription>
+<para>scale-encodes blob instance to stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream type </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>blob size </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>blob</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to encode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/blob.hpp" line="189" column="3" bodyfile="src/base/blob.hpp" bodystart="189" bodyend="194"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1aae443f961a4d58289b9b0c1cb09eaa24" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>size_t</type>
+            <declname>size</declname>
+            <defname>size</defname>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::base::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, Blob&lt; size &gt; &amp;blob)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::base::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">Blob</ref>&lt; size &gt; &amp;</type>
+          <declname>blob</declname>
+        </param>
+        <briefdescription>
+<para>decodes blob instance from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream type </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>blob size </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>blob</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to encode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/blob.hpp" line="207" column="10" bodyfile="src/base/blob.hpp" bodystart="207" bodyend="212"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a1a3c211ff3038f9336a52c85bae9f9ff" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>size_t</type>
+            <declname>N</declname>
+            <defname>N</defname>
+          </param>
+        </templateparamlist>
+        <type>std::ostream &amp;</type>
+        <definition>std::ostream &amp; sgns::base::operator&lt;&lt;</definition>
+        <argsstring>(std::ostream &amp;os, const Blob&lt; N &gt; &amp;blob)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::base::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>std::ostream &amp;</type>
+          <declname>os</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">Blob</ref>&lt; N &gt; &amp;</type>
+          <declname>blob</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/blob.hpp" line="215" column="10" bodyfile="src/base/blob.hpp" bodystart="215" bodyend="217"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1adbae05593478481bf7f1145abca27eac" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::ostream &amp;</type>
+        <definition>std::ostream &amp; sgns::base::operator&lt;&lt;</definition>
+        <argsstring>(std::ostream &amp;os, const Buffer &amp;buffer)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::base::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>std::ostream &amp;</type>
+          <declname>os</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>buffer</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.cpp" line="188" column="3" bodyfile="src/base/buffer.cpp" bodystart="188" bodyend="190" declfile="src/base/buffer.hpp" declline="283" declcolumn="3"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a29134476bdbd906d924bbfdeaf14185e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::base::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const Buffer &amp;buffer)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::base::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>buffer</declname>
+        </param>
+        <briefdescription>
+<para>override operator&lt;&lt; for all streams except std::ostream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>buffer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to encode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="263" column="3" bodyfile="src/base/buffer.hpp" bodystart="263" bodyend="265"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1aeb5ff2babf89865e7531c73effa6d7a4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::base::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, Buffer &amp;buffer)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::base::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>buffer</declname>
+        </param>
+        <briefdescription>
+<para>decodes buffer object from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>buffer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to decode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="276" column="10" bodyfile="src/base/buffer.hpp" bodystart="276" bodyend="281"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a9f31e6a700eca4827b23208df298c650" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::base::hex_upper</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; bytes) noexcept</argsstring>
+        <name>hex_upper</name>
+        <qualifiedname>sgns::base::hex_upper</qualifiedname>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>bytes</declname>
+        </param>
+        <briefdescription>
+<para>Converts bytes to uppercase hex representation. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>bytes</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input bytes </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>hexstring </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/hexutil.cpp" line="24" column="15" bodyfile="src/base/hexutil.cpp" bodystart="24" bodyend="28" declfile="src/base/hexutil.hpp" declline="28" declcolumn="15"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a1f74d21c556c1448afb372b3a399e734" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::base::hex_lower</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; bytes) noexcept</argsstring>
+        <name>hex_lower</name>
+        <qualifiedname>sgns::base::hex_lower</qualifiedname>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>bytes</declname>
+        </param>
+        <briefdescription>
+<para>Converts bytes to hex representation. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>bytes</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input bytes </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>hexstring </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/hexutil.cpp" line="30" column="15" bodyfile="src/base/hexutil.cpp" bodystart="30" bodyend="34" declfile="src/base/hexutil.hpp" declline="35" declcolumn="15"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a11e2b29344b634aa6e0ebf208bdd9826" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::vector&lt; uint8_t &gt; &gt;</type>
+        <definition>outcome::result&lt; std::vector&lt; uint8_t &gt; &gt; sgns::base::unhex</definition>
+        <argsstring>(std::string_view hex)</argsstring>
+        <name>unhex</name>
+        <qualifiedname>sgns::base::unhex</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>hex</declname>
+        </param>
+        <briefdescription>
+<para>Converts hex representation to bytes. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>hex</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>hex string input </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>result containing array of bytes if input string is hex encoded and has even length</para>
+</simplesect>
+<simplesect kind="note"><para>reads both uppercase and lowercase hexstrings</para>
+</simplesect>
+<simplesect kind="see"><para><ulink url="https://www.boost.org/doc/libs/1_51_0/libs/algorithm/doc/html/the_boost_algorithm_library/Misc/hex.html">https://www.boost.org/doc/libs/1_51_0/libs/algorithm/doc/html/the_boost_algorithm_library/Misc/hex.html</ulink> </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/hexutil.cpp" line="36" column="19" bodyfile="src/base/hexutil.cpp" bodystart="36" bodyend="57" declfile="src/base/hexutil.hpp" declline="48" declcolumn="19"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a1323ce5ec7250ac1f595cc02b990e03d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::vector&lt; uint8_t &gt; &gt;</type>
+        <definition>outcome::result&lt; std::vector&lt; uint8_t &gt; &gt; sgns::base::unhexWith0x</definition>
+        <argsstring>(std::string_view hex)</argsstring>
+        <name>unhexWith0x</name>
+        <qualifiedname>sgns::base::unhexWith0x</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>hex</declname>
+        </param>
+        <briefdescription>
+<para>Unhex hex-string with 0x in the begining. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>hex</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>hex string with 0x in the beginning </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>unhexed buffer </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/hexutil.cpp" line="59" column="19" bodyfile="src/base/hexutil.cpp" bodystart="59" bodyend="70" declfile="src/base/hexutil.hpp" declline="55" declcolumn="19"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">Logger</ref></type>
+        <definition>Logger sgns::base::createLogger</definition>
+        <argsstring>(const std::string &amp;tag, const std::string &amp;basepath=&quot;&quot;)</argsstring>
+        <name>createLogger</name>
+        <qualifiedname>sgns::base::createLogger</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>tag</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>basepath</declname>
+          <defval>&quot;&quot;</defval>
+        </param>
+        <briefdescription>
+<para>Create a logger instance. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>tag</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Tagging name for identifying logger. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>basepath</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional base path for log output (platform dependent). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">Logger</ref> object. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/logger.cpp" line="55" column="12" bodyfile="src/base/logger.cpp" bodystart="55" bodyend="76" declfile="src/base/logger.hpp" declline="21" declcolumn="12"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a21dc6bdd749b275f767262aaaf1064bf" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::array&lt; uint8_t, 8 &gt;</type>
+        <definition>std::array&lt; uint8_t, 8 &gt; sgns::base::uint64_t_to_bytes</definition>
+        <argsstring>(uint64_t number)</argsstring>
+        <name>uint64_t_to_bytes</name>
+        <qualifiedname>sgns::base::uint64_t_to_bytes</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>number</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/mp_utils.cpp" line="27" column="14" bodyfile="src/base/mp_utils.cpp" bodystart="27" bodyend="33" declfile="src/base/mp_utils.hpp" declline="17" declcolumn="14"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a09babae5a8bf57b573c46a0abbedc3df" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::base::bytes_to_uint64_t</definition>
+        <argsstring>(gsl::span&lt; uint8_t, 8 &gt; bytes)</argsstring>
+        <name>bytes_to_uint64_t</name>
+        <qualifiedname>sgns::base::bytes_to_uint64_t</qualifiedname>
+        <param>
+          <type>gsl::span&lt; uint8_t, 8 &gt;</type>
+          <declname>bytes</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/mp_utils.cpp" line="35" column="12" bodyfile="src/base/mp_utils.cpp" bodystart="35" bodyend="41" declfile="src/base/mp_utils.hpp" declline="19" declcolumn="12"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a0cdbd1812624ab91a5fd6ea69313734c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::array&lt; uint8_t, 16 &gt;</type>
+        <definition>std::array&lt; uint8_t, 16 &gt; sgns::base::uint128_t_to_bytes</definition>
+        <argsstring>(const boost::multiprecision::uint128_t &amp;i)</argsstring>
+        <name>uint128_t_to_bytes</name>
+        <qualifiedname>sgns::base::uint128_t_to_bytes</qualifiedname>
+        <param>
+          <type>const boost::multiprecision::uint128_t &amp;</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/mp_utils.cpp" line="43" column="14" bodyfile="src/base/mp_utils.cpp" bodystart="43" bodyend="46" declfile="src/base/mp_utils.hpp" declline="21" declcolumn="14"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a018d68b5aa488c5739f2a47faebe0856" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>boost::multiprecision::uint128_t</type>
+        <definition>boost::multiprecision::uint128_t sgns::base::bytes_to_uint128_t</definition>
+        <argsstring>(gsl::span&lt; uint8_t, 16 &gt; bytes)</argsstring>
+        <name>bytes_to_uint128_t</name>
+        <qualifiedname>sgns::base::bytes_to_uint128_t</qualifiedname>
+        <param>
+          <type>gsl::span&lt; uint8_t, 16 &gt;</type>
+          <declname>bytes</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/mp_utils.cpp" line="48" column="36" bodyfile="src/base/mp_utils.cpp" bodystart="48" bodyend="51" declfile="src/base/mp_utils.hpp" declline="24" declcolumn="36"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a5b96680618109525939be7fe14c2631b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::array&lt; uint8_t, 32 &gt;</type>
+        <definition>std::array&lt; uint8_t, 32 &gt; sgns::base::uint256_t_to_bytes</definition>
+        <argsstring>(const boost::multiprecision::uint256_t &amp;i)</argsstring>
+        <name>uint256_t_to_bytes</name>
+        <qualifiedname>sgns::base::uint256_t_to_bytes</qualifiedname>
+        <param>
+          <type>const boost::multiprecision::uint256_t &amp;</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/mp_utils.cpp" line="53" column="14" bodyfile="src/base/mp_utils.cpp" bodystart="53" bodyend="56" declfile="src/base/mp_utils.hpp" declline="27" declcolumn="14"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a9f65272a956bf42d90bb5b4de9d77892" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>boost::multiprecision::uint256_t</type>
+        <definition>boost::multiprecision::uint256_t sgns::base::bytes_to_uint256_t</definition>
+        <argsstring>(gsl::span&lt; uint8_t, 32 &gt; bytes)</argsstring>
+        <name>bytes_to_uint256_t</name>
+        <qualifiedname>sgns::base::bytes_to_uint256_t</qualifiedname>
+        <param>
+          <type>gsl::span&lt; uint8_t, 32 &gt;</type>
+          <declname>bytes</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/mp_utils.cpp" line="58" column="36" bodyfile="src/base/mp_utils.cpp" bodystart="58" bodyend="61" declfile="src/base/mp_utils.hpp" declline="30" declcolumn="36"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a6e3f4809320974468497c0cb0999e28a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;std::is_enum_v&lt;T&gt;&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::base::raise</definition>
+        <argsstring>(T t)</argsstring>
+        <name>raise</name>
+        <qualifiedname>sgns::base::raise</qualifiedname>
+        <param>
+          <type>T</type>
+          <declname>t</declname>
+        </param>
+        <briefdescription>
+<para>throws outcome::result error as boost exception </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>enum error type, only outcome::result enums are allowed </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>t</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>error value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/outcome_throw.hpp" line="14" column="8" bodyfile="src/base/outcome_throw.hpp" bodystart="14" bodyend="17"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a80b560d9c5dad903e2ef5efde8dae070" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;!std::is_enum_v&lt;T&gt;&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::base::raise</definition>
+        <argsstring>(const T &amp;t)</argsstring>
+        <name>raise</name>
+        <qualifiedname>sgns::base::raise</qualifiedname>
+        <param>
+          <type>const T &amp;</type>
+          <declname>t</declname>
+        </param>
+        <briefdescription>
+<para>throws outcome::result error made of error as boost exception </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>outcome error type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>t</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>outcome error value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/outcome_throw.hpp" line="25" column="8" bodyfile="src/base/outcome_throw.hpp" bodystart="25" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1ad1e812581dc901b9dc0c261d7196d2d0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+          <param>
+            <type>typename Tag</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;std::is_arithmetic_v&lt;T&gt;&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>bool</type>
+        <definition>bool sgns::base::operator&lt;</definition>
+        <argsstring>(const Wrapper&lt; T, Tag &gt; &amp;a, const Wrapper&lt; T, Tag &gt; &amp;b)</argsstring>
+        <name>operator&lt;</name>
+        <qualifiedname>sgns::base::operator&lt;</qualifiedname>
+        <param>
+          <type>const <ref refid="df/d5a/structsgns_1_1base_1_1_wrapper" kindref="compound">Wrapper</ref>&lt; T, Tag &gt; &amp;</type>
+          <declname>a</declname>
+        </param>
+        <param>
+          <type>const <ref refid="df/d5a/structsgns_1_1base_1_1_wrapper" kindref="compound">Wrapper</ref>&lt; T, Tag &gt; &amp;</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/wrapper.hpp" line="42" column="3" bodyfile="src/base/wrapper.hpp" bodystart="42" bodyend="45"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/base/blob.cpp" line="14" column="1"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,453 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/d68/sgns__version_8hpp" kind="file" language="C++">
+    <compoundname>sgns_version.hpp</compoundname>
+    <includes local="no">cstdint</includes>
+    <includes local="no">string</includes>
+    <includedby refid="d0/d58/_account_messenger_8cpp" local="yes">src/account/AccountMessenger.cpp</includedby>
+    <includedby refid="df/de0/_genius_node_8cpp" local="yes">src/account/GeniusNode.cpp</includedby>
+    <includedby refid="dc/dfe/_migration0__2__0_to1__0__0_8cpp" local="yes">src/account/Migration0_2_0To1_0_0.cpp</includedby>
+    <includedby refid="da/d32/_migration3__5__0_to3__5__1_8cpp" local="yes">src/account/Migration3_5_0To3_5_1.cpp</includedby>
+    <includedby refid="db/da7/_migration3__5__1_to3__6__0_8cpp" local="yes">src/account/Migration3_5_1To3_6_0.cpp</includedby>
+    <includedby refid="d2/d4b/_migration_manager_8cpp" local="yes">src/account/MigrationManager.cpp</includedby>
+    <includedby refid="d0/dcc/_transaction_manager_8cpp" local="yes">src/account/TransactionManager.cpp</includedby>
+    <includedby refid="d4/d36/sgns__version_8cpp" local="yes">src/base/sgns_version.cpp</includedby>
+    <includedby refid="dc/d59/_blockchain_8hpp" local="yes">src/blockchain/Blockchain.hpp</includedby>
+    <includedby refid="d1/dc9/pubsub__broadcaster__ext_8cpp" local="yes">src/crdt/globaldb/pubsub_broadcaster_ext.cpp</includedby>
+    <includedby refid="d3/d3a/processing__service_8cpp" local="yes">src/processing/processing_service.cpp</includedby>
+    <includedby refid="dd/d14/processing__subtask__queue__accessor__impl_8cpp" local="yes">src/processing/processing_subtask_queue_accessor_impl.cpp</includedby>
+    <includedby refid="d8/d6f/processing__subtask__queue__channel__pubsub_8cpp" local="yes">src/processing/processing_subtask_queue_channel_pubsub.cpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/base/sgns_version.hpp</label>
+        <link refid="de/d68/sgns__version_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>cstdint</label>
+      </node>
+      <node id="3">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/account/AccountMessenger.cpp</label>
+        <link refid="d0/d58/_account_messenger_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/account/GeniusNode.cpp</label>
+        <link refid="df/de0/_genius_node_8cpp"/>
+      </node>
+      <node id="11">
+        <label>src/account/GeniusNode.hpp</label>
+        <link refid="d3/d63/_genius_node_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>src/account/Migration0_2_0To1_0_0.cpp</label>
+        <link refid="dc/dfe/_migration0__2__0_to1__0__0_8cpp"/>
+      </node>
+      <node id="13">
+        <label>src/account/Migration3_4_0To3_5_0.cpp</label>
+        <link refid="d6/d71/_migration3__4__0_to3__5__0_8cpp"/>
+      </node>
+      <node id="12">
+        <label>src/account/Migration3_4_0To3_5_0.hpp</label>
+        <link refid="de/d71/_migration3__4__0_to3__5__0_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>src/account/Migration3_5_0To3_5_1.cpp</label>
+        <link refid="da/d32/_migration3__5__0_to3__5__1_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/account/Migration3_5_1To3_6_0.cpp</label>
+        <link refid="db/da7/_migration3__5__1_to3__6__0_8cpp"/>
+      </node>
+      <node id="7">
+        <label>src/account/MigrationManager.cpp</label>
+        <link refid="d2/d4b/_migration_manager_8cpp"/>
+      </node>
+      <node id="8">
+        <label>src/account/TransactionManager.cpp</label>
+        <link refid="d0/dcc/_transaction_manager_8cpp"/>
+      </node>
+      <node id="9">
+        <label>src/base/sgns_version.cpp</label>
+        <link refid="d4/d36/sgns__version_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/base/sgns_version.hpp</label>
+        <link refid="de/d68/sgns__version_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>src/blockchain/Blockchain.hpp</label>
+        <link refid="dc/d59/_blockchain_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>src/blockchain/impl/Blockchain.cpp</label>
+        <link refid="da/d8c/_blockchain_8cpp"/>
+      </node>
+      <node id="15">
+        <label>src/crdt/globaldb/pubsub_broadcaster_ext.cpp</label>
+        <link refid="d1/dc9/pubsub__broadcaster__ext_8cpp"/>
+      </node>
+      <node id="16">
+        <label>src/processing/processing_service.cpp</label>
+        <link refid="d3/d3a/processing__service_8cpp"/>
+      </node>
+      <node id="17">
+        <label>src/processing/processing_subtask_queue_accessor_impl.cpp</label>
+        <link refid="dd/d14/processing__subtask__queue__accessor__impl_8cpp"/>
+      </node>
+      <node id="18">
+        <label>src/processing/processing_subtask_queue_channel_pubsub.cpp</label>
+        <link refid="d8/d6f/processing__subtask__queue__channel__pubsub_8cpp"/>
+      </node>
+    </invincdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d8/d5b/namespacesgns_1_1version">sgns::version</innernamespace>
+    <sectiondef kind="var">
+      <memberdef kind="variable" id="d8/d5b/namespacesgns_1_1version_1a6058da6912c24b9f90a2cf46233acf2b" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>std::uint16_t</type>
+        <definition>std::uint16_t sgns::version::MAIN_NET_ID</definition>
+        <argsstring></argsstring>
+        <name>MAIN_NET_ID</name>
+        <qualifiedname>sgns::version::MAIN_NET_ID</qualifiedname>
+        <initializer>= 369</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/sgns_version.hpp" line="10" column="43" bodyfile="src/base/sgns_version.hpp" bodystart="10" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d5b/namespacesgns_1_1version_1aa707e1847e0333d6484494b5dc604c78" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>std::uint16_t</type>
+        <definition>std::uint16_t sgns::version::TEST_NET_ID</definition>
+        <argsstring></argsstring>
+        <name>TEST_NET_ID</name>
+        <qualifiedname>sgns::version::TEST_NET_ID</qualifiedname>
+        <initializer>= 963</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/sgns_version.hpp" line="11" column="43" bodyfile="src/base/sgns_version.hpp" bodystart="11" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d5b/namespacesgns_1_1version_1ab0ce4d68d333ec310b8ff2d86b1b6ecf" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>std::uint16_t</type>
+        <definition>std::uint16_t sgns::version::DEV_NET_ID</definition>
+        <argsstring></argsstring>
+        <name>DEV_NET_ID</name>
+        <qualifiedname>sgns::version::DEV_NET_ID</qualifiedname>
+        <initializer>= 144</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/sgns_version.hpp" line="12" column="43" bodyfile="src/base/sgns_version.hpp" bodystart="12" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d5b/namespacesgns_1_1version_1ad0b8e1b613245c17f4ffb194a429e9fa" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>std::string_view</type>
+        <definition>std::string_view sgns::version::NET_ID_APPENDIX</definition>
+        <argsstring></argsstring>
+        <name>NET_ID_APPENDIX</name>
+        <qualifiedname>sgns::version::NET_ID_APPENDIX</qualifiedname>
+        <initializer>= &quot;.%hu&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/sgns_version.hpp" line="13" column="43" bodyfile="src/base/sgns_version.hpp" bodystart="13" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d5b/namespacesgns_1_1version_1a520d3bc2f8bdda243d42000a5f9bb98f" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>std::string_view</type>
+        <definition>std::string_view sgns::version::SGNS_VERSION_APPENDIX</definition>
+        <argsstring></argsstring>
+        <name>SGNS_VERSION_APPENDIX</name>
+        <qualifiedname>sgns::version::SGNS_VERSION_APPENDIX</qualifiedname>
+        <initializer>= &quot;.%hu.%hu&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/sgns_version.hpp" line="14" column="43" bodyfile="src/base/sgns_version.hpp" bodystart="14" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d8/d5b/namespacesgns_1_1version_1a0d3878847bd689755efef9f47d3799bc" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::version::SuperGeniusVersionNum</definition>
+        <argsstring>()</argsstring>
+        <name>SuperGeniusVersionNum</name>
+        <qualifiedname>sgns::version::SuperGeniusVersionNum</qualifiedname>
+        <briefdescription>
+<para>Retrieves the complete version number of SuperGenius. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>uint64_t representing the version number. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/sgns_version.hpp" line="20" column="18" bodyfile="src/base/sgns_version.cpp" bodystart="14" bodyend="17" declfile="src/base/sgns_version.hpp" declline="20" declcolumn="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d5b/namespacesgns_1_1version_1ad4dd9a548817d85f2449cba06dcb5d4f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>uint32_t</type>
+        <definition>uint32_t sgns::version::SuperGeniusVersionMajor</definition>
+        <argsstring>()</argsstring>
+        <name>SuperGeniusVersionMajor</name>
+        <qualifiedname>sgns::version::SuperGeniusVersionMajor</qualifiedname>
+        <briefdescription>
+<para>Retrieves the major version of SuperGenius. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>uint32_t representing the major version. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/sgns_version.hpp" line="27" column="18" bodyfile="src/base/sgns_version.cpp" bodystart="19" bodyend="22" declfile="src/base/sgns_version.hpp" declline="27" declcolumn="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d5b/namespacesgns_1_1version_1a2958688648d5842f150a9406970656b1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>uint32_t</type>
+        <definition>uint32_t sgns::version::SuperGeniusVersionMinor</definition>
+        <argsstring>()</argsstring>
+        <name>SuperGeniusVersionMinor</name>
+        <qualifiedname>sgns::version::SuperGeniusVersionMinor</qualifiedname>
+        <briefdescription>
+<para>Retrieves the minor version of SuperGenius. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>uint32_t representing the minor version. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/sgns_version.hpp" line="34" column="18" bodyfile="src/base/sgns_version.cpp" bodystart="24" bodyend="27" declfile="src/base/sgns_version.hpp" declline="34" declcolumn="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d5b/namespacesgns_1_1version_1a516cbf7fee97f49995fe7ab6e5c7b88b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>uint32_t</type>
+        <definition>uint32_t sgns::version::SuperGeniusVersionPatch</definition>
+        <argsstring>()</argsstring>
+        <name>SuperGeniusVersionPatch</name>
+        <qualifiedname>sgns::version::SuperGeniusVersionPatch</qualifiedname>
+        <briefdescription>
+<para>Retrieves the patch version of SuperGenius. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>uint32_t representing the patch version. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/sgns_version.hpp" line="41" column="18" bodyfile="src/base/sgns_version.cpp" bodystart="29" bodyend="32" declfile="src/base/sgns_version.hpp" declline="41" declcolumn="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d5b/namespacesgns_1_1version_1a93974a89c523d5473125573207ee8c16" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::version::SuperGeniusVersionString</definition>
+        <argsstring>()</argsstring>
+        <name>SuperGeniusVersionString</name>
+        <qualifiedname>sgns::version::SuperGeniusVersionString</qualifiedname>
+        <briefdescription>
+<para>Retrieves the short version string of SuperGenius. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>std::string representing the short version. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/sgns_version.hpp" line="48" column="21" bodyfile="src/base/sgns_version.cpp" bodystart="34" bodyend="37" declfile="src/base/sgns_version.hpp" declline="48" declcolumn="21"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d5b/namespacesgns_1_1version_1a0bee2226f39e876fa5aa3b7a39026176" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::version::SuperGeniusVersionFullString</definition>
+        <argsstring>()</argsstring>
+        <name>SuperGeniusVersionFullString</name>
+        <qualifiedname>sgns::version::SuperGeniusVersionFullString</qualifiedname>
+        <briefdescription>
+<para>Retrieves the full version string of SuperGenius. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>std::string representing the full version. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/sgns_version.hpp" line="55" column="21" bodyfile="src/base/sgns_version.cpp" bodystart="39" bodyend="42" declfile="src/base/sgns_version.hpp" declline="55" declcolumn="21"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d5b/namespacesgns_1_1version_1a846b7bb36ba245e14fcc089bdf745052" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::version::SuperGeniusVersionText</definition>
+        <argsstring>()</argsstring>
+        <name>SuperGeniusVersionText</name>
+        <qualifiedname>sgns::version::SuperGeniusVersionText</qualifiedname>
+        <briefdescription>
+<para>Retrieves the display version text of SuperGenius. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>std::string representing the version text. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/sgns_version.hpp" line="62" column="21" bodyfile="src/base/sgns_version.cpp" bodystart="44" bodyend="47" declfile="src/base/sgns_version.hpp" declline="62" declcolumn="21"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d5b/namespacesgns_1_1version_1ae035b9b5be3314e142ae0710e0755d80" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>uint16_t</type>
+        <definition>uint16_t sgns::version::GetNetworkID</definition>
+        <argsstring>()</argsstring>
+        <name>GetNetworkID</name>
+        <qualifiedname>sgns::version::GetNetworkID</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/sgns_version.hpp" line="64" column="18" bodyfile="src/base/sgns_version.cpp" bodystart="49" bodyend="58" declfile="src/base/sgns_version.hpp" declline="64" declcolumn="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d5b/namespacesgns_1_1version_1a1a29ab66e9005576bcef86ee7d914f97" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::version::GetNetAndVersionAppendix</definition>
+        <argsstring>()</argsstring>
+        <name>GetNetAndVersionAppendix</name>
+        <qualifiedname>sgns::version::GetNetAndVersionAppendix</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/sgns_version.hpp" line="66" column="21" bodyfile="src/base/sgns_version.cpp" bodystart="60" bodyend="65" declfile="src/base/sgns_version.hpp" declline="66" declcolumn="21"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d5b/namespacesgns_1_1version_1a4e8319f5a51e4bed0bc418e5397dd8c3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::version::GetNetAndVersionAppendix</definition>
+        <argsstring>(uint32_t version_major, uint32_t version_minor, uint16_t net_id)</argsstring>
+        <name>GetNetAndVersionAppendix</name>
+        <qualifiedname>sgns::version::GetNetAndVersionAppendix</qualifiedname>
+        <param>
+          <type>uint32_t</type>
+          <declname>version_major</declname>
+        </param>
+        <param>
+          <type>uint32_t</type>
+          <declname>version_minor</declname>
+        </param>
+        <param>
+          <type>uint16_t</type>
+          <declname>net_id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/sgns_version.hpp" line="67" column="21" bodyfile="src/base/sgns_version.cpp" bodystart="67" bodyend="72" declfile="src/base/sgns_version.hpp" declline="67" declcolumn="21"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#pragma<sp/>once</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstdint&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="7"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="8" refid="d8/d5b/namespacesgns_1_1version" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d8/d5b/namespacesgns_1_1version" kindref="compound">version</ref></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="10" refid="d8/d5b/namespacesgns_1_1version_1a6058da6912c24b9f90a2cf46233acf2b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::uint16_t<sp/><sp/><sp/><sp/><ref refid="d8/d5b/namespacesgns_1_1version_1a6058da6912c24b9f90a2cf46233acf2b" kindref="member">MAIN_NET_ID</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>369;</highlight></codeline>
+<codeline lineno="11" refid="d8/d5b/namespacesgns_1_1version_1aa707e1847e0333d6484494b5dc604c78" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::uint16_t<sp/><sp/><sp/><sp/><ref refid="d8/d5b/namespacesgns_1_1version_1aa707e1847e0333d6484494b5dc604c78" kindref="member">TEST_NET_ID</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>963;</highlight></codeline>
+<codeline lineno="12" refid="d8/d5b/namespacesgns_1_1version_1ab0ce4d68d333ec310b8ff2d86b1b6ecf" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::uint16_t<sp/><sp/><sp/><sp/><ref refid="d8/d5b/namespacesgns_1_1version_1ab0ce4d68d333ec310b8ff2d86b1b6ecf" kindref="member">DEV_NET_ID</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>144;</highlight></codeline>
+<codeline lineno="13" refid="d8/d5b/namespacesgns_1_1version_1ad0b8e1b613245c17f4ffb194a429e9fa" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::string_view<sp/><ref refid="d8/d5b/namespacesgns_1_1version_1ad0b8e1b613245c17f4ffb194a429e9fa" kindref="member">NET_ID_APPENDIX</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;.%hu&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="14" refid="d8/d5b/namespacesgns_1_1version_1a520d3bc2f8bdda243d42000a5f9bb98f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::string_view<sp/><ref refid="d8/d5b/namespacesgns_1_1version_1a520d3bc2f8bdda243d42000a5f9bb98f" kindref="member">SGNS_VERSION_APPENDIX</ref><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;.%hu.%hu&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="d8/d5b/namespacesgns_1_1version_1a0d3878847bd689755efef9f47d3799bc" kindref="member">SuperGeniusVersionNum</ref>();</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint32_t<sp/><ref refid="d8/d5b/namespacesgns_1_1version_1ad4dd9a548817d85f2449cba06dcb5d4f" kindref="member">SuperGeniusVersionMajor</ref>();</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint32_t<sp/><ref refid="d8/d5b/namespacesgns_1_1version_1a2958688648d5842f150a9406970656b1" kindref="member">SuperGeniusVersionMinor</ref>();</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint32_t<sp/><ref refid="d8/d5b/namespacesgns_1_1version_1a516cbf7fee97f49995fe7ab6e5c7b88b" kindref="member">SuperGeniusVersionPatch</ref>();</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d8/d5b/namespacesgns_1_1version_1a93974a89c523d5473125573207ee8c16" kindref="member">SuperGeniusVersionString</ref>();</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d8/d5b/namespacesgns_1_1version_1a0bee2226f39e876fa5aa3b7a39026176" kindref="member">SuperGeniusVersionFullString</ref>();</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"></highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d8/d5b/namespacesgns_1_1version_1a846b7bb36ba245e14fcc089bdf745052" kindref="member">SuperGeniusVersionText</ref>();</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"></highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint16_t<sp/><ref refid="d8/d5b/namespacesgns_1_1version_1ae035b9b5be3314e142ae0710e0755d80" kindref="member">GetNetworkID</ref>();</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"></highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d8/d5b/namespacesgns_1_1version_1a1a29ab66e9005576bcef86ee7d914f97" kindref="member">GetNetAndVersionAppendix</ref>();</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d8/d5b/namespacesgns_1_1version_1a1a29ab66e9005576bcef86ee7d914f97" kindref="member">GetNetAndVersionAppendix</ref>(<sp/>uint32_t<sp/>version_major,<sp/>uint32_t<sp/>version_minor,<sp/>uint16_t<sp/>net_id<sp/>);</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="69"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="src/base/sgns_version.hpp"/>
+  </compounddef>
+</doxygen>

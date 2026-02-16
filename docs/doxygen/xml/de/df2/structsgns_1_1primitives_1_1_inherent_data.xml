@@ -1,0 +1,286 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/df2/structsgns_1_1primitives_1_1_inherent_data" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::primitives::InherentData</compoundname>
+    <includes refid="d7/dcf/inherent__data_8hpp" local="no">inherent_data.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="de/df2/structsgns_1_1primitives_1_1_inherent_data_1a1c4fc07ca8405887d352c19694827d5c" prot="public" static="no" mutable="no">
+        <type>std::map&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8422e89a738f542cf8371df481a9dcdb" kindref="member">InherentIdentifier</ref>, <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>std::map&lt;InherentIdentifier, base::Buffer&gt; sgns::primitives::InherentData::data</definition>
+        <argsstring></argsstring>
+        <name>data</name>
+        <qualifiedname>sgns::primitives::InherentData::data</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/inherent_data.hpp" line="79" column="14" bodyfile="src/primitives/inherent_data.hpp" bodystart="79" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="de/df2/structsgns_1_1primitives_1_1_inherent_data_1ab7f2af7c2ae65d5639e8749f15d9d281" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::primitives::InherentData::putData</definition>
+        <argsstring>(InherentIdentifier identifier, T inherent)</argsstring>
+        <name>putData</name>
+        <qualifiedname>sgns::primitives::InherentData::putData</qualifiedname>
+        <param>
+          <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a8422e89a738f542cf8371df481a9dcdb" kindref="member">InherentIdentifier</ref></type>
+          <declname>identifier</declname>
+        </param>
+        <param>
+          <type>T</type>
+          <declname>inherent</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Put data for an inherent into the internal storage.</para>
+<para><itemizedlist>
+<listitem><para>identifier need to be unique, otherwise decoding of these values will not work! </para>
+</listitem>
+<listitem><para>inherent encoded data to be stored <simplesect kind="return"><para>success if the data could be inserted an no data for an inherent with the same </para>
+</simplesect>
+</para>
+</listitem>
+</itemizedlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/inherent_data.hpp" line="45" column="21" bodyfile="src/primitives/inherent_data.hpp" bodystart="45" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="function" id="de/df2/structsgns_1_1primitives_1_1_inherent_data_1a0b8ff61eeca84118bc514f214fb1f486" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::primitives::InherentData::replaceData</definition>
+        <argsstring>(InherentIdentifier identifier, T inherent)</argsstring>
+        <name>replaceData</name>
+        <qualifiedname>sgns::primitives::InherentData::replaceData</qualifiedname>
+        <param>
+          <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a8422e89a738f542cf8371df481a9dcdb" kindref="member">InherentIdentifier</ref></type>
+          <declname>identifier</declname>
+        </param>
+        <param>
+          <type>T</type>
+          <declname>inherent</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Replace the data for an inherent. If it does not exist, the data is just inserted. <itemizedlist>
+<listitem><para>inherent encoded data to be stored </para>
+</listitem>
+</itemizedlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/inherent_data.hpp" line="58" column="10" bodyfile="src/primitives/inherent_data.hpp" bodystart="58" bodyend="60"/>
+      </memberdef>
+      <memberdef kind="function" id="de/df2/structsgns_1_1primitives_1_1_inherent_data_1a36c5b3a5f26ed47962d2cb3632a7c126" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>outcome::result&lt; T &gt;</type>
+        <definition>outcome::result&lt; T &gt; sgns::primitives::InherentData::getData</definition>
+        <argsstring>(const InherentIdentifier &amp;identifier) const</argsstring>
+        <name>getData</name>
+        <qualifiedname>sgns::primitives::InherentData::getData</qualifiedname>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8422e89a738f542cf8371df481a9dcdb" kindref="member">InherentIdentifier</ref> &amp;</type>
+          <declname>identifier</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>the data for the requested inherent. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/inherent_data.hpp" line="66" column="21" bodyfile="src/primitives/inherent_data.hpp" bodystart="66" bodyend="73"/>
+      </memberdef>
+      <memberdef kind="function" id="de/df2/structsgns_1_1primitives_1_1_inherent_data_1ab23e11ef2bc8836b548a55ecb7e24bb6" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::primitives::InherentData::operator==</definition>
+        <argsstring>(const InherentData &amp;rhs) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::primitives::InherentData::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="de/df2/structsgns_1_1primitives_1_1_inherent_data" kindref="compound">InherentData</ref> &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/inherent_data.hpp" line="75" column="10" bodyfile="src/primitives/inherent_data.cpp" bodystart="18" bodyend="21"/>
+      </memberdef>
+      <memberdef kind="function" id="de/df2/structsgns_1_1primitives_1_1_inherent_data_1a1a532e79b3c5d63dc36e999a14802bbb" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::primitives::InherentData::operator!=</definition>
+        <argsstring>(const InherentData &amp;rhs) const</argsstring>
+        <name>operator!=</name>
+        <qualifiedname>sgns::primitives::InherentData::operator!=</qualifiedname>
+        <param>
+          <type>const <ref refid="de/df2/structsgns_1_1primitives_1_1_inherent_data" kindref="compound">InherentData</ref> &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/inherent_data.hpp" line="77" column="10" bodyfile="src/primitives/inherent_data.cpp" bodystart="23" bodyend="26"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="friend">
+      <memberdef kind="friend" id="de/df2/structsgns_1_1primitives_1_1_inherent_data_1a8a4b2f11865acc9edce9c9005495c2d2" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::ostream &amp;</type>
+        <definition>std::ostream &amp; operator&lt;&lt;</definition>
+        <argsstring>(std::ostream &amp;out, const InherentData &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::InherentData::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>std::ostream &amp;</type>
+          <declname>out</declname>
+        </param>
+        <param>
+          <type>const <ref refid="de/df2/structsgns_1_1primitives_1_1_inherent_data" kindref="compound">InherentData</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/inherent_data.hpp" line="80" column="12" bodyfile="src/primitives/inherent_data.hpp" bodystart="80" bodyend="95"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Inherent data to include in a block </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="14">
+        <label>K</label>
+      </node>
+      <node id="5">
+        <label>T</label>
+      </node>
+      <node id="8">
+        <label>boost::equality_comparable&lt; Buffer &gt;</label>
+      </node>
+      <node id="9">
+        <label>boost::equality_comparable&lt; gsl::span&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="10">
+        <label>boost::equality_comparable&lt; std::vector&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="6">
+        <label>sgns::base::Blob&lt; size_ &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::base::Blob&lt; 8u &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; 8u &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::base::Buffer</label>
+        <link refid="de/dd5/classsgns_1_1base_1_1_buffer"/>
+        <childnode refid="8" relation="public-inheritance">
+        </childnode>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::primitives::InherentData</label>
+        <link refid="de/df2/structsgns_1_1primitives_1_1_inherent_data"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+data</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="13">
+        <label>std::map&lt; K, T &gt;</label>
+        <childnode refid="14" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::map&lt; sgns::base::Blob&lt; 8u &gt;, sgns::base::Buffer &gt;</label>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="13" relation="template-instance">
+          <edgelabel>&lt; sgns::base::Blob&lt; 8u &gt;, sgns::base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::vector&lt; uint8_t &gt;</label>
+        <childnode refid="12" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/primitives/inherent_data.hpp" line="35" column="3" bodyfile="src/primitives/inherent_data.hpp" bodystart="35" bodyend="97"/>
+    <listofallmembers>
+      <member refid="de/df2/structsgns_1_1primitives_1_1_inherent_data_1a1c4fc07ca8405887d352c19694827d5c" prot="public" virt="non-virtual"><scope>sgns::primitives::InherentData</scope><name>data</name></member>
+      <member refid="de/df2/structsgns_1_1primitives_1_1_inherent_data_1a36c5b3a5f26ed47962d2cb3632a7c126" prot="public" virt="non-virtual"><scope>sgns::primitives::InherentData</scope><name>getData</name></member>
+      <member refid="de/df2/structsgns_1_1primitives_1_1_inherent_data_1a1a532e79b3c5d63dc36e999a14802bbb" prot="public" virt="non-virtual"><scope>sgns::primitives::InherentData</scope><name>operator!=</name></member>
+      <member refid="de/df2/structsgns_1_1primitives_1_1_inherent_data_1a8a4b2f11865acc9edce9c9005495c2d2" prot="public" virt="non-virtual"><scope>sgns::primitives::InherentData</scope><name>operator&lt;&lt;</name></member>
+      <member refid="de/df2/structsgns_1_1primitives_1_1_inherent_data_1ab23e11ef2bc8836b548a55ecb7e24bb6" prot="public" virt="non-virtual"><scope>sgns::primitives::InherentData</scope><name>operator==</name></member>
+      <member refid="de/df2/structsgns_1_1primitives_1_1_inherent_data_1ab7f2af7c2ae65d5639e8749f15d9d281" prot="public" virt="non-virtual"><scope>sgns::primitives::InherentData</scope><name>putData</name></member>
+      <member refid="de/df2/structsgns_1_1primitives_1_1_inherent_data_1a0b8ff61eeca84118bc514f214fb1f486" prot="public" virt="non-virtual"><scope>sgns::primitives::InherentData</scope><name>replaceData</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

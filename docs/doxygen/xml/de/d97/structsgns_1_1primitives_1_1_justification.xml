@@ -1,0 +1,103 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/d97/structsgns_1_1primitives_1_1_justification" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::primitives::Justification</compoundname>
+    <includes refid="d6/ddd/justification_8hpp" local="no">justification.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="de/d97/structsgns_1_1primitives_1_1_justification_1ad894ae3f106da7b7e7f104c2970c57fc" prot="public" static="no" mutable="no">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>base::Buffer sgns::primitives::Justification::data</definition>
+        <argsstring></argsstring>
+        <name>data</name>
+        <qualifiedname>sgns::primitives::Justification::data</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/justification.hpp" line="13" column="18" bodyfile="src/primitives/justification.hpp" bodystart="13" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="friend">
+      <memberdef kind="friend" id="de/d97/structsgns_1_1primitives_1_1_justification_1acca80580efa20f0579f1fe04ffe9b394" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::ostream &amp;</type>
+        <definition>std::ostream &amp; operator&lt;&lt;</definition>
+        <argsstring>(std::ostream &amp;out, const Justification &amp;test_struct)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::Justification::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>std::ostream &amp;</type>
+          <declname>out</declname>
+        </param>
+        <param>
+          <type>const <ref refid="de/d97/structsgns_1_1primitives_1_1_justification" kindref="compound">Justification</ref> &amp;</type>
+          <declname>test_struct</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/justification.hpp" line="15" column="12" bodyfile="src/primitives/justification.hpp" bodystart="15" bodyend="18"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para><ref refid="de/d97/structsgns_1_1primitives_1_1_justification" kindref="compound">Justification</ref> of the finalized block </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="8">
+        <label>T</label>
+      </node>
+      <node id="3">
+        <label>boost::equality_comparable&lt; Buffer &gt;</label>
+      </node>
+      <node id="4">
+        <label>boost::equality_comparable&lt; gsl::span&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="5">
+        <label>boost::equality_comparable&lt; std::vector&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="2">
+        <label>sgns::base::Buffer</label>
+        <link refid="de/dd5/classsgns_1_1base_1_1_buffer"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::primitives::Justification</label>
+        <link refid="de/d97/structsgns_1_1primitives_1_1_justification"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+data</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::vector&lt; uint8_t &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/primitives/justification.hpp" line="12" column="3" bodyfile="src/primitives/justification.hpp" bodystart="12" bodyend="20"/>
+    <listofallmembers>
+      <member refid="de/d97/structsgns_1_1primitives_1_1_justification_1ad894ae3f106da7b7e7f104c2970c57fc" prot="public" virt="non-virtual"><scope>sgns::primitives::Justification</scope><name>data</name></member>
+      <member refid="de/d97/structsgns_1_1primitives_1_1_justification_1acca80580efa20f0579f1fe04ffe9b394" prot="public" virt="non-virtual"><scope>sgns::primitives::Justification</scope><name>operator&lt;&lt;</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

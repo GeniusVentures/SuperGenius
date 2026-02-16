@@ -1,0 +1,759 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor" kind="class" language="C++" prot="public">
+    <compoundname>sgns::storage::trie::SuperGeniusTrieCursor</compoundname>
+    <basecompoundref refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor" prot="public" virt="non-virtual">sgns::storage::face::MapCursor&lt; base::Buffer, base::Buffer &gt;</basecompoundref>
+    <includes refid="db/dd4/supergenius__trie__cursor_8hpp" local="no">supergenius_trie_cursor.hpp</includes>
+    <innerclass refid="d9/df8/structsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1_1_trie_path_entry" prot="private">sgns::storage::trie::SuperGeniusTrieCursor::TriePathEntry</innerclass>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1aa24ccb2b145480c986a7bcad656cd181" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>Error</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::Error</qualifiedname>
+        <enumvalue id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1aa24ccb2b145480c986a7bcad656cd181a1961212e1a7608a7c4c56947000e7d32" prot="public">
+          <name>INVALID_CURSOR_POSITION</name>
+          <initializer>=
+          1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1aa24ccb2b145480c986a7bcad656cd181a8c02547a8a3b02382bac3557bcb2280d" prot="public">
+          <name>NOT_FOUND</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1aa24ccb2b145480c986a7bcad656cd181abac80e889984f01604edafb0d646f249" prot="public">
+          <name>NULL_ROOT</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1aa24ccb2b145480c986a7bcad656cd181a390e464e3e9f4f424f3f489886f64770" prot="public">
+          <name>METHOD_NOT_IMPLEMENTED</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="21" column="5" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" bodystart="21" bodyend="29"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a3e42057615923a057574a10918c3099b" prot="public" static="no">
+        <type>std::shared_ptr&lt; <ref refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node" kindref="compound">SuperGeniusNode</ref> &gt;</type>
+        <definition>using sgns::storage::trie::SuperGeniusTrieCursor::NodePtr = std::shared_ptr&lt;SuperGeniusNode&gt;</definition>
+        <argsstring></argsstring>
+        <name>NodePtr</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::NodePtr</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="17" column="5" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" bodystart="17" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a4b0ba6d8aeb9ba827c05c9bff906f200" prot="public" static="no">
+        <type>std::shared_ptr&lt; <ref refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node" kindref="compound">BranchNode</ref> &gt;</type>
+        <definition>using sgns::storage::trie::SuperGeniusTrieCursor::BranchPtr = std::shared_ptr&lt;BranchNode&gt;</definition>
+        <argsstring></argsstring>
+        <name>BranchPtr</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::BranchPtr</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="18" column="5" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" bodystart="18" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a53ea7a5e0c68052d1ca205f173bb6eeb" prot="public" static="no">
+        <type><ref refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1a8e6ad7aafff6f51af4b80b396d6c8c2a" kindref="member">SuperGeniusNode::Type</ref></type>
+        <definition>using sgns::storage::trie::SuperGeniusTrieCursor::NodeType = SuperGeniusNode::Type</definition>
+        <argsstring></argsstring>
+        <name>NodeType</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::NodeType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="19" column="5" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" bodystart="19" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1ad5f3d26ffe04bada5021626450a66e2c" prot="private" static="no" mutable="no">
+        <type>const <ref refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie" kindref="compound">SuperGeniusTrie</ref> &amp;</type>
+        <definition>const SuperGeniusTrie&amp; sgns::storage::trie::SuperGeniusTrieCursor::trie_</definition>
+        <argsstring></argsstring>
+        <name>trie_</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::trie_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="77" column="27" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" bodystart="77" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a25093427b270f5dc2f49a1502fc1f2c0" prot="private" static="no" mutable="no">
+        <type><ref refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec" kindref="compound">SuperGeniusCodec</ref></type>
+        <definition>SuperGeniusCodec sgns::storage::trie::SuperGeniusTrieCursor::codec_</definition>
+        <argsstring></argsstring>
+        <name>codec_</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::codec_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="78" column="22" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" bodystart="78" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a06e524029db6b4eac2067445ff02217b" prot="private" static="no" mutable="no">
+        <type><ref refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a3e42057615923a057574a10918c3099b" kindref="member">NodePtr</ref></type>
+        <definition>NodePtr sgns::storage::trie::SuperGeniusTrieCursor::current_</definition>
+        <argsstring></argsstring>
+        <name>current_</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::current_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="79" column="13" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" bodystart="79" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1adc7f5f77a551900591542b34f77c665c" prot="private" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::storage::trie::SuperGeniusTrieCursor::visited_root_</definition>
+        <argsstring></argsstring>
+        <name>visited_root_</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::visited_root_</qualifiedname>
+        <initializer>= false</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="80" column="10" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" bodystart="80" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a4842de4d82599822fcafe1fb001b58a1" prot="private" static="no" mutable="no">
+        <type>std::list&lt; <ref refid="d9/df8/structsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1_1_trie_path_entry" kindref="compound">TriePathEntry</ref> &gt;</type>
+        <definition>std::list&lt;TriePathEntry&gt; sgns::storage::trie::SuperGeniusTrieCursor::last_visited_child_</definition>
+        <argsstring></argsstring>
+        <name>last_visited_child_</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::last_visited_child_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="81" column="15" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" bodystart="81" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a3c016ee6badee1612507396fc30fd9fa" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::SuperGeniusTrieCursor::SuperGeniusTrieCursor</definition>
+        <argsstring>(const SuperGeniusTrie &amp;trie)</argsstring>
+        <name>SuperGeniusTrieCursor</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::SuperGeniusTrieCursor</qualifiedname>
+        <param>
+          <type>const <ref refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie" kindref="compound">SuperGeniusTrie</ref> &amp;</type>
+          <declname>trie</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="31" column="14" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.cpp" bodystart="28" bodyend="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a36fc03b665f13072135cd253958fb817" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::SuperGeniusTrieCursor::~SuperGeniusTrieCursor</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~SuperGeniusTrieCursor</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::~SuperGeniusTrieCursor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="32" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a443517b65d395359220b9bd2ff2df8aa" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::trie::SuperGeniusTrieCursor::seekToFirst</definition>
+        <argsstring>() override</argsstring>
+        <name>seekToFirst</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::seekToFirst</qualifiedname>
+        <reimplements refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1ab94b4d14a0f9a9a071db04994f554b4b">seekToFirst</reimplements>
+        <briefdescription>
+<para>Same as std::begin(...);. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="37" column="21" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.cpp" bodystart="44" bodyend="48"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a71b4cad27369888bbc98742b97032c73" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::trie::SuperGeniusTrieCursor::seek</definition>
+        <argsstring>(const base::Buffer &amp;key) override</argsstring>
+        <name>seek</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::seek</qualifiedname>
+        <reimplements refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1a1ee1f250e632122582d02f410369f8e2">seek</reimplements>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Find given key and seek iterator to this key. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="38" column="21" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.cpp" bodystart="50" bodyend="69"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a7eaec60bcd0bc688c6bd76f8a8d12870" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::trie::SuperGeniusTrieCursor::seekToLast</definition>
+        <argsstring>() override</argsstring>
+        <name>seekToLast</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::seekToLast</qualifiedname>
+        <reimplements refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1a849a708a4a8bcd9e004f9b8ea62283a7">seekToLast</reimplements>
+        <briefdescription>
+<para>Same as std::rbegin(...);, e.g. points to the last valid element. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="39" column="21" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.cpp" bodystart="71" bodyend="103"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1afa380e4cbc228e3a29e9ec8477759571" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>bool</type>
+        <definition>bool sgns::storage::trie::SuperGeniusTrieCursor::isValid</definition>
+        <argsstring>() const override</argsstring>
+        <name>isValid</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::isValid</qualifiedname>
+        <reimplements refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1ae440e958a9172cf9661e91f65f67fc4f">isValid</reimplements>
+        <briefdescription>
+<para>Is iterator valid? </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>true if iterator points to the element of map, false otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="40" column="10" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.cpp" bodystart="105" bodyend="107"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1ad509ab8479771ac69c7ec7093834b8da" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::trie::SuperGeniusTrieCursor::next</definition>
+        <argsstring>() override</argsstring>
+        <name>next</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::next</qualifiedname>
+        <reimplements refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1ae6e709b813b7b837eeb0507e91e995e5">next</reimplements>
+        <briefdescription>
+<para>Make step forward. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="41" column="21" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.cpp" bodystart="109" bodyend="165"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a649125281ef41defd54a54da117e4034" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::trie::SuperGeniusTrieCursor::prev</definition>
+        <argsstring>() override</argsstring>
+        <name>prev</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::prev</qualifiedname>
+        <reimplements refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1ab00e624a68d1c1a107fcb91dd53d97b3">prev</reimplements>
+        <briefdescription>
+<para>Make step backwards. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="42" column="21" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.cpp" bodystart="167" bodyend="170"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1acd35e423ed9a53c8cc25adcdc20b9b60" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; base::Buffer &gt; sgns::storage::trie::SuperGeniusTrieCursor::key</definition>
+        <argsstring>() const override</argsstring>
+        <name>key</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::key</qualifiedname>
+        <reimplements refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1a4924be6694aef0f87174cd235f4f21ae">key</reimplements>
+        <briefdescription>
+<para>Getter for key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>key </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="43" column="21" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.cpp" bodystart="188" bodyend="193"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a69f5f593e36879511c5f1eac284afac1" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; base::Buffer &gt; sgns::storage::trie::SuperGeniusTrieCursor::value</definition>
+        <argsstring>() const override</argsstring>
+        <name>value</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::value</qualifiedname>
+        <reimplements refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1a75161503b4cee69b0b4723dbe4febf66">value</reimplements>
+        <briefdescription>
+<para>Getter for value. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>value </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="44" column="21" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.cpp" bodystart="195" bodyend="200"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a2a1944e2c5a13d60ba117895b8e75fd5" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::unique_ptr&lt; <ref refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a3c016ee6badee1612507396fc30fd9fa" kindref="member">SuperGeniusTrieCursor</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::unique_ptr&lt; SuperGeniusTrieCursor &gt; &gt; sgns::storage::trie::SuperGeniusTrieCursor::createAt</definition>
+        <argsstring>(const base::Buffer &amp;key, const SuperGeniusTrie &amp;trie)</argsstring>
+        <name>createAt</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::createAt</qualifiedname>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie" kindref="compound">SuperGeniusTrie</ref> &amp;</type>
+          <declname>trie</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="34" column="28" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.cpp" bodystart="32" bodyend="42"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a8c47a05f9a146d5125f91d6001c15408" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>int8_t</type>
+        <definition>int8_t sgns::storage::trie::SuperGeniusTrieCursor::getNextChildIdx</definition>
+        <argsstring>(const BranchPtr &amp;parent, uint8_t child_idx)</argsstring>
+        <name>getNextChildIdx</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::getNextChildIdx</qualifiedname>
+        <param>
+          <type>const <ref refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a4b0ba6d8aeb9ba827c05c9bff906f200" kindref="member">BranchPtr</ref> &amp;</type>
+          <declname>parent</declname>
+        </param>
+        <param>
+          <type>uint8_t</type>
+          <declname>child_idx</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="47" column="19" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.cpp" bodystart="202" bodyend="210"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a1572ff6a3c909810858e2bdf816278d9" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::storage::trie::SuperGeniusTrieCursor::hasNextChild</definition>
+        <argsstring>(const BranchPtr &amp;parent, uint8_t child_idx)</argsstring>
+        <name>hasNextChild</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::hasNextChild</qualifiedname>
+        <param>
+          <type>const <ref refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a4b0ba6d8aeb9ba827c05c9bff906f200" kindref="member">BranchPtr</ref> &amp;</type>
+          <declname>parent</declname>
+        </param>
+        <param>
+          <type>uint8_t</type>
+          <declname>child_idx</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="48" column="17" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.cpp" bodystart="212" bodyend="215"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a0118971cd5f26f28324f2d54d6ed6988" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>int8_t</type>
+        <definition>int8_t sgns::storage::trie::SuperGeniusTrieCursor::getPrevChildIdx</definition>
+        <argsstring>(const BranchPtr &amp;parent, uint8_t child_idx)</argsstring>
+        <name>getPrevChildIdx</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::getPrevChildIdx</qualifiedname>
+        <param>
+          <type>const <ref refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a4b0ba6d8aeb9ba827c05c9bff906f200" kindref="member">BranchPtr</ref> &amp;</type>
+          <declname>parent</declname>
+        </param>
+        <param>
+          <type>uint8_t</type>
+          <declname>child_idx</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="50" column="19" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.cpp" bodystart="217" bodyend="225"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a175a775ee464f6832f006f318ad22481" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::storage::trie::SuperGeniusTrieCursor::hasPrevChild</definition>
+        <argsstring>(const BranchPtr &amp;parent, uint8_t child_idx)</argsstring>
+        <name>hasPrevChild</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::hasPrevChild</qualifiedname>
+        <param>
+          <type>const <ref refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a4b0ba6d8aeb9ba827c05c9bff906f200" kindref="member">BranchPtr</ref> &amp;</type>
+          <declname>parent</declname>
+        </param>
+        <param>
+          <type>uint8_t</type>
+          <declname>child_idx</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="51" column="17" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.cpp" bodystart="227" bodyend="230"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a64470f76084844621bf708d546c388bd" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::storage::trie::SuperGeniusTrieCursor::updateLastVisitedChild</definition>
+        <argsstring>(const BranchPtr &amp;parent, uint8_t child_idx)</argsstring>
+        <name>updateLastVisitedChild</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::updateLastVisitedChild</qualifiedname>
+        <param>
+          <type>const <ref refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a4b0ba6d8aeb9ba827c05c9bff906f200" kindref="member">BranchPtr</ref> &amp;</type>
+          <declname>parent</declname>
+        </param>
+        <param>
+          <type>uint8_t</type>
+          <declname>child_idx</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="55" column="10" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.cpp" bodystart="232" bodyend="238"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a14f70121fb7989359f8dbb35cd1180fe" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::list&lt; <ref refid="d9/df8/structsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1_1_trie_path_entry" kindref="compound">TriePathEntry</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::list&lt; TriePathEntry &gt; &gt; sgns::storage::trie::SuperGeniusTrieCursor::constructLastVisitedChildPath</definition>
+        <argsstring>(const base::Buffer &amp;key)</argsstring>
+        <name>constructLastVisitedChildPath</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::constructLastVisitedChildPath</qualifiedname>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Constructs a list of branch nodes on the path from the root to the node with the given <itemizedlist>
+<listitem><para>key </para>
+</listitem>
+</itemizedlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="72" column="10" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.cpp" bodystart="240" bodyend="251"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1af0a7c748d5b434a2f1d4db7e25d92893" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>base::Buffer sgns::storage::trie::SuperGeniusTrieCursor::collectKey</definition>
+        <argsstring>() const</argsstring>
+        <name>collectKey</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::collectKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="75" column="18" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.cpp" bodystart="172" bodyend="186"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>sgns::storage::face::MapCursor&lt; K, V &gt;</label>
+        <link refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor"/>
+      </node>
+      <node id="2">
+        <label>sgns::storage::face::MapCursor&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor"/>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::SuperGeniusTrieCursor</label>
+        <link refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="21">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="24">
+        <label>T</label>
+      </node>
+      <node id="16">
+        <label>sgns::storage::face::GenericMap&lt; K, V &gt;</label>
+        <link refid="d4/d01/structsgns_1_1storage_1_1face_1_1_generic_map"/>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::face::GenericMap&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d4/d01/structsgns_1_1storage_1_1face_1_1_generic_map"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="14" relation="public-inheritance">
+        </childnode>
+        <childnode refid="16" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="12">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="7">
+        <label>sgns::storage::face::Iterable&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::face::MapCursor&lt; K, V &gt;</label>
+        <link refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor"/>
+      </node>
+      <node id="2">
+        <label>sgns::storage::face::MapCursor&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor"/>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+        <childnode refid="13" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+        <childnode refid="13" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>sgns::storage::face::ReadOnlyMap&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="7" relation="public-inheritance">
+        </childnode>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+        <childnode refid="11" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="13">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="9">
+        <label>sgns::storage::face::Readable&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="15">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="18">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="14">
+        <label>sgns::storage::face::Writeable&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="15" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="20">
+        <label>sgns::storage::trie::Codec</label>
+        <link refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec"/>
+        <childnode refid="21" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>sgns::storage::trie::SuperGeniusCodec</label>
+        <link refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec"/>
+        <childnode refid="20" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::storage::trie::SuperGeniusTrie</label>
+        <link refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::SuperGeniusTrieCursor</label>
+        <link refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-trie_</edgelabel>
+        </childnode>
+        <childnode refid="19" relation="usage">
+          <edgelabel>-codec_</edgelabel>
+        </childnode>
+        <childnode refid="22" relation="usage">
+          <edgelabel>-current_</edgelabel>
+        </childnode>
+        <childnode refid="25" relation="usage">
+          <edgelabel>-last_visited_child_</edgelabel>
+        </childnode>
+      </node>
+      <node id="26">
+        <label>sgns::storage::trie::SuperGeniusTrieCursor::TriePathEntry</label>
+        <link refid="d9/df8/structsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1_1_trie_path_entry"/>
+        <childnode refid="27" relation="usage">
+          <edgelabel>+parent</edgelabel>
+        </childnode>
+      </node>
+      <node id="28">
+        <label>std::list&lt; T &gt;</label>
+        <childnode refid="24" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="25">
+        <label>std::list&lt; sgns::storage::trie::SuperGeniusTrieCursor::TriePathEntry &gt;</label>
+        <childnode refid="26" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::trie::SuperGeniusTrieCursor::TriePathEntry &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="23">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="24" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="27">
+        <label>std::shared_ptr&lt; BranchNode &gt;</label>
+        <childnode refid="23" relation="template-instance">
+          <edgelabel>&lt; BranchNode &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="22">
+        <label>std::shared_ptr&lt; SuperGeniusNode &gt;</label>
+        <childnode refid="23" relation="template-instance">
+          <edgelabel>&lt; SuperGeniusNode &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="14" column="3" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" bodystart="15" bodyend="82"/>
+    <listofallmembers>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a4b0ba6d8aeb9ba827c05c9bff906f200" prot="public" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>BranchPtr</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a25093427b270f5dc2f49a1502fc1f2c0" prot="private" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>codec_</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1af0a7c748d5b434a2f1d4db7e25d92893" prot="private" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>collectKey</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a14f70121fb7989359f8dbb35cd1180fe" prot="private" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>constructLastVisitedChildPath</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a2a1944e2c5a13d60ba117895b8e75fd5" prot="public" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>createAt</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a06e524029db6b4eac2067445ff02217b" prot="private" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>current_</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1aa24ccb2b145480c986a7bcad656cd181" prot="public" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>Error</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a8c47a05f9a146d5125f91d6001c15408" prot="private" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>getNextChildIdx</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a0118971cd5f26f28324f2d54d6ed6988" prot="private" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>getPrevChildIdx</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a1572ff6a3c909810858e2bdf816278d9" prot="private" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>hasNextChild</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a175a775ee464f6832f006f318ad22481" prot="private" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>hasPrevChild</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1afa380e4cbc228e3a29e9ec8477759571" prot="public" virt="virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>isValid</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1acd35e423ed9a53c8cc25adcdc20b9b60" prot="public" virt="virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>key</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a4842de4d82599822fcafe1fb001b58a1" prot="private" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>last_visited_child_</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1ad509ab8479771ac69c7ec7093834b8da" prot="public" virt="virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>next</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a3e42057615923a057574a10918c3099b" prot="public" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>NodePtr</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a53ea7a5e0c68052d1ca205f173bb6eeb" prot="public" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>NodeType</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a649125281ef41defd54a54da117e4034" prot="public" virt="virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>prev</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a71b4cad27369888bbc98742b97032c73" prot="public" virt="virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>seek</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a443517b65d395359220b9bd2ff2df8aa" prot="public" virt="virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>seekToFirst</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a7eaec60bcd0bc688c6bd76f8a8d12870" prot="public" virt="virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>seekToLast</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a3c016ee6badee1612507396fc30fd9fa" prot="public" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>SuperGeniusTrieCursor</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1ad5f3d26ffe04bada5021626450a66e2c" prot="private" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>trie_</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a64470f76084844621bf708d546c388bd" prot="private" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>updateLastVisitedChild</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a69f5f593e36879511c5f1eac284afac1" prot="public" virt="virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>value</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1adc7f5f77a551900591542b34f77c665c" prot="private" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>visited_root_</name></member>
+      <member refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1aa0ad20c2b901c2ee1a8a8a0be0f169c0" prot="public" virt="virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>~MapCursor</name></member>
+      <member refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a36fc03b665f13072135cd253958fb817" prot="public" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor</scope><name>~SuperGeniusTrieCursor</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

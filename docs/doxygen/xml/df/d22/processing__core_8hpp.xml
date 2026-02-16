@@ -1,0 +1,140 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/d22/processing__core_8hpp" kind="file" language="C++">
+    <compoundname>processing_core.hpp</compoundname>
+    <includes local="yes">processing/proto/SGProcessing.pb.h</includes>
+    <includes refid="d5/dda/outcome_8hpp" local="yes">outcome/outcome.hpp</includes>
+    <includes local="no">boost/asio/io_context.hpp</includes>
+    <includedby refid="dd/da6/processing__core__impl_8hpp" local="yes">src/processing/impl/processing_core_impl.hpp</includedby>
+    <includedby refid="d3/d33/processing__engine_8hpp" local="yes">src/processing/processing_engine.hpp</includedby>
+    <incdepgraph>
+      <node id="3">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/processing/processing_core.hpp</label>
+        <link refid="df/d22/processing__core_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>boost/asio/io_context.hpp</label>
+      </node>
+      <node id="4">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="2">
+        <label>processing/proto/SGProcessing.pb.h</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="4">
+        <label>src/account/GeniusNode.cpp</label>
+        <link refid="df/de0/_genius_node_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/account/GeniusNode.hpp</label>
+        <link refid="d3/d63/_genius_node_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>src/processing/impl/processing_core_impl.cpp</label>
+        <link refid="db/d83/processing__core__impl_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/processing/impl/processing_core_impl.hpp</label>
+        <link refid="dd/da6/processing__core__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/processing/processing_core.hpp</label>
+        <link refid="df/d22/processing__core_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>src/processing/processing_engine.cpp</label>
+        <link refid="df/d3c/processing__engine_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/processing/processing_engine.hpp</label>
+        <link refid="d3/d33/processing__engine_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>src/processing/processing_node.cpp</label>
+        <link refid="de/d98/processing__node_8cpp"/>
+      </node>
+      <node id="8">
+        <label>src/processing/processing_node.hpp</label>
+        <link refid="df/dac/processing__node_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>src/processing/processing_service.cpp</label>
+        <link refid="d3/d3a/processing__service_8cpp"/>
+      </node>
+      <node id="10">
+        <label>src/processing/processing_service.hpp</label>
+        <link refid="d5/d37/processing__service_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d6/da7/classsgns_1_1processing_1_1_processing_core" prot="public">sgns::processing::ProcessingCore</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6a/namespacesgns_1_1processing">sgns::processing</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;processing/proto/SGProcessing.pb.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/dda/outcome_8hpp" kindref="compound">outcome/outcome.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/asio/io_context.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d6a/namespacesgns_1_1processing" kindref="compound">sgns::processing</ref></highlight></codeline>
+<codeline lineno="13"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="19" refid="d6/da7/classsgns_1_1processing_1_1_processing_core" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d6/da7/classsgns_1_1processing_1_1_processing_core" kindref="compound">ProcessingCore</ref></highlight></codeline>
+<codeline lineno="20"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="22" refid="d6/da7/classsgns_1_1processing_1_1_processing_core_1a1f9cb94ed895e58267661e07f69f80e8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="d6/da7/classsgns_1_1processing_1_1_processing_core_1a1f9cb94ed895e58267661e07f69f80e8" kindref="member">~ProcessingCore</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28" refid="d6/da7/classsgns_1_1processing_1_1_processing_core_1addcc244cb6978cc610c95b1a23edbf2f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;SGProcessing::SubTaskResult&gt;<sp/><ref refid="d6/da7/classsgns_1_1processing_1_1_processing_core_1addcc244cb6978cc610c95b1a23edbf2f" kindref="member">ProcessSubTask</ref>(</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>SGProcessing::SubTask&amp;<sp/>subTask,<sp/>uint32_t<sp/>initialHashCode)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="34" refid="d6/da7/classsgns_1_1processing_1_1_processing_core_1a6a66780b5457764ece59bd3c3c8e9abc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">float</highlight><highlight class="normal"><sp/><ref refid="d6/da7/classsgns_1_1processing_1_1_processing_core_1a6a66780b5457764ece59bd3c3c8e9abc" kindref="member">GetProgress</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>0.0f;<sp/>}</highlight></codeline>
+<codeline lineno="35"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::processing</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">//<sp/>GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/processing/processing_core.hpp"/>
+  </compounddef>
+</doxygen>

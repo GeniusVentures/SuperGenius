@@ -1,0 +1,242 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/d0c/entropy__accumulator_8cpp" kind="file" language="C++">
+    <compoundname>entropy_accumulator.cpp</compoundname>
+    <includes refid="d0/da6/entropy__accumulator_8hpp" local="yes">crypto/bip39/entropy_accumulator.hpp</includes>
+    <includes refid="d5/d68/sha256_8hpp" local="yes">crypto/sha/sha256.hpp</includes>
+    <incdepgraph>
+      <node id="10">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crypto/bip39/entropy_accumulator.cpp</label>
+        <link refid="d4/d0c/entropy__accumulator_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>crypto/bip39/entropy_accumulator.hpp</label>
+        <link refid="d0/da6/entropy__accumulator_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>crypto/sha/sha256.hpp</label>
+        <link refid="d5/d68/sha256_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>array</label>
+      </node>
+      <node id="5">
+        <label>bitset</label>
+      </node>
+      <node id="13">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="11">
+        <label>cstddef</label>
+      </node>
+      <node id="9">
+        <label>gsl/span</label>
+      </node>
+      <node id="15">
+        <label>iostream</label>
+      </node>
+      <node id="4">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="8">
+        <label>string_view</label>
+      </node>
+      <node id="6">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6e/namespacesgns_1_1crypto">sgns::crypto</innernamespace>
+    <innernamespace refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39">sgns::crypto::bip39</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d4/d0c/entropy__accumulator_8cpp_1a8ecf91678e6cc6f13c48f099166c7406" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>OUTCOME_CPP_DEFINE_CATEGORY_3</definition>
+        <argsstring>(sgns::crypto::bip39, Bip39EntropyError, error)</argsstring>
+        <name>OUTCOME_CPP_DEFINE_CATEGORY_3</name>
+        <param>
+          <type><ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39" kindref="compound">sgns::crypto::bip39</ref></type>
+        </param>
+        <param>
+          <type>Bip39EntropyError</type>
+        </param>
+        <param>
+          <type>error</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/entropy_accumulator.cpp" line="99" column="1" bodyfile="src/crypto/bip39/entropy_accumulator.cpp" bodystart="99" bodyend="111"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d0/da6/entropy__accumulator_8hpp" kindref="compound">crypto/bip39/entropy_accumulator.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/d68/sha256_8hpp" kindref="compound">crypto/sha/sha256.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39" kindref="compound">sgns::crypto::bip39</ref><sp/>{</highlight></codeline>
+<codeline lineno="8" refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a284bb6a832b699cde5ffcab272cc53d1" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;EntropyAccumulator&gt;<sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a284bb6a832b699cde5ffcab272cc53d1" kindref="member">EntropyAccumulator::create</ref>(</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>words_count)<sp/>{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">switch</highlight><highlight class="normal"><sp/>(words_count)<sp/>{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/>12:</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1adff3c10a8eb22a135b29227ff29371ee" kindref="member">EntropyAccumulator</ref>(132,<sp/>4);</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/>15:</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1adff3c10a8eb22a135b29227ff29371ee" kindref="member">EntropyAccumulator</ref>(165,<sp/>5);</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/>18:</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1adff3c10a8eb22a135b29227ff29371ee" kindref="member">EntropyAccumulator</ref>(198,<sp/>6);</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/>21:</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1adff3c10a8eb22a135b29227ff29371ee" kindref="member">EntropyAccumulator</ref>(231,<sp/>7);</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/>24:</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1adff3c10a8eb22a135b29227ff29371ee" kindref="member">EntropyAccumulator</ref>(264,<sp/>8);</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">break</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39_1ab468043ad272fcbcecb59dd7f98861d1a6c0a529b20d222e6ec152233ea3cce4c" kindref="member">Bip39EntropyError::WRONG_WORDS_COUNT</ref>;</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27" refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a45a7260069e68a6811973fc91cdcb2db" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;std::vector&lt;uint8_t&gt;&gt;<sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a45a7260069e68a6811973fc91cdcb2db" kindref="member">EntropyAccumulator::getEntropy</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1ad060f278b494864a4589b5828ffe7d00" kindref="member">bits_</ref>.size()<sp/>!=<sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1ad7cb93f812c60a69540704c8e9477a47" kindref="member">total_bits_count_</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39_1ab468043ad272fcbcecb59dd7f98861d1a4d68d53f3f4a10559b14f3ea25d4bc28" kindref="member">Bip39EntropyError::STORAGE_NOT_COMPLETE</ref>;</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>convert<sp/>data</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>bytes_count<sp/>=<sp/>(<ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1ad7cb93f812c60a69540704c8e9477a47" kindref="member">total_bits_count_</ref><sp/>-<sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a61b33d87d6848279266c48f470500f14" kindref="member">checksum_bits_count_</ref>)<sp/>/<sp/>8;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/>std::vector&lt;uint8_t&gt;<sp/>res;</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/>res.reserve(bytes_count);</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>it<sp/>=<sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1ad060f278b494864a4589b5828ffe7d00" kindref="member">bits_</ref>.begin();</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>i<sp/>=<sp/>0;<sp/>i<sp/>&lt;<sp/>bytes_count;<sp/>++i)<sp/>{</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>uint8_t<sp/></highlight><highlight class="keywordtype">byte</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>j<sp/>=<sp/>0;<sp/>j<sp/>&lt;<sp/>8u;<sp/>++j)<sp/>{</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">byte</highlight><highlight class="normal"><sp/>&lt;&lt;=<sp/>1u;</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">byte</highlight><highlight class="normal"><sp/>+=<sp/>*it++;</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>res.push_back(</highlight><highlight class="keywordtype">byte</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>res;</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight></codeline>
+<codeline lineno="50" refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1acc09ab0c65ef4959e50b372bd80d25f0" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;uint8_t&gt;<sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1acc09ab0c65ef4959e50b372bd80d25f0" kindref="member">EntropyAccumulator::getChecksum</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1ad060f278b494864a4589b5828ffe7d00" kindref="member">bits_</ref>.size()<sp/>!=<sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1ad7cb93f812c60a69540704c8e9477a47" kindref="member">total_bits_count_</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39_1ab468043ad272fcbcecb59dd7f98861d1a4d68d53f3f4a10559b14f3ea25d4bc28" kindref="member">Bip39EntropyError::STORAGE_NOT_COMPLETE</ref>;</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/>uint8_t<sp/>checksum<sp/>=<sp/>0u;</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>it<sp/>=<sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1ad060f278b494864a4589b5828ffe7d00" kindref="member">bits_</ref>.rbegin();</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i<sp/>=<sp/>0u;<sp/>i<sp/>&lt;<sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a61b33d87d6848279266c48f470500f14" kindref="member">checksum_bits_count_</ref>;<sp/>++i)<sp/>{</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>checksum<sp/>+=<sp/>(*it++<sp/>&lt;&lt;<sp/>i);</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"></highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>checksum;</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"></highlight></codeline>
+<codeline lineno="64" refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a555aa509d8fba6b21c54fd3d4da4b9da" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a555aa509d8fba6b21c54fd3d4da4b9da" kindref="member">EntropyAccumulator::append</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="da/dc8/structsgns_1_1crypto_1_1bip39_1_1_entropy_token" kindref="compound">EntropyToken</ref><sp/>&amp;value)<sp/>{</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1ad060f278b494864a4589b5828ffe7d00" kindref="member">bits_</ref>.size()<sp/>+<sp/>value.size()<sp/>&gt;<sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1ad7cb93f812c60a69540704c8e9477a47" kindref="member">total_bits_count_</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39_1ab468043ad272fcbcecb59dd7f98861d1a0b757a2484779e2ff609be2558899ad5" kindref="member">Bip39EntropyError::STORAGE_IS_FULL</ref>;</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"></highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>i<sp/>=<sp/>0;<sp/>i<sp/>&lt;<sp/>value.size();<sp/>++i)<sp/>{</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>bits<sp/>order<sp/>is<sp/>little-endian,<sp/>but<sp/>we<sp/>need<sp/>big<sp/>endian,<sp/>reverse<sp/>it</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>position<sp/>=<sp/>value.size()<sp/>-<sp/>i<sp/>-<sp/>1;</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>uint8_t<sp/>v<sp/>=<sp/>value.test(position)<sp/>?<sp/>1<sp/>:<sp/>0;</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1ad060f278b494864a4589b5828ffe7d00" kindref="member">bits_</ref>.push_back(v);</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"></highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success();</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"></highlight></codeline>
+<codeline lineno="79" refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a04aad90c5d6630b4e6e961173c8489e8" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;uint8_t&gt;<sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a04aad90c5d6630b4e6e961173c8489e8" kindref="member">EntropyAccumulator::calculateChecksum</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/>OUTCOME_TRY((</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/>entropy),<sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a45a7260069e68a6811973fc91cdcb2db" kindref="member">getEntropy</ref>());</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>hash<sp/>=<sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a6af465e58a4956eb5164f6c400a1a6ed" kindref="member">sha256</ref>(entropy);</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>hash[0]<sp/>&gt;&gt;<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint8_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(8<sp/>-<sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a61b33d87d6848279266c48f470500f14" kindref="member">checksum_bits_count_</ref>);</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"></highlight></codeline>
+<codeline lineno="85" refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1adff3c10a8eb22a135b29227ff29371ee" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1adff3c10a8eb22a135b29227ff29371ee" kindref="member">EntropyAccumulator::EntropyAccumulator</ref>(</highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>bits_count,</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>checksum_bits_count)</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1ad7cb93f812c60a69540704c8e9477a47" kindref="member">total_bits_count_</ref>{bits_count},</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a61b33d87d6848279266c48f470500f14" kindref="member">checksum_bits_count_</ref>{checksum_bits_count}<sp/>{</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_ASSERT_MSG((bits_count<sp/>-<sp/>checksum_bits_count)<sp/>%<sp/>32<sp/>==<sp/>0,</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;invalid<sp/>bits<sp/>count&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_ASSERT_MSG(bits_count<sp/>&lt;=<sp/>264<sp/>&amp;&amp;<sp/>bits_count<sp/>&gt;=<sp/>132,</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;unsupported<sp/>bits<sp/>count&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"></highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1ad060f278b494864a4589b5828ffe7d00" kindref="member">bits_</ref>.reserve(bits_count);</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"></highlight></codeline>
+<codeline lineno="97"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::crypto::bip39</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="98"><highlight class="normal"></highlight></codeline>
+<codeline lineno="99" refid="d4/d0c/entropy__accumulator_8cpp_1a8ecf91678e6cc6f13c48f099166c7406" refkind="member"><highlight class="normal"><ref refid="d0/d58/_account_messenger_8cpp_1a02e728041bc457b75e7166617f4c9c33" kindref="member">OUTCOME_CPP_DEFINE_CATEGORY_3</ref>(<ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39" kindref="compound">sgns::crypto::bip39</ref>,<sp/>Bip39EntropyError,<sp/>error)<sp/>{</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">E<sp/>=<sp/><ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39_1ab468043ad272fcbcecb59dd7f98861d1" kindref="member">sgns::crypto::bip39::Bip39EntropyError</ref>;</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">switch</highlight><highlight class="normal"><sp/>(error)<sp/>{</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/>E::WRONG_WORDS_COUNT:</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;invalid<sp/>or<sp/>unsupported<sp/>words<sp/>count&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/>E::STORAGE_NOT_COMPLETE:</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;cannot<sp/>get<sp/>info<sp/>from<sp/>storage<sp/>while<sp/>it<sp/>is<sp/>still<sp/>not<sp/>complete&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/>E::STORAGE_IS_FULL:</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;cannot<sp/>put<sp/>more<sp/>data<sp/>into<sp/>storage,<sp/>it<sp/>is<sp/>full&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"></highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;unknown<sp/>Bip39EntropyError<sp/>error&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="111"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="src/crypto/bip39/entropy_accumulator.cpp"/>
+  </compounddef>
+</doxygen>

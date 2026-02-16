@@ -1,0 +1,145 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable" kind="struct" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::storage::face::Batchable</compoundname>
+    <derivedcompoundref refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map" prot="public" virt="non-virtual">sgns::storage::face::BatchWriteMap&lt; Buffer, Buffer &gt;</derivedcompoundref>
+    <derivedcompoundref refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map" prot="public" virt="non-virtual">sgns::storage::face::BatchWriteMap&lt; K, V &gt;</derivedcompoundref>
+    <includes refid="de/d87/batchable_8hpp" local="no">batchable.hpp</includes>
+    <templateparamlist>
+      <param>
+        <type>typename K</type>
+      </param>
+      <param>
+        <type>typename V</type>
+      </param>
+    </templateparamlist>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable_1a09ef385308b209ab00cf72ed42897e01" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::storage::face::Batchable&lt; K, V &gt;::~Batchable</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Batchable</name>
+        <qualifiedname>sgns::storage::face::Batchable::~Batchable</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/batchable.hpp" line="20" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable_1af8f2ceafd524ec1a2180b3694f541fda" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::unique_ptr&lt; <ref refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch" kindref="compound">WriteBatch</ref>&lt; K, V &gt; &gt;</type>
+        <definition>virtual std::unique_ptr&lt; WriteBatch&lt; K, V &gt; &gt; sgns::storage::face::Batchable&lt; K, V &gt;::batch</definition>
+        <argsstring>()=0</argsstring>
+        <name>batch</name>
+        <qualifiedname>sgns::storage::face::Batchable::batch</qualifiedname>
+        <reimplementedby refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1a46acd24518c3c875e25609acf32bdfa6">batch</reimplementedby>
+        <reimplementedby refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a255eca48e3786f29e7aad0ae1879a2af">batch</reimplementedby>
+        <reimplementedby refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a3112c8f70d3ab0fb4bed2b77198491e7">batch</reimplementedby>
+        <briefdescription>
+<para>Creates new Write Batch - an object, which can be used to efficiently write bulk data. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/batchable.hpp" line="26" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A mixin for a map that supports batching for efficiency of modifications. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>K</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key type </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>V</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="4">
+        <label>sgns::storage::InMemoryStorage</label>
+        <link refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::storage::face::BatchWriteMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="3">
+        <label>sgns::storage::face::GenericStorage&lt; Buffer, Buffer &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="9" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::storage::face::GenericStorage&lt; K, V &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="8" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::rocksdb</label>
+        <link refid="d5/dbf/classsgns_1_1storage_1_1rocksdb"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>sgns::storage::trie::TrieStorageBackend</label>
+        <link refid="dd/d95/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::storage::trie::TrieStorageBackendImpl</label>
+        <link refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/face/batchable.hpp" line="19" column="3" bodyfile="src/storage/face/batchable.hpp" bodystart="19" bodyend="27"/>
+    <listofallmembers>
+      <member refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable_1af8f2ceafd524ec1a2180b3694f541fda" prot="public" virt="pure-virtual"><scope>sgns::storage::face::Batchable</scope><name>batch</name></member>
+      <member refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable_1a09ef385308b209ab00cf72ed42897e01" prot="public" virt="virtual"><scope>sgns::storage::face::Batchable</scope><name>~Batchable</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

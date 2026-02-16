@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_29996793db42d9d65795c30def856817" kind="dir">
+    <compoundname>src/crypto/crypto_store</compoundname>
+    <innerfile refid="dd/d14/crypto__store__impl_8cpp">crypto_store_impl.cpp</innerfile>
+    <innerfile refid="d4/d05/crypto__store__impl_8hpp">crypto_store_impl.hpp</innerfile>
+    <innerfile refid="d8/d25/key__type_8cpp">key_type.cpp</innerfile>
+    <innerfile refid="dc/d6f/key__type_8hpp">key_type.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/crypto_store/"/>
+  </compounddef>
+</doxygen>

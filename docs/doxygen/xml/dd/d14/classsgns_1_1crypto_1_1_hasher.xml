@@ -1,0 +1,376 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/d14/classsgns_1_1crypto_1_1_hasher" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::crypto::Hasher</compoundname>
+    <basecompoundref refid="d1/dbf/class_i_component" prot="public" virt="non-virtual">IComponent</basecompoundref>
+    <derivedcompoundref refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl" prot="public" virt="non-virtual">sgns::crypto::HasherImpl</derivedcompoundref>
+    <includes refid="da/d6b/hasher_8hpp" local="no">hasher.hpp</includes>
+    <sectiondef kind="protected-type">
+      <memberdef kind="typedef" id="dd/d14/classsgns_1_1crypto_1_1_hasher_1a140a50019470b7f717657b8ab6590956" prot="protected" static="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a6fcc14244fc08a51e93f6c85d24f3562" kindref="member">base::Hash64</ref></type>
+        <definition>using sgns::crypto::Hasher::Hash64 = base::Hash64</definition>
+        <argsstring></argsstring>
+        <name>Hash64</name>
+        <qualifiedname>sgns::crypto::Hasher::Hash64</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/hasher.hpp" line="10" column="5" bodyfile="src/crypto/hasher.hpp" bodystart="10" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/d14/classsgns_1_1crypto_1_1_hasher_1a227db21449d9ce711fee9d152a600906" prot="protected" static="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a13f0ff8307c68dd02b7474681fffbe98" kindref="member">base::Hash128</ref></type>
+        <definition>using sgns::crypto::Hasher::Hash128 = base::Hash128</definition>
+        <argsstring></argsstring>
+        <name>Hash128</name>
+        <qualifiedname>sgns::crypto::Hasher::Hash128</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/hasher.hpp" line="11" column="5" bodyfile="src/crypto/hasher.hpp" bodystart="11" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/d14/classsgns_1_1crypto_1_1_hasher_1ac18b1fe64670d4605b3537023088e101" prot="protected" static="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+        <definition>using sgns::crypto::Hasher::Hash256 = base::Hash256</definition>
+        <argsstring></argsstring>
+        <name>Hash256</name>
+        <qualifiedname>sgns::crypto::Hasher::Hash256</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/hasher.hpp" line="12" column="5" bodyfile="src/crypto/hasher.hpp" bodystart="12" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dd/d14/classsgns_1_1crypto_1_1_hasher_1a9e04ab8eea4cc88ccf98c4bce17abf61" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crypto::Hasher::~Hasher</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~Hasher</name>
+        <qualifiedname>sgns::crypto::Hasher::~Hasher</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/hasher.hpp" line="15" column="8"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d14/classsgns_1_1crypto_1_1_hasher_1a7e8909b5075e885692253dc2f487c6cd" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a140a50019470b7f717657b8ab6590956" kindref="member">Hash64</ref></type>
+        <definition>virtual Hash64 sgns::crypto::Hasher::twox_64</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; buffer) const =0</argsstring>
+        <name>twox_64</name>
+        <qualifiedname>sgns::crypto::Hasher::twox_64</qualifiedname>
+        <reimplementedby refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1a8aa7bde3df18bb5898d3f05c4e3445eb">twox_64</reimplementedby>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>buffer</declname>
+        </param>
+        <briefdescription>
+<para>twox_128 calculates 16-byte twox hash </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>buffer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>source buffer </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>128-bit hash value </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/hasher.hpp" line="23" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d14/classsgns_1_1crypto_1_1_hasher_1a45876d83902bf68955f90c7a08757db7" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a227db21449d9ce711fee9d152a600906" kindref="member">Hash128</ref></type>
+        <definition>virtual Hash128 sgns::crypto::Hasher::twox_128</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; buffer) const =0</argsstring>
+        <name>twox_128</name>
+        <qualifiedname>sgns::crypto::Hasher::twox_128</qualifiedname>
+        <reimplementedby refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1acf6e94c2819447022dd14b7edfb21c97">twox_128</reimplementedby>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>buffer</declname>
+        </param>
+        <briefdescription>
+<para>twox_128 calculates 16-byte twox hash </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>buffer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>source buffer </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>128-bit hash value </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/hasher.hpp" line="31" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d14/classsgns_1_1crypto_1_1_hasher_1ab5adadf11d6a3494970be3c689e4e36c" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a227db21449d9ce711fee9d152a600906" kindref="member">Hash128</ref></type>
+        <definition>virtual Hash128 sgns::crypto::Hasher::blake2b_128</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; buffer) const =0</argsstring>
+        <name>blake2b_128</name>
+        <qualifiedname>sgns::crypto::Hasher::blake2b_128</qualifiedname>
+        <reimplementedby refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1a83c88b3ec8d8786faf578342e573a286">blake2b_128</reimplementedby>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>buffer</declname>
+        </param>
+        <briefdescription>
+<para>blake2b_128 function calculates 16-byte blake2b hash </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>buffer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>source value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>128-bit hash value </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/hasher.hpp" line="38" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d14/classsgns_1_1crypto_1_1_hasher_1a19c8909ef4f15893eb59055685464e52" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ac18b1fe64670d4605b3537023088e101" kindref="member">Hash256</ref></type>
+        <definition>virtual Hash256 sgns::crypto::Hasher::twox_256</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; buffer) const =0</argsstring>
+        <name>twox_256</name>
+        <qualifiedname>sgns::crypto::Hasher::twox_256</qualifiedname>
+        <reimplementedby refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1aff242979ffd701ea45146096b4baa486">twox_256</reimplementedby>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>buffer</declname>
+        </param>
+        <briefdescription>
+<para>twox_256 calculates 32-byte twox hash </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>buffer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>source buffer </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>256-bit hash value </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/hasher.hpp" line="46" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d14/classsgns_1_1crypto_1_1_hasher_1a664c6beae5f689383829c3fc33ab96ca" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ac18b1fe64670d4605b3537023088e101" kindref="member">Hash256</ref></type>
+        <definition>virtual Hash256 sgns::crypto::Hasher::blake2b_256</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; buffer) const =0</argsstring>
+        <name>blake2b_256</name>
+        <qualifiedname>sgns::crypto::Hasher::blake2b_256</qualifiedname>
+        <reimplementedby refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1ada049d5830ba942ec672f26bfab32dc7">blake2b_256</reimplementedby>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>buffer</declname>
+        </param>
+        <briefdescription>
+<para>blake2b_256 function calculates 32-byte blake2b hash </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>buffer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>source value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>256-bit hash value </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/hasher.hpp" line="53" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d14/classsgns_1_1crypto_1_1_hasher_1a0782b760dc6ee7dc043888090a325bab" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ac18b1fe64670d4605b3537023088e101" kindref="member">Hash256</ref></type>
+        <definition>virtual Hash256 sgns::crypto::Hasher::keccak_256</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; buffer) const =0</argsstring>
+        <name>keccak_256</name>
+        <qualifiedname>sgns::crypto::Hasher::keccak_256</qualifiedname>
+        <reimplementedby refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1aafeca768b3c7d118947e2284be4c099b">keccak_256</reimplementedby>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>buffer</declname>
+        </param>
+        <briefdescription>
+<para>keccak_256 function calculates 32-byte keccak hash </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>buffer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>source value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>256-bit hash value </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/hasher.hpp" line="60" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d14/classsgns_1_1crypto_1_1_hasher_1aac85545c0a0c5c6fe2dbe2f4f113ce49" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ac18b1fe64670d4605b3537023088e101" kindref="member">Hash256</ref></type>
+        <definition>virtual Hash256 sgns::crypto::Hasher::blake2s_256</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; buffer) const =0</argsstring>
+        <name>blake2s_256</name>
+        <qualifiedname>sgns::crypto::Hasher::blake2s_256</qualifiedname>
+        <reimplementedby refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1a829718432ae7dcfa8c114f7355d828f9">blake2s_256</reimplementedby>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>buffer</declname>
+        </param>
+        <briefdescription>
+<para>blake2s_256 function calculates 32-byte blake2s hash </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>buffer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>source value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>256-bit hash value </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/hasher.hpp" line="67" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d14/classsgns_1_1crypto_1_1_hasher_1ad3071dc9962b178ef9fa84875fdf9f9f" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ac18b1fe64670d4605b3537023088e101" kindref="member">Hash256</ref></type>
+        <definition>virtual Hash256 sgns::crypto::Hasher::sha2_256</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; buffer) const =0</argsstring>
+        <name>sha2_256</name>
+        <qualifiedname>sgns::crypto::Hasher::sha2_256</qualifiedname>
+        <reimplementedby refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1a5acd09393ceb741ce869fe80206d07be">sha2_256</reimplementedby>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>buffer</declname>
+        </param>
+        <briefdescription>
+<para>sha2_256 function calculates 32-byte sha2-256 hash </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>buffer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>source value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>256-bit hash value </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/hasher.hpp" line="74" column="25"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::crypto::Hasher</label>
+        <link refid="dd/d14/classsgns_1_1crypto_1_1_hasher"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::crypto::HasherImpl</label>
+        <link refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::crypto::Hasher</label>
+        <link refid="dd/d14/classsgns_1_1crypto_1_1_hasher"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crypto/hasher.hpp" line="8" column="3" bodyfile="src/crypto/hasher.hpp" bodystart="8" bodyend="75"/>
+    <listofallmembers>
+      <member refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ab5adadf11d6a3494970be3c689e4e36c" prot="public" virt="pure-virtual"><scope>sgns::crypto::Hasher</scope><name>blake2b_128</name></member>
+      <member refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a664c6beae5f689383829c3fc33ab96ca" prot="public" virt="pure-virtual"><scope>sgns::crypto::Hasher</scope><name>blake2b_256</name></member>
+      <member refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1aac85545c0a0c5c6fe2dbe2f4f113ce49" prot="public" virt="pure-virtual"><scope>sgns::crypto::Hasher</scope><name>blake2s_256</name></member>
+      <member refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7" prot="public" virt="pure-virtual"><scope>sgns::crypto::Hasher</scope><name>GetName</name></member>
+      <member refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a227db21449d9ce711fee9d152a600906" prot="protected" virt="non-virtual"><scope>sgns::crypto::Hasher</scope><name>Hash128</name></member>
+      <member refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ac18b1fe64670d4605b3537023088e101" prot="protected" virt="non-virtual"><scope>sgns::crypto::Hasher</scope><name>Hash256</name></member>
+      <member refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a140a50019470b7f717657b8ab6590956" prot="protected" virt="non-virtual"><scope>sgns::crypto::Hasher</scope><name>Hash64</name></member>
+      <member refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a0782b760dc6ee7dc043888090a325bab" prot="public" virt="pure-virtual"><scope>sgns::crypto::Hasher</scope><name>keccak_256</name></member>
+      <member refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ad3071dc9962b178ef9fa84875fdf9f9f" prot="public" virt="pure-virtual"><scope>sgns::crypto::Hasher</scope><name>sha2_256</name></member>
+      <member refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a45876d83902bf68955f90c7a08757db7" prot="public" virt="pure-virtual"><scope>sgns::crypto::Hasher</scope><name>twox_128</name></member>
+      <member refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a19c8909ef4f15893eb59055685464e52" prot="public" virt="pure-virtual"><scope>sgns::crypto::Hasher</scope><name>twox_256</name></member>
+      <member refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a7e8909b5075e885692253dc2f487c6cd" prot="public" virt="pure-virtual"><scope>sgns::crypto::Hasher</scope><name>twox_64</name></member>
+      <member refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a9e04ab8eea4cc88ccf98c4bce17abf61" prot="public" virt="non-virtual"><scope>sgns::crypto::Hasher</scope><name>~Hasher</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::crypto::Hasher</scope><name>~IComponent</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

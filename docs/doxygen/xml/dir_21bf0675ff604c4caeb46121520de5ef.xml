@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_21bf0675ff604c4caeb46121520de5ef" kind="dir">
+    <compoundname>src/api/transport/impl</compoundname>
+    <innerdir refid="dir_d3006fc2371888d9e891ce71a5a277b2">src/api/transport/impl/http</innerdir>
+    <innerdir refid="dir_0f6c1d22850ba89d47f4ccc2983f8e7e">src/api/transport/impl/ws</innerdir>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/api/transport/impl/"/>
+  </compounddef>
+</doxygen>

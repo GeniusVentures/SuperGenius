@@ -1,0 +1,148 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="db/d30/application_2impl_2config__reader_2error_8hpp" kind="file" language="C++">
+    <compoundname>error.hpp</compoundname>
+    <includes refid="d5/dda/outcome_8hpp" local="yes">outcome/outcome.hpp</includes>
+    <includedby refid="d0/d94/application_2impl_2config__reader_2error_8cpp" local="yes">src/application/impl/config_reader/error.cpp</includedby>
+    <includedby refid="db/da6/pt__util_8hpp" local="yes">src/application/impl/config_reader/pt_util.hpp</includedby>
+    <includedby refid="d1/d90/configuration__storage__impl_8cpp" local="yes">src/application/impl/configuration_storage_impl.cpp</includedby>
+    <includedby refid="df/d89/local__key__storage_8cpp" local="yes">src/application/impl/local_key_storage.cpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/application/impl/config_reader/error.hpp</label>
+        <link refid="db/d30/application_2impl_2config__reader_2error_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/application/impl/config_reader/error.cpp</label>
+        <link refid="d0/d94/application_2impl_2config__reader_2error_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/application/impl/config_reader/error.hpp</label>
+        <link refid="db/d30/application_2impl_2config__reader_2error_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>src/application/impl/config_reader/pt_util.hpp</label>
+        <link refid="db/da6/pt__util_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>src/application/impl/configuration_storage_impl.cpp</label>
+        <link refid="d1/d90/configuration__storage__impl_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/application/impl/local_key_storage.cpp</label>
+        <link refid="df/d89/local__key__storage_8cpp"/>
+      </node>
+    </invincdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="db/d40/namespacesgns_1_1application">sgns::application</innernamespace>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="db/d40/namespacesgns_1_1application_1aeec9e912f01414eb0080fcea28d0608e" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>ConfigReaderError</name>
+        <qualifiedname>sgns::application::ConfigReaderError</qualifiedname>
+        <enumvalue id="db/d40/namespacesgns_1_1application_1aeec9e912f01414eb0080fcea28d0608eaf16391370c3f8ee7b594c94f22924c8a" prot="public">
+          <name>MISSING_ENTRY</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="db/d40/namespacesgns_1_1application_1aeec9e912f01414eb0080fcea28d0608ea993e14b6038e4569a690b5711a2faf7b" prot="public">
+          <name>PARSER_ERROR</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="db/d40/namespacesgns_1_1application_1aeec9e912f01414eb0080fcea28d0608ea2b9e0164c20d01aa76539e8c37af9d37" prot="public">
+          <name>NOT_YET_IMPLEMENTED</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Codes for errors that originate in configuration readers </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/config_reader/error.hpp" line="12" column="3" bodyfile="src/application/impl/config_reader/error.hpp" bodystart="12" bodyend="16"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="db/d30/application_2impl_2config__reader_2error_8hpp_1aa01448f12a2d4993dd3f7b6c726ecadb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>OUTCOME_HPP_DECLARE_ERROR_2</definition>
+        <argsstring>(sgns::application, ConfigReaderError)</argsstring>
+        <name>OUTCOME_HPP_DECLARE_ERROR_2</name>
+        <param>
+          <type><ref refid="db/d40/namespacesgns_1_1application" kindref="compound">sgns::application</ref></type>
+        </param>
+        <param>
+          <type>ConfigReaderError</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/config_reader/error.hpp" line="20" column="1" declfile="src/application/impl/config_reader/error.hpp" declline="20" declcolumn="1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_APPLICATION_CONFIG_READER_ERROR_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_APPLICATION_CONFIG_READER_ERROR_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/dda/outcome_8hpp" kindref="compound">outcome/outcome.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="db/d40/namespacesgns_1_1application" kindref="compound">sgns::application</ref><sp/>{</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12" refid="db/d40/namespacesgns_1_1application_1aeec9e912f01414eb0080fcea28d0608e" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">enum<sp/>class</highlight><highlight class="normal"><sp/><ref refid="db/d40/namespacesgns_1_1application_1aeec9e912f01414eb0080fcea28d0608e" kindref="member">ConfigReaderError</ref><sp/>{</highlight></codeline>
+<codeline lineno="13" refid="db/d40/namespacesgns_1_1application_1aeec9e912f01414eb0080fcea28d0608eaf16391370c3f8ee7b594c94f22924c8a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="db/d40/namespacesgns_1_1application_1aeec9e912f01414eb0080fcea28d0608eaf16391370c3f8ee7b594c94f22924c8a" kindref="member">MISSING_ENTRY</ref><sp/>=<sp/>1,</highlight></codeline>
+<codeline lineno="14" refid="db/d40/namespacesgns_1_1application_1aeec9e912f01414eb0080fcea28d0608ea993e14b6038e4569a690b5711a2faf7b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="db/d40/namespacesgns_1_1application_1aeec9e912f01414eb0080fcea28d0608ea993e14b6038e4569a690b5711a2faf7b" kindref="member">PARSER_ERROR</ref>,</highlight></codeline>
+<codeline lineno="15" refid="db/d40/namespacesgns_1_1application_1aeec9e912f01414eb0080fcea28d0608ea2b9e0164c20d01aa76539e8c37af9d37" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="db/d40/namespacesgns_1_1application_1aeec9e912f01414eb0080fcea28d0608ea2b9e0164c20d01aa76539e8c37af9d37" kindref="member">NOT_YET_IMPLEMENTED</ref></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20" refid="db/d30/application_2impl_2config__reader_2error_8hpp_1aa01448f12a2d4993dd3f7b6c726ecadb" refkind="member"><highlight class="normal"><ref refid="d8/d7a/_account_messenger_8hpp_1a6feb41574b755b7b1a774c2b443650a3" kindref="member">OUTCOME_HPP_DECLARE_ERROR_2</ref>(<ref refid="db/d40/namespacesgns_1_1application" kindref="compound">sgns::application</ref>,<sp/>ConfigReaderError);</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_APPLICATION_CONFIG_READER_ERROR_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/application/impl/config_reader/error.hpp"/>
+  </compounddef>
+</doxygen>

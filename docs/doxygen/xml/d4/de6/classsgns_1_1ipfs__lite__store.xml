@@ -1,0 +1,897 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/de6/classsgns_1_1ipfs__lite__store" kind="class" language="C++" prot="public">
+    <compoundname>sgns::ipfs_lite_store</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">block_store_partial&lt; IPFS_val, ipfs_lite_store &gt;</basecompoundref>
+    <includes refid="de/d32/ipfs__lite__store_8hpp" local="no">ipfs_lite_store.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1a0b948935d2bbe64cf4353aec5caf5eb2" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; IpfsDatastore &gt;</type>
+        <definition>std::shared_ptr&lt;IpfsDatastore&gt; sgns::ipfs_lite_store::datastore</definition>
+        <argsstring></argsstring>
+        <name>datastore</name>
+        <qualifiedname>sgns::ipfs_lite_store::datastore</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="52" column="26" bodyfile="node/ipfs_lite_store.hpp" bodystart="52" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1a215ef2fa240b3c7de919cd55ef82b6dd" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::frontiers</definition>
+        <argsstring></argsstring>
+        <name>frontiers</name>
+        <qualifiedname>sgns::ipfs_lite_store::frontiers</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Maps head block to owning account sgns::block_hash -&gt; sgns::account </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="86" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="86" bodyend="86"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1a6c350a05543244fef2dbf6a3ea54c09f" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::accounts_v0</definition>
+        <argsstring></argsstring>
+        <name>accounts_v0</name>
+        <qualifiedname>sgns::ipfs_lite_store::accounts_v0</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Maps account v1 to account information, head, rep, open, balance, timestamp and block count. (Removed) sgns::account -&gt; sgns::block_hash, sgns::block_hash, sgns::block_hash, sgns::amount, uint64_t, uint64_t </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="92" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="92" bodyend="92"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1ac4382383430f7eb8fd97e61b32f15097" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::accounts_v1</definition>
+        <argsstring></argsstring>
+        <name>accounts_v1</name>
+        <qualifiedname>sgns::ipfs_lite_store::accounts_v1</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Maps account v0 to account information, head, rep, open, balance, timestamp and block count. (Removed) sgns::account -&gt; sgns::block_hash, sgns::block_hash, sgns::block_hash, sgns::amount, uint64_t, uint64_t </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="98" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="98" bodyend="98"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1a9197f26d334660f5d576e5ddaa07eefd" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::accounts</definition>
+        <argsstring></argsstring>
+        <name>accounts</name>
+        <qualifiedname>sgns::ipfs_lite_store::accounts</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Maps account v0 to account information, head, rep, open, balance, timestamp, block count and epoch. (Removed) sgns::account -&gt; sgns::block_hash, sgns::block_hash, sgns::block_hash, sgns::amount, uint64_t, uint64_t, sgns::epoch </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="104" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="104" bodyend="104"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1aa9de72aace0df026277eb882175ebb2d" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::send_blocks</definition>
+        <argsstring></argsstring>
+        <name>send_blocks</name>
+        <qualifiedname>sgns::ipfs_lite_store::send_blocks</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Maps block hash to send block. sgns::block_hash -&gt; sgns::send_block </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="110" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="110" bodyend="110"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1ad8c7e7d648e6c57b89d2ed77033a960d" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::receive_blocks</definition>
+        <argsstring></argsstring>
+        <name>receive_blocks</name>
+        <qualifiedname>sgns::ipfs_lite_store::receive_blocks</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Maps block hash to receive block. sgns::block_hash -&gt; sgns::receive_block </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="116" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="116" bodyend="116"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1a3a7220f72e1ec10e532c3983e3e15931" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::open_blocks</definition>
+        <argsstring></argsstring>
+        <name>open_blocks</name>
+        <qualifiedname>sgns::ipfs_lite_store::open_blocks</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Maps block hash to open block. sgns::block_hash -&gt; sgns::open_block </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="122" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="122" bodyend="122"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1a4051a769379acff0a37408b57bf87f4a" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::change_blocks</definition>
+        <argsstring></argsstring>
+        <name>change_blocks</name>
+        <qualifiedname>sgns::ipfs_lite_store::change_blocks</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Maps block hash to change block. sgns::block_hash -&gt; sgns::change_block </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="128" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="128" bodyend="128"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1a22ac6f00bdae96c6f7fa7bbc0999a549" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::state_blocks_v0</definition>
+        <argsstring></argsstring>
+        <name>state_blocks_v0</name>
+        <qualifiedname>sgns::ipfs_lite_store::state_blocks_v0</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Maps block hash to v0 state block. (Removed) sgns::block_hash -&gt; sgns::state_block </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="134" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="134" bodyend="134"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1a097012dde7fdf20aba416e9426d5674d" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::state_blocks_v1</definition>
+        <argsstring></argsstring>
+        <name>state_blocks_v1</name>
+        <qualifiedname>sgns::ipfs_lite_store::state_blocks_v1</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Maps block hash to v1 state block. (Removed) sgns::block_hash -&gt; sgns::state_block </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="140" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="140" bodyend="140"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1a3da1cf716fb09508eb40cdddf7410746" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::state_blocks</definition>
+        <argsstring></argsstring>
+        <name>state_blocks</name>
+        <qualifiedname>sgns::ipfs_lite_store::state_blocks</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Maps block hash to state block. sgns::block_hash -&gt; sgns::state_block </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="146" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="146" bodyend="146"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1a85bcff04ab14daf6e0757ee64dcb6333" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::pending_v0</definition>
+        <argsstring></argsstring>
+        <name>pending_v0</name>
+        <qualifiedname>sgns::ipfs_lite_store::pending_v0</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Maps min_version 0 (destination account, pending block) to (source account, amount). (Removed) sgns::account, sgns::block_hash -&gt; sgns::account, sgns::amount </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="152" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="152" bodyend="152"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1a08dda97f73b3b14be350f73545cc5ab1" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::pending_v1</definition>
+        <argsstring></argsstring>
+        <name>pending_v1</name>
+        <qualifiedname>sgns::ipfs_lite_store::pending_v1</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Maps min_version 1 (destination account, pending block) to (source account, amount). (Removed) sgns::account, sgns::block_hash -&gt; sgns::account, sgns::amount </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="158" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="158" bodyend="158"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1a628198032e4c1c4b10508edc1615ca6f" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::pending</definition>
+        <argsstring></argsstring>
+        <name>pending</name>
+        <qualifiedname>sgns::ipfs_lite_store::pending</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Maps (destination account, pending block) to (source account, amount, version). (Removed) sgns::account, sgns::block_hash -&gt; sgns::account, sgns::amount, sgns::epoch </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="164" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="164" bodyend="164"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1acdfa394098f7b40fac2f0f2f99d5fd3d" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::blocks_info</definition>
+        <argsstring></argsstring>
+        <name>blocks_info</name>
+        <qualifiedname>sgns::ipfs_lite_store::blocks_info</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Maps block hash to account and balance. (Removed) block_hash -&gt; sgns::account, sgns::amount </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="170" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="170" bodyend="170"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1aaa4e1181ad8ddb5715e64fa4576941f9" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::representation</definition>
+        <argsstring></argsstring>
+        <name>representation</name>
+        <qualifiedname>sgns::ipfs_lite_store::representation</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Representative weights. (Removed) sgns::account -&gt; sgns::uint128_t </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="176" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="176" bodyend="176"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1a029981e35e1e449006d28a0da331463d" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::unchecked</definition>
+        <argsstring></argsstring>
+        <name>unchecked</name>
+        <qualifiedname>sgns::ipfs_lite_store::unchecked</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Unchecked bootstrap blocks info. sgns::block_hash -&gt; sgns::unchecked_info </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="182" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="182" bodyend="182"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1a640fb63d5adec33bafc63ea3cf37746f" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::vote</definition>
+        <argsstring></argsstring>
+        <name>vote</name>
+        <qualifiedname>sgns::ipfs_lite_store::vote</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Highest vote observed for account. sgns::account -&gt; uint64_t </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="188" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="188" bodyend="188"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1a2be041e7dbad6e494757bc5971557269" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::online_weight</definition>
+        <argsstring></argsstring>
+        <name>online_weight</name>
+        <qualifiedname>sgns::ipfs_lite_store::online_weight</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Samples of online vote weight uint64_t -&gt; sgns::amount </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="194" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="194" bodyend="194"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1a4ece17a093d850497faf472134cd96e2" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::meta</definition>
+        <argsstring></argsstring>
+        <name>meta</name>
+        <qualifiedname>sgns::ipfs_lite_store::meta</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Meta information about block store, such as versions. sgns::uint256_union (arbitrary key) -&gt; blob </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="200" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="200" bodyend="200"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1a3d620bb82cb5e2144da014e32d3049ce" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::peers</definition>
+        <argsstring></argsstring>
+        <name>peers</name>
+        <qualifiedname>sgns::ipfs_lite_store::peers</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="206" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="206" bodyend="206"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/de6/classsgns_1_1ipfs__lite__store_1a15c47795859fa980cb0099b3b1563bee" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a1a0b3c97c07375bd3f9dc07e1f832177" kindref="member">ipfs_dbi</ref></type>
+        <definition>ipfs_dbi sgns::ipfs_lite_store::confirmation_height</definition>
+        <argsstring></argsstring>
+        <name>confirmation_height</name>
+        <qualifiedname>sgns::ipfs_lite_store::confirmation_height</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="212" column="18" bodyfile="node/ipfs_lite_store.hpp" bodystart="212" bodyend="212"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1a47d4a19b212b493af66a5cd25f37d985" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::ipfs_lite_store::ipfs_lite_store</definition>
+        <argsstring>()</argsstring>
+        <name>ipfs_lite_store</name>
+        <qualifiedname>sgns::ipfs_lite_store::ipfs_lite_store</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>\file for implementing <ref refid="d4/de6/classsgns_1_1ipfs__lite__store" kindref="compound">ipfs_lite_store</ref> class \author ruymaster </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="54" column="9" bodyfile="node/ipfs_lite_store.cpp" bodystart="46" bodyend="48"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1acdc1a960f225a042ad0b5743bb74b28b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::ipfs_lite_store::exists</definition>
+        <argsstring>(sgns::transaction const &amp;transaction_a, tables table_a, ipfs_val const &amp;key_a) const</argsstring>
+        <name>exists</name>
+        <qualifiedname>sgns::ipfs_lite_store::exists</qualifiedname>
+        <param>
+          <type>sgns::transaction const &amp;</type>
+          <declname>transaction_a</declname>
+        </param>
+        <param>
+          <type>tables</type>
+          <declname>table_a</declname>
+        </param>
+        <param>
+          <type><ref refid="d2/d2b/namespacesgns_1aa3452b68fa5043a4b7cd36d669923882" kindref="member">ipfs_val</ref> const &amp;</type>
+          <declname>key_a</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="56" column="14" bodyfile="node/ipfs_lite_store.cpp" bodystart="49" bodyend="52"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1abebad3c45ceb41afdd300294d471821f" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>int</type>
+        <definition>int sgns::ipfs_lite_store::get</definition>
+        <argsstring>(sgns::transaction const &amp;transaction_a, tables table_a, ipfs_val const &amp;key, ipfs_val const &amp;value_a) const</argsstring>
+        <name>get</name>
+        <qualifiedname>sgns::ipfs_lite_store::get</qualifiedname>
+        <param>
+          <type>sgns::transaction const &amp;</type>
+          <declname>transaction_a</declname>
+        </param>
+        <param>
+          <type>tables</type>
+          <declname>table_a</declname>
+        </param>
+        <param>
+          <type><ref refid="d2/d2b/namespacesgns_1aa3452b68fa5043a4b7cd36d669923882" kindref="member">ipfs_val</ref> const &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type><ref refid="d2/d2b/namespacesgns_1aa3452b68fa5043a4b7cd36d669923882" kindref="member">ipfs_val</ref> const &amp;</type>
+          <declname>value_a</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="57" column="13" bodyfile="node/ipfs_lite_store.cpp" bodystart="53" bodyend="56"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1ad7060ad8dc4c6bb1133a66643b1b9ef2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>int</type>
+        <definition>int sgns::ipfs_lite_store::put</definition>
+        <argsstring>(sgns::write_transaction const &amp;transaction_a, tables table_a, ipfs_val const &amp;key_a, const ipfs_val &amp;value_a) const</argsstring>
+        <name>put</name>
+        <qualifiedname>sgns::ipfs_lite_store::put</qualifiedname>
+        <param>
+          <type>sgns::write_transaction const &amp;</type>
+          <declname>transaction_a</declname>
+        </param>
+        <param>
+          <type>tables</type>
+          <declname>table_a</declname>
+        </param>
+        <param>
+          <type><ref refid="d2/d2b/namespacesgns_1aa3452b68fa5043a4b7cd36d669923882" kindref="member">ipfs_val</ref> const &amp;</type>
+          <declname>key_a</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d2/d2b/namespacesgns_1aa3452b68fa5043a4b7cd36d669923882" kindref="member">ipfs_val</ref> &amp;</type>
+          <declname>value_a</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="58" column="13" bodyfile="node/ipfs_lite_store.cpp" bodystart="58" bodyend="61"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1a3bdc0b5c1636b5c2066b0f670e34f64e" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>int</type>
+        <definition>int sgns::ipfs_lite_store::del</definition>
+        <argsstring>(sgns::write_transaction const &amp;transaction_a, tables table_a, ipfs_val const &amp;key_a) const</argsstring>
+        <name>del</name>
+        <qualifiedname>sgns::ipfs_lite_store::del</qualifiedname>
+        <param>
+          <type>sgns::write_transaction const &amp;</type>
+          <declname>transaction_a</declname>
+        </param>
+        <param>
+          <type>tables</type>
+          <declname>table_a</declname>
+        </param>
+        <param>
+          <type><ref refid="d2/d2b/namespacesgns_1aa3452b68fa5043a4b7cd36d669923882" kindref="member">ipfs_val</ref> const &amp;</type>
+          <declname>key_a</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="59" column="13" bodyfile="node/ipfs_lite_store.cpp" bodystart="63" bodyend="66"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1a8ff79f21632438fbbf74e7c988235af0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>int</type>
+        <definition>int sgns::ipfs_lite_store::drop</definition>
+        <argsstring>(sgns::write_transaction const &amp;transaction_a, tables table_a) override</argsstring>
+        <name>drop</name>
+        <qualifiedname>sgns::ipfs_lite_store::drop</qualifiedname>
+        <param>
+          <type>sgns::write_transaction const &amp;</type>
+          <declname>transaction_a</declname>
+        </param>
+        <param>
+          <type>tables</type>
+          <declname>table_a</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="60" column="13" bodyfile="node/ipfs_lite_store.cpp" bodystart="68" bodyend="71"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1ac935ba7b5d1ce4aff282b7d203e599e7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::write_transaction</type>
+        <definition>sgns::write_transaction sgns::ipfs_lite_store::tx_begin_write</definition>
+        <argsstring>(std::vector&lt; sgns::tables &gt; const &amp;tables_requiring_lock={}, std::vector&lt; sgns::tables &gt; const &amp;tables_no_lock={}) override</argsstring>
+        <name>tx_begin_write</name>
+        <qualifiedname>sgns::ipfs_lite_store::tx_begin_write</qualifiedname>
+        <param>
+          <type>std::vector&lt; sgns::tables &gt; const &amp;</type>
+          <declname>tables_requiring_lock</declname>
+          <defval>{}</defval>
+        </param>
+        <param>
+          <type>std::vector&lt; sgns::tables &gt; const &amp;</type>
+          <declname>tables_no_lock</declname>
+          <defval>{}</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="62" column="33" bodyfile="node/ipfs_lite_store.cpp" bodystart="103" bodyend="106"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1a97c372b8436a6b42def0774e85cf38ca" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::read_transaction</type>
+        <definition>sgns::read_transaction sgns::ipfs_lite_store::tx_begin_read</definition>
+        <argsstring>() override</argsstring>
+        <name>tx_begin_read</name>
+        <qualifiedname>sgns::ipfs_lite_store::tx_begin_read</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="63" column="29" bodyfile="node/ipfs_lite_store.cpp" bodystart="108" bodyend="111"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1aa050d83f779b39f923c702bc737cc52a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::ipfs_lite_store::vendor_get</definition>
+        <argsstring>() const override</argsstring>
+        <name>vendor_get</name>
+        <qualifiedname>sgns::ipfs_lite_store::vendor_get</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="65" column="17" bodyfile="node/ipfs_lite_store.cpp" bodystart="113" bodyend="116"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1aea4814ba3df8997b058c00904f2f090a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::ipfs_lite_store::block_info_get</definition>
+        <argsstring>(sgns::transaction const &amp;, sgns::block_hash const &amp;, sgns::block_info &amp;) const override</argsstring>
+        <name>block_info_get</name>
+        <qualifiedname>sgns::ipfs_lite_store::block_info_get</qualifiedname>
+        <param>
+          <type>sgns::transaction const &amp;</type>
+          <defname>transaction_a</defname>
+        </param>
+        <param>
+          <type>sgns::block_hash const &amp;</type>
+          <defname>hash_a</defname>
+        </param>
+        <param>
+          <type>sgns::block_info &amp;</type>
+          <defname>block_info_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="67" column="10" bodyfile="node/ipfs_lite_store.cpp" bodystart="118" bodyend="121"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1af221913698cf481cc851c7dc29b9f219" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::ipfs_lite_store::version_put</definition>
+        <argsstring>(sgns::write_transaction const &amp;, int) override</argsstring>
+        <name>version_put</name>
+        <qualifiedname>sgns::ipfs_lite_store::version_put</qualifiedname>
+        <param>
+          <type>sgns::write_transaction const &amp;</type>
+          <defname>transaction_a</defname>
+        </param>
+        <param>
+          <type>int</type>
+          <defname>version_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="68" column="10" bodyfile="node/ipfs_lite_store.cpp" bodystart="122" bodyend="125"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1a5af3c3af859d0534c067609f5d7f413b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::ipfs_lite_store::serialize_mdb_tracker</definition>
+        <argsstring>(boost::property_tree::ptree &amp;, std::chrono::milliseconds, std::chrono::milliseconds) override</argsstring>
+        <name>serialize_mdb_tracker</name>
+        <qualifiedname>sgns::ipfs_lite_store::serialize_mdb_tracker</qualifiedname>
+        <param>
+          <type>boost::property_tree::ptree &amp;</type>
+          <defname>json</defname>
+        </param>
+        <param>
+          <type>std::chrono::milliseconds</type>
+          <defname>min_read_time</defname>
+        </param>
+        <param>
+          <type>std::chrono::milliseconds</type>
+          <defname>min_write_time</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="69" column="10" bodyfile="node/ipfs_lite_store.cpp" bodystart="127" bodyend="130"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1a16cc378e947b1cdf16c0ca06168c4db9" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; sgns::block &gt;</type>
+        <definition>std::shared_ptr&lt; sgns::block &gt; sgns::ipfs_lite_store::block_get_v14</definition>
+        <argsstring>(sgns::transaction const &amp;transaction_a, sgns::block_hash const &amp;hash_a, sgns::block_sideband_v14 *sideband_a=nullptr, bool *is_state_v1=nullptr) const override</argsstring>
+        <name>block_get_v14</name>
+        <qualifiedname>sgns::ipfs_lite_store::block_get_v14</qualifiedname>
+        <param>
+          <type>sgns::transaction const &amp;</type>
+          <declname>transaction_a</declname>
+        </param>
+        <param>
+          <type>sgns::block_hash const &amp;</type>
+          <declname>hash_a</declname>
+        </param>
+        <param>
+          <type>sgns::block_sideband_v14 *</type>
+          <declname>sideband_a</declname>
+          <defval>nullptr</defval>
+        </param>
+        <param>
+          <type>bool *</type>
+          <declname>is_state_v1</declname>
+          <defval>nullptr</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="72" column="21" bodyfile="node/ipfs_lite_store.cpp" bodystart="131" bodyend="134"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1a7890b4bbe7ce54a0b37305979ed993e0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::ipfs_lite_store::copy_db</definition>
+        <argsstring>(boost::filesystem::path const &amp;destination_file) override</argsstring>
+        <name>copy_db</name>
+        <qualifiedname>sgns::ipfs_lite_store::copy_db</qualifiedname>
+        <param>
+          <type>boost::filesystem::path const &amp;</type>
+          <declname>destination_file</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="73" column="14" bodyfile="node/ipfs_lite_store.cpp" bodystart="88" bodyend="91"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1a5f61d49d4173bc05ef13940659a10671" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::ipfs_lite_store::rebuild_db</definition>
+        <argsstring>(sgns::write_transaction const &amp;transaction_a) override</argsstring>
+        <name>rebuild_db</name>
+        <qualifiedname>sgns::ipfs_lite_store::rebuild_db</qualifiedname>
+        <param>
+          <type>sgns::write_transaction const &amp;</type>
+          <declname>transaction_a</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="74" column="10" bodyfile="node/ipfs_lite_store.cpp" bodystart="93" bodyend="96"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1ae6b8a49ab893f3cd1ae1d2aaa435a394" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::ipfs_lite_store::init_error</definition>
+        <argsstring>() const override</argsstring>
+        <name>init_error</name>
+        <qualifiedname>sgns::ipfs_lite_store::init_error</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="75" column="14" bodyfile="node/ipfs_lite_store.cpp" bodystart="98" bodyend="101"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1a73c38e25de11636f0f7672932c3c8e73" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t sgns::ipfs_lite_store::count</definition>
+        <argsstring>(sgns::transaction const &amp;transaction_a, tables table_a) const override</argsstring>
+        <name>count</name>
+        <qualifiedname>sgns::ipfs_lite_store::count</qualifiedname>
+        <param>
+          <type>sgns::transaction const &amp;</type>
+          <declname>transaction_a</declname>
+        </param>
+        <param>
+          <type>tables</type>
+          <declname>table_a</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="76" column="16" bodyfile="node/ipfs_lite_store.cpp" bodystart="135" bodyend="138"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1a62c1149ee4db3cf3e9ad1c0f26d7f541" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::ipfs_lite_store::not_found</definition>
+        <argsstring>(int status) const override</argsstring>
+        <name>not_found</name>
+        <qualifiedname>sgns::ipfs_lite_store::not_found</qualifiedname>
+        <param>
+          <type>int</type>
+          <declname>status</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="78" column="14" bodyfile="node/ipfs_lite_store.cpp" bodystart="73" bodyend="76"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1a79490a1e141b7993484109ca71d1d0ec" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::ipfs_lite_store::success</definition>
+        <argsstring>(int status) const override</argsstring>
+        <name>success</name>
+        <qualifiedname>sgns::ipfs_lite_store::success</qualifiedname>
+        <param>
+          <type>int</type>
+          <declname>status</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="79" column="10" bodyfile="node/ipfs_lite_store.cpp" bodystart="78" bodyend="81"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/de6/classsgns_1_1ipfs__lite__store_1ae863a30f88bd7ab8037704a3b776f5cb" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>int</type>
+        <definition>int sgns::ipfs_lite_store::status_code_not_found</definition>
+        <argsstring>() const override</argsstring>
+        <name>status_code_not_found</name>
+        <qualifiedname>sgns::ipfs_lite_store::status_code_not_found</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="80" column="9" bodyfile="node/ipfs_lite_store.cpp" bodystart="83" bodyend="86"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>block_store_partial&lt; IPFS_val, ipfs_lite_store &gt;</label>
+      </node>
+      <node id="1">
+        <label>sgns::ipfs_lite_store</label>
+        <link refid="d4/de6/classsgns_1_1ipfs__lite__store"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="5">
+        <label>T</label>
+      </node>
+      <node id="2">
+        <label>block_store_partial&lt; IPFS_val, ipfs_lite_store &gt;</label>
+      </node>
+      <node id="1">
+        <label>sgns::ipfs_lite_store</label>
+        <link refid="d4/de6/classsgns_1_1ipfs__lite__store"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-datastore</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; IpfsDatastore &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; IpfsDatastore &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="node/ipfs_lite_store.hpp" line="49" column="5" bodyfile="node/ipfs_lite_store.hpp" bodystart="50" bodyend="214"/>
+    <listofallmembers>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a9197f26d334660f5d576e5ddaa07eefd" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>accounts</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a6c350a05543244fef2dbf6a3ea54c09f" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>accounts_v0</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1ac4382383430f7eb8fd97e61b32f15097" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>accounts_v1</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a16cc378e947b1cdf16c0ca06168c4db9" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>block_get_v14</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1aea4814ba3df8997b058c00904f2f090a" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>block_info_get</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1acdfa394098f7b40fac2f0f2f99d5fd3d" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>blocks_info</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a4051a769379acff0a37408b57bf87f4a" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>change_blocks</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a15c47795859fa980cb0099b3b1563bee" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>confirmation_height</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a7890b4bbe7ce54a0b37305979ed993e0" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>copy_db</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a73c38e25de11636f0f7672932c3c8e73" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>count</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a0b948935d2bbe64cf4353aec5caf5eb2" prot="private" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>datastore</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a3bdc0b5c1636b5c2066b0f670e34f64e" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>del</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a8ff79f21632438fbbf74e7c988235af0" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>drop</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1acdc1a960f225a042ad0b5743bb74b28b" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>exists</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a215ef2fa240b3c7de919cd55ef82b6dd" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>frontiers</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1abebad3c45ceb41afdd300294d471821f" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>get</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1ae6b8a49ab893f3cd1ae1d2aaa435a394" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>init_error</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a47d4a19b212b493af66a5cd25f37d985" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>ipfs_lite_store</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a4ece17a093d850497faf472134cd96e2" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>meta</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a62c1149ee4db3cf3e9ad1c0f26d7f541" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>not_found</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a2be041e7dbad6e494757bc5971557269" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>online_weight</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a3a7220f72e1ec10e532c3983e3e15931" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>open_blocks</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a3d620bb82cb5e2144da014e32d3049ce" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>peers</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a628198032e4c1c4b10508edc1615ca6f" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>pending</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a85bcff04ab14daf6e0757ee64dcb6333" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>pending_v0</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a08dda97f73b3b14be350f73545cc5ab1" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>pending_v1</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1ad7060ad8dc4c6bb1133a66643b1b9ef2" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>put</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a5f61d49d4173bc05ef13940659a10671" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>rebuild_db</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1ad8c7e7d648e6c57b89d2ed77033a960d" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>receive_blocks</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1aaa4e1181ad8ddb5715e64fa4576941f9" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>representation</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1aa9de72aace0df026277eb882175ebb2d" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>send_blocks</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a5af3c3af859d0534c067609f5d7f413b" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>serialize_mdb_tracker</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a3da1cf716fb09508eb40cdddf7410746" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>state_blocks</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a22ac6f00bdae96c6f7fa7bbc0999a549" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>state_blocks_v0</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a097012dde7fdf20aba416e9426d5674d" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>state_blocks_v1</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1ae863a30f88bd7ab8037704a3b776f5cb" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>status_code_not_found</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a79490a1e141b7993484109ca71d1d0ec" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>success</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a97c372b8436a6b42def0774e85cf38ca" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>tx_begin_read</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1ac935ba7b5d1ce4aff282b7d203e599e7" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>tx_begin_write</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a029981e35e1e449006d28a0da331463d" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>unchecked</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1aa050d83f779b39f923c702bc737cc52a" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>vendor_get</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1af221913698cf481cc851c7dc29b9f219" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>version_put</name></member>
+      <member refid="d4/de6/classsgns_1_1ipfs__lite__store_1a640fb63d5adec33bafc63ea3cf37746f" prot="public" virt="non-virtual"><scope>sgns::ipfs_lite_store</scope><name>vote</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

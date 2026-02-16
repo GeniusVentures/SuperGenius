@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_41866827cbe4fc1fa31e11cc42d77a61" kind="dir">
+    <compoundname>src/crdt/globaldb</compoundname>
+    <innerfile refid="d6/de2/globaldb_8cpp">globaldb.cpp</innerfile>
+    <innerfile refid="d0/d0e/globaldb_8hpp">globaldb.hpp</innerfile>
+    <innerfile refid="d7/dda/keypair__file__storage_8cpp">keypair_file_storage.cpp</innerfile>
+    <innerfile refid="d1/d13/keypair__file__storage_8hpp">keypair_file_storage.hpp</innerfile>
+    <innerfile refid="d2/d86/pubsub__broadcaster_8cpp">pubsub_broadcaster.cpp</innerfile>
+    <innerfile refid="d8/dfe/pubsub__broadcaster_8hpp">pubsub_broadcaster.hpp</innerfile>
+    <innerfile refid="d1/dc9/pubsub__broadcaster__ext_8cpp">pubsub_broadcaster_ext.cpp</innerfile>
+    <innerfile refid="d7/db9/pubsub__broadcaster__ext_8hpp">pubsub_broadcaster_ext.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crdt/globaldb/"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,368 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/d4c/block__header__repository_8hpp" kind="file" language="C++">
+    <compoundname>block_header_repository.hpp</compoundname>
+    <includes refid="d5/dda/outcome_8hpp" local="yes">outcome/outcome.hpp</includes>
+    <includes refid="d4/d16/blob_8hpp" local="yes">base/blob.hpp</includes>
+    <includes refid="d7/d72/block__header_8hpp" local="yes">primitives/block_header.hpp</includes>
+    <includes refid="d9/da1/block__id_8hpp" local="yes">primitives/block_id.hpp</includes>
+    <includes refid="df/dec/_i_component_8hpp" local="yes">singleton/IComponent.hpp</includes>
+    <includedby refid="df/d2c/block__header__repository_8cpp" local="yes">src/blockchain/impl/block_header_repository.cpp</includedby>
+    <includedby refid="d7/d87/block__tree__impl_8hpp" local="yes">src/blockchain/impl/block_tree_impl.hpp</includedby>
+    <includedby refid="dd/dc6/key__value__block__header__repository_8hpp" local="yes">src/blockchain/impl/key_value_block_header_repository.hpp</includedby>
+    <includedby refid="d7/dbc/core__impl_8hpp" local="yes">src/runtime/binaryen/runtime_api/core_impl.hpp</includedby>
+    <incdepgraph>
+      <node id="4">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>base/unused.hpp</label>
+        <link refid="dd/d26/unused_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/blockchain/block_header_repository.hpp</label>
+        <link refid="d6/d4c/block__header__repository_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>primitives/authority.hpp</label>
+        <link refid="d2/d45/authority_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>primitives/block_header.hpp</label>
+        <link refid="d7/d72/block__header_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>primitives/block_id.hpp</label>
+        <link refid="d9/da1/block__id_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>primitives/common.hpp</label>
+        <link refid="d4/d26/src_2primitives_2common_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>primitives/compact_integer.hpp</label>
+        <link refid="d9/df3/compact__integer_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>primitives/digest.hpp</label>
+        <link refid="df/dbf/digest_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>primitives/scheduled_change.hpp</label>
+        <link refid="d7/d5f/scheduled__change_8hpp"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>primitives/session_key.hpp</label>
+        <link refid="d4/de0/session__key_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>scale/types.hpp</label>
+        <link refid="dd/d27/scale_2types_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="31" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>array</label>
+      </node>
+      <node id="24">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="7">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="15">
+        <label>boost/multiprecision/cpp_int.hpp</label>
+      </node>
+      <node id="18">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="22">
+        <label>boost/variant.hpp</label>
+      </node>
+      <node id="5">
+        <label>cstddef</label>
+      </node>
+      <node id="17">
+        <label>cstdint</label>
+      </node>
+      <node id="11">
+        <label>gsl/span</label>
+      </node>
+      <node id="12">
+        <label>iostream</label>
+      </node>
+      <node id="3">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="31">
+        <label>string</label>
+      </node>
+      <node id="9">
+        <label>string_view</label>
+      </node>
+      <node id="14">
+        <label>type_traits</label>
+      </node>
+      <node id="10">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="1">
+        <label>src/blockchain/block_header_repository.hpp</label>
+        <link refid="d6/d4c/block__header__repository_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>src/blockchain/impl/block_header_repository.cpp</label>
+        <link refid="df/d2c/block__header__repository_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/blockchain/impl/block_tree_impl.cpp</label>
+        <link refid="d5/df4/block__tree__impl_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/blockchain/impl/block_tree_impl.hpp</label>
+        <link refid="d7/d87/block__tree__impl_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>src/blockchain/impl/key_value_block_header_repository.cpp</label>
+        <link refid="de/d1b/key__value__block__header__repository_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/blockchain/impl/key_value_block_header_repository.hpp</label>
+        <link refid="dd/dc6/key__value__block__header__repository_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>src/blockchain/impl/key_value_block_storage.cpp</label>
+        <link refid="de/de9/key__value__block__storage_8cpp"/>
+      </node>
+      <node id="7">
+        <label>src/blockchain/impl/key_value_block_storage.hpp</label>
+        <link refid="d4/d6b/key__value__block__storage_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.cpp</label>
+        <link refid="de/d5e/core__factory__impl_8cpp"/>
+      </node>
+      <node id="11">
+        <label>src/runtime/binaryen/runtime_api/core_impl.cpp</label>
+        <link refid="dc/d7c/core__impl_8cpp"/>
+      </node>
+      <node id="9">
+        <label>src/runtime/binaryen/runtime_api/core_impl.hpp</label>
+        <link refid="d7/dbc/core__impl_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository" prot="public">sgns::blockchain::BlockHeaderRepository</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d9/df6/namespacesgns_1_1blockchain">sgns::blockchain</innernamespace>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="d9/df6/namespacesgns_1_1blockchain_1a3fc0313c5d47d95b48f02d1ebb6e0aea" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>BlockStatus</name>
+        <qualifiedname>sgns::blockchain::BlockStatus</qualifiedname>
+        <enumvalue id="d9/df6/namespacesgns_1_1blockchain_1a3fc0313c5d47d95b48f02d1ebb6e0aeaa4ddc1f10c5822c174470affbb45f9901" prot="public">
+          <name>InChain</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d9/df6/namespacesgns_1_1blockchain_1a3fc0313c5d47d95b48f02d1ebb6e0aeaa88183b946cc5f0e8c96b2e66e1c74a7e" prot="public">
+          <name>Unknown</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Status of a block </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_header_repository.hpp" line="15" column="5" bodyfile="src/blockchain/block_header_repository.hpp" bodystart="16" bodyend="19"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_CORE_BLOCKCHAIN_BLOCK_HEADER_REPOSITORY_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_CORE_BLOCKCHAIN_BLOCK_HEADER_REPOSITORY_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/dda/outcome_8hpp" kindref="compound">outcome/outcome.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d4/d16/blob_8hpp" kindref="compound">base/blob.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d7/d72/block__header_8hpp" kindref="compound">primitives/block_header.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d9/da1/block__id_8hpp" kindref="compound">primitives/block_id.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="df/dec/_i_component_8hpp" kindref="compound">singleton/IComponent.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10" refid="d9/df6/namespacesgns_1_1blockchain" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d9/df6/namespacesgns_1_1blockchain" kindref="compound">sgns::blockchain</ref></highlight></codeline>
+<codeline lineno="11"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="15" refid="d9/df6/namespacesgns_1_1blockchain_1a3fc0313c5d47d95b48f02d1ebb6e0aea" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">enum<sp/>class</highlight><highlight class="normal"><sp/><ref refid="d9/df6/namespacesgns_1_1blockchain_1a3fc0313c5d47d95b48f02d1ebb6e0aea" kindref="member">BlockStatus</ref></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="17" refid="d9/df6/namespacesgns_1_1blockchain_1a3fc0313c5d47d95b48f02d1ebb6e0aeaa4ddc1f10c5822c174470affbb45f9901" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/df6/namespacesgns_1_1blockchain_1a3fc0313c5d47d95b48f02d1ebb6e0aeaa4ddc1f10c5822c174470affbb45f9901" kindref="member">InChain</ref>,</highlight></codeline>
+<codeline lineno="18" refid="d9/df6/namespacesgns_1_1blockchain_1a3fc0313c5d47d95b48f02d1ebb6e0aeaa88183b946cc5f0e8c96b2e66e1c74a7e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/df6/namespacesgns_1_1blockchain_1a3fc0313c5d47d95b48f02d1ebb6e0aeaa88183b946cc5f0e8c96b2e66e1c74a7e" kindref="member">Unknown</ref></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26" refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository" kindref="compound">BlockHeaderRepository</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d1/dbf/class_i_component" kindref="compound">IComponent</ref></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="34" refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1ae01d3ff3728f72830ed3fe1d4ed4a105" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;primitives::BlockNumber&gt;<sp/><ref refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1ae01d3ff3728f72830ed3fe1d4ed4a105" kindref="member">getNumberByHash</ref>(</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref><sp/>&amp;hash<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight></codeline>
+<codeline lineno="42" refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a2f1bd33a158b858790919435ea724287" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;base::Hash256&gt;<sp/><ref refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a2f1bd33a158b858790919435ea724287" kindref="member">getHashByNumber</ref>(</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref><sp/>&amp;number<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight></codeline>
+<codeline lineno="48" refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1abdda56d42d916b4c4347d9c0218437e8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;primitives::BlockHeader&gt;<sp/><ref refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1abdda56d42d916b4c4347d9c0218437e8" kindref="member">getBlockHeader</ref>(</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref><sp/>&amp;</highlight><highlight class="keywordtype">id</highlight><highlight class="normal"><sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"></highlight></codeline>
+<codeline lineno="51" refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a715e15760cede3d29dab5151b90d2614" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;primitives::BlockHash&gt;<sp/><ref refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a715e15760cede3d29dab5151b90d2614" kindref="member">putBlockHeader</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">primitives::BlockHeader</ref><sp/>&amp;header<sp/>)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"></highlight></codeline>
+<codeline lineno="53" refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a51cf7179f72edbf1d685ed4ec6a8b1af" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;void&gt;<sp/><ref refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a51cf7179f72edbf1d685ed4ec6a8b1af" kindref="member">removeBlockHeader</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref><sp/>&amp;</highlight><highlight class="keywordtype">id</highlight><highlight class="normal"><sp/>)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight></codeline>
+<codeline lineno="59" refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a9b64699fae33ac63a0bf15136872d981" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;sgns::blockchain::BlockStatus&gt;<sp/><ref refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a9b64699fae33ac63a0bf15136872d981" kindref="member">getBlockStatus</ref>(</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref><sp/>&amp;</highlight><highlight class="keywordtype">id</highlight><highlight class="normal"><sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"></highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/>outcome::result&lt;primitives::BlockNumber&gt;<sp/><ref refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1afd8c7ea054ae0a36b2e44f772e13c768" kindref="member">getNumberById</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref><sp/>&amp;</highlight><highlight class="keywordtype">id</highlight><highlight class="normal"><sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"></highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/>outcome::result&lt;base::Hash256&gt;<sp/><ref refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a2d5c162b8cc3929937c060ea3bee1549" kindref="member">getHashById</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref><sp/>&amp;</highlight><highlight class="keywordtype">id</highlight><highlight class="normal"><sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="76"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"></highlight></codeline>
+<codeline lineno="78"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/blockchain/block_header_repository.hpp"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,365 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/dd8/keccak_8h" kind="file" language="C++">
+    <compoundname>keccak.h</compoundname>
+    <includedby refid="d3/d84/hasher__impl_8cpp" local="yes">src/crypto/hasher/hasher_impl.cpp</includedby>
+    <includedby refid="d5/d47/keccak_8c" local="yes">src/crypto/keccak/keccak.c</includedby>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/crypto/hasher/hasher_impl.cpp</label>
+        <link refid="d3/d84/hasher__impl_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/crypto/keccak/keccak.c</label>
+        <link refid="d5/d47/keccak_8c"/>
+      </node>
+      <node id="1">
+        <label>src/crypto/keccak/keccak.h</label>
+        <link refid="d6/dd8/keccak_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d0/d9a/structsha3__context__" prot="public">sha3_context_</innerclass>
+    <innerclass refid="d4/d0b/unionsha3__context___8____unnamed0____" prot="public">sha3_context_.__unnamed0__</innerclass>
+    <sectiondef kind="define">
+      <memberdef kind="define" id="d6/dd8/keccak_8h_1a523878099e5ec16cb61e01d0365201f5" prot="public" static="no">
+        <name>SHA3_KECCAK_SPONGE_WORDS</name>
+        <initializer>(((1600) / 8 /*bits to byte*/) / sizeof(uint64_t))</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="11" column="9" bodyfile="src/crypto/keccak/keccak.h" bodystart="11" bodyend="12"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="d6/dd8/keccak_8h_1aeafb3c3d4034b10ca45439626146202d" prot="public" static="no" strong="no">
+        <type></type>
+        <name>SHA3_FLAGS</name>
+        <enumvalue id="d6/dd8/keccak_8h_1aeafb3c3d4034b10ca45439626146202da81425a869c4a6882def4f3e34bdeb400" prot="public">
+          <name>SHA3_FLAGS_NONE</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d6/dd8/keccak_8h_1aeafb3c3d4034b10ca45439626146202dad66fa299ed3f91105f43263ec0545a53" prot="public">
+          <name>SHA3_FLAGS_KECCAK</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="28" column="1" bodyfile="src/crypto/keccak/keccak.h" bodystart="28" bodyend="28"/>
+      </memberdef>
+      <memberdef kind="enum" id="d6/dd8/keccak_8h_1a4c7cb4d5ae71a49c9e882b9ccd61c836" prot="public" static="no" strong="no">
+        <type></type>
+        <name>SHA3_RETURN</name>
+        <enumvalue id="d6/dd8/keccak_8h_1a4c7cb4d5ae71a49c9e882b9ccd61c836ac75a9bc079c1d792891fd76d74573f59" prot="public">
+          <name>SHA3_RETURN_OK</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d6/dd8/keccak_8h_1a4c7cb4d5ae71a49c9e882b9ccd61c836ae7f774084fdb544d07ccbbab20292b7a" prot="public">
+          <name>SHA3_RETURN_BAD_PARAMS</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="30" column="1" bodyfile="src/crypto/keccak/keccak.h" bodystart="30" bodyend="30"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="d6/dd8/keccak_8h_1a144bd9bfe50c819c3b0ad0f4a6cbfd16" prot="public" static="no">
+        <type>struct <ref refid="d0/d9a/structsha3__context__" kindref="compound">sha3_context_</ref></type>
+        <definition>typedef struct sha3_context_ sha3_context</definition>
+        <argsstring></argsstring>
+        <name>sha3_context</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="26" column="14"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d6/dd8/keccak_8h_1a9375a269cc778c2e4a430ed65d588e4f" prot="public" static="no">
+        <type>enum <ref refid="d6/dd8/keccak_8h_1a4c7cb4d5ae71a49c9e882b9ccd61c836" kindref="member">SHA3_RETURN</ref></type>
+        <definition>typedef enum SHA3_RETURN sha3_return_t</definition>
+        <argsstring></argsstring>
+        <name>sha3_return_t</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="31" column="25" bodyfile="src/crypto/keccak/keccak.h" bodystart="31" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d6/dd8/keccak_8h_1a80d8a48726b284c1a0a3e7b408d7ffbc" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d6/dd8/keccak_8h_1a9375a269cc778c2e4a430ed65d588e4f" kindref="member">sha3_return_t</ref></type>
+        <definition>sha3_return_t sha3_Init</definition>
+        <argsstring>(void *priv, unsigned bitSize)</argsstring>
+        <name>sha3_Init</name>
+        <param>
+          <type>void *</type>
+          <declname>priv</declname>
+        </param>
+        <param>
+          <type>unsigned</type>
+          <declname>bitSize</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="34" column="15" bodyfile="src/crypto/keccak/keccak.c" bodystart="98" bodyend="105" declfile="src/crypto/keccak/keccak.h" declline="34" declcolumn="15"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/dd8/keccak_8h_1ae6ad8ca9e5c339bbb03add5d045792a1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sha3_Init256</definition>
+        <argsstring>(void *priv)</argsstring>
+        <name>sha3_Init256</name>
+        <param>
+          <type>void *</type>
+          <declname>priv</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="36" column="6" bodyfile="src/crypto/keccak/keccak.c" bodystart="107" bodyend="109" declfile="src/crypto/keccak/keccak.h" declline="36" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/dd8/keccak_8h_1abdd2a314bd4ceb904de5f3610399e262" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sha3_Init384</definition>
+        <argsstring>(void *priv)</argsstring>
+        <name>sha3_Init384</name>
+        <param>
+          <type>void *</type>
+          <declname>priv</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="37" column="6" bodyfile="src/crypto/keccak/keccak.c" bodystart="111" bodyend="113" declfile="src/crypto/keccak/keccak.h" declline="37" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/dd8/keccak_8h_1aa9e1841952701e66f01ca60187c579b4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sha3_Init512</definition>
+        <argsstring>(void *priv)</argsstring>
+        <name>sha3_Init512</name>
+        <param>
+          <type>void *</type>
+          <declname>priv</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="38" column="6" bodyfile="src/crypto/keccak/keccak.c" bodystart="115" bodyend="117" declfile="src/crypto/keccak/keccak.h" declline="38" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/dd8/keccak_8h_1a12f1cf6a0bd68f5c61414b6a982cef23" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>enum <ref refid="d6/dd8/keccak_8h_1aeafb3c3d4034b10ca45439626146202d" kindref="member">SHA3_FLAGS</ref></type>
+        <definition>enum SHA3_FLAGS sha3_SetFlags</definition>
+        <argsstring>(void *priv, enum SHA3_FLAGS)</argsstring>
+        <name>sha3_SetFlags</name>
+        <param>
+          <type>void *</type>
+          <declname>priv</declname>
+        </param>
+        <param>
+          <type>enum</type>
+          <declname>SHA3_FLAGS</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="40" column="16" bodyfile="src/crypto/keccak/keccak.c" bodystart="119" bodyend="124" declfile="src/crypto/keccak/keccak.h" declline="40" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/dd8/keccak_8h_1a1890cbea84c0b1b9b40095951bb84be1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns_sha3_Update</definition>
+        <argsstring>(void *priv, void const *bufIn, size_t len)</argsstring>
+        <name>sgns_sha3_Update</name>
+        <param>
+          <type>void *</type>
+          <declname>priv</declname>
+        </param>
+        <param>
+          <type>void const *</type>
+          <declname>bufIn</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>len</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="42" column="6" bodyfile="src/crypto/keccak/keccak.c" bodystart="126" bodyend="210" declfile="src/crypto/keccak/keccak.h" declline="42" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/dd8/keccak_8h_1a64bc390fe9782ecde45d7ccc82393590" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void const *</type>
+        <definition>void const  * sha3_Finalize</definition>
+        <argsstring>(void *priv)</argsstring>
+        <name>sha3_Finalize</name>
+        <param>
+          <type>void *</type>
+          <declname>priv</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="44" column="12" bodyfile="src/crypto/keccak/keccak.c" bodystart="216" bodyend="268" declfile="src/crypto/keccak/keccak.h" declline="44" declcolumn="12"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/dd8/keccak_8h_1a5c4a3f0bf42eb447a47ab229815be83f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d6/dd8/keccak_8h_1a9375a269cc778c2e4a430ed65d588e4f" kindref="member">sha3_return_t</ref></type>
+        <definition>sha3_return_t sha3_HashBuffer</definition>
+        <argsstring>(unsigned bitSize, enum SHA3_FLAGS flags, const void *in, unsigned inBytes, void *out, unsigned outBytes)</argsstring>
+        <name>sha3_HashBuffer</name>
+        <param>
+          <type>unsigned</type>
+          <declname>bitSize</declname>
+        </param>
+        <param>
+          <type>enum <ref refid="d6/dd8/keccak_8h_1aeafb3c3d4034b10ca45439626146202d" kindref="member">SHA3_FLAGS</ref></type>
+          <declname>flags</declname>
+        </param>
+        <param>
+          <type>const void *</type>
+          <declname>in</declname>
+        </param>
+        <param>
+          <type>unsigned</type>
+          <declname>inBytes</declname>
+        </param>
+        <param>
+          <type>void *</type>
+          <declname>out</declname>
+        </param>
+        <param>
+          <type>unsigned</type>
+          <declname>outBytes</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="47" column="15" bodyfile="src/crypto/keccak/keccak.c" bodystart="270" bodyend="290" declfile="src/crypto/keccak/keccak.h" declline="47" declcolumn="15"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SRC_KECCAK_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SRC_KECCAK_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#if<sp/>defined(__cplusplus)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">extern</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;C&quot;</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="comment">/*<sp/>&apos;Words&apos;<sp/>here<sp/>refers<sp/>to<sp/>uint64_t<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11" refid="d6/dd8/keccak_8h_1a523878099e5ec16cb61e01d0365201f5" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SHA3_KECCAK_SPONGE_WORDS<sp/>\</highlight></codeline>
+<codeline lineno="12"><highlight class="preprocessor"><sp/><sp/>(((1600)<sp/>/<sp/>8<sp/></highlight><highlight class="comment">/*bits<sp/>to<sp/>byte*/</highlight><highlight class="preprocessor">)<sp/>/<sp/>sizeof(uint64_t))</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13" refid="d0/d9a/structsha3__context__" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="d0/d9a/structsha3__context__" kindref="compound">sha3_context_</ref><sp/>{</highlight></codeline>
+<codeline lineno="14" refid="d0/d9a/structsha3__context___1aa3e142662475461e1cb62c191358c095" refkind="member"><highlight class="normal"><sp/><sp/>uint64_t<sp/><ref refid="d0/d9a/structsha3__context___1aa3e142662475461e1cb62c191358c095" kindref="member">saved</ref>;<sp/></highlight><highlight class="comment">/*<sp/>the<sp/>portion<sp/>of<sp/>the<sp/>input<sp/>message<sp/>that<sp/>we</highlight></codeline>
+<codeline lineno="15"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>didn&apos;t<sp/>consume<sp/>yet<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16" refid="d4/d0b/unionsha3__context___8____unnamed0____" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">union<sp/></highlight><highlight class="normal">{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*<sp/>Keccak&apos;s<sp/>state<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="d4/d0b/unionsha3__context___8____unnamed0_____1a676ee00ac088037cc66364ad0e6b4912" kindref="member">s</ref>[<ref refid="d6/dd8/keccak_8h_1a523878099e5ec16cb61e01d0365201f5" kindref="member">SHA3_KECCAK_SPONGE_WORDS</ref>];</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/>uint8_t<sp/><ref refid="d4/d0b/unionsha3__context___8____unnamed0_____1a6943966b1148e19a5007da5b955360df" kindref="member">sb</ref>[<ref refid="d6/dd8/keccak_8h_1a523878099e5ec16cb61e01d0365201f5" kindref="member">SHA3_KECCAK_SPONGE_WORDS</ref><sp/>*<sp/>8];</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="20" refid="d0/d9a/structsha3__context___1a3b82e6a02e3660338cadb8b8d4b2b82a" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/><ref refid="d0/d9a/structsha3__context___1a3b82e6a02e3660338cadb8b8d4b2b82a" kindref="member">byteIndex</ref>;<sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*<sp/>0..7--the<sp/>next<sp/>byte<sp/>after<sp/>the<sp/>set<sp/>one</highlight></codeline>
+<codeline lineno="21"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>(starts<sp/>from<sp/>0;<sp/>0--none<sp/>are<sp/>buffered)<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22" refid="d0/d9a/structsha3__context___1a6bd3f08cba5bab58fa3b9014313bbde1" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/><ref refid="d0/d9a/structsha3__context___1a6bd3f08cba5bab58fa3b9014313bbde1" kindref="member">wordIndex</ref>;<sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*<sp/>0..24--the<sp/>next<sp/>word<sp/>to<sp/>integrate<sp/>input</highlight></codeline>
+<codeline lineno="23"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>(starts<sp/>from<sp/>0)<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="24" refid="d0/d9a/structsha3__context___1ac0931578aa317d7440cfa3297e1876a3" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/><ref refid="d0/d9a/structsha3__context___1ac0931578aa317d7440cfa3297e1876a3" kindref="member">capacityWords</ref>;<sp/></highlight><highlight class="comment">/*<sp/>the<sp/>double<sp/>size<sp/>of<sp/>the<sp/>hash<sp/>output<sp/>in</highlight></codeline>
+<codeline lineno="25"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>words<sp/>(e.g.<sp/>16<sp/>for<sp/>Keccak<sp/>512)<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="26" refid="d6/dd8/keccak_8h_1a144bd9bfe50c819c3b0ad0f4a6cbfd16" refkind="member"><highlight class="normal">}<sp/><ref refid="d6/dd8/keccak_8h_1a144bd9bfe50c819c3b0ad0f4a6cbfd16" kindref="member">sha3_context</ref>;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28" refid="d6/dd8/keccak_8h_1aeafb3c3d4034b10ca45439626146202d" refkind="member"><highlight class="normal"></highlight><highlight class="keyword">enum</highlight><highlight class="normal"><sp/><ref refid="d6/dd8/keccak_8h_1aeafb3c3d4034b10ca45439626146202d" kindref="member">SHA3_FLAGS</ref><sp/>{<sp/><ref refid="d6/dd8/keccak_8h_1aeafb3c3d4034b10ca45439626146202da81425a869c4a6882def4f3e34bdeb400" kindref="member">SHA3_FLAGS_NONE</ref><sp/>=<sp/>0,<sp/><ref refid="d6/dd8/keccak_8h_1aeafb3c3d4034b10ca45439626146202dad66fa299ed3f91105f43263ec0545a53" kindref="member">SHA3_FLAGS_KECCAK</ref><sp/>=<sp/>1<sp/>};</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30" refid="d6/dd8/keccak_8h_1a4c7cb4d5ae71a49c9e882b9ccd61c836" refkind="member"><highlight class="normal"></highlight><highlight class="keyword">enum</highlight><highlight class="normal"><sp/><ref refid="d6/dd8/keccak_8h_1a4c7cb4d5ae71a49c9e882b9ccd61c836" kindref="member">SHA3_RETURN</ref><sp/>{<sp/><ref refid="d6/dd8/keccak_8h_1a4c7cb4d5ae71a49c9e882b9ccd61c836ac75a9bc079c1d792891fd76d74573f59" kindref="member">SHA3_RETURN_OK</ref><sp/>=<sp/>0,<sp/><ref refid="d6/dd8/keccak_8h_1a4c7cb4d5ae71a49c9e882b9ccd61c836ae7f774084fdb544d07ccbbab20292b7a" kindref="member">SHA3_RETURN_BAD_PARAMS</ref><sp/>=<sp/>1<sp/>};</highlight></codeline>
+<codeline lineno="31" refid="d6/dd8/keccak_8h_1a9375a269cc778c2e4a430ed65d588e4f" refkind="member"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">enum</highlight><highlight class="normal"><sp/><ref refid="d6/dd8/keccak_8h_1a4c7cb4d5ae71a49c9e882b9ccd61c836" kindref="member">SHA3_RETURN</ref><sp/><ref refid="d6/dd8/keccak_8h_1a9375a269cc778c2e4a430ed65d588e4f" kindref="member">sha3_return_t</ref>;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight><highlight class="comment">/*<sp/>For<sp/>Init<sp/>or<sp/>Reset<sp/>call<sp/>these:<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><ref refid="d6/dd8/keccak_8h_1a9375a269cc778c2e4a430ed65d588e4f" kindref="member">sha3_return_t</ref><sp/><ref refid="d6/dd8/keccak_8h_1a80d8a48726b284c1a0a3e7b408d7ffbc" kindref="member">sha3_Init</ref>(</highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>*priv,<sp/></highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/>bitSize);</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d6/dd8/keccak_8h_1ae6ad8ca9e5c339bbb03add5d045792a1" kindref="member">sha3_Init256</ref>(</highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>*priv);</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d6/dd8/keccak_8h_1abdd2a314bd4ceb904de5f3610399e262" kindref="member">sha3_Init384</ref>(</highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>*priv);</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d6/dd8/keccak_8h_1aa9e1841952701e66f01ca60187c579b4" kindref="member">sha3_Init512</ref>(</highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>*priv);</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight><highlight class="keyword">enum</highlight><highlight class="normal"><sp/><ref refid="d6/dd8/keccak_8h_1aeafb3c3d4034b10ca45439626146202d" kindref="member">SHA3_FLAGS</ref><sp/><ref refid="d6/dd8/keccak_8h_1a12f1cf6a0bd68f5c61414b6a982cef23" kindref="member">sha3_SetFlags</ref>(</highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>*priv,<sp/></highlight><highlight class="keyword">enum</highlight><highlight class="normal"><sp/><ref refid="d6/dd8/keccak_8h_1aeafb3c3d4034b10ca45439626146202d" kindref="member">SHA3_FLAGS</ref>);</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d6/dd8/keccak_8h_1a1890cbea84c0b1b9b40095951bb84be1" kindref="member">sgns_sha3_Update</ref>(</highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>*priv,<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>*bufIn,<sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>len);</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>*<ref refid="d6/dd8/keccak_8h_1a64bc390fe9782ecde45d7ccc82393590" kindref="member">sha3_Finalize</ref>(</highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>*priv);</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight><highlight class="comment">/*<sp/>Single-call<sp/>hashing<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><ref refid="d6/dd8/keccak_8h_1a9375a269cc778c2e4a430ed65d588e4f" kindref="member">sha3_return_t</ref><sp/><ref refid="d6/dd8/keccak_8h_1a5c4a3f0bf42eb447a47ab229815be83f" kindref="member">sha3_HashBuffer</ref>(</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/>bitSize,<sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*<sp/>256,<sp/>384,<sp/>512<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">enum</highlight><highlight class="normal"><sp/><ref refid="d6/dd8/keccak_8h_1aeafb3c3d4034b10ca45439626146202d" kindref="member">SHA3_FLAGS</ref><sp/>flags,<sp/></highlight><highlight class="comment">/*<sp/>SHA3_FLAGS_NONE<sp/>or<sp/>SHA3_FLAGS_KECCAK<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>*in,</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/>inBytes,</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>*out,</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/>outBytes);<sp/></highlight><highlight class="comment">/*<sp/>up<sp/>to<sp/>bitSize/8;<sp/>truncation<sp/>OK<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight></codeline>
+<codeline lineno="55"><highlight class="normal"></highlight><highlight class="preprocessor">#if<sp/>defined(__cplusplus)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="56"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="58"><highlight class="normal"></highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/crypto/keccak/keccak.h"/>
+  </compounddef>
+</doxygen>

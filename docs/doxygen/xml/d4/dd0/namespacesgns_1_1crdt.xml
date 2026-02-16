@@ -1,0 +1,196 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/dd0/namespacesgns_1_1crdt" kind="namespace" language="C++">
+    <compoundname>sgns::crdt</compoundname>
+    <innerclass refid="d8/da6/classsgns_1_1crdt_1_1_atomic_transaction" prot="public">sgns::crdt::AtomicTransaction</innerclass>
+    <innerclass refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster" prot="public">sgns::crdt::Broadcaster</innerclass>
+    <innerclass refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager" prot="public">sgns::crdt::CRDTCallbackManager</innerclass>
+    <innerclass refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter" prot="public">sgns::crdt::CRDTDataFilter</innerclass>
+    <innerclass refid="db/dbb/classsgns_1_1crdt_1_1_crdt_datastore" prot="public">sgns::crdt::CrdtDatastore</innerclass>
+    <innerclass refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads" prot="public">sgns::crdt::CrdtHeads</innerclass>
+    <innerclass refid="db/d77/structsgns_1_1crdt_1_1_crdt_options" prot="public">sgns::crdt::CrdtOptions</innerclass>
+    <innerclass refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set" prot="public">sgns::crdt::CrdtSet</innerclass>
+    <innerclass refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer" prot="public">sgns::crdt::DAGSyncer</innerclass>
+    <innerclass refid="da/d32/classsgns_1_1crdt_1_1_global_d_b" prot="public">sgns::crdt::GlobalDB</innerclass>
+    <innerclass refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage" prot="public">sgns::crdt::KeyPairFileStorage</innerclass>
+    <innerclass refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster" prot="public">sgns::crdt::PubSubBroadcaster</innerclass>
+    <innerclass refid="da/d80/classsgns_1_1crdt_1_1_pub_sub_broadcaster_ext" prot="public">sgns::crdt::PubSubBroadcasterExt</innerclass>
+    <innerclass refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer" prot="public">sgns::crdt::GraphsyncDAGSyncer</innerclass>
+    <innerclass refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" prot="public">sgns::crdt::HierarchicalKey</innerclass>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="d4/dd0/namespacesgns_1_1crdt_1ae60ef32bf5d6a1d3abdca472b12638c8" prot="public" static="no">
+        <type>crdt::CrdtOptions</type>
+        <definition>using sgns::crdt::CrdtOptions = crdt::CrdtOptions</definition>
+        <argsstring></argsstring>
+        <name>CrdtOptions</name>
+        <qualifiedname>sgns::crdt::CrdtOptions</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.cpp" line="54" column="5" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="54" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d4/dd0/namespacesgns_1_1crdt_1a980bc5b1501b2b1c54c84669b743ff5d" prot="public" static="no">
+        <type>crdt::CrdtDatastore</type>
+        <definition>using sgns::crdt::CrdtDatastore = crdt::CrdtDatastore</definition>
+        <argsstring></argsstring>
+        <name>CrdtDatastore</name>
+        <qualifiedname>sgns::crdt::CrdtDatastore</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.cpp" line="55" column="5" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="55" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d4/dd0/namespacesgns_1_1crdt_1a88a7f87d9192c8f8fc5382b0ab0657a7" prot="public" static="no">
+        <type>crdt::HierarchicalKey</type>
+        <definition>using sgns::crdt::HierarchicalKey = crdt::HierarchicalKey</definition>
+        <argsstring></argsstring>
+        <name>HierarchicalKey</name>
+        <qualifiedname>sgns::crdt::HierarchicalKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.cpp" line="56" column="5" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="56" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d4/dd0/namespacesgns_1_1crdt_1a5e1bebbfe307c830d33c2e033375c24c" prot="public" static="no">
+        <type>crdt::GraphsyncDAGSyncer</type>
+        <definition>using sgns::crdt::GraphsyncDAGSyncer = crdt::GraphsyncDAGSyncer</definition>
+        <argsstring></argsstring>
+        <name>GraphsyncDAGSyncer</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.cpp" line="57" column="5" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="57" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d4/dd0/namespacesgns_1_1crdt_1aec05a40bcfb38d4a19cd489e1c3b1daf" prot="public" static="no">
+        <type>ipfs_lite::ipfs::RocksdbDatastore</type>
+        <definition>using sgns::crdt::RocksdbDatastore = ipfs_lite::ipfs::RocksdbDatastore</definition>
+        <argsstring></argsstring>
+        <name>RocksdbDatastore</name>
+        <qualifiedname>sgns::crdt::RocksdbDatastore</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.cpp" line="58" column="5" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="58" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d4/dd0/namespacesgns_1_1crdt_1ac18b365920169e684f43067a201ae179" prot="public" static="no">
+        <type>ipfs_lite::rocksdb</type>
+        <definition>using sgns::crdt::IpfsRocksDb = ipfs_lite::rocksdb</definition>
+        <argsstring></argsstring>
+        <name>IpfsRocksDb</name>
+        <qualifiedname>sgns::crdt::IpfsRocksDb</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.cpp" line="59" column="5" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="59" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d4/dd0/namespacesgns_1_1crdt_1ae2af92f6e799e652a802d0533e857815" prot="public" static="no">
+        <type>ipfs_pubsub::GossipPubSub</type>
+        <definition>using sgns::crdt::GossipPubSub = ipfs_pubsub::GossipPubSub</definition>
+        <argsstring></argsstring>
+        <name>GossipPubSub</name>
+        <qualifiedname>sgns::crdt::GossipPubSub</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.cpp" line="60" column="5" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="60" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d4/dd0/namespacesgns_1_1crdt_1a24b060a5500bb56b1733442b836f1322" prot="public" static="no">
+        <type>ipfs_lite::ipfs::graphsync::GraphsyncImpl</type>
+        <definition>using sgns::crdt::GraphsyncImpl = ipfs_lite::ipfs::graphsync::GraphsyncImpl</definition>
+        <argsstring></argsstring>
+        <name>GraphsyncImpl</name>
+        <qualifiedname>sgns::crdt::GraphsyncImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.cpp" line="61" column="5" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="61" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d4/dd0/namespacesgns_1_1crdt_1a2df47dd45fa08ff06d2a699aec8d610d" prot="public" static="no">
+        <type>libp2p::crypto::CryptoProviderImpl</type>
+        <definition>using sgns::crdt::CryptoProvider = libp2p::crypto::CryptoProviderImpl</definition>
+        <argsstring></argsstring>
+        <name>CryptoProvider</name>
+        <qualifiedname>sgns::crdt::CryptoProvider</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/keypair_file_storage.cpp" line="20" column="5" bodyfile="src/crdt/globaldb/keypair_file_storage.cpp" bodystart="20" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d4/dd0/namespacesgns_1_1crdt_1a9204c704939b1de2f9206c2a603b82c3" prot="public" static="no">
+        <type>libp2p::crypto::marshaller::KeyMarshallerImpl</type>
+        <definition>using sgns::crdt::KeyMarshaller = libp2p::crypto::marshaller::KeyMarshallerImpl</definition>
+        <argsstring></argsstring>
+        <name>KeyMarshaller</name>
+        <qualifiedname>sgns::crdt::KeyMarshaller</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/keypair_file_storage.cpp" line="22" column="5" bodyfile="src/crdt/globaldb/keypair_file_storage.cpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d4/dd0/namespacesgns_1_1crdt_1ae1b7a7dafdb55ca9bffcc3fe149f8505" prot="public" static="no">
+        <type>libp2p::crypto::validator::KeyValidatorImpl</type>
+        <definition>using sgns::crdt::KeyValidator = libp2p::crypto::validator::KeyValidatorImpl</definition>
+        <argsstring></argsstring>
+        <name>KeyValidator</name>
+        <qualifiedname>sgns::crdt::KeyValidator</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/keypair_file_storage.cpp" line="23" column="5" bodyfile="src/crdt/globaldb/keypair_file_storage.cpp" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d4/dd0/namespacesgns_1_1crdt_1a1d0b898f99317ea071b15b3394eef65a" prot="public" static="no">
+        <type>pb::CRDTBroadcast</type>
+        <definition>using sgns::crdt::CRDTBroadcast = pb::CRDTBroadcast</definition>
+        <argsstring></argsstring>
+        <name>CRDTBroadcast</name>
+        <qualifiedname>sgns::crdt::CRDTBroadcast</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/impl/crdt_datastore.cpp" line="40" column="5" bodyfile="src/crdt/impl/crdt_datastore.cpp" bodystart="40" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/account/GeniusAccount.hpp" line="44" column="5"/>
+  </compounddef>
+</doxygen>

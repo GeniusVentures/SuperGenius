@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/d29/namespacesgns_1_1storage_1_1face" kind="namespace" language="C++">
+    <compoundname>sgns::storage::face</compoundname>
+    <innerclass refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable" prot="public">sgns::storage::face::Batchable</innerclass>
+    <innerclass refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map" prot="public">sgns::storage::face::ReadOnlyMap</innerclass>
+    <innerclass refid="d4/d01/structsgns_1_1storage_1_1face_1_1_generic_map" prot="public">sgns::storage::face::GenericMap</innerclass>
+    <innerclass refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map" prot="public">sgns::storage::face::BatchWriteMap</innerclass>
+    <innerclass refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage" prot="public">sgns::storage::face::GenericStorage</innerclass>
+    <innerclass refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable" prot="public">sgns::storage::face::Iterable</innerclass>
+    <innerclass refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor" prot="public">sgns::storage::face::MapCursor</innerclass>
+    <innerclass refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable" prot="public">sgns::storage::face::Readable</innerclass>
+    <innerclass refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch" prot="public">sgns::storage::face::WriteBatch</innerclass>
+    <innerclass refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable" prot="public">sgns::storage::face::Writeable</innerclass>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/storage/face/batchable.hpp" line="10" column="1"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/d66/namespacesgns_1_1scale_1_1_0d276124144237006304040150244115377133141063326064" kind="namespace" language="C++">
+    <compoundname>sgns::scale::@276124144237006304040150244115377133141063326064</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/scale/scale_encoder_stream.cpp" line="10" column="3"/>
+  </compounddef>
+</doxygen>

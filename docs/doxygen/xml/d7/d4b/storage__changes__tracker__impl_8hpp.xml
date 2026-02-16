@@ -1,0 +1,336 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/d4b/storage__changes__tracker__impl_8hpp" kind="file" language="C++">
+    <compoundname>storage_changes_tracker_impl.hpp</compoundname>
+    <includes local="no">set</includes>
+    <includes local="no">map</includes>
+    <includes refid="db/dd3/extrinsic_8hpp" local="yes">primitives/extrinsic.hpp</includes>
+    <includes refid="d3/d51/changes__tracker_8hpp" local="yes">storage/changes_trie/changes_tracker.hpp</includes>
+    <includes refid="d8/df0/subscriber_8hpp" local="yes">subscription/subscriber.hpp</includes>
+    <includedby refid="d8/d2c/storage__changes__tracker__impl_8cpp" local="yes">src/storage/changes_trie/impl/storage_changes_tracker_impl.cpp</includedby>
+    <incdepgraph>
+      <node id="16">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>primitives/common.hpp</label>
+        <link refid="d4/d26/src_2primitives_2common_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>primitives/extrinsic.hpp</label>
+        <link refid="db/dd3/extrinsic_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>storage/changes_trie/changes_tracker.hpp</label>
+        <link refid="d3/d51/changes__tracker_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>storage/changes_trie/changes_trie_config.hpp</label>
+        <link refid="da/d9b/changes__trie__config_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp</label>
+        <link refid="d7/d4b/storage__changes__tracker__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>subscription/subscriber.hpp</label>
+        <link refid="d8/df0/subscriber_8hpp"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>subscription_engine.hpp</label>
+        <link refid="d1/d9c/subscription__engine_8hpp"/>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>array</label>
+      </node>
+      <node id="8">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="19">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="9">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="17">
+        <label>cstddef</label>
+      </node>
+      <node id="15">
+        <label>cstdint</label>
+      </node>
+      <node id="27">
+        <label>functional</label>
+      </node>
+      <node id="10">
+        <label>gsl/span</label>
+      </node>
+      <node id="21">
+        <label>iostream</label>
+      </node>
+      <node id="12">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="31">
+        <label>list</label>
+      </node>
+      <node id="3">
+        <label>map</label>
+      </node>
+      <node id="28">
+        <label>memory</label>
+      </node>
+      <node id="29">
+        <label>mutex</label>
+      </node>
+      <node id="2">
+        <label>set</label>
+      </node>
+      <node id="32">
+        <label>shared_mutex</label>
+      </node>
+      <node id="25">
+        <label>string</label>
+      </node>
+      <node id="6">
+        <label>string_view</label>
+      </node>
+      <node id="23">
+        <label>type_traits</label>
+      </node>
+      <node id="33">
+        <label>unordered_map</label>
+      </node>
+      <node id="7">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/storage/changes_trie/impl/storage_changes_tracker_impl.cpp</label>
+        <link refid="d8/d2c/storage__changes__tracker__impl_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp</label>
+        <link refid="d7/d4b/storage__changes__tracker__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl" prot="public">sgns::storage::changes_trie::StorageChangesTrackerImpl</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d0/dbf/namespacesgns_1_1storage">sgns::storage</innernamespace>
+    <innernamespace refid="d2/db5/namespacesgns_1_1storage_1_1trie">sgns::storage::trie</innernamespace>
+    <innernamespace refid="df/d66/namespacesgns_1_1api">sgns::api</innernamespace>
+    <innernamespace refid="dd/d55/namespacesgns_1_1storage_1_1changes__trie">sgns::storage::changes_trie</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d7/d4b/storage__changes__tracker__impl_8hpp_1a61679709027595b82e13974052c2b209" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>OUTCOME_HPP_DECLARE_ERROR_2</definition>
+        <argsstring>(sgns::storage::changes_trie, StorageChangesTrackerImpl::Error)</argsstring>
+        <name>OUTCOME_HPP_DECLARE_ERROR_2</name>
+        <param>
+          <type><ref refid="dd/d55/namespacesgns_1_1storage_1_1changes__trie" kindref="compound">sgns::storage::changes_trie</ref></type>
+        </param>
+        <param>
+          <type>StorageChangesTrackerImpl::Error</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" line="84" column="1" declfile="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp" declline="84" declcolumn="1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_STORAGE_CHANGES_TRIE_STORAGE_CHANGES_TRACKER_IMPL</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_STORAGE_CHANGES_TRIE_STORAGE_CHANGES_TRACKER_IMPL</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;set&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;map&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="db/dd3/extrinsic_8hpp" kindref="compound">primitives/extrinsic.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d3/d51/changes__tracker_8hpp" kindref="compound">storage/changes_trie/changes_tracker.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d8/df0/subscriber_8hpp" kindref="compound">subscription/subscriber.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/db5/namespacesgns_1_1storage_1_1trie" kindref="compound">sgns::storage::trie</ref><sp/>{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec" kindref="compound">Codec</ref>;</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory" kindref="compound">SuperGeniusTrieFactory</ref>;</highlight></codeline>
+<codeline lineno="14"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::storage::trie</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d66/namespacesgns_1_1api" kindref="compound">sgns::api</ref><sp/>{</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="db/d02/classsgns_1_1api_1_1_session" kindref="compound">Session</ref>;</highlight></codeline>
+<codeline lineno="18"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="dd/d55/namespacesgns_1_1storage_1_1changes__trie" kindref="compound">sgns::storage::changes_trie</ref><sp/>{</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22" refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a3c374d81894ccd0dde7c18ce3ba58001" kindref="member">StorageChangesTrackerImpl</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker" kindref="compound">ChangesTracker</ref><sp/>{</highlight></codeline>
+<codeline lineno="23" refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a8954a652ca381bc045ba90a9ec0f1d77" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a8954a652ca381bc045ba90a9ec0f1d77" kindref="member">SessionPtr</ref><sp/>=<sp/>std::shared_ptr&lt;api::Session&gt;;</highlight></codeline>
+<codeline lineno="24" refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1aaa38f8096da40a127653bc877bc01402" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1aaa38f8096da40a127653bc877bc01402" kindref="member">SubscriptionEngineType</ref><sp/>=</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine" kindref="compound">subscription::SubscriptionEngine</ref>&lt;<ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref>,</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a8954a652ca381bc045ba90a9ec0f1d77" kindref="member">SessionPtr</ref>,</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref>,</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref>&gt;;</highlight></codeline>
+<codeline lineno="29" refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a8298b3e42140943daee4d5fdcde45f8a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a8298b3e42140943daee4d5fdcde45f8a" kindref="member">SubscriptionEnginePtr</ref><sp/>=<sp/>std::shared_ptr&lt;SubscriptionEngineType&gt;;</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="32" refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a9baa60464fa96ef868ed86e766845d2b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">enum<sp/>class</highlight><highlight class="normal"><sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a9baa60464fa96ef868ed86e766845d2b" kindref="member">Error</ref><sp/>{</highlight></codeline>
+<codeline lineno="33" refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a9baa60464fa96ef868ed86e766845d2ba0c0451be116b9230d6c4372d1d445649" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a9baa60464fa96ef868ed86e766845d2ba0c0451be116b9230d6c4372d1d445649" kindref="member">EXTRINSIC_IDX_GETTER_UNINITIALIZED</ref><sp/>=<sp/>1,</highlight></codeline>
+<codeline lineno="34" refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a9baa60464fa96ef868ed86e766845d2ba291e6fb968bf10991b1ee240c7415556" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a9baa60464fa96ef868ed86e766845d2ba291e6fb968bf10991b1ee240c7415556" kindref="member">INVALID_PARENT_HASH</ref></highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a3c374d81894ccd0dde7c18ce3ba58001" kindref="member">StorageChangesTrackerImpl</ref>(</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;storage::trie::SuperGeniusTrieFactory&gt;<sp/>trie_factory,</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;storage::trie::Codec&gt;<sp/>codec,</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a8298b3e42140943daee4d5fdcde45f8a" kindref="member">SubscriptionEnginePtr</ref><sp/>subscription_engine);</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46" refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a856c404ad7742033cb49793236560b96" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a856c404ad7742033cb49793236560b96" kindref="member">~StorageChangesTrackerImpl</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1adb3760bb75bc34c94025540c04f70d22" kindref="member">setExtrinsicIdxGetter</ref>(<ref refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker_1a506136fb4bfa3050a7a629eb9f970dea" kindref="member">GetExtrinsicIndexDelegate</ref><sp/>f)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a863ba3dfe5b4f557e28626ec34342f18" kindref="member">onBlockChange</ref>(</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref><sp/>new_parent_hash,</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref><sp/>new_parent_number)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"></highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1acc7219974f91ce5d6f8da5c3c8315107" kindref="member">onPut</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;key,</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;value,</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>new_entry)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a233734877217f62ab7342e7f10c65a2e" kindref="member">onRemove</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;key)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"></highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;base::Hash256&gt;<sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1aade9566811938db7a1fbd938ad04e917" kindref="member">constructChangesTrie</ref>(</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref><sp/>&amp;parent,</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="da/d4a/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_config" kindref="compound">ChangesTrieConfig</ref><sp/>&amp;conf)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"></highlight></codeline>
+<codeline lineno="63" refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1ab715b9e347c6f0e6262727df63c408bc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1ab715b9e347c6f0e6262727df63c408bc" kindref="member">GetName</ref>()</highlight><highlight class="keyword"><sp/>override</highlight></codeline>
+<codeline lineno="64"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;StorageChangesTrackerImpl&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"></highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="69" refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a448d31597a2223e9bed6fc205ac7b0e8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;storage::trie::SuperGeniusTrieFactory&gt;<sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a448d31597a2223e9bed6fc205ac7b0e8" kindref="member">trie_factory_</ref>;</highlight></codeline>
+<codeline lineno="70" refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a39467eff1c125352fc844fa027139106" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;storage::trie::Codec&gt;<sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a39467eff1c125352fc844fa027139106" kindref="member">codec_</ref>;</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"></highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/>std::map&lt;base::Buffer,<sp/>std::vector&lt;primitives::ExtrinsicIndex&gt;&gt;</highlight></codeline>
+<codeline lineno="73" refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a5263951b6c90046e30b4905cf6463183" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a5263951b6c90046e30b4905cf6463183" kindref="member">extrinsics_changes_</ref>;</highlight></codeline>
+<codeline lineno="74" refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1aac796d2feda10b42d85b7d49685e358f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::set&lt;base::Buffer&gt;<sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1aac796d2feda10b42d85b7d49685e358f" kindref="member">new_entries_</ref>;<sp/><sp/></highlight><highlight class="comment">//<sp/>entries<sp/>that<sp/>do<sp/>not<sp/>yet<sp/>exist<sp/>in</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>the<sp/>underlying<sp/>storage</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="76" refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1afb2db431c31bd355661b954819a52f8e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref><sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1afb2db431c31bd355661b954819a52f8e" kindref="member">parent_hash_</ref>;</highlight></codeline>
+<codeline lineno="77" refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1aa9f3fa5eda9d39902bee9f71d1569c99" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref><sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1aa9f3fa5eda9d39902bee9f71d1569c99" kindref="member">parent_number_</ref>;</highlight></codeline>
+<codeline lineno="78" refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a47a72f41ffc1628a18247d6d0ff2f823" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker_1a506136fb4bfa3050a7a629eb9f970dea" kindref="member">GetExtrinsicIndexDelegate</ref><sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a47a72f41ffc1628a18247d6d0ff2f823" kindref="member">get_extrinsic_index_</ref>;</highlight></codeline>
+<codeline lineno="79" refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a796ad94fa40f1edbe5ce5aefd338c21e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a8298b3e42140943daee4d5fdcde45f8a" kindref="member">SubscriptionEnginePtr</ref><sp/><ref refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1a796ad94fa40f1edbe5ce5aefd338c21e" kindref="member">subscription_engine_</ref>;</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"></highlight></codeline>
+<codeline lineno="82"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::storage::changes_trie</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="83"><highlight class="normal"></highlight></codeline>
+<codeline lineno="84" refid="d7/d4b/storage__changes__tracker__impl_8hpp_1a61679709027595b82e13974052c2b209" refkind="member"><highlight class="normal"><ref refid="d7/d4b/storage__changes__tracker__impl_8hpp_1a61679709027595b82e13974052c2b209" kindref="member">OUTCOME_HPP_DECLARE_ERROR_2</ref>(<ref refid="dd/d55/namespacesgns_1_1storage_1_1changes__trie" kindref="compound">sgns::storage::changes_trie</ref>,</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>StorageChangesTrackerImpl::Error);</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"></highlight></codeline>
+<codeline lineno="87"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_STORAGE_CHANGES_TRIE_STORAGE_CHANGES_TRACKER_IMPL</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp"/>
+  </compounddef>
+</doxygen>

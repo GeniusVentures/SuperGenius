@@ -1,0 +1,368 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/d19/_genius_assigner_8hpp" kind="file" language="C++">
+    <compoundname>GeniusAssigner.hpp</compoundname>
+    <includes local="no">cstdint</includes>
+    <includes local="no">cstdio</includes>
+    <includes local="no">nil/marshalling/status_type.hpp</includes>
+    <includes local="no">nil/marshalling/field_type.hpp</includes>
+    <includes local="no">nil/marshalling/endianness.hpp</includes>
+    <includes local="no">nil/crypto3/zk/snark/arithmetization/plonk/params.hpp</includes>
+    <includes local="no">nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp</includes>
+    <includes local="no">nil/crypto3/marshalling/zk/types/plonk/constraint_system.hpp</includes>
+    <includes local="no">nil/crypto3/marshalling/zk/types/plonk/assignment_table.hpp</includes>
+    <includes local="no">nil/crypto3/algebra/curves/pallas.hpp</includes>
+    <includes local="no">nil/crypto3/algebra/fields/arithmetic_params/pallas.hpp</includes>
+    <includes local="no">nil/crypto3/algebra/curves/bls12.hpp</includes>
+    <includes local="no">nil/blueprint/assigner.hpp</includes>
+    <includes local="no">nil/blueprint/utils/satisfiability_check.hpp</includes>
+    <includes local="no">boost/log/trivial.hpp</includes>
+    <includes refid="d5/dda/outcome_8hpp" local="yes">outcome/outcome.hpp</includes>
+    <includedby refid="d7/da6/_genius_assigner_8cpp" local="yes">src/proof/GeniusAssigner.cpp</includedby>
+    <includedby refid="d9/d35/_genius_prover_8hpp" local="yes">src/proof/GeniusProver.hpp</includedby>
+    <includedby refid="dc/d19/_i_basic_proof_8cpp" local="yes">src/proof/IBasicProof.cpp</includedby>
+    <incdepgraph>
+      <node id="17">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/proof/GeniusAssigner.hpp</label>
+        <link refid="d1/d19/_genius_assigner_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>boost/log/trivial.hpp</label>
+      </node>
+      <node id="2">
+        <label>cstdint</label>
+      </node>
+      <node id="3">
+        <label>cstdio</label>
+      </node>
+      <node id="18">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="14">
+        <label>nil/blueprint/assigner.hpp</label>
+      </node>
+      <node id="15">
+        <label>nil/blueprint/utils/satisfiability_check.hpp</label>
+      </node>
+      <node id="13">
+        <label>nil/crypto3/algebra/curves/bls12.hpp</label>
+      </node>
+      <node id="11">
+        <label>nil/crypto3/algebra/curves/pallas.hpp</label>
+      </node>
+      <node id="12">
+        <label>nil/crypto3/algebra/fields/arithmetic_params/pallas.hpp</label>
+      </node>
+      <node id="10">
+        <label>nil/crypto3/marshalling/zk/types/plonk/assignment_table.hpp</label>
+      </node>
+      <node id="9">
+        <label>nil/crypto3/marshalling/zk/types/plonk/constraint_system.hpp</label>
+      </node>
+      <node id="8">
+        <label>nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp</label>
+      </node>
+      <node id="7">
+        <label>nil/crypto3/zk/snark/arithmetization/plonk/params.hpp</label>
+      </node>
+      <node id="6">
+        <label>nil/marshalling/endianness.hpp</label>
+      </node>
+      <node id="5">
+        <label>nil/marshalling/field_type.hpp</label>
+      </node>
+      <node id="4">
+        <label>nil/marshalling/status_type.hpp</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/proof/GeniusAssigner.cpp</label>
+        <link refid="d7/da6/_genius_assigner_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/proof/GeniusAssigner.hpp</label>
+        <link refid="d1/d19/_genius_assigner_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>src/proof/GeniusProver.cpp</label>
+        <link refid="dc/dfd/_genius_prover_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/proof/GeniusProver.hpp</label>
+        <link refid="d9/d35/_genius_prover_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>src/proof/IBasicProof.cpp</label>
+        <link refid="dc/d19/_i_basic_proof_8cpp"/>
+      </node>
+      <node id="7">
+        <label>src/proof/RecursiveTransferProof.cpp</label>
+        <link refid="df/db6/_recursive_transfer_proof_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/proof/RecursiveTransferProof.hpp</label>
+        <link refid="d7/d6d/_recursive_transfer_proof_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d6/d8b/classsgns_1_1_genius_assigner" prot="public">sgns::GeniusAssigner</innerclass>
+    <innerclass refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output" prot="public">sgns::GeniusAssigner::AssignerOutput</innerclass>
+    <innerclass refid="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors" prot="private">sgns::GeniusAssigner::TableVectors</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d9/d2d/namespacenil">nil</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d1/d19/_genius_assigner_8hpp_1ac3d9517df89cf8149faac3c93a827ce0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>OUTCOME_HPP_DECLARE_ERROR_2</definition>
+        <argsstring>(sgns, GeniusAssigner::AssignerError)</argsstring>
+        <name>OUTCOME_HPP_DECLARE_ERROR_2</name>
+        <param>
+          <type><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></type>
+        </param>
+        <param>
+          <type>GeniusAssigner::AssignerError</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="171" column="1" declfile="src/proof/GeniusAssigner.hpp" declline="171" declcolumn="1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Header file of the assigner from bytecode to circuit. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="date"><para>2024-09-09 </para>
+</simplesect>
+<simplesect kind="author"><para>Henrique A. Klein (<ulink url="mailto:hklein@gnus.ai">hklein@gnus.ai</ulink>) </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>_GENIUS_ASSIGNER_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>_GENIUS_ASSIGNER_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstdint&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstdio&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;nil/marshalling/status_type.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;nil/marshalling/field_type.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;nil/marshalling/endianness.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;nil/crypto3/zk/snark/arithmetization/plonk/params.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;nil/crypto3/marshalling/zk/types/plonk/constraint_system.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;nil/crypto3/marshalling/zk/types/plonk/assignment_table.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;nil/crypto3/algebra/curves/pallas.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;nil/crypto3/algebra/fields/arithmetic_params/pallas.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;nil/crypto3/algebra/curves/bls12.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;nil/blueprint/assigner.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;nil/blueprint/utils/satisfiability_check.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/log/trivial.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/dda/outcome_8hpp" kindref="compound">outcome/outcome.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">nil;</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="32"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="33" refid="d6/d8b/classsgns_1_1_genius_assigner" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a9e3a852b9d6aada7ccebecb3c5a9f56d" kindref="member">GeniusAssigner</ref></highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="35" refid="d6/d8b/classsgns_1_1_genius_assigner_1a2d2769c400cea111cdac310aaca4f9a6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a2d2769c400cea111cdac310aaca4f9a6" kindref="member">BlueprintFieldType</ref><sp/><sp/><sp/>=<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>crypto3::algebra::curves::pallas::base_field_type;</highlight></codeline>
+<codeline lineno="36" refid="d6/d8b/classsgns_1_1_genius_assigner_1ae76b73acb13fb990fa666f45205a72ce" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ae76b73acb13fb990fa666f45205a72ce" kindref="member">AssignerEndianess</ref><sp/><sp/><sp/><sp/>=<sp/>nil::marshalling::option::big_endian;</highlight></codeline>
+<codeline lineno="37" refid="d6/d8b/classsgns_1_1_genius_assigner_1a7fad0f9c3f25451bfb42471f02400373" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a7fad0f9c3f25451bfb42471f02400373" kindref="member">ArithmetizationType</ref><sp/><sp/>=<sp/>crypto3::zk::snark::plonk_constraint_system&lt;BlueprintFieldType&gt;;</highlight></codeline>
+<codeline lineno="38" refid="d6/d8b/classsgns_1_1_genius_assigner_1a4d6ca29808798b4bd89572ae258864f8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a4d6ca29808798b4bd89572ae258864f8" kindref="member">ConstraintSystemType</ref><sp/>=<sp/>crypto3::zk::snark::plonk_constraint_system&lt;BlueprintFieldType&gt;;</highlight></codeline>
+<codeline lineno="39" refid="d6/d8b/classsgns_1_1_genius_assigner_1a8a018dbbea894ec4191ad1fc855dbbfb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a8a018dbbea894ec4191ad1fc855dbbfb" kindref="member">AssignmentTableType</ref><sp/><sp/>=<sp/>nil::blueprint::assignment_proxy&lt;ArithmetizationType&gt;;</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="42" refid="d6/d8b/classsgns_1_1_genius_assigner_1a3da104ae5fb3329634ea33db73300d88" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a3da104ae5fb3329634ea33db73300d88" kindref="member">TableDescriptionType</ref><sp/>=<sp/>crypto3::zk::snark::plonk_table_description&lt;BlueprintFieldType&gt;;</highlight></codeline>
+<codeline lineno="43" refid="d6/d8b/classsgns_1_1_genius_assigner_1a636b6edfc3948db5355f97c042edac23" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a636b6edfc3948db5355f97c042edac23" kindref="member">PlonkConstraintSystemType</ref><sp/>=</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>crypto3::marshalling::types::plonk_constraint_system&lt;nil::marshalling::field_type&lt;AssignerEndianess&gt;,</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a4d6ca29808798b4bd89572ae258864f8" kindref="member">ConstraintSystemType</ref>&gt;;</highlight></codeline>
+<codeline lineno="46" refid="d6/d8b/classsgns_1_1_genius_assigner_1afa467b5b38c772695d1365d4ac6601b6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1afa467b5b38c772695d1365d4ac6601b6" kindref="member">PlonkAssignTableType</ref><sp/>=</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>crypto3::marshalling::types::plonk_assignment_table&lt;nil::marshalling::field_type&lt;AssignerEndianess&gt;,</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a8a018dbbea894ec4191ad1fc855dbbfb" kindref="member">AssignmentTableType</ref>&gt;;</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight></codeline>
+<codeline lineno="50" refid="d6/d8b/classsgns_1_1_genius_assigner_1a9e3a852b9d6aada7ccebecb3c5a9f56d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a9e3a852b9d6aada7ccebecb3c5a9f56d" kindref="member">GeniusAssigner</ref>()<sp/>:</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a3e69f85356a6838840e2188c211b47cf" kindref="member">gen_mode_</ref>(<sp/>nil::blueprint::generation_mode::assignments()<sp/>|<sp/>nil::blueprint::generation_mode::circuit()<sp/>),</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1adfe213075b1eae9a471a9f4ec3608b2f" kindref="member">assigner_instance_</ref>(<sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ab99b65dcd3104420afbc36e7e9fcd8a0" kindref="member">GetPlonkTableDescription</ref>(),</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a5e9cfa23c0624a20843ea476988bf64a" kindref="member">STACK_SIZE</ref>,</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a5e961a8c954f82c3eeeafe9918e6a259" kindref="member">LOG_LEVEL</ref>,</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a69d889458e00ecca8b452ba8ebc22da5" kindref="member">MAX_NUM_PROVERS</ref>,</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a5367bb2d56626ac245d26743b026c2cf" kindref="member">TARGET_PROVER</ref>,</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a3e69f85356a6838840e2188c211b47cf" kindref="member">gen_mode_</ref>,</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::string(<sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a2989bc4d4b1f7b0e41b771a77d2e72e4" kindref="member">POLICY</ref><sp/>),</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>nil::blueprint::print_format::no_print,</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::string(<sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1abe671554372448e293b134a01d0e1d7e" kindref="member">CHECK_VALIDITY</ref><sp/>)<sp/>==<sp/></highlight><highlight class="stringliteral">&quot;check&quot;</highlight><highlight class="normal"><sp/>)</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"></highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"></highlight></codeline>
+<codeline lineno="65" refid="d6/d8b/classsgns_1_1_genius_assigner_1a34acd052ee548e655d6b36b8e8b7a7fb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a34acd052ee548e655d6b36b8e8b7a7fb" kindref="member">~GeniusAssigner</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"></highlight></codeline>
+<codeline lineno="67" refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">enum<sp/>class</highlight><highlight class="normal"><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70" kindref="member">AssignerError</ref></highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="69" refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70a18fcf6528f69a110eda90d31fe2e38d3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70a18fcf6528f69a110eda90d31fe2e38d3" kindref="member">EMPTY_BYTECODE</ref><sp/>=<sp/>0,</highlight></codeline>
+<codeline lineno="70" refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70a53e5639adb257d60be9e68e806fd4952" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70a53e5639adb257d60be9e68e806fd4952" kindref="member">BYTECODE_MISMATCH</ref>,</highlight></codeline>
+<codeline lineno="71" refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70af8fd338f08e48d5ab6d0391b8152074f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70af8fd338f08e48d5ab6d0391b8152074f" kindref="member">HAS_SIZE_ESTIMATION</ref>,</highlight></codeline>
+<codeline lineno="72" refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70aaadee091fd7f2fe9185ac0ee19fd8c50" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70aaadee091fd7f2fe9185ac0ee19fd8c50" kindref="member">TABLE_PATH_ERROR</ref>,</highlight></codeline>
+<codeline lineno="73" refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70aeb9e1ed11a9380417d6e723449ea591a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70aeb9e1ed11a9380417d6e723449ea591a" kindref="member">CIRCUIT_PATH_ERROR</ref>,</highlight></codeline>
+<codeline lineno="74" refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70a4c32967bd614979f6b9dd89740b80a17" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70a4c32967bd614979f6b9dd89740b80a17" kindref="member">SELECTOR_COLUMNS_INVALID</ref>,</highlight></codeline>
+<codeline lineno="75" refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70aa617ea9ba11835ec9f94a663068fad00" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70aa617ea9ba11835ec9f94a663068fad00" kindref="member">WRONG_TARGET_PROVER</ref>,</highlight></codeline>
+<codeline lineno="76" refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70ade69fdc2e265df843195609181256b08" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70ade69fdc2e265df843195609181256b08" kindref="member">UNSATISFIED_CIRCUIT</ref>,</highlight></codeline>
+<codeline lineno="77" refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70ad5ad426ec8e91a632fe9de696d4b1bcd" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70ad5ad426ec8e91a632fe9de696d4b1bcd" kindref="member">TABLE_CIRCUIT_NUM_MISMATCH</ref>,</highlight></codeline>
+<codeline lineno="78" refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70ae1a4e442c3c47df8d6daaebbbf82afaa" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ac769d8cf55deff6f5016094d96376d70ae1a4e442c3c47df8d6daaebbbf82afaa" kindref="member">CIRCUIT_NOT_FOUND</ref>,</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"></highlight></codeline>
+<codeline lineno="81" refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output_1a41f9dc72c3eed6dfc066d87def15d3a5" kindref="member">AssignerOutput</ref></highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="83" refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output_1a41f9dc72c3eed6dfc066d87def15d3a5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">explicit</highlight><highlight class="normal"><sp/><ref refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output_1a41f9dc72c3eed6dfc066d87def15d3a5" kindref="member">AssignerOutput</ref>(<sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a636b6edfc3948db5355f97c042edac23" kindref="member">PlonkConstraintSystemType</ref><sp/>new_constrains,<sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1afa467b5b38c772695d1365d4ac6601b6" kindref="member">PlonkAssignTableType</ref><sp/>new_table<sp/>)<sp/>:</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output_1a69fb98088d17ae4436d7796004305654" kindref="member">constrains</ref>(<sp/><ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(<sp/>new_constrains<sp/>)<sp/>),<sp/><ref refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output_1a176e9b5080fa4bbae9c3e7e7751fa263" kindref="member">table</ref>(<sp/><ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(<sp/>new_table<sp/>)<sp/>)</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"></highlight></codeline>
+<codeline lineno="88" refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output_1a69fb98088d17ae4436d7796004305654" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a636b6edfc3948db5355f97c042edac23" kindref="member">PlonkConstraintSystemType</ref><sp/><ref refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output_1a69fb98088d17ae4436d7796004305654" kindref="member">constrains</ref>;</highlight></codeline>
+<codeline lineno="89" refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output_1a176e9b5080fa4bbae9c3e7e7751fa263" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1afa467b5b38c772695d1365d4ac6601b6" kindref="member">PlonkAssignTableType</ref><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output_1a176e9b5080fa4bbae9c3e7e7751fa263" kindref="member">table</ref>;</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"></highlight></codeline>
+<codeline lineno="92" refid="d6/d8b/classsgns_1_1_genius_assigner_1ab99b65dcd3104420afbc36e7e9fcd8a0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a3da104ae5fb3329634ea33db73300d88" kindref="member">TableDescriptionType</ref><sp/>&amp;<ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ab99b65dcd3104420afbc36e7e9fcd8a0" kindref="member">GetPlonkTableDescription</ref>()</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a3da104ae5fb3329634ea33db73300d88" kindref="member">TableDescriptionType</ref><sp/>desc(<sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1abb563c75628d0af441f5ad69dba9ae67" kindref="member">WITNESS_COLUMNS</ref>,</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ad7b98cb670cb85bd0835f53678f26014" kindref="member">PUBLIC_INPUT_COLUMNS</ref>,</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a1ba4f084efbdecf0742f48be8478957e" kindref="member">COMPONENT_CONSTANT_COLUMNS</ref><sp/>+<sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a36267752b11ed84438bebc6e1552fa90" kindref="member">LOOKUP_CONSTANT_COLUMNS</ref>,</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1af62e803e646ecbacecfc07853706478a" kindref="member">COMPONENT_SELECTOR_COLUMNS</ref><sp/>+<sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a20c97d3238cbb5a7b7cf49eb7eaea7cb" kindref="member">LOOKUP_SELECTOR_COLUMNS</ref><sp/>);</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"></highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>desc;</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"></highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;std::vector&lt;AssignerOutput&gt;&gt;<sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ad373c58f0c6b02dc6985e691097e9d61" kindref="member">GenerateCircuitAndTable</ref>(</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::json::array<sp/>&amp;public_inputs_json,</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::json::array<sp/>&amp;private_inputs_json,</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;bytecode_file_payload<sp/>);</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;std::vector&lt;AssignerOutput&gt;&gt;<sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ad373c58f0c6b02dc6985e691097e9d61" kindref="member">GenerateCircuitAndTable</ref>(</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;int&gt;<sp/>&amp;public_inputs,</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;int&gt;<sp/>&amp;private_inputs,</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/>&amp;bytecode_file_payload<sp/>);</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a3ce1cb0f5b09f174d201e8e1594aecc2" kindref="member">PrintCircuitAndTable</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;AssignerOutput&gt;<sp/>&amp;public_inputs,</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;table_path,</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;circuit_path<sp/>);</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"></highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//TODO<sp/>-<sp/>Check<sp/>if<sp/>better<sp/>on<sp/>cmakelists,<sp/>since<sp/>the<sp/>zkllvm<sp/>executable<sp/>does<sp/>it<sp/>like<sp/>this<sp/>for<sp/>plonk_table_description<sp/>variables</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="116" refid="d6/d8b/classsgns_1_1_genius_assigner_1abb563c75628d0af441f5ad69dba9ae67" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::size_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1abb563c75628d0af441f5ad69dba9ae67" kindref="member">WITNESS_COLUMNS</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>15;</highlight></codeline>
+<codeline lineno="117" refid="d6/d8b/classsgns_1_1_genius_assigner_1ad7b98cb670cb85bd0835f53678f26014" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::size_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ad7b98cb670cb85bd0835f53678f26014" kindref="member">PUBLIC_INPUT_COLUMNS</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>1;</highlight></codeline>
+<codeline lineno="118" refid="d6/d8b/classsgns_1_1_genius_assigner_1a1ba4f084efbdecf0742f48be8478957e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::size_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a1ba4f084efbdecf0742f48be8478957e" kindref="member">COMPONENT_CONSTANT_COLUMNS</ref><sp/>=<sp/>5;</highlight></codeline>
+<codeline lineno="119" refid="d6/d8b/classsgns_1_1_genius_assigner_1a36267752b11ed84438bebc6e1552fa90" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::size_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a36267752b11ed84438bebc6e1552fa90" kindref="member">LOOKUP_CONSTANT_COLUMNS</ref><sp/><sp/><sp/><sp/>=<sp/>30;</highlight></codeline>
+<codeline lineno="120" refid="d6/d8b/classsgns_1_1_genius_assigner_1af62e803e646ecbacecfc07853706478a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::size_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1af62e803e646ecbacecfc07853706478a" kindref="member">COMPONENT_SELECTOR_COLUMNS</ref><sp/>=<sp/>50;</highlight></codeline>
+<codeline lineno="121" refid="d6/d8b/classsgns_1_1_genius_assigner_1a20c97d3238cbb5a7b7cf49eb7eaea7cb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::size_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a20c97d3238cbb5a7b7cf49eb7eaea7cb" kindref="member">LOOKUP_SELECTOR_COLUMNS</ref><sp/><sp/><sp/><sp/>=<sp/>6;</highlight></codeline>
+<codeline lineno="122" refid="d6/d8b/classsgns_1_1_genius_assigner_1a5e9cfa23c0624a20843ea476988bf64a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">long</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a5e9cfa23c0624a20843ea476988bf64a" kindref="member">STACK_SIZE</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>4000000;</highlight></codeline>
+<codeline lineno="123" refid="d6/d8b/classsgns_1_1_genius_assigner_1a5e961a8c954f82c3eeeafe9918e6a259" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::log::trivial::severity_level<sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a5e961a8c954f82c3eeeafe9918e6a259" kindref="member">LOG_LEVEL</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>boost::log::trivial::info;</highlight></codeline>
+<codeline lineno="124" refid="d6/d8b/classsgns_1_1_genius_assigner_1a69d889458e00ecca8b452ba8ebc22da5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::uint32_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a69d889458e00ecca8b452ba8ebc22da5" kindref="member">MAX_NUM_PROVERS</ref><sp/>=<sp/>1;</highlight></codeline>
+<codeline lineno="125" refid="d6/d8b/classsgns_1_1_genius_assigner_1a5367bb2d56626ac245d26743b026c2cf" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::uint32_t<sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a5367bb2d56626ac245d26743b026c2cf" kindref="member">TARGET_PROVER</ref><sp/><sp/>=<sp/>std::numeric_limits&lt;std::uint32_t&gt;::max();</highlight></codeline>
+<codeline lineno="126" refid="d6/d8b/classsgns_1_1_genius_assigner_1a2989bc4d4b1f7b0e41b771a77d2e72e4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string_view<sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a2989bc4d4b1f7b0e41b771a77d2e72e4" kindref="member">POLICY</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;default&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="127" refid="d6/d8b/classsgns_1_1_genius_assigner_1abe671554372448e293b134a01d0e1d7e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string_view<sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1abe671554372448e293b134a01d0e1d7e" kindref="member">CHECK_VALIDITY</ref><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"></highlight></codeline>
+<codeline lineno="129" refid="d6/d8b/classsgns_1_1_genius_assigner_1a3e69f85356a6838840e2188c211b47cf" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>nil::blueprint::generation_mode<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a3e69f85356a6838840e2188c211b47cf" kindref="member">gen_mode_</ref>;</highlight></codeline>
+<codeline lineno="130" refid="d6/d8b/classsgns_1_1_genius_assigner_1adfe213075b1eae9a471a9f4ec3608b2f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>nil::blueprint::assigner&lt;BlueprintFieldType&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1adfe213075b1eae9a471a9f4ec3608b2f" kindref="member">assigner_instance_</ref>;</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"></highlight></codeline>
+<codeline lineno="132" refid="d6/d8b/classsgns_1_1_genius_assigner_1a2c5149d4abb14c8c192956f2bda72791" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">enum<sp/>class</highlight><highlight class="normal"><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a2c5149d4abb14c8c192956f2bda72791" kindref="member">PrintTableKind</ref></highlight></codeline>
+<codeline lineno="133"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="134" refid="d6/d8b/classsgns_1_1_genius_assigner_1a2c5149d4abb14c8c192956f2bda72791a40ad8d6d515524aedf6b929c360e9a09" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a2c5149d4abb14c8c192956f2bda72791a40ad8d6d515524aedf6b929c360e9a09" kindref="member">SINGLE_PROVER</ref><sp/>=<sp/>0,</highlight></codeline>
+<codeline lineno="135" refid="d6/d8b/classsgns_1_1_genius_assigner_1a2c5149d4abb14c8c192956f2bda72791a6184694980d7d96c00d3767deefbf3bf" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a2c5149d4abb14c8c192956f2bda72791a6184694980d7d96c00d3767deefbf3bf" kindref="member">MULTI_PROVER</ref><sp/><sp/>=<sp/>1,</highlight></codeline>
+<codeline lineno="136"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="137"><highlight class="normal"></highlight></codeline>
+<codeline lineno="138" refid="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors" kindref="compound">TableVectors</ref></highlight></codeline>
+<codeline lineno="139"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="140" refid="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors_1ac643b08711af9f8391f76d2f5b055c9c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;typename<sp/>AssignmentTableType::field_type::value_type&gt;<sp/><ref refid="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors_1ac643b08711af9f8391f76d2f5b055c9c" kindref="member">witness_values</ref>;</highlight></codeline>
+<codeline lineno="141" refid="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors_1ada6f06bfb29cb123de93331ff692c831" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;typename<sp/>AssignmentTableType::field_type::value_type&gt;<sp/><ref refid="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors_1ada6f06bfb29cb123de93331ff692c831" kindref="member">public_input_values</ref>;</highlight></codeline>
+<codeline lineno="142" refid="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors_1a1b65be98c6ecc0c95c9d9287ab95cdf7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;typename<sp/>AssignmentTableType::field_type::value_type&gt;<sp/><ref refid="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors_1a1b65be98c6ecc0c95c9d9287ab95cdf7" kindref="member">constant_values</ref>;</highlight></codeline>
+<codeline lineno="143" refid="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors_1a1cdf509c6fb99766442241df4dc5bf49" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;typename<sp/>AssignmentTableType::field_type::value_type&gt;<sp/><ref refid="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors_1a1cdf509c6fb99766442241df4dc5bf49" kindref="member">selector_values</ref>;</highlight></codeline>
+<codeline lineno="144"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="145"><highlight class="normal"></highlight></codeline>
+<codeline lineno="146"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1afa467b5b38c772695d1365d4ac6601b6" kindref="member">PlonkAssignTableType</ref><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1abfe678cb40707129a322dbb726b448e1" kindref="member">BuildPlonkAssignmentTable</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a8a018dbbea894ec4191ad1fc855dbbfb" kindref="member">AssignmentTableType</ref><sp/>&amp;table_proxy,</highlight></codeline>
+<codeline lineno="147"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a2c5149d4abb14c8c192956f2bda72791" kindref="member">PrintTableKind</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>print_kind,</highlight></codeline>
+<codeline lineno="148"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::uint32_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ComponentConstantColumns,</highlight></codeline>
+<codeline lineno="149"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::uint32_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ComponentSelectorColumns<sp/>);</highlight></codeline>
+<codeline lineno="150"><highlight class="normal"></highlight></codeline>
+<codeline lineno="151"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::uint32_t<sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a1ac967c76f93bd44f874d9105d0246ee" kindref="member">GetUsableRowsAmount</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a8a018dbbea894ec4191ad1fc855dbbfb" kindref="member">AssignmentTableType</ref><sp/>&amp;table_proxy,<sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a2c5149d4abb14c8c192956f2bda72791" kindref="member">PrintTableKind</ref><sp/>print_kind<sp/>);</highlight></codeline>
+<codeline lineno="152"><highlight class="normal"></highlight></codeline>
+<codeline lineno="153"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/dea/structsgns_1_1_genius_assigner_1_1_table_vectors" kindref="compound">TableVectors</ref><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a753258860e00923eddfe75f99a443d83" kindref="member">GetTableVectors</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a8a018dbbea894ec4191ad1fc855dbbfb" kindref="member">AssignmentTableType</ref><sp/>&amp;table_proxy,</highlight></codeline>
+<codeline lineno="154"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a2c5149d4abb14c8c192956f2bda72791" kindref="member">PrintTableKind</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>print_kind,</highlight></codeline>
+<codeline lineno="155"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::uint32_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ComponentConstantColumns,</highlight></codeline>
+<codeline lineno="156"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::uint32_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ComponentSelectorColumns,</highlight></codeline>
+<codeline lineno="157"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::uint32_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>padded_rows_amount<sp/>);</highlight></codeline>
+<codeline lineno="158"><highlight class="normal"></highlight></codeline>
+<codeline lineno="159"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a636b6edfc3948db5355f97c042edac23" kindref="member">PlonkConstraintSystemType</ref><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1ad405133fab7ded05674abc5506673937" kindref="member">BuildPlonkConstraintSystem</ref>(</highlight></codeline>
+<codeline lineno="160"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>nil::blueprint::circuit_proxy&lt;ArithmetizationType&gt;<sp/>&amp;circuit_proxy,</highlight></codeline>
+<codeline lineno="161"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a8a018dbbea894ec4191ad1fc855dbbfb" kindref="member">AssignmentTableType</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;table_proxy,</highlight></codeline>
+<codeline lineno="162"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>rename_required<sp/>);</highlight></codeline>
+<codeline lineno="163"><highlight class="normal"></highlight></codeline>
+<codeline lineno="164"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>ValueType,<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>ContainerType&gt;</highlight></codeline>
+<codeline lineno="165"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a9bbd217b74b23a19b962597eabc1bfab" kindref="member">FillVectorValue</ref>(<sp/>std::vector&lt;ValueType&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;table_values,</highlight></codeline>
+<codeline lineno="166"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>ContainerType<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;table_col,</highlight></codeline>
+<codeline lineno="167"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>std::vector&lt;ValueType&gt;::iterator<sp/>start<sp/>);</highlight></codeline>
+<codeline lineno="168"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="169"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="170"><highlight class="normal"></highlight></codeline>
+<codeline lineno="171" refid="d1/d19/_genius_assigner_8hpp_1ac3d9517df89cf8149faac3c93a827ce0" refkind="member"><highlight class="normal"><ref refid="d1/d19/_genius_assigner_8hpp_1ac3d9517df89cf8149faac3c93a827ce0" kindref="member">OUTCOME_HPP_DECLARE_ERROR_2</ref>(<sp/><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref>,<sp/>GeniusAssigner::AssignerError<sp/>);</highlight></codeline>
+<codeline lineno="172"><highlight class="normal"></highlight></codeline>
+<codeline lineno="173"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/proof/GeniusAssigner.hpp"/>
+  </compounddef>
+</doxygen>

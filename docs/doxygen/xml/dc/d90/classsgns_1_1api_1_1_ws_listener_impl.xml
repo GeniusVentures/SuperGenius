@@ -1,0 +1,476 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/d90/classsgns_1_1api_1_1_ws_listener_impl" kind="class" language="C++" prot="public">
+    <compoundname>sgns::api::WsListenerImpl</compoundname>
+    <basecompoundref refid="d6/d3f/classsgns_1_1api_1_1_listener" prot="public" virt="non-virtual">sgns::api::Listener</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">std::enable_shared_from_this&lt; WsListenerImpl &gt;</basecompoundref>
+    <includes refid="dc/d23/ws__listener__impl_8hpp" local="no">ws_listener_impl.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1add7302064a96b4b3c38b82bb59f7dcda" prot="public" static="no">
+        <type><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session" kindref="compound">WsSession</ref></type>
+        <definition>using sgns::api::WsListenerImpl::SessionImpl = WsSession</definition>
+        <argsstring></argsstring>
+        <name>SessionImpl</name>
+        <qualifiedname>sgns::api::WsListenerImpl::SessionImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_listener_impl.hpp" line="19" column="5" bodyfile="src/api/transport/impl/ws/ws_listener_impl.hpp" bodystart="19" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a8d1ad185c41a25e9910841eabe9dbbed" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d6/d3f/classsgns_1_1api_1_1_listener_1a392bda7a9c584023241233eaebabb4db" kindref="member">Context</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Context&gt; sgns::api::WsListenerImpl::context_</definition>
+        <argsstring></argsstring>
+        <name>context_</name>
+        <qualifiedname>sgns::api::WsListenerImpl::context_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_listener_impl.hpp" line="48" column="21" bodyfile="src/api/transport/impl/ws/ws_listener_impl.hpp" bodystart="48" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a3e9a55dbc72d06a2877d8efa335e3d71" prot="private" static="no" mutable="no">
+        <type>const <ref refid="d5/d93/structsgns_1_1api_1_1_listener_1_1_configuration" kindref="compound">Configuration</ref></type>
+        <definition>const Configuration sgns::api::WsListenerImpl::config_</definition>
+        <argsstring></argsstring>
+        <name>config_</name>
+        <qualifiedname>sgns::api::WsListenerImpl::config_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_listener_impl.hpp" line="49" column="25" bodyfile="src/api/transport/impl/ws/ws_listener_impl.hpp" bodystart="49" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a7299fc845f011e1ac6d374697cc8af3f" prot="private" static="no" mutable="no">
+        <type>const <ref refid="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration" kindref="compound">SessionImpl::Configuration</ref></type>
+        <definition>const SessionImpl::Configuration sgns::api::WsListenerImpl::session_config_</definition>
+        <argsstring></argsstring>
+        <name>session_config_</name>
+        <qualifiedname>sgns::api::WsListenerImpl::session_config_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_listener_impl.hpp" line="50" column="38" bodyfile="src/api/transport/impl/ws/ws_listener_impl.hpp" bodystart="50" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a155c4e4896decebc692a17a695865d85" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; <ref refid="d6/d3f/classsgns_1_1api_1_1_listener_1afe8587bdb42a214eb13ca6a0c4f7cb66" kindref="member">Acceptor</ref> &gt;</type>
+        <definition>std::unique_ptr&lt;Acceptor&gt; sgns::api::WsListenerImpl::acceptor_</definition>
+        <argsstring></argsstring>
+        <name>acceptor_</name>
+        <qualifiedname>sgns::api::WsListenerImpl::acceptor_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_listener_impl.hpp" line="52" column="21" bodyfile="src/api/transport/impl/ws/ws_listener_impl.hpp" bodystart="52" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a75a8921992ef0ce7afc32894e1db0be3" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; <ref refid="d6/d3f/classsgns_1_1api_1_1_listener_1a46eee029b2ad2b539a0a22182adf9370" kindref="member">NewSessionHandler</ref> &gt;</type>
+        <definition>std::unique_ptr&lt;NewSessionHandler&gt; sgns::api::WsListenerImpl::on_new_session_</definition>
+        <argsstring></argsstring>
+        <name>on_new_session_</name>
+        <qualifiedname>sgns::api::WsListenerImpl::on_new_session_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_listener_impl.hpp" line="53" column="21" bodyfile="src/api/transport/impl/ws/ws_listener_impl.hpp" bodystart="53" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1abde4e93fa3d1199eb20ea5e04a76e78e" prot="private" static="no" mutable="no">
+        <type>std::atomic&lt; <ref refid="db/d02/classsgns_1_1api_1_1_session_1aa68e294d772e90f0c69e8b8cd1d79d64" kindref="member">Session::SessionId</ref> &gt;</type>
+        <definition>std::atomic&lt;Session::SessionId&gt; sgns::api::WsListenerImpl::next_session_id_</definition>
+        <argsstring></argsstring>
+        <name>next_session_id_</name>
+        <qualifiedname>sgns::api::WsListenerImpl::next_session_id_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_listener_impl.hpp" line="55" column="17" bodyfile="src/api/transport/impl/ws/ws_listener_impl.hpp" bodystart="55" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1af73cdb4fe7cc41d09d1e8eff76ecbe17" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1add7302064a96b4b3c38b82bb59f7dcda" kindref="member">SessionImpl</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;SessionImpl&gt; sgns::api::WsListenerImpl::new_session_</definition>
+        <argsstring></argsstring>
+        <name>new_session_</name>
+        <qualifiedname>sgns::api::WsListenerImpl::new_session_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_listener_impl.hpp" line="56" column="21" bodyfile="src/api/transport/impl/ws/ws_listener_impl.hpp" bodystart="56" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a11b048d35e5f677a18aee646ae1e3fb5" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::api::WsListenerImpl::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::api::WsListenerImpl::logger_</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>(&quot;RPC_Websocket_Listener&quot;)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_listener_impl.hpp" line="58" column="18" bodyfile="src/api/transport/impl/ws/ws_listener_impl.hpp" bodystart="58" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a565beed7881e52227b4f4ed443b50bca" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::api::WsListenerImpl::WsListenerImpl</definition>
+        <argsstring>(const std::shared_ptr&lt; application::AppStateManager &gt; &amp;app_state_manager, std::shared_ptr&lt; Context &gt; context, Configuration listener_config, SessionImpl::Configuration session_config)</argsstring>
+        <name>WsListenerImpl</name>
+        <qualifiedname>sgns::api::WsListenerImpl::WsListenerImpl</qualifiedname>
+        <param>
+          <type>const std::shared_ptr&lt; <ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager" kindref="compound">application::AppStateManager</ref> &gt; &amp;</type>
+          <declname>app_state_manager</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d6/d3f/classsgns_1_1api_1_1_listener_1a392bda7a9c584023241233eaebabb4db" kindref="member">Context</ref> &gt;</type>
+          <declname>context</declname>
+        </param>
+        <param>
+          <type><ref refid="d5/d93/structsgns_1_1api_1_1_listener_1_1_configuration" kindref="compound">Configuration</ref></type>
+          <declname>listener_config</declname>
+        </param>
+        <param>
+          <type><ref refid="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration" kindref="compound">SessionImpl::Configuration</ref></type>
+          <declname>session_config</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_listener_impl.hpp" line="21" column="5" bodyfile="src/api/transport/impl/ws/ws_listener_impl.cpp" bodystart="7" bodyend="18"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a5c70321479b384f63d36c453a7a813b9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::api::WsListenerImpl::~WsListenerImpl</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~WsListenerImpl</name>
+        <qualifiedname>sgns::api::WsListenerImpl::~WsListenerImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_listener_impl.hpp" line="27" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a567d0f4d15a9369ee07a4a7ddb25c5c4" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>bool</type>
+        <definition>bool sgns::api::WsListenerImpl::prepare</definition>
+        <argsstring>() override</argsstring>
+        <name>prepare</name>
+        <qualifiedname>sgns::api::WsListenerImpl::prepare</qualifiedname>
+        <reimplements refid="d6/d3f/classsgns_1_1api_1_1_listener_1a1d47e7a8d44c673ed0e47d9e09a742d0">prepare</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="see"><para><ref refid="d2/d3c/class_app_state_manager_1a8f1d6ffdb29ae915f1165e7da81ae739" kindref="member">AppStateManager::takeControl</ref> </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_listener_impl.hpp" line="30" column="10" bodyfile="src/api/transport/impl/ws/ws_listener_impl.cpp" bodystart="20" bodyend="40"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1ad977149f983f4c1cf17cdc8cd6eadad5" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>bool</type>
+        <definition>bool sgns::api::WsListenerImpl::start</definition>
+        <argsstring>() override</argsstring>
+        <name>start</name>
+        <qualifiedname>sgns::api::WsListenerImpl::start</qualifiedname>
+        <reimplements refid="d6/d3f/classsgns_1_1api_1_1_listener_1a430c88059890b2e419fd3b422015a0d0">start</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="see"><para><ref refid="d2/d3c/class_app_state_manager_1a8f1d6ffdb29ae915f1165e7da81ae739" kindref="member">AppStateManager::takeControl</ref> </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_listener_impl.hpp" line="33" column="10" bodyfile="src/api/transport/impl/ws/ws_listener_impl.cpp" bodystart="42" bodyend="52"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1ae4c802a834827b66b78b096856034c74" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsListenerImpl::stop</definition>
+        <argsstring>() override</argsstring>
+        <name>stop</name>
+        <qualifiedname>sgns::api::WsListenerImpl::stop</qualifiedname>
+        <reimplements refid="d6/d3f/classsgns_1_1api_1_1_listener_1a7298bee38d86730d76a47eb10cab6d8c">stop</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="see"><para><ref refid="d2/d3c/class_app_state_manager_1a8f1d6ffdb29ae915f1165e7da81ae739" kindref="member">AppStateManager::takeControl</ref> </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_listener_impl.hpp" line="36" column="10" bodyfile="src/api/transport/impl/ws/ws_listener_impl.cpp" bodystart="54" bodyend="58"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a4a5f6fe68a3fdb050104ef6140021206" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsListenerImpl::setHandlerForNewSession</definition>
+        <argsstring>(NewSessionHandler &amp;&amp;on_new_session) override</argsstring>
+        <name>setHandlerForNewSession</name>
+        <qualifiedname>sgns::api::WsListenerImpl::setHandlerForNewSession</qualifiedname>
+        <reimplements refid="d6/d3f/classsgns_1_1api_1_1_listener_1a2c447262ee5e172d5f2df0a21fde29e3">setHandlerForNewSession</reimplements>
+        <param>
+          <type><ref refid="d6/d3f/classsgns_1_1api_1_1_listener_1a46eee029b2ad2b539a0a22182adf9370" kindref="member">NewSessionHandler</ref> &amp;&amp;</type>
+          <declname>on_new_session</declname>
+        </param>
+        <briefdescription>
+<para>Set handler for working new session. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_listener_impl.hpp" line="38" column="10" bodyfile="src/api/transport/impl/ws/ws_listener_impl.cpp" bodystart="60" bodyend="64"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a9cbb9ed327df7da3f4d7b1a45a69eadc" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::api::WsListenerImpl::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::api::WsListenerImpl::GetName</qualifiedname>
+        <reimplements refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_listener_impl.hpp" line="40" column="17" bodyfile="src/api/transport/impl/ws/ws_listener_impl.hpp" bodystart="40" bodyend="43"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a18c5a5e3b3ce401be88e163cd68b8bb3" prot="private" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsListenerImpl::acceptOnce</definition>
+        <argsstring>() override</argsstring>
+        <name>acceptOnce</name>
+        <qualifiedname>sgns::api::WsListenerImpl::acceptOnce</qualifiedname>
+        <reimplements refid="d6/d3f/classsgns_1_1api_1_1_listener_1af52c93d1a241869ee003044a786b5eda">acceptOnce</reimplements>
+        <briefdescription>
+<para>Accept incoming connection. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_listener_impl.hpp" line="46" column="10" bodyfile="src/api/transport/impl/ws/ws_listener_impl.cpp" bodystart="66" bodyend="86"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>server which listens for incoming connection, accepts connections making session from socket </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="2">
+        <label>sgns::api::Listener</label>
+        <link refid="d6/d3f/classsgns_1_1api_1_1_listener"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::api::WsListenerImpl</label>
+        <link refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::enable_shared_from_this&lt; WsListenerImpl &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="2">
+        <label>sgns::api::Listener</label>
+        <link refid="d6/d3f/classsgns_1_1api_1_1_listener"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>sgns::api::Session</label>
+        <link refid="db/d02/classsgns_1_1api_1_1_session"/>
+      </node>
+      <node id="1">
+        <label>sgns::api::WsListenerImpl</label>
+        <link refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-context_</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-session_config_</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-acceptor_</edgelabel>
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>-on_new_session_</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>-next_session_id_</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="usage">
+          <edgelabel>-new_session_</edgelabel>
+        </childnode>
+        <childnode refid="18" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="15">
+        <label>sgns::api::WsSession</label>
+        <link refid="da/dc7/classsgns_1_1api_1_1_ws_session"/>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-config_</edgelabel>
+        </childnode>
+        <childnode refid="18" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>sgns::api::WsSession::Configuration</label>
+        <link refid="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration"/>
+      </node>
+      <node id="13">
+        <label>std::atomic&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::atomic&lt; Session::SessionId &gt;</label>
+        <childnode refid="13" relation="template-instance">
+          <edgelabel>&lt; Session::SessionId &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::enable_shared_from_this&lt; WsListenerImpl &gt;</label>
+      </node>
+      <node id="17">
+        <label>std::enable_shared_from_this&lt; WsSession &gt;</label>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::shared_ptr&lt; Context &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; Context &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="14">
+        <label>std::shared_ptr&lt; sgns::api::WsSession &gt;</label>
+        <childnode refid="15" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::api::WsSession &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="18">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::unique_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::unique_ptr&lt; Acceptor &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; Acceptor &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::unique_ptr&lt; NewSessionHandler &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; NewSessionHandler &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/api/transport/impl/ws/ws_listener_impl.hpp" line="16" column="3" bodyfile="src/api/transport/impl/ws/ws_listener_impl.hpp" bodystart="17" bodyend="59"/>
+    <listofallmembers>
+      <member refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a18c5a5e3b3ce401be88e163cd68b8bb3" prot="private" virt="virtual"><scope>sgns::api::WsListenerImpl</scope><name>acceptOnce</name></member>
+      <member refid="d6/d3f/classsgns_1_1api_1_1_listener_1afe8587bdb42a214eb13ca6a0c4f7cb66" prot="protected" virt="non-virtual"><scope>sgns::api::WsListenerImpl</scope><name>Acceptor</name></member>
+      <member refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a155c4e4896decebc692a17a695865d85" prot="private" virt="non-virtual"><scope>sgns::api::WsListenerImpl</scope><name>acceptor_</name></member>
+      <member refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a3e9a55dbc72d06a2877d8efa335e3d71" prot="private" virt="non-virtual"><scope>sgns::api::WsListenerImpl</scope><name>config_</name></member>
+      <member refid="d6/d3f/classsgns_1_1api_1_1_listener_1a392bda7a9c584023241233eaebabb4db" prot="public" virt="non-virtual"><scope>sgns::api::WsListenerImpl</scope><name>Context</name></member>
+      <member refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a8d1ad185c41a25e9910841eabe9dbbed" prot="private" virt="non-virtual"><scope>sgns::api::WsListenerImpl</scope><name>context_</name></member>
+      <member refid="d6/d3f/classsgns_1_1api_1_1_listener_1a7e388013a06677841216e4f837a2345b" prot="protected" virt="non-virtual"><scope>sgns::api::WsListenerImpl</scope><name>Endpoint</name></member>
+      <member refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a9cbb9ed327df7da3f4d7b1a45a69eadc" prot="public" virt="virtual"><scope>sgns::api::WsListenerImpl</scope><name>GetName</name></member>
+      <member refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a11b048d35e5f677a18aee646ae1e3fb5" prot="private" virt="non-virtual"><scope>sgns::api::WsListenerImpl</scope><name>logger_</name></member>
+      <member refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1af73cdb4fe7cc41d09d1e8eff76ecbe17" prot="private" virt="non-virtual"><scope>sgns::api::WsListenerImpl</scope><name>new_session_</name></member>
+      <member refid="d6/d3f/classsgns_1_1api_1_1_listener_1a46eee029b2ad2b539a0a22182adf9370" prot="protected" virt="non-virtual"><scope>sgns::api::WsListenerImpl</scope><name>NewSessionHandler</name></member>
+      <member refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1abde4e93fa3d1199eb20ea5e04a76e78e" prot="private" virt="non-virtual"><scope>sgns::api::WsListenerImpl</scope><name>next_session_id_</name></member>
+      <member refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a75a8921992ef0ce7afc32894e1db0be3" prot="private" virt="non-virtual"><scope>sgns::api::WsListenerImpl</scope><name>on_new_session_</name></member>
+      <member refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a567d0f4d15a9369ee07a4a7ddb25c5c4" prot="public" virt="virtual"><scope>sgns::api::WsListenerImpl</scope><name>prepare</name></member>
+      <member refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a7299fc845f011e1ac6d374697cc8af3f" prot="private" virt="non-virtual"><scope>sgns::api::WsListenerImpl</scope><name>session_config_</name></member>
+      <member refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1add7302064a96b4b3c38b82bb59f7dcda" prot="public" virt="non-virtual"><scope>sgns::api::WsListenerImpl</scope><name>SessionImpl</name></member>
+      <member refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a4a5f6fe68a3fdb050104ef6140021206" prot="public" virt="virtual"><scope>sgns::api::WsListenerImpl</scope><name>setHandlerForNewSession</name></member>
+      <member refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1ad977149f983f4c1cf17cdc8cd6eadad5" prot="public" virt="virtual"><scope>sgns::api::WsListenerImpl</scope><name>start</name></member>
+      <member refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1ae4c802a834827b66b78b096856034c74" prot="public" virt="virtual"><scope>sgns::api::WsListenerImpl</scope><name>stop</name></member>
+      <member refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a565beed7881e52227b4f4ed443b50bca" prot="public" virt="non-virtual"><scope>sgns::api::WsListenerImpl</scope><name>WsListenerImpl</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::api::WsListenerImpl</scope><name>~IComponent</name></member>
+      <member refid="d6/d3f/classsgns_1_1api_1_1_listener_1aa8805fec5cda361850084ebabdbda679" prot="public" virt="non-virtual"><scope>sgns::api::WsListenerImpl</scope><name>~Listener</name></member>
+      <member refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a5c70321479b384f63d36c453a7a813b9" prot="public" virt="non-virtual"><scope>sgns::api::WsListenerImpl</scope><name>~WsListenerImpl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

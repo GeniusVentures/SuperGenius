@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_452baf35e1d7639c9f2a5ece4ec85855" kind="dir">
+    <compoundname>src/storage</compoundname>
+    <innerdir refid="dir_f59ed95a35871f90fcb9f2a97ad1a62f">src/storage/changes_trie</innerdir>
+    <innerdir refid="dir_327325bb3b1a588237e9e9d943fb4bf7">src/storage/face</innerdir>
+    <innerdir refid="dir_8a0290e33b4fedf5267a246ac0f48aa8">src/storage/in_memory</innerdir>
+    <innerdir refid="dir_8b7acb397e6053a9fdf7b2acfd527342">src/storage/rocksdb</innerdir>
+    <innerdir refid="dir_8f5e4fb549865540d4346189ec27fd9e">src/storage/trie</innerdir>
+    <innerfile refid="d8/dcc/buffer__map__types_8hpp">buffer_map_types.hpp</innerfile>
+    <innerfile refid="dd/d5f/database__error_8cpp">database_error.cpp</innerfile>
+    <innerfile refid="d9/da2/database__error_8hpp">database_error.hpp</innerfile>
+    <innerfile refid="dc/df7/predefined__keys_8hpp">predefined_keys.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/storage/"/>
+  </compounddef>
+</doxygen>

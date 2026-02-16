@@ -1,0 +1,111 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d8/db4/_linux_8hpp" kind="file" language="C++">
+    <compoundname>Linux.hpp</compoundname>
+    <includes refid="d9/d5a/_j_s_o_n_backend_8hpp" local="yes">JSONBackend.hpp</includes>
+    <includes local="no">libsecret/secret.h</includes>
+    <includedby refid="de/d39/_linux_8cpp" local="yes">src/local_secure_storage/impl/Linux.cpp</includedby>
+    <incdepgraph>
+      <node id="3">
+        <label>../ISecureStorage.hpp</label>
+        <link refid="dd/d1a/_i_secure_storage_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>JSONBackend.hpp</label>
+        <link refid="d9/d5a/_j_s_o_n_backend_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/local_secure_storage/impl/Linux.hpp</label>
+        <link refid="d8/db4/_linux_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="9">
+        <label>libsecret/secret.h</label>
+      </node>
+      <node id="8">
+        <label>rapidjson/document.h</label>
+      </node>
+      <node id="4">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/local_secure_storage/impl/Linux.cpp</label>
+        <link refid="de/d39/_linux_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/local_secure_storage/impl/Linux.hpp</label>
+        <link refid="d8/db4/_linux_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="dd/de8/classsgns_1_1_linux_secure_storage" prot="public">sgns::LinuxSecureStorage</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#pragma<sp/>once</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d9/d5a/_j_s_o_n_backend_8hpp" kindref="compound">JSONBackend.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libsecret/secret.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="8"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="9" refid="dd/de8/classsgns_1_1_linux_secure_storage" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="dd/de8/classsgns_1_1_linux_secure_storage_1aa025bc977d747702eae08502d345f948" kindref="member">LinuxSecureStorage</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a9e536564914936ba39ee7d67dfa1a316" kindref="member">JSONBackend</ref></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">explicit</highlight><highlight class="normal"><sp/><ref refid="dd/de8/classsgns_1_1_linux_secure_storage_1aa025bc977d747702eae08502d345f948" kindref="member">LinuxSecureStorage</ref>(std::string<sp/>identifier);</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14" refid="dd/de8/classsgns_1_1_linux_secure_storage_1ad7651f04e4f7397465de71ea01968ce9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/de8/classsgns_1_1_linux_secure_storage_1ad7651f04e4f7397465de71ea01968ce9" kindref="member">~LinuxSecureStorage</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16" refid="dd/de8/classsgns_1_1_linux_secure_storage_1a4e24c58d7c44e03cd5bba1bd8d158fac" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="dd/de8/classsgns_1_1_linux_secure_storage_1a4e24c58d7c44e03cd5bba1bd8d158fac" kindref="member">GetName</ref>()</highlight><highlight class="keyword"><sp/>override</highlight></codeline>
+<codeline lineno="17"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;LinuxSecureStorage&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;rapidjson::Document&gt;<sp/><ref refid="dd/de8/classsgns_1_1_linux_secure_storage_1a4723809650162dc3f6082419a1c2b992" kindref="member">LoadJSON</ref>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="dd/de8/classsgns_1_1_linux_secure_storage_1a897476ddc216d7ec997f93d880ea90bd" kindref="member">SaveJSON</ref>(<sp/>rapidjson::Document<sp/>document<sp/>)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="26" refid="dd/de8/classsgns_1_1_linux_secure_storage_1aa1020b2919813556a49d2bb638cd514b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="dd/de8/classsgns_1_1_linux_secure_storage_1aa1020b2919813556a49d2bb638cd514b" kindref="member">identifier_</ref>;</highlight></codeline>
+<codeline lineno="27" refid="dd/de8/classsgns_1_1_linux_secure_storage_1a19cfa1dcd0623e227e79ef01ba5265f6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SecretSchema<sp/><ref refid="dd/de8/classsgns_1_1_linux_secure_storage_1a19cfa1dcd0623e227e79ef01ba5265f6" kindref="member">schema_</ref>;</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="29"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="src/local_secure_storage/impl/Linux.hpp"/>
+  </compounddef>
+</doxygen>

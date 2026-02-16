@@ -1,0 +1,137 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="db/db9/namespacesgns_1_1scale_1_1detail_1_1variant__impl" kind="namespace" language="C++">
+    <compoundname>sgns::scale::detail::variant_impl</compoundname>
+    <innerclass refid="d3/df9/classsgns_1_1scale_1_1detail_1_1variant__impl_1_1_variant_encoder" prot="public">sgns::scale::detail::variant_impl::VariantEncoder</innerclass>
+    <innerclass refid="d4/dc6/classsgns_1_1scale_1_1detail_1_1variant__impl_1_1_variant_decoder" prot="public">sgns::scale::detail::variant_impl::VariantDecoder</innerclass>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="db/db9/namespacesgns_1_1scale_1_1detail_1_1variant__impl_1a113229e0f1c01c168efbcfb07e5d4ad9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class F</type>
+          </param>
+          <param>
+            <type>class H</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::scale::detail::variant_impl::apply_once</definition>
+        <argsstring>(F &amp;f, uint8_t i)</argsstring>
+        <name>apply_once</name>
+        <qualifiedname>sgns::scale::detail::variant_impl::apply_once</qualifiedname>
+        <param>
+          <type>F &amp;</type>
+          <declname>f</declname>
+        </param>
+        <param>
+          <type>uint8_t</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/variant.hpp" line="14" column="10" bodyfile="src/scale/detail/variant.hpp" bodystart="14" bodyend="16"/>
+      </memberdef>
+      <memberdef kind="function" id="db/db9/namespacesgns_1_1scale_1_1detail_1_1variant__impl_1a8de53e5e298b7670cfc53454e87a1f8a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>uint8_t</type>
+            <declname>i</declname>
+            <defname>i</defname>
+          </param>
+          <param>
+            <type>class F</type>
+          </param>
+          <param>
+            <type>class H</type>
+          </param>
+          <param>
+            <type>class...</type>
+            <declname>T</declname>
+            <defname>T</defname>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::scale::detail::variant_impl::for_each_apply_impl</definition>
+        <argsstring>(F &amp;f)</argsstring>
+        <name>for_each_apply_impl</name>
+        <qualifiedname>sgns::scale::detail::variant_impl::for_each_apply_impl</qualifiedname>
+        <param>
+          <type>F &amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/variant.hpp" line="19" column="10" bodyfile="src/scale/detail/variant.hpp" bodystart="19" bodyend="22"/>
+      </memberdef>
+      <memberdef kind="function" id="db/db9/namespacesgns_1_1scale_1_1detail_1_1variant__impl_1a030a5a23359015d9a472cc5c1685d7f5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>uint8_t</type>
+            <declname>i</declname>
+            <defname>i</defname>
+          </param>
+          <param>
+            <type>class F</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::scale::detail::variant_impl::for_each_apply_impl</definition>
+        <argsstring>(F &amp;f)</argsstring>
+        <name>for_each_apply_impl</name>
+        <qualifiedname>sgns::scale::detail::variant_impl::for_each_apply_impl</qualifiedname>
+        <param>
+          <type>F &amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/variant.hpp" line="25" column="10" bodyfile="src/scale/detail/variant.hpp" bodystart="25" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="function" id="db/db9/namespacesgns_1_1scale_1_1detail_1_1variant__impl_1a572ab0ba4fdeb1b05c8575c4a42c9389" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class F</type>
+          </param>
+          <param>
+            <type>class...</type>
+            <declname>T</declname>
+            <defname>T</defname>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::scale::detail::variant_impl::for_each_apply</definition>
+        <argsstring>(F &amp;f)</argsstring>
+        <name>for_each_apply</name>
+        <qualifiedname>sgns::scale::detail::variant_impl::for_each_apply</qualifiedname>
+        <param>
+          <type>F &amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/variant.hpp" line="72" column="10" bodyfile="src/scale/detail/variant.hpp" bodystart="72" bodyend="74"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/scale/detail/variant.hpp" line="12" column="3"/>
+  </compounddef>
+</doxygen>

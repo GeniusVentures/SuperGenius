@@ -1,0 +1,810 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/d31/classsgns_1_1api_1_1_http_session" kind="class" language="C++" prot="public">
+    <compoundname>sgns::api::HttpSession</compoundname>
+    <basecompoundref refid="db/d02/classsgns_1_1api_1_1_session" prot="public" virt="non-virtual">sgns::api::Session</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">std::enable_shared_from_this&lt; HttpSession &gt;</basecompoundref>
+    <includes refid="df/df4/http__session_8hpp" local="no">http_session.hpp</includes>
+    <innerclass refid="d9/ddf/structsgns_1_1api_1_1_http_session_1_1_configuration" prot="public">sgns::api::HttpSession::Configuration</innerclass>
+    <sectiondef kind="private-type">
+      <memberdef kind="typedef" id="de/d31/classsgns_1_1api_1_1_http_session_1a5ccfa955b1455fd434f117b4726fe22e" prot="private" static="no">
+        <templateparamlist>
+          <param>
+            <type>typename Body</type>
+          </param>
+        </templateparamlist>
+        <type>boost::beast::http::request&lt; Body &gt;</type>
+        <definition>using sgns::api::HttpSession::Request = boost::beast::http::request&lt;Body&gt;</definition>
+        <argsstring></argsstring>
+        <name>Request</name>
+        <qualifiedname>sgns::api::HttpSession::Request</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="21" column="5" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="de/d31/classsgns_1_1api_1_1_http_session_1a2aa907ce0c3c48b2e464b838ef38fc7b" prot="private" static="no">
+        <templateparamlist>
+          <param>
+            <type>typename Body</type>
+          </param>
+        </templateparamlist>
+        <type>boost::beast::http::response&lt; Body &gt;</type>
+        <definition>using sgns::api::HttpSession::Response = boost::beast::http::response&lt;Body&gt;</definition>
+        <argsstring></argsstring>
+        <name>Response</name>
+        <qualifiedname>sgns::api::HttpSession::Response</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="24" column="5" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="de/d31/classsgns_1_1api_1_1_http_session_1a7a0afeb911541d877638a5b8705f8cbb" prot="private" static="no">
+        <type>boost::beast::http::string_body</type>
+        <definition>using sgns::api::HttpSession::StringBody = boost::beast::http::string_body</definition>
+        <argsstring></argsstring>
+        <name>StringBody</name>
+        <qualifiedname>sgns::api::HttpSession::StringBody</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="26" column="5" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="de/d31/classsgns_1_1api_1_1_http_session_1adb770088731beefcb38650223714484e" prot="private" static="no">
+        <templateparamlist>
+          <param>
+            <type>class Body</type>
+          </param>
+        </templateparamlist>
+        <type>boost::beast::http::request_parser&lt; Body &gt;</type>
+        <definition>using sgns::api::HttpSession::RequestParser = boost::beast::http::request_parser&lt;Body&gt;</definition>
+        <argsstring></argsstring>
+        <name>RequestParser</name>
+        <qualifiedname>sgns::api::HttpSession::RequestParser</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="29" column="5" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="29" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="de/d31/classsgns_1_1api_1_1_http_session_1ae9ff1fd110fcb9cd5d0da5cd948e6f7a" prot="private" static="no">
+        <type>boost::beast::http::field</type>
+        <definition>using sgns::api::HttpSession::HttpField = boost::beast::http::field</definition>
+        <argsstring></argsstring>
+        <name>HttpField</name>
+        <qualifiedname>sgns::api::HttpSession::HttpField</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="31" column="5" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="31" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="de/d31/classsgns_1_1api_1_1_http_session_1a60c194d11c373c1a4dc76558a10f9314" prot="private" static="no">
+        <type>boost::beast::http::error</type>
+        <definition>using sgns::api::HttpSession::HttpError = boost::beast::http::error</definition>
+        <argsstring></argsstring>
+        <name>HttpError</name>
+        <qualifiedname>sgns::api::HttpSession::HttpError</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="33" column="5" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="33" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="de/d31/classsgns_1_1api_1_1_http_session_1af652770da103c839cac6c7ba5606ab02" prot="private" static="no">
+        <type><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1adb770088731beefcb38650223714484e" kindref="member">RequestParser</ref>&lt; <ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a7a0afeb911541d877638a5b8705f8cbb" kindref="member">StringBody</ref> &gt;</type>
+        <definition>using sgns::api::HttpSession::Parser = RequestParser&lt;StringBody&gt;</definition>
+        <argsstring></argsstring>
+        <name>Parser</name>
+        <qualifiedname>sgns::api::HttpSession::Parser</qualifiedname>
+        <briefdescription>
+<para>request parser type </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="150" column="5" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="150" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="de/d31/classsgns_1_1api_1_1_http_session_1ac541372ea04f128ec1d3a4edd0e95110" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>boost::beast::string_view</type>
+        <definition>boost::beast::string_view sgns::api::HttpSession::kServerName</definition>
+        <argsstring></argsstring>
+        <name>kServerName</name>
+        <qualifiedname>sgns::api::HttpSession::kServerName</qualifiedname>
+        <initializer>= &quot;SuperGenius&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="138" column="48" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="138" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="de/d31/classsgns_1_1api_1_1_http_session_1a34dfc444a0877ab9fecec8c50fb5b302" prot="private" static="no" mutable="no">
+        <type>boost::asio::strand&lt; boost::asio::io_context::executor_type &gt;</type>
+        <definition>boost::asio::strand&lt;boost::asio::io_context::executor_type&gt; sgns::api::HttpSession::strand_</definition>
+        <argsstring></argsstring>
+        <name>strand_</name>
+        <qualifiedname>sgns::api::HttpSession::strand_</qualifiedname>
+        <briefdescription>
+<para>Strand to ensure the connection&apos;s handlers are not called concurrently. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="141" column="25" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="141" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d31/classsgns_1_1api_1_1_http_session_1aec13736742fbcb010f7e457ee3740b08" prot="private" static="no" mutable="no">
+        <type><ref refid="d9/ddf/structsgns_1_1api_1_1_http_session_1_1_configuration" kindref="compound">Configuration</ref></type>
+        <definition>Configuration sgns::api::HttpSession::config_</definition>
+        <argsstring></argsstring>
+        <name>config_</name>
+        <qualifiedname>sgns::api::HttpSession::config_</qualifiedname>
+        <briefdescription>
+<para>session configuration </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="143" column="19" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="143" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d31/classsgns_1_1api_1_1_http_session_1a8d8fbddfb3e5b5abe5ea160d948cb2b6" prot="private" static="no" mutable="no">
+        <type>boost::beast::tcp_stream</type>
+        <definition>boost::beast::tcp_stream sgns::api::HttpSession::stream_</definition>
+        <argsstring></argsstring>
+        <name>stream_</name>
+        <qualifiedname>sgns::api::HttpSession::stream_</qualifiedname>
+        <briefdescription>
+<para>stream </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="144" column="30" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="144" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d31/classsgns_1_1api_1_1_http_session_1a1dcc27f8331a951131c6d75b7f167d63" prot="private" static="no" mutable="no">
+        <type>boost::beast::flat_buffer</type>
+        <definition>boost::beast::flat_buffer sgns::api::HttpSession::buffer_</definition>
+        <argsstring></argsstring>
+        <name>buffer_</name>
+        <qualifiedname>sgns::api::HttpSession::buffer_</qualifiedname>
+        <briefdescription>
+<para>read buffer </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="145" column="31" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="145" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d31/classsgns_1_1api_1_1_http_session_1a2e62f795014de2f646a5ade12753f05f" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; <ref refid="de/d31/classsgns_1_1api_1_1_http_session_1af652770da103c839cac6c7ba5606ab02" kindref="member">Parser</ref> &gt;</type>
+        <definition>std::unique_ptr&lt;Parser&gt; sgns::api::HttpSession::parser_</definition>
+        <argsstring></argsstring>
+        <name>parser_</name>
+        <qualifiedname>sgns::api::HttpSession::parser_</qualifiedname>
+        <briefdescription>
+<para>http parser </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="152" column="21" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="152" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d31/classsgns_1_1api_1_1_http_session_1a2849f4c59aa3a5d97cae1a34991214f6" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::api::HttpSession::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::api::HttpSession::logger_</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>(&quot;http session&quot;)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="153" column="18" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="153" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="de/d31/classsgns_1_1api_1_1_http_session_1aa5fe49c8fd962be96c2641431320c2ce" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::api::HttpSession::~HttpSession</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~HttpSession</name>
+        <qualifiedname>sgns::api::HttpSession::~HttpSession</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="44" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d31/classsgns_1_1api_1_1_http_session_1acb63711c01fb7d42bf39fdb26e7d88b8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::api::HttpSession::HttpSession</definition>
+        <argsstring>(Context &amp;context, Configuration config)</argsstring>
+        <name>HttpSession</name>
+        <qualifiedname>sgns::api::HttpSession::HttpSession</qualifiedname>
+        <param>
+          <type><ref refid="db/d02/classsgns_1_1api_1_1_session_1a4764a67d047daedafadc808a341dbae5" kindref="member">Context</ref> &amp;</type>
+          <declname>context</declname>
+        </param>
+        <param>
+          <type><ref refid="d9/ddf/structsgns_1_1api_1_1_http_session_1_1_configuration" kindref="compound">Configuration</ref></type>
+          <declname>config</declname>
+        </param>
+        <briefdescription>
+<para>constructor </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>context</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>session context </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>config</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>session configuration </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="51" column="5" bodyfile="src/api/transport/impl/http/http_session.cpp" bodystart="9" bodyend="12"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d31/classsgns_1_1api_1_1_http_session_1a393470096225d90e083ae5923ac9beb0" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type><ref refid="db/d02/classsgns_1_1api_1_1_session_1a283ab2019b76debbb9301e27b4a64d53" kindref="member">Socket</ref> &amp;</type>
+        <definition>Socket &amp; sgns::api::HttpSession::socket</definition>
+        <argsstring>() override</argsstring>
+        <name>socket</name>
+        <qualifiedname>sgns::api::HttpSession::socket</qualifiedname>
+        <reimplements refid="db/d02/classsgns_1_1api_1_1_session_1a897f603425d34bd6a0cb13673650c25a">socket</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="53" column="12" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="53" bodyend="55"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d31/classsgns_1_1api_1_1_http_session_1aed2220fb92785c7bbc22dbe7079cf9d2" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::api::HttpSession::start</definition>
+        <argsstring>() override</argsstring>
+        <name>start</name>
+        <qualifiedname>sgns::api::HttpSession::start</qualifiedname>
+        <reimplements refid="db/d02/classsgns_1_1api_1_1_session_1a3c3854eb5a09d59a21ab5dda73fab662">start</reimplements>
+        <briefdescription>
+<para>starts session </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="60" column="10" bodyfile="src/api/transport/impl/http/http_session.cpp" bodystart="14" bodyend="16"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d31/classsgns_1_1api_1_1_http_session_1a1985cae9f5296bbe722a9fc5fcaf3b2f" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::api::HttpSession::respond</definition>
+        <argsstring>(std::string_view response) override</argsstring>
+        <name>respond</name>
+        <qualifiedname>sgns::api::HttpSession::respond</qualifiedname>
+        <reimplements refid="db/d02/classsgns_1_1api_1_1_session_1a227f95f8f11b0572a50013d31203e44f">respond</reimplements>
+        <param>
+          <type>std::string_view</type>
+          <declname>response</declname>
+        </param>
+        <briefdescription>
+<para>sends response wrapped by http message </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>response</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>message to send </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="66" column="10" bodyfile="src/api/transport/impl/http/http_session.cpp" bodystart="77" bodyend="92"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d31/classsgns_1_1api_1_1_http_session_1a210901c3d1d584eb0e059eb1f0a4a976" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="virtual">
+        <type><ref refid="db/d02/classsgns_1_1api_1_1_session_1aa68e294d772e90f0c69e8b8cd1d79d64" kindref="member">SessionId</ref></type>
+        <definition>SessionId sgns::api::HttpSession::id</definition>
+        <argsstring>() const override</argsstring>
+        <name>id</name>
+        <qualifiedname>sgns::api::HttpSession::id</qualifiedname>
+        <reimplements refid="db/d02/classsgns_1_1api_1_1_session_1ade1be3e75ef4b4b0e5bf0c9d83a9d79c">id</reimplements>
+        <briefdescription>
+<para>method to get id of the session </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>id of the session </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="72" column="15" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="72" bodyend="74"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d31/classsgns_1_1api_1_1_http_session_1abb1bcf74f369fce6b7832118fcce3dc7" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="virtual">
+        <type><ref refid="df/d66/namespacesgns_1_1api_1a581f7e82b9cfa3fb5262a71984f54a1f" kindref="member">SessionType</ref></type>
+        <definition>SessionType sgns::api::HttpSession::type</definition>
+        <argsstring>() const override</argsstring>
+        <name>type</name>
+        <qualifiedname>sgns::api::HttpSession::type</qualifiedname>
+        <reimplements refid="db/d02/classsgns_1_1api_1_1_session_1a9f128ad7af2aaa49a1b8cb061f89f552">type</reimplements>
+        <briefdescription>
+<para>method to get type of the session </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>type of the session </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="80" column="17" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="80" bodyend="82"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d31/classsgns_1_1api_1_1_http_session_1aba0404395beef8b134e64553095a8f77" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Body</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::api::HttpSession::handleRequest</definition>
+        <argsstring>(boost::beast::http::request&lt; Body &gt; &amp;&amp;req)</argsstring>
+        <name>handleRequest</name>
+        <qualifiedname>sgns::api::HttpSession::handleRequest</qualifiedname>
+        <param>
+          <type>boost::beast::http::request&lt; Body &gt; &amp;&amp;</type>
+          <declname>req</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.cpp" line="37" column="8" bodyfile="src/api/transport/impl/http/http_session.cpp" bodystart="37" bodyend="45"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="de/d31/classsgns_1_1api_1_1_http_session_1ab6ed0e8f276f6a7a002a1216dfd1f1d6" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::HttpSession::stop</definition>
+        <argsstring>()</argsstring>
+        <name>stop</name>
+        <qualifiedname>sgns::api::HttpSession::stop</qualifiedname>
+        <briefdescription>
+<para>stops session </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="88" column="10" bodyfile="src/api/transport/impl/http/http_session.cpp" bodystart="18" bodyend="22"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d31/classsgns_1_1api_1_1_http_session_1ae542bf5f6212cfe49b702ccc8c52d921" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Body</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::api::HttpSession::handleRequest</definition>
+        <argsstring>(Request&lt; Body &gt; &amp;&amp;request)</argsstring>
+        <name>handleRequest</name>
+        <qualifiedname>sgns::api::HttpSession::handleRequest</qualifiedname>
+        <param>
+          <type><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a5ccfa955b1455fd434f117b4726fe22e" kindref="member">Request</ref>&lt; Body &gt; &amp;&amp;</type>
+          <declname>request</declname>
+        </param>
+        <briefdescription>
+<para>process http request, compose and execute response </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Body</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>request body type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>request</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>request </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="96" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d31/classsgns_1_1api_1_1_http_session_1a1822a27ceb629ea5b0195cae4f6aa656" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::HttpSession::asyncRead</definition>
+        <argsstring>()</argsstring>
+        <name>asyncRead</name>
+        <qualifiedname>sgns::api::HttpSession::asyncRead</qualifiedname>
+        <briefdescription>
+<para>asynchronously read http message </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="101" column="10" bodyfile="src/api/transport/impl/http/http_session.cpp" bodystart="47" bodyend="61"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d31/classsgns_1_1api_1_1_http_session_1a2e31f8394a2d75f08125299b4ef0e90a" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Message</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::api::HttpSession::asyncWrite</definition>
+        <argsstring>(Message &amp;&amp;message)</argsstring>
+        <name>asyncWrite</name>
+        <qualifiedname>sgns::api::HttpSession::asyncWrite</qualifiedname>
+        <param>
+          <type>Message &amp;&amp;</type>
+          <declname>message</declname>
+        </param>
+        <briefdescription>
+<para>sends http message </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Message</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>http message type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>http message </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="109" column="10" bodyfile="src/api/transport/impl/http/http_session.cpp" bodystart="64" bodyend="75"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d31/classsgns_1_1api_1_1_http_session_1a8da8a5557b22eaceba1c2ecc43579cf7" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::HttpSession::onRead</definition>
+        <argsstring>(boost::system::error_code ec, std::size_t size)</argsstring>
+        <name>onRead</name>
+        <qualifiedname>sgns::api::HttpSession::onRead</qualifiedname>
+        <param>
+          <type>boost::system::error_code</type>
+          <declname>ec</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>size</declname>
+        </param>
+        <briefdescription>
+<para>read completion callback </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="114" column="10" bodyfile="src/api/transport/impl/http/http_session.cpp" bodystart="94" bodyend="104"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d31/classsgns_1_1api_1_1_http_session_1ab0392341545648b4a6a3fd33c871d3f2" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::HttpSession::onWrite</definition>
+        <argsstring>(boost::system::error_code ec, std::size_t, bool close)</argsstring>
+        <name>onWrite</name>
+        <qualifiedname>sgns::api::HttpSession::onWrite</qualifiedname>
+        <param>
+          <type>boost::system::error_code</type>
+          <declname>ec</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>close</declname>
+        </param>
+        <briefdescription>
+<para>write completion callback </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="119" column="10" bodyfile="src/api/transport/impl/http/http_session.cpp" bodystart="106" bodyend="120"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d31/classsgns_1_1api_1_1_http_session_1a9d0eba73a3e695c5da5d64c48c3054d8" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::HttpSession::reportError</definition>
+        <argsstring>(boost::system::error_code ec, std::string_view message)</argsstring>
+        <name>reportError</name>
+        <qualifiedname>sgns::api::HttpSession::reportError</qualifiedname>
+        <param>
+          <type>boost::system::error_code</type>
+          <declname>ec</declname>
+        </param>
+        <param>
+          <type>std::string_view</type>
+          <declname>message</declname>
+        </param>
+        <briefdescription>
+<para>reports error code and message </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>ec</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>error code </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>error message </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="136" column="10" bodyfile="src/api/transport/impl/http/http_session.cpp" bodystart="122" bodyend="125"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="de/d31/classsgns_1_1api_1_1_http_session_1a426137195b8604402b886fac6693a058" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>auto</type>
+        <definition>auto sgns::api::HttpSession::makeBadResponse</definition>
+        <argsstring>(std::string_view message, unsigned version, bool keep_alive)</argsstring>
+        <name>makeBadResponse</name>
+        <qualifiedname>sgns::api::HttpSession::makeBadResponse</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>message</declname>
+        </param>
+        <param>
+          <type>unsigned</type>
+          <declname>version</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>keep_alive</declname>
+        </param>
+        <briefdescription>
+<para>composes <computeroutput>bad request</computeroutput> message </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>text to send </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername><ref refid="d8/d5b/namespacesgns_1_1version" kindref="compound">version</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>protocol version </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>keep_alive</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>true if server should keep connection alive, false otherwise </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>composed request </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="129" column="17" bodyfile="src/api/transport/impl/http/http_session.cpp" bodystart="24" bodyend="34"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>HTTP session for api service. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::api::HttpSession</label>
+        <link refid="de/d31/classsgns_1_1api_1_1_http_session"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::api::Session</label>
+        <link refid="db/d02/classsgns_1_1api_1_1_session"/>
+      </node>
+      <node id="3">
+        <label>std::enable_shared_from_this&lt; HttpSession &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::api::HttpSession</label>
+        <link refid="de/d31/classsgns_1_1api_1_1_http_session"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-config_</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-parser_</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::api::HttpSession::Configuration</label>
+        <link refid="d9/ddf/structsgns_1_1api_1_1_http_session_1_1_configuration"/>
+      </node>
+      <node id="2">
+        <label>sgns::api::Session</label>
+        <link refid="db/d02/classsgns_1_1api_1_1_session"/>
+      </node>
+      <node id="3">
+        <label>std::enable_shared_from_this&lt; HttpSession &gt;</label>
+      </node>
+      <node id="9">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="9" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::unique_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::unique_ptr&lt; Parser &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; Parser &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/api/transport/impl/http/http_session.hpp" line="18" column="3" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="19" bodyend="154"/>
+    <listofallmembers>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1a1822a27ceb629ea5b0195cae4f6aa656" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>asyncRead</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1a2e31f8394a2d75f08125299b4ef0e90a" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>asyncWrite</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1a1dcc27f8331a951131c6d75b7f167d63" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>buffer_</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1aec13736742fbcb010f7e457ee3740b08" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>config_</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1ac3e901cde61af1e9cfba7ab0baf7f858" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>Connection</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1aeb11d97bb8e29d696f1afecba7dabb4a" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>connectOnCloseHandler</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1ad35d77dc02ce01ff9b548272ae2bc9a7" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>connectOnRequest</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a4764a67d047daedafadc808a341dbae5" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>Context</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1ade6442f88ca08387c1e733fef6f54655" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>Duration</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a5e3bdd1623479f13a3700e8b5e8d7c5d" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>ErrorCode</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1ae542bf5f6212cfe49b702ccc8c52d921" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>handleRequest</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1aba0404395beef8b134e64553095a8f77" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>handleRequest</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1a60c194d11c373c1a4dc76558a10f9314" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>HttpError</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1ae9ff1fd110fcb9cd5d0da5cd948e6f7a" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>HttpField</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1acb63711c01fb7d42bf39fdb26e7d88b8" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>HttpSession</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1a210901c3d1d584eb0e059eb1f0a4a976" prot="public" virt="virtual"><scope>sgns::api::HttpSession</scope><name>id</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1ac541372ea04f128ec1d3a4edd0e95110" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>kServerName</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1a2849f4c59aa3a5d97cae1a34991214f6" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>logger_</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1a426137195b8604402b886fac6693a058" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>makeBadResponse</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1ab3dad321654c3ba64a361844f2ea9499" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>notifyOnClose</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1aac07a048258e122e14d7b6b402bc13ec" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>on_close_</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a76c3869f9fd623d31a00d1b059dae7a6" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>on_request_</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a87f1f677b7bd1282b182bcc76dd914e8" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>OnCloseHandler</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1a8da8a5557b22eaceba1c2ecc43579cf7" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>onRead</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1ac6bac7b2025c44184c38e34e8232a3c7" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>OnRequest</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a0354397ff9773e4bb7ec08ab2cf1ab65" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>OnRequestSignature</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1ab0392341545648b4a6a3fd33c871d3f2" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>onWrite</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1af652770da103c839cac6c7ba5606ab02" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>Parser</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1a2e62f795014de2f646a5ade12753f05f" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>parser_</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1abd0a3726505e365e7aa987c5b2b21320" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>processRequest</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1a9d0eba73a3e695c5da5d64c48c3054d8" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>reportError</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1a5ccfa955b1455fd434f117b4726fe22e" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>Request</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1adb770088731beefcb38650223714484e" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>RequestParser</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1a1985cae9f5296bbe722a9fc5fcaf3b2f" prot="public" virt="virtual"><scope>sgns::api::HttpSession</scope><name>respond</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1a2aa907ce0c3c48b2e464b838ef38fc7b" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>Response</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1aa68e294d772e90f0c69e8b8cd1d79d64" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>SessionId</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1ab83d2fce65fb765c430881991ea24c67" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>Signal</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a283ab2019b76debbb9301e27b4a64d53" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>Socket</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1a393470096225d90e083ae5923ac9beb0" prot="public" virt="virtual"><scope>sgns::api::HttpSession</scope><name>socket</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1aed2220fb92785c7bbc22dbe7079cf9d2" prot="public" virt="virtual"><scope>sgns::api::HttpSession</scope><name>start</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1ab6ed0e8f276f6a7a002a1216dfd1f1d6" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>stop</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1a34dfc444a0877ab9fecec8c50fb5b302" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>strand_</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1a8d8fbddfb3e5b5abe5ea160d948cb2b6" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>stream_</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a8ffcb164f0690b1cd611d0fad0268922" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>Streambuf</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1a7a0afeb911541d877638a5b8705f8cbb" prot="private" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>StringBody</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1abb1ed543281476201cee542238b80ee4" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>Timer</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1abb1bcf74f369fce6b7832118fcce3dc7" prot="public" virt="virtual"><scope>sgns::api::HttpSession</scope><name>type</name></member>
+      <member refid="de/d31/classsgns_1_1api_1_1_http_session_1aa5fe49c8fd962be96c2641431320c2ce" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession</scope><name>~HttpSession</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a94029caff4c3d132f662998b98e6fbb6" prot="public" virt="virtual"><scope>sgns::api::HttpSession</scope><name>~Session</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

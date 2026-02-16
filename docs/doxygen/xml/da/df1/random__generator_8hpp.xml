@@ -1,0 +1,100 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/df1/random__generator_8hpp" kind="file" language="C++">
+    <compoundname>random_generator.hpp</compoundname>
+    <includes local="no">libp2p/crypto/random_generator.hpp</includes>
+    <includedby refid="d4/d05/crypto__store__impl_8hpp" local="yes">src/crypto/crypto_store/crypto_store_impl.hpp</includedby>
+    <includedby refid="d6/da3/vrf__provider__impl_8hpp" local="yes">src/crypto/vrf/vrf_provider_impl.hpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/crypto/random_generator.hpp</label>
+        <link refid="da/df1/random__generator_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>libp2p/crypto/random_generator.hpp</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="3">
+        <label>src/crypto/crypto_store/crypto_store_impl.cpp</label>
+        <link refid="dd/d14/crypto__store__impl_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/crypto/crypto_store/crypto_store_impl.hpp</label>
+        <link refid="d4/d05/crypto__store__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crypto/random_generator.hpp</label>
+        <link refid="da/df1/random__generator_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>src/crypto/vrf/vrf_provider_impl.cpp</label>
+        <link refid="d5/d8f/vrf__provider__impl_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/crypto/vrf/vrf_provider_impl.hpp</label>
+        <link refid="d6/da3/vrf__provider__impl_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6e/namespacesgns_1_1crypto">sgns::crypto</innernamespace>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1a18589156f32ea35b0b954d807b16e899" prot="public" static="no">
+        <type>libp2p::crypto::random::RandomGenerator</type>
+        <definition>using sgns::crypto::RandomGenerator = libp2p::crypto::random::RandomGenerator</definition>
+        <argsstring></argsstring>
+        <name>RandomGenerator</name>
+        <qualifiedname>sgns::crypto::RandomGenerator</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/random_generator.hpp" line="7" column="3" bodyfile="src/crypto/random_generator.hpp" bodystart="7" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1af5b689e8f731b918be933cd0a6ba8db4" prot="public" static="no">
+        <type>libp2p::crypto::random::CSPRNG</type>
+        <definition>using sgns::crypto::CSPRNG = libp2p::crypto::random::CSPRNG</definition>
+        <argsstring></argsstring>
+        <name>CSPRNG</name>
+        <qualifiedname>sgns::crypto::CSPRNG</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/random_generator.hpp" line="8" column="3" bodyfile="src/crypto/random_generator.hpp" bodystart="8" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_CRYPTO_RANDOM_GENERATOR_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_CRYPTO_RANDOM_GENERATOR_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libp2p/crypto/random_generator.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d6e/namespacesgns_1_1crypto" kindref="compound">sgns::crypto</ref><sp/>{</highlight></codeline>
+<codeline lineno="7" refid="df/d6e/namespacesgns_1_1crypto_1a18589156f32ea35b0b954d807b16e899" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="df/d6e/namespacesgns_1_1crypto_1a18589156f32ea35b0b954d807b16e899" kindref="member">RandomGenerator</ref><sp/>=<sp/>libp2p::crypto::random::RandomGenerator;</highlight></codeline>
+<codeline lineno="8" refid="df/d6e/namespacesgns_1_1crypto_1af5b689e8f731b918be933cd0a6ba8db4" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="df/d6e/namespacesgns_1_1crypto_1af5b689e8f731b918be933cd0a6ba8db4" kindref="member">CSPRNG</ref><sp/>=<sp/>libp2p::crypto::random::CSPRNG;</highlight></codeline>
+<codeline lineno="9"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/crypto/random_generator.hpp"/>
+  </compounddef>
+</doxygen>

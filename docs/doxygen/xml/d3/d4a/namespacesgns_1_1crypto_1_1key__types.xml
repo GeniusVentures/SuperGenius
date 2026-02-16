@@ -1,0 +1,104 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d3/d4a/namespacesgns_1_1crypto_1_1key__types" kind="namespace" language="C++">
+    <compoundname>sgns::crypto::key_types</compoundname>
+    <sectiondef kind="var">
+      <memberdef kind="variable" id="d3/d4a/namespacesgns_1_1crypto_1_1key__types_1a9f89dd4e8f46de1f9d2ab27df5ca6e73" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+        <definition>KeyTypeId sgns::crypto::key_types::kProd</definition>
+        <argsstring></argsstring>
+        <name>kProd</name>
+        <qualifiedname>sgns::crypto::key_types::kProd</qualifiedname>
+        <initializer>= 1886547812U</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Types are 32bit integers, which represent encoded 4-char strings Big-endian byte order is used </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/key_type.hpp" line="22" column="32" bodyfile="src/crypto/crypto_store/key_type.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/d4a/namespacesgns_1_1crypto_1_1key__types_1aa7ffea1f1d6969f66139355e8321242a" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+        <definition>KeyTypeId sgns::crypto::key_types::kGran</definition>
+        <argsstring></argsstring>
+        <name>kGran</name>
+        <qualifiedname>sgns::crypto::key_types::kGran</qualifiedname>
+        <initializer>= 1735549294U</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/key_type.hpp" line="23" column="32" bodyfile="src/crypto/crypto_store/key_type.hpp" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/d4a/namespacesgns_1_1crypto_1_1key__types_1ab87b7a8605de76d0d3a4694a6c119cdf" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+        <definition>KeyTypeId sgns::crypto::key_types::kAcco</definition>
+        <argsstring></argsstring>
+        <name>kAcco</name>
+        <qualifiedname>sgns::crypto::key_types::kAcco</qualifiedname>
+        <initializer>= 1633903471U</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/key_type.hpp" line="24" column="32" bodyfile="src/crypto/crypto_store/key_type.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/d4a/namespacesgns_1_1crypto_1_1key__types_1ada21eaf977aa08e5b717bafeba87dc40" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+        <definition>KeyTypeId sgns::crypto::key_types::kImon</definition>
+        <argsstring></argsstring>
+        <name>kImon</name>
+        <qualifiedname>sgns::crypto::key_types::kImon</qualifiedname>
+        <initializer>= 1768779630U</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/key_type.hpp" line="25" column="32" bodyfile="src/crypto/crypto_store/key_type.hpp" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/d4a/namespacesgns_1_1crypto_1_1key__types_1a8e939b79ca83eee09cc5977328c0d9a9" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+        <definition>KeyTypeId sgns::crypto::key_types::kAudi</definition>
+        <argsstring></argsstring>
+        <name>kAudi</name>
+        <qualifiedname>sgns::crypto::key_types::kAudi</qualifiedname>
+        <initializer>= 1635083369U</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/key_type.hpp" line="26" column="32" bodyfile="src/crypto/crypto_store/key_type.hpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/d4a/namespacesgns_1_1crypto_1_1key__types_1a975df97c7c813f3366deafea84a4be87" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+        <definition>KeyTypeId sgns::crypto::key_types::kLp2p</definition>
+        <argsstring></argsstring>
+        <name>kLp2p</name>
+        <qualifiedname>sgns::crypto::key_types::kLp2p</qualifiedname>
+        <initializer>= 1819292272U</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/key_type.hpp" line="27" column="32" bodyfile="src/crypto/crypto_store/key_type.hpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/crypto_store/key_type.hpp" line="17" column="3"/>
+  </compounddef>
+</doxygen>

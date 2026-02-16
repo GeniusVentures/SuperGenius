@@ -1,0 +1,248 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/d71/classsgns_1_1_j_s_o_n_backend" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::JSONBackend</compoundname>
+    <basecompoundref refid="d5/db7/classsgns_1_1_i_secure_storage" prot="public" virt="non-virtual">sgns::ISecureStorage</basecompoundref>
+    <derivedcompoundref refid="d5/d83/classsgns_1_1_android_secure_storage" prot="public" virt="non-virtual">sgns::AndroidSecureStorage</derivedcompoundref>
+    <derivedcompoundref refid="d9/d1f/classsgns_1_1_apple_secure_storage" prot="public" virt="non-virtual">sgns::AppleSecureStorage</derivedcompoundref>
+    <derivedcompoundref refid="dd/de8/classsgns_1_1_linux_secure_storage" prot="public" virt="non-virtual">sgns::LinuxSecureStorage</derivedcompoundref>
+    <derivedcompoundref refid="db/d24/classsgns_1_1_windows_secure_storage" prot="public" virt="non-virtual">sgns::WindowsSecureStorage</derivedcompoundref>
+    <includes refid="d9/d5a/_j_s_o_n_backend_8hpp" local="no">JSONBackend.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d9/d71/classsgns_1_1_j_s_o_n_backend_1a9e536564914936ba39ee7d67dfa1a316" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::JSONBackend::JSONBackend</definition>
+        <argsstring>()=default</argsstring>
+        <name>JSONBackend</name>
+        <qualifiedname>sgns::JSONBackend::JSONBackend</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/JSONBackend.hpp" line="12" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d71/classsgns_1_1_j_s_o_n_backend_1a8b69c80e8af12d7c16ada35f6ae2d170" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::JSONBackend::~JSONBackend</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~JSONBackend</name>
+        <qualifiedname>sgns::JSONBackend::~JSONBackend</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/JSONBackend.hpp" line="14" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d71/classsgns_1_1_j_s_o_n_backend_1a5e2595afc441ef277e89c6ed13fc3495" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::JSONBackend::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::JSONBackend::GetName</qualifiedname>
+        <reimplements refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7">GetName</reimplements>
+        <reimplementedby refid="dd/de8/classsgns_1_1_linux_secure_storage_1a4e24c58d7c44e03cd5bba1bd8d158fac">GetName</reimplementedby>
+        <reimplementedby refid="db/d24/classsgns_1_1_windows_secure_storage_1a45dce53c507a2304198f3451be5ecdd9">GetName</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/JSONBackend.hpp" line="16" column="21" bodyfile="src/local_secure_storage/impl/JSONBackend.hpp" bodystart="16" bodyend="19"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d71/classsgns_1_1_j_s_o_n_backend_1a40da14b3444d1b03eac8164f59a3c347" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d5/db7/classsgns_1_1_i_secure_storage_1a5a10a540c9551ccad7d9c8e44cfd14d1" kindref="member">SecureBufferType</ref> &gt;</type>
+        <definition>outcome::result&lt; ISecureStorage::SecureBufferType &gt; sgns::JSONBackend::Load</definition>
+        <argsstring>(const std::string &amp;key) override</argsstring>
+        <name>Load</name>
+        <qualifiedname>sgns::JSONBackend::Load</qualifiedname>
+        <reimplements refid="d5/db7/classsgns_1_1_i_secure_storage_1a45d50a23530ee9218d85c063e83758fd">Load</reimplements>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/JSONBackend.hpp" line="21" column="25" bodyfile="src/local_secure_storage/impl/JSONBackend.cpp" bodystart="9" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d71/classsgns_1_1_j_s_o_n_backend_1a00f62ecffae03504a180358b004d61e4" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::JSONBackend::Save</definition>
+        <argsstring>(const std::string &amp;key, const SecureBufferType &amp;buffer) override</argsstring>
+        <name>Save</name>
+        <qualifiedname>sgns::JSONBackend::Save</qualifiedname>
+        <reimplements refid="d5/db7/classsgns_1_1_i_secure_storage_1a3cc4bde24353a69a965903afcefb9765">Save</reimplements>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d5/db7/classsgns_1_1_i_secure_storage_1a5a10a540c9551ccad7d9c8e44cfd14d1" kindref="member">SecureBufferType</ref> &amp;</type>
+          <declname>buffer</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/JSONBackend.hpp" line="23" column="25" bodyfile="src/local_secure_storage/impl/JSONBackend.cpp" bodystart="29" bodyend="45"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d71/classsgns_1_1_j_s_o_n_backend_1a041dd45b9e2196bb757d23d2934876e4" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; bool &gt;</type>
+        <definition>outcome::result&lt; bool &gt; sgns::JSONBackend::DeleteKey</definition>
+        <argsstring>(const std::string &amp;key) override</argsstring>
+        <name>DeleteKey</name>
+        <qualifiedname>sgns::JSONBackend::DeleteKey</qualifiedname>
+        <reimplements refid="d5/db7/classsgns_1_1_i_secure_storage_1ae594e24ee45aced50e30be65eec4facd">DeleteKey</reimplements>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/JSONBackend.hpp" line="25" column="25" bodyfile="src/local_secure_storage/impl/JSONBackend.cpp" bodystart="47" bodyend="56"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d71/classsgns_1_1_j_s_o_n_backend_1aa20b2995d7c4d206ae8217b08ee94fc1" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; rapidjson::Document &gt;</type>
+        <definition>virtual outcome::result&lt; rapidjson::Document &gt; sgns::JSONBackend::LoadJSON</definition>
+        <argsstring>() const =0</argsstring>
+        <name>LoadJSON</name>
+        <qualifiedname>sgns::JSONBackend::LoadJSON</qualifiedname>
+        <reimplementedby refid="d5/d83/classsgns_1_1_android_secure_storage_1a1a855c2314c40dbe447d53cf4f5f4140">LoadJSON</reimplementedby>
+        <reimplementedby refid="d9/d1f/classsgns_1_1_apple_secure_storage_1ae46afcf95f68608f363e971d2f6a8425">LoadJSON</reimplementedby>
+        <reimplementedby refid="dd/de8/classsgns_1_1_linux_secure_storage_1a4723809650162dc3f6082419a1c2b992">LoadJSON</reimplementedby>
+        <reimplementedby refid="db/d24/classsgns_1_1_windows_secure_storage_1a97a1ed63cfecff13c61564999109ad29">LoadJSON</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/JSONBackend.hpp" line="27" column="33"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d71/classsgns_1_1_j_s_o_n_backend_1a7ec4c317139903bcb835bb3d33a4ae07" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::JSONBackend::SaveJSON</definition>
+        <argsstring>(rapidjson::Document document)=0</argsstring>
+        <name>SaveJSON</name>
+        <qualifiedname>sgns::JSONBackend::SaveJSON</qualifiedname>
+        <reimplementedby refid="d5/d83/classsgns_1_1_android_secure_storage_1a48a47b909539147f6ddb36c45d906ff2">SaveJSON</reimplementedby>
+        <reimplementedby refid="d9/d1f/classsgns_1_1_apple_secure_storage_1a125c79f2552074f258417ed4ce368517">SaveJSON</reimplementedby>
+        <reimplementedby refid="dd/de8/classsgns_1_1_linux_secure_storage_1a897476ddc216d7ec997f93d880ea90bd">SaveJSON</reimplementedby>
+        <reimplementedby refid="db/d24/classsgns_1_1_windows_secure_storage_1af73ddd7b05f529f915c2a8ce76593d0e">SaveJSON</reimplementedby>
+        <param>
+          <type>rapidjson::Document</type>
+          <declname>document</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/JSONBackend.hpp" line="29" column="33"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="5">
+        <label>sgns::AndroidSecureStorage</label>
+        <link refid="d5/d83/classsgns_1_1_android_secure_storage"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>sgns::AppleSecureStorage</label>
+        <link refid="d9/d1f/classsgns_1_1_apple_secure_storage"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::ISecureStorage</label>
+        <link refid="d5/db7/classsgns_1_1_i_secure_storage"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::JSONBackend</label>
+        <link refid="d9/d71/classsgns_1_1_j_s_o_n_backend"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::LinuxSecureStorage</label>
+        <link refid="dd/de8/classsgns_1_1_linux_secure_storage"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>sgns::WindowsSecureStorage</label>
+        <link refid="db/d24/classsgns_1_1_windows_secure_storage"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::enable_shared_from_this&lt; ISecureStorage &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="2">
+        <label>sgns::ISecureStorage</label>
+        <link refid="d5/db7/classsgns_1_1_i_secure_storage"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::JSONBackend</label>
+        <link refid="d9/d71/classsgns_1_1_j_s_o_n_backend"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::enable_shared_from_this&lt; ISecureStorage &gt;</label>
+      </node>
+    </collaborationgraph>
+    <location file="src/local_secure_storage/impl/JSONBackend.hpp" line="9" column="5" bodyfile="src/local_secure_storage/impl/JSONBackend.hpp" bodystart="10" bodyend="30"/>
+    <listofallmembers>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a041dd45b9e2196bb757d23d2934876e4" prot="public" virt="virtual"><scope>sgns::JSONBackend</scope><name>DeleteKey</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a5e2595afc441ef277e89c6ed13fc3495" prot="public" virt="virtual"><scope>sgns::JSONBackend</scope><name>GetName</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a9e536564914936ba39ee7d67dfa1a316" prot="public" virt="non-virtual"><scope>sgns::JSONBackend</scope><name>JSONBackend</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a40da14b3444d1b03eac8164f59a3c347" prot="public" virt="virtual"><scope>sgns::JSONBackend</scope><name>Load</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1aa20b2995d7c4d206ae8217b08ee94fc1" prot="public" virt="pure-virtual"><scope>sgns::JSONBackend</scope><name>LoadJSON</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a00f62ecffae03504a180358b004d61e4" prot="public" virt="virtual"><scope>sgns::JSONBackend</scope><name>Save</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a7ec4c317139903bcb835bb3d33a4ae07" prot="public" virt="pure-virtual"><scope>sgns::JSONBackend</scope><name>SaveJSON</name></member>
+      <member refid="d5/db7/classsgns_1_1_i_secure_storage_1a5a10a540c9551ccad7d9c8e44cfd14d1" prot="public" virt="non-virtual"><scope>sgns::JSONBackend</scope><name>SecureBufferType</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::JSONBackend</scope><name>~IComponent</name></member>
+      <member refid="d5/db7/classsgns_1_1_i_secure_storage_1a941b5c4bbea8622d949ef341b129f55c" prot="public" virt="non-virtual"><scope>sgns::JSONBackend</scope><name>~ISecureStorage</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a8b69c80e8af12d7c16ada35f6ae2d170" prot="public" virt="non-virtual"><scope>sgns::JSONBackend</scope><name>~JSONBackend</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

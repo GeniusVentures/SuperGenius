@@ -1,0 +1,328 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/d26/unused_8hpp" kind="file" language="C++">
+    <compoundname>unused.hpp</compoundname>
+    <includes local="no">cstddef</includes>
+    <includedby refid="df/dbf/digest_8hpp" local="yes">src/primitives/digest.hpp</includedby>
+    <includedby refid="d1/dfb/changes__trie_8hpp" local="yes">src/storage/changes_trie/impl/changes_trie.hpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/base/unused.hpp</label>
+        <link refid="dd/d26/unused_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>cstddef</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="1">
+        <label>src/base/unused.hpp</label>
+        <link refid="dd/d26/unused_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>src/blockchain/block_header_repository.hpp</label>
+        <link refid="d6/d4c/block__header__repository_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>src/blockchain/block_storage.hpp</label>
+        <link refid="d4/d5d/block__storage_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>src/blockchain/block_tree.hpp</label>
+        <link refid="d2/d0a/block__tree_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>src/blockchain/impl/block_header_repository.cpp</label>
+        <link refid="df/d2c/block__header__repository_8cpp"/>
+      </node>
+      <node id="7">
+        <label>src/blockchain/impl/block_tree_impl.cpp</label>
+        <link refid="d5/df4/block__tree__impl_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/blockchain/impl/block_tree_impl.hpp</label>
+        <link refid="d7/d87/block__tree__impl_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>src/blockchain/impl/key_value_block_header_repository.cpp</label>
+        <link refid="de/d1b/key__value__block__header__repository_8cpp"/>
+      </node>
+      <node id="8">
+        <label>src/blockchain/impl/key_value_block_header_repository.hpp</label>
+        <link refid="dd/dc6/key__value__block__header__repository_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>src/blockchain/impl/key_value_block_storage.cpp</label>
+        <link refid="de/de9/key__value__block__storage_8cpp"/>
+      </node>
+      <node id="10">
+        <label>src/blockchain/impl/key_value_block_storage.hpp</label>
+        <link refid="d4/d6b/key__value__block__storage_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>src/primitives/block.hpp</label>
+        <link refid="d9/db2/block_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>src/primitives/block_data.hpp</label>
+        <link refid="d1/dce/block__data_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>src/primitives/block_header.hpp</label>
+        <link refid="d7/d72/block__header_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>src/primitives/digest.hpp</label>
+        <link refid="df/dbf/digest_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.cpp</label>
+        <link refid="d7/d6b/block__builder__impl_8cpp"/>
+      </node>
+      <node id="20">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.hpp</label>
+        <link refid="d3/d95/block__builder__impl_8hpp"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.cpp</label>
+        <link refid="de/d5e/core__factory__impl_8cpp"/>
+      </node>
+      <node id="24">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.hpp</label>
+        <link refid="d7/de4/core__factory__impl_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>src/runtime/binaryen/runtime_api/core_impl.cpp</label>
+        <link refid="dc/d7c/core__impl_8cpp"/>
+      </node>
+      <node id="12">
+        <label>src/runtime/binaryen/runtime_api/core_impl.hpp</label>
+        <link refid="d7/dbc/core__impl_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.cpp</label>
+        <link refid="dc/def/finality__api__impl_8cpp"/>
+      </node>
+      <node id="26">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.hpp</label>
+        <link refid="db/dad/finality__api__impl_8hpp"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>src/runtime/block_builder.hpp</label>
+        <link refid="d7/d89/block__builder_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>src/runtime/core.hpp</label>
+        <link refid="da/d47/core_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>src/runtime/core_factory.hpp</label>
+        <link refid="da/d13/core__factory_8hpp"/>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>src/runtime/dummy/finality_api_dummy.cpp</label>
+        <link refid="d0/d07/finality__api__dummy_8cpp"/>
+      </node>
+      <node id="28">
+        <label>src/runtime/dummy/finality_api_dummy.hpp</label>
+        <link refid="d5/d14/finality__api__dummy_8hpp"/>
+        <childnode refid="29" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>src/runtime/finality_api.hpp</label>
+        <link refid="d7/d22/finality__api_8hpp"/>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>src/storage/changes_trie/impl/changes_trie.cpp</label>
+        <link refid="d9/d77/changes__trie_8cpp"/>
+      </node>
+      <node id="30">
+        <label>src/storage/changes_trie/impl/changes_trie.hpp</label>
+        <link refid="d1/dfb/changes__trie_8hpp"/>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>src/storage/changes_trie/impl/storage_changes_tracker_impl.cpp</label>
+        <link refid="d8/d2c/storage__changes__tracker__impl_8cpp"/>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="da/dac/structsgns_1_1_unused" prot="public">sgns::Unused</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1aa528beacefda8b0a1c432a7d0afda122" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>size_t</type>
+            <declname>N</declname>
+            <defname>N</defname>
+          </param>
+          <param>
+            <type>class Stream</type>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const Unused&lt; N &gt; &amp;)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const Unused&lt; N &gt; &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/unused.hpp" line="20" column="3" bodyfile="src/base/unused.hpp" bodystart="20" bodyend="22"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1af7fe99356bce42afdd5d73359b05caf8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>size_t</type>
+            <declname>N</declname>
+            <defname>N</defname>
+          </param>
+          <param>
+            <type>class Stream</type>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, Unused&lt; N &gt; &amp;)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>Unused&lt; N &gt; &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/unused.hpp" line="25" column="10" bodyfile="src/base/unused.hpp" bodystart="25" bodyend="27"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_UNUSED</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_UNUSED</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstddef&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref><sp/>{</highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>N&gt;</highlight></codeline>
+<codeline lineno="11" refid="da/dac/structsgns_1_1_unused" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="da/dac/structsgns_1_1_unused" kindref="compound">Unused</ref><sp/>{</highlight></codeline>
+<codeline lineno="12" refid="da/dac/structsgns_1_1_unused_1a6df8d8bed8ef0af8674b44e108c0cfca" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/><ref refid="da/dac/structsgns_1_1_unused_1a6df8d8bed8ef0af8674b44e108c0cfca" kindref="member">index</ref><sp/>=<sp/>N;</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14" refid="da/dac/structsgns_1_1_unused_1a77235fda4dc7c9324af49843bd527a81" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="da/dac/structsgns_1_1_unused_1a77235fda4dc7c9324af49843bd527a81" kindref="member">operator==</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="da/dac/structsgns_1_1_unused" kindref="compound">Unused</ref><sp/>&amp;)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>N,<sp/></highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>Stream&gt;</highlight></codeline>
+<codeline lineno="20" refid="d2/d2b/namespacesgns_1aa528beacefda8b0a1c432a7d0afda122" refkind="member"><highlight class="normal"><sp/><sp/>Stream<sp/>&amp;<ref refid="d2/d2b/namespacesgns_1aa528beacefda8b0a1c432a7d0afda122" kindref="member">operator&lt;&lt;</ref>(Stream<sp/>&amp;s,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="da/dac/structsgns_1_1_unused" kindref="compound">Unused&lt;N&gt;</ref><sp/>&amp;)<sp/>{</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>s;</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>N,<sp/></highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>Stream&gt;</highlight></codeline>
+<codeline lineno="25" refid="d2/d2b/namespacesgns_1af7fe99356bce42afdd5d73359b05caf8" refkind="member"><highlight class="normal"><sp/><sp/>Stream<sp/>&amp;<ref refid="d2/d2b/namespacesgns_1af7fe99356bce42afdd5d73359b05caf8" kindref="member">operator&gt;&gt;</ref>(Stream<sp/>&amp;s,<sp/><ref refid="da/dac/structsgns_1_1_unused" kindref="compound">Unused&lt;N&gt;</ref><sp/>&amp;)<sp/>{</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>s;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_UNUSED</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/base/unused.hpp"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,78 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/d00/classsgns_1_1runtime_1_1_wasm_provider" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::runtime::WasmProvider</compoundname>
+    <derivedcompoundref refid="dc/d5f/classsgns_1_1runtime_1_1_const_wasm_provider" prot="public" virt="non-virtual">sgns::runtime::ConstWasmProvider</derivedcompoundref>
+    <derivedcompoundref refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider" prot="public" virt="non-virtual">sgns::runtime::StorageWasmProvider</derivedcompoundref>
+    <includes refid="d5/d32/wasm__provider_8hpp" local="no">wasm_provider.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d2/d00/classsgns_1_1runtime_1_1_wasm_provider_1a380f66d67c973b57a1e12f9159fad82b" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::runtime::WasmProvider::~WasmProvider</definition>
+        <argsstring>()=default</argsstring>
+        <name>~WasmProvider</name>
+        <qualifiedname>sgns::runtime::WasmProvider::~WasmProvider</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/wasm_provider.hpp" line="12" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d00/classsgns_1_1runtime_1_1_wasm_provider_1a753f3b4868712df7855290c65127b067" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+        <definition>virtual const base::Buffer &amp; sgns::runtime::WasmProvider::getStateCode</definition>
+        <argsstring>() const =0</argsstring>
+        <name>getStateCode</name>
+        <qualifiedname>sgns::runtime::WasmProvider::getStateCode</qualifiedname>
+        <reimplementedby refid="dc/d5f/classsgns_1_1runtime_1_1_const_wasm_provider_1af625c00d4f8348678dd9c73e8e99f967">getStateCode</reimplementedby>
+        <reimplementedby refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1adb1f45d96e2092f9131ca641418a7d43">getStateCode</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>wasm runtime code </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/wasm_provider.hpp" line="17" column="32"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Interface for accessing WASM state/runtime code. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::runtime::ConstWasmProvider</label>
+        <link refid="dc/d5f/classsgns_1_1runtime_1_1_const_wasm_provider"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::runtime::StorageWasmProvider</label>
+        <link refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::WasmProvider</label>
+        <link refid="d2/d00/classsgns_1_1runtime_1_1_wasm_provider"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::runtime::WasmProvider</label>
+        <link refid="d2/d00/classsgns_1_1runtime_1_1_wasm_provider"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/wasm_provider.hpp" line="10" column="3" bodyfile="src/runtime/wasm_provider.hpp" bodystart="10" bodyend="18"/>
+    <listofallmembers>
+      <member refid="d2/d00/classsgns_1_1runtime_1_1_wasm_provider_1a753f3b4868712df7855290c65127b067" prot="public" virt="pure-virtual"><scope>sgns::runtime::WasmProvider</scope><name>getStateCode</name></member>
+      <member refid="d2/d00/classsgns_1_1runtime_1_1_wasm_provider_1a380f66d67c973b57a1e12f9159fad82b" prot="public" virt="virtual"><scope>sgns::runtime::WasmProvider</scope><name>~WasmProvider</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

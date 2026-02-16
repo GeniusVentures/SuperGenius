@@ -1,0 +1,199 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/de0/structsgns_1_1primitives_1_1_verification" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::primitives::Verification</compoundname>
+    <basecompoundref refid="df/db0/structsgns_1_1primitives_1_1detail_1_1_digest_item_common" prot="public" virt="non-virtual">sgns::primitives::detail::DigestItemCommon</basecompoundref>
+    <includes refid="df/dbf/digest_8hpp" local="no">digest.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d5/de0/structsgns_1_1primitives_1_1_verification_1a584faeda0668a09db2ddd52ffe8a96ad" prot="public" static="no" mutable="no">
+        <type>boost::variant&lt; <ref refid="da/dac/structsgns_1_1_unused" kindref="compound">Unused</ref>&lt; 0 &gt;, <ref refid="db/d4b/structsgns_1_1primitives_1_1_scheduled_change" kindref="compound">ScheduledChange</ref>, <ref refid="de/dc2/structsgns_1_1primitives_1_1_forced_change" kindref="compound">ForcedChange</ref>, <ref refid="d2/d91/structsgns_1_1primitives_1_1_on_disabled" kindref="compound">OnDisabled</ref>, <ref refid="db/df4/structsgns_1_1primitives_1_1_pause" kindref="compound">Pause</ref>, <ref refid="d3/da5/structsgns_1_1primitives_1_1_resume" kindref="compound">Resume</ref> &gt;</type>
+        <definition>boost::variant&lt;Unused&lt;0&gt;, ScheduledChange, ForcedChange, OnDisabled, Pause, Resume&gt; sgns::primitives::Verification::payload</definition>
+        <argsstring></argsstring>
+        <name>payload</name>
+        <qualifiedname>sgns::primitives::Verification::payload</qualifiedname>
+        <initializer>= <ref refid="da/dac/structsgns_1_1_unused" kindref="compound">Unused</ref>&lt;0&gt;{}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/digest.hpp" line="59" column="9" bodyfile="src/primitives/digest.hpp" bodystart="59" bodyend="59"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d5/de0/structsgns_1_1primitives_1_1_verification_1ae15b4cbb61e1735d1b9949dd8aaa6079" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::primitives::Verification::Verification</definition>
+        <argsstring>()=default</argsstring>
+        <name>Verification</name>
+        <qualifiedname>sgns::primitives::Verification::Verification</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/digest.hpp" line="61" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/de0/structsgns_1_1primitives_1_1_verification_1a9d8d55821ae3a75c806b7c00b781d5a3" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class A</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;!std::is_same_v&lt;A, <ref refid="d5/de0/structsgns_1_1primitives_1_1_verification_1ae15b4cbb61e1735d1b9949dd8aaa6079" kindref="member">Verification</ref>&gt;, void&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type></type>
+        <definition>sgns::primitives::Verification::Verification</definition>
+        <argsstring>(A &amp;&amp;a)</argsstring>
+        <name>Verification</name>
+        <qualifiedname>sgns::primitives::Verification::Verification</qualifiedname>
+        <param>
+          <type>A &amp;&amp;</type>
+          <declname>a</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/digest.hpp" line="65" column="5" bodyfile="src/primitives/digest.hpp" bodystart="65" bodyend="65"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/de0/structsgns_1_1primitives_1_1_verification_1ae8b905df9082b6cf01672c6aee30cdff" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class A</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;!std::is_same_v&lt;A, <ref refid="d5/de0/structsgns_1_1primitives_1_1_verification_1ae15b4cbb61e1735d1b9949dd8aaa6079" kindref="member">Verification</ref>&gt;, void&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type></type>
+        <definition>sgns::primitives::Verification::Verification</definition>
+        <argsstring>(const A &amp;a)</argsstring>
+        <name>Verification</name>
+        <qualifiedname>sgns::primitives::Verification::Verification</qualifiedname>
+        <param>
+          <type>const A &amp;</type>
+          <declname>a</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/digest.hpp" line="69" column="5" bodyfile="src/primitives/digest.hpp" bodystart="69" bodyend="69"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>A message from the runtime to the verification engine. This should <emphasis>never</emphasis> be generated by the native code of any verification engine, but this is not checked (yet). </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::primitives::Verification</label>
+        <link refid="d5/de0/structsgns_1_1primitives_1_1_verification"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::primitives::detail::DigestItemCommon</label>
+        <link refid="df/db0/structsgns_1_1primitives_1_1detail_1_1_digest_item_common"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="5">
+        <label>T</label>
+      </node>
+      <node id="8">
+        <label>boost::equality_comparable&lt; Buffer &gt;</label>
+      </node>
+      <node id="9">
+        <label>boost::equality_comparable&lt; gsl::span&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="10">
+        <label>boost::equality_comparable&lt; std::vector&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="6">
+        <label>sgns::base::Blob&lt; size_ &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::base::Blob&lt; 4 &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; 4 &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::base::Buffer</label>
+        <link refid="de/dd5/classsgns_1_1base_1_1_buffer"/>
+        <childnode refid="8" relation="public-inheritance">
+        </childnode>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::primitives::Verification</label>
+        <link refid="d5/de0/structsgns_1_1primitives_1_1_verification"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::primitives::detail::DigestItemCommon</label>
+        <link refid="df/db0/structsgns_1_1primitives_1_1detail_1_1_digest_item_common"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+verification_engine_id</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+data</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::vector&lt; uint8_t &gt;</label>
+        <childnode refid="12" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/primitives/digest.hpp" line="52" column="3" bodyfile="src/primitives/digest.hpp" bodystart="52" bodyend="70"/>
+    <listofallmembers>
+      <member refid="df/db0/structsgns_1_1primitives_1_1detail_1_1_digest_item_common_1a5f2daabc089b61b10fe91ce0d3a5772a" prot="public" virt="non-virtual"><scope>sgns::primitives::Verification</scope><name>data</name></member>
+      <member refid="df/db0/structsgns_1_1primitives_1_1detail_1_1_digest_item_common_1a6602c67d6361fb77b3ac7cbcebd11ad3" prot="public" virt="non-virtual"><scope>sgns::primitives::Verification</scope><name>operator!=</name></member>
+      <member refid="df/db0/structsgns_1_1primitives_1_1detail_1_1_digest_item_common_1af212abb13ed9f3b0e3a88cb1d7c9706d" prot="public" virt="non-virtual"><scope>sgns::primitives::Verification</scope><name>operator==</name></member>
+      <member refid="d5/de0/structsgns_1_1primitives_1_1_verification_1a584faeda0668a09db2ddd52ffe8a96ad" prot="public" virt="non-virtual"><scope>sgns::primitives::Verification</scope><name>payload</name></member>
+      <member refid="d5/de0/structsgns_1_1primitives_1_1_verification_1ae15b4cbb61e1735d1b9949dd8aaa6079" prot="public" virt="non-virtual"><scope>sgns::primitives::Verification</scope><name>Verification</name></member>
+      <member refid="d5/de0/structsgns_1_1primitives_1_1_verification_1a9d8d55821ae3a75c806b7c00b781d5a3" prot="public" virt="non-virtual"><scope>sgns::primitives::Verification</scope><name>Verification</name></member>
+      <member refid="d5/de0/structsgns_1_1primitives_1_1_verification_1ae8b905df9082b6cf01672c6aee30cdff" prot="public" virt="non-virtual"><scope>sgns::primitives::Verification</scope><name>Verification</name></member>
+      <member refid="df/db0/structsgns_1_1primitives_1_1detail_1_1_digest_item_common_1ae0e8d3d45f7c31c0a38d75d5a9bb5f2a" prot="public" virt="non-virtual"><scope>sgns::primitives::Verification</scope><name>verification_engine_id</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

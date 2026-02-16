@@ -1,0 +1,216 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::runtime::binaryen::Version</compoundname>
+    <includes refid="d7/dad/version_8hpp" local="no">version.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version_1a61c3cd1fd166e6fb1134171e934d097b" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::primitives::Version::spec_name</definition>
+        <argsstring></argsstring>
+        <name>spec_name</name>
+        <qualifiedname>sgns::runtime::binaryen::Version::spec_name</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Identifies the different Substrate runtimes. There&apos;ll be at least supergenius and node. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/version.hpp" line="45" column="17" bodyfile="src/primitives/version.hpp" bodystart="45" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version_1a6fd15f393df98575964268136eca4b6a" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::primitives::Version::impl_name</definition>
+        <argsstring></argsstring>
+        <name>impl_name</name>
+        <qualifiedname>sgns::runtime::binaryen::Version::impl_name</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Name of the implementation of the spec. This is of little consequence for the node and serves only to differentiate code of different implementation teams. For this codebase, it will be supergenius. If there were a non-Rust implementation of the SuperGenius runtime (e.g. C++), then it would identify itself with an accordingly different impl_name. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/version.hpp" line="53" column="17" bodyfile="src/primitives/version.hpp" bodystart="53" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version_1a89b6213d88c67b3dd6963132f9d41b47" prot="public" static="no" mutable="no">
+        <type>uint32_t</type>
+        <definition>uint32_t sgns::primitives::Version::authoring_version</definition>
+        <argsstring></argsstring>
+        <name>authoring_version</name>
+        <qualifiedname>sgns::runtime::binaryen::Version::authoring_version</qualifiedname>
+        <initializer>= 0u</initializer>
+        <briefdescription>
+<para>authoring_version is the version of the authorship interface </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/version.hpp" line="55" column="14" bodyfile="src/primitives/version.hpp" bodystart="55" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version_1a7ef5be03790801aab1bdeb84b5fc38ae" prot="public" static="no" mutable="no">
+        <type>uint32_t</type>
+        <definition>uint32_t sgns::primitives::Version::spec_version</definition>
+        <argsstring></argsstring>
+        <name>spec_version</name>
+        <qualifiedname>sgns::runtime::binaryen::Version::spec_version</qualifiedname>
+        <initializer>= 0u</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><ref refid="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version" kindref="compound">Version</ref> of the implementation of the specification. Nodes are free to ignore this; it serves only as an indication that the code is different; as long as the other two versions are the same then while the actual code may be different, it is nonetheless required to do the same thing. Non-verification-breaking optimizations are about the only changes that could be made which would result in only the impl_version changing. <ref refid="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version" kindref="compound">Version</ref> of the runtime specification. A full-node will not attempt to use its native runtime in substitute for the on-chain Wasm runtime unless all of <computeroutput><ref refid="de/d6d/structsgns_1_1primitives_1_1_version_1a61c3cd1fd166e6fb1134171e934d097b" kindref="member">spec_name</ref></computeroutput>, <computeroutput><ref refid="de/d6d/structsgns_1_1primitives_1_1_version_1a7ef5be03790801aab1bdeb84b5fc38ae" kindref="member">spec_version</ref></computeroutput> and <computeroutput><ref refid="de/d6d/structsgns_1_1primitives_1_1_version_1a89b6213d88c67b3dd6963132f9d41b47" kindref="member">authoring_version</ref></computeroutput> are the same between Wasm and native. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/version.hpp" line="69" column="14" bodyfile="src/primitives/version.hpp" bodystart="69" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version_1abffbefdd753ad2011c4abdc2dc3708a5" prot="public" static="no" mutable="no">
+        <type>uint32_t</type>
+        <definition>uint32_t sgns::primitives::Version::impl_version</definition>
+        <argsstring></argsstring>
+        <name>impl_version</name>
+        <qualifiedname>sgns::runtime::binaryen::Version::impl_version</qualifiedname>
+        <initializer>= 0u</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/version.hpp" line="71" column="14" bodyfile="src/primitives/version.hpp" bodystart="71" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version_1aa95b62ca68e9ab57d875c64baa2b0883" prot="public" static="no" mutable="no">
+        <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1ad41a35e4207250aa9f1d43e1284638cc" kindref="member">ApisVec</ref></type>
+        <definition>ApisVec sgns::primitives::Version::apis</definition>
+        <argsstring></argsstring>
+        <name>apis</name>
+        <qualifiedname>sgns::runtime::binaryen::Version::apis</qualifiedname>
+        <briefdescription>
+<para>List of supported API &quot;features&quot; along with their versions. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/version.hpp" line="73" column="13" bodyfile="src/primitives/version.hpp" bodystart="73" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version_1aadb98fe0d8032ee4cd3690f85cf6cc6a" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::primitives::Version::operator==</definition>
+        <argsstring>(const Version &amp;rhs) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::runtime::binaryen::Version::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="de/d6d/structsgns_1_1primitives_1_1_version" kindref="compound">Version</ref> &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/version.hpp" line="75" column="10" bodyfile="src/primitives/version.hpp" bodystart="75" bodyend="80"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version_1aa0d4e9c5feeb12c009e58647ea3efe33" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::primitives::Version::operator!=</definition>
+        <argsstring>(const Version &amp;rhs) const</argsstring>
+        <name>operator!=</name>
+        <qualifiedname>sgns::runtime::binaryen::Version::operator!=</qualifiedname>
+        <param>
+          <type>const <ref refid="de/d6d/structsgns_1_1primitives_1_1_version" kindref="compound">Version</ref> &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/version.hpp" line="82" column="10" bodyfile="src/primitives/version.hpp" bodystart="82" bodyend="84"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="friend">
+      <memberdef kind="friend" id="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version_1ae2be0f2e106d629db4655106250fd49c" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::ostream &amp;</type>
+        <definition>std::ostream &amp; operator&lt;&lt;</definition>
+        <argsstring>(std::ostream &amp;out, const Version &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::runtime::binaryen::Version::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>std::ostream &amp;</type>
+          <declname>out</declname>
+        </param>
+        <param>
+          <type>const <ref refid="de/d6d/structsgns_1_1primitives_1_1_version" kindref="compound">Version</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/version.hpp" line="86" column="12" bodyfile="src/primitives/version.hpp" bodystart="86" bodyend="90"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Runtime version. This should not be thought of as classic Semver (major/minor/tiny). This triplet have different semantics and mis-interpretation could cause problems. In particular: bug fixes should result in an increment of <computeroutput><ref refid="de/d6d/structsgns_1_1primitives_1_1_version_1a7ef5be03790801aab1bdeb84b5fc38ae" kindref="member">spec_version</ref></computeroutput> and possibly <computeroutput><ref refid="de/d6d/structsgns_1_1primitives_1_1_version_1a89b6213d88c67b3dd6963132f9d41b47" kindref="member">authoring_version</ref></computeroutput>, absolutely not <computeroutput><ref refid="de/d6d/structsgns_1_1primitives_1_1_version_1abffbefdd753ad2011c4abdc2dc3708a5" kindref="member">impl_version</ref></computeroutput> since they change the semantics of the runtime. </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="6">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::binaryen::Version</label>
+        <link refid="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+impl_name</edgelabel>
+          <edgelabel>+spec_name</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+apis</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="2">
+        <label>std::string</label>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::vector&lt; Api &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; Api &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/primitives/version.hpp" line="40" column="3" bodyfile="src/primitives/version.hpp" bodystart="40" bodyend="92"/>
+    <listofallmembers>
+      <member refid="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version_1aa95b62ca68e9ab57d875c64baa2b0883" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Version</scope><name>apis</name></member>
+      <member refid="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version_1a89b6213d88c67b3dd6963132f9d41b47" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Version</scope><name>authoring_version</name></member>
+      <member refid="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version_1a6fd15f393df98575964268136eca4b6a" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Version</scope><name>impl_name</name></member>
+      <member refid="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version_1abffbefdd753ad2011c4abdc2dc3708a5" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Version</scope><name>impl_version</name></member>
+      <member refid="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version_1aa0d4e9c5feeb12c009e58647ea3efe33" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Version</scope><name>operator!=</name></member>
+      <member refid="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version_1ae2be0f2e106d629db4655106250fd49c" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Version</scope><name>operator&lt;&lt;</name></member>
+      <member refid="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version_1aadb98fe0d8032ee4cd3690f85cf6cc6a" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Version</scope><name>operator==</name></member>
+      <member refid="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version_1a61c3cd1fd166e6fb1134171e934d097b" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Version</scope><name>spec_name</name></member>
+      <member refid="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version_1a7ef5be03790801aab1bdeb84b5fc38ae" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Version</scope><name>spec_version</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

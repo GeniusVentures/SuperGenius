@@ -1,0 +1,250 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/dc8/src_2storage_2trie_2node_8hpp" kind="file" language="C++">
+    <compoundname>node.hpp</compoundname>
+    <includedby refid="d6/d58/codec_8hpp" local="yes">src/storage/trie/codec.hpp</includedby>
+    <includedby refid="d0/d2c/supergenius__node_8hpp" local="yes">src/storage/trie/supergenius_trie/supergenius_node.hpp</includedby>
+    <invincdepgraph>
+      <node id="13">
+        <label>src/application/impl/validating_node_application.cpp</label>
+        <link refid="d3/d34/validating__node__application_8cpp"/>
+      </node>
+      <node id="14">
+        <label>src/blockchain/impl/types.cpp</label>
+        <link refid="da/ddf/types_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/storage/changes_trie/impl/changes_trie.cpp</label>
+        <link refid="d9/d77/changes__trie_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/storage/changes_trie/impl/changes_trie.hpp</label>
+        <link refid="d1/dfb/changes__trie_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>src/storage/changes_trie/impl/storage_changes_tracker_impl.cpp</label>
+        <link refid="d8/d2c/storage__changes__tracker__impl_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/storage/trie/codec.hpp</label>
+        <link refid="d6/d58/codec_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>src/storage/trie/impl/ephemeral_trie_batch_impl.cpp</label>
+        <link refid="db/d7d/ephemeral__trie__batch__impl_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/storage/trie/impl/ephemeral_trie_batch_impl.hpp</label>
+        <link refid="d9/d3e/ephemeral__trie__batch__impl_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>src/storage/trie/impl/persistent_trie_batch_impl.cpp</label>
+        <link refid="dd/dda/persistent__trie__batch__impl_8cpp"/>
+      </node>
+      <node id="9">
+        <label>src/storage/trie/impl/persistent_trie_batch_impl.hpp</label>
+        <link refid="d7/daf/persistent__trie__batch__impl_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>src/storage/trie/impl/trie_storage_impl.cpp</label>
+        <link refid="db/dc1/trie__storage__impl_8cpp"/>
+      </node>
+      <node id="11">
+        <label>src/storage/trie/impl/trie_storage_impl.hpp</label>
+        <link refid="d8/dd1/trie__storage__impl_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/storage/trie/node.hpp</label>
+        <link refid="df/dc8/src_2storage_2trie_2node_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>src/storage/trie/serialization/ordered_trie_hash.hpp</label>
+        <link refid="d9/dcb/ordered__trie__hash_8hpp"/>
+      </node>
+      <node id="16">
+        <label>src/storage/trie/serialization/supergenius_codec.cpp</label>
+        <link refid="d1/dc3/supergenius__codec_8cpp"/>
+      </node>
+      <node id="12">
+        <label>src/storage/trie/serialization/supergenius_codec.hpp</label>
+        <link refid="d7/db4/supergenius__codec_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>src/storage/trie/serialization/trie_serializer.hpp</label>
+        <link refid="d9/d67/trie__serializer_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>src/storage/trie/serialization/trie_serializer_impl.cpp</label>
+        <link refid="dd/d1c/trie__serializer__impl_8cpp"/>
+      </node>
+      <node id="20">
+        <label>src/storage/trie/serialization/trie_serializer_impl.hpp</label>
+        <link refid="d4/d17/trie__serializer__impl_8hpp"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>src/storage/trie/supergenius_trie/supergenius_node.cpp</label>
+        <link refid="d9/ddd/supergenius__node_8cpp"/>
+      </node>
+      <node id="22">
+        <label>src/storage/trie/supergenius_trie/supergenius_node.hpp</label>
+        <link refid="d0/d2c/supergenius__node_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>src/storage/trie/supergenius_trie/supergenius_trie.hpp</label>
+        <link refid="d5/d9e/supergenius__trie_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>src/storage/trie/supergenius_trie/supergenius_trie_cursor.cpp</label>
+        <link refid="d9/d0e/supergenius__trie__cursor_8cpp"/>
+      </node>
+      <node id="18">
+        <label>src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp</label>
+        <link refid="db/dd4/supergenius__trie__cursor_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>src/storage/trie/supergenius_trie/supergenius_trie_factory.hpp</label>
+        <link refid="dc/dc9/supergenius__trie__factory_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>src/storage/trie/supergenius_trie/supergenius_trie_factory_impl.cpp</label>
+        <link refid="d8/d87/supergenius__trie__factory__impl_8cpp"/>
+      </node>
+      <node id="27">
+        <label>src/storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp</label>
+        <link refid="da/da2/supergenius__trie__factory__impl_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>src/storage/trie/supergenius_trie/supergenius_trie_impl.cpp</label>
+        <link refid="db/df1/supergenius__trie__impl_8cpp"/>
+      </node>
+      <node id="29">
+        <label>src/storage/trie/supergenius_trie/supergenius_trie_impl.hpp</label>
+        <link refid="db/d50/supergenius__trie__impl_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node" prot="public">sgns::storage::trie::Node</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d0/dbf/namespacesgns_1_1storage">sgns::storage</innernamespace>
+    <innernamespace refid="d2/db5/namespacesgns_1_1storage_1_1trie">sgns::storage::trie</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_NODE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_NODE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/db5/namespacesgns_1_1storage_1_1trie" kindref="compound">sgns::storage::trie</ref><sp/>{</highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8" refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node" kindref="compound">Node</ref><sp/>{</highlight></codeline>
+<codeline lineno="9" refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node_1aa43d0f34895a260aaf3f0156896c44f0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node_1aa43d0f34895a260aaf3f0156896c44f0" kindref="member">~Node</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>returns<sp/>type<sp/>of<sp/>a<sp/>node</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12" refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node_1ae74019c97c6effa927393afb2bd9a791" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/><ref refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node_1ae74019c97c6effa927393afb2bd9a791" kindref="member">getType</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::storage::trie</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_NODE_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/storage/trie/node.hpp"/>
+  </compounddef>
+</doxygen>

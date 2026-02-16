@@ -1,0 +1,222 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl" kind="class" language="C++" prot="public">
+    <compoundname>sgns::crypto::Secp256k1ProviderImpl</compoundname>
+    <basecompoundref refid="d6/d6e/classsgns_1_1crypto_1_1_secp256k1_provider" prot="public" virt="non-virtual">sgns::crypto::Secp256k1Provider</basecompoundref>
+    <includes refid="d3/ddb/secp256k1__provider__impl_8hpp" local="no">secp256k1_provider_impl.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1a2cf6fcafcc3f3fd3d0fab3f56a4b3e7d" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; secp256k1_context, void(*)(secp256k1_context *)&gt;</type>
+        <definition>std::unique_ptr&lt;secp256k1_context, void (*)(secp256k1_context *)&gt; sgns::crypto::Secp256k1ProviderImpl::context_</definition>
+        <argsstring></argsstring>
+        <name>context_</name>
+        <qualifiedname>sgns::crypto::Secp256k1ProviderImpl::context_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1/secp256k1_provider_impl.hpp" line="36" column="21" bodyfile="src/crypto/secp256k1/secp256k1_provider_impl.hpp" bodystart="36" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1ae913c506e597af859bd9067aa5519835" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crypto::Secp256k1ProviderImpl::~Secp256k1ProviderImpl</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~Secp256k1ProviderImpl</name>
+        <qualifiedname>sgns::crypto::Secp256k1ProviderImpl::~Secp256k1ProviderImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1/secp256k1_provider_impl.hpp" line="19" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1a40dd5d777303b4e27ebc877d5cd44d68" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crypto::Secp256k1ProviderImpl::Secp256k1ProviderImpl</definition>
+        <argsstring>()</argsstring>
+        <name>Secp256k1ProviderImpl</name>
+        <qualifiedname>sgns::crypto::Secp256k1ProviderImpl::Secp256k1ProviderImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1/secp256k1_provider_impl.hpp" line="21" column="5" bodyfile="src/crypto/secp256k1/secp256k1_provider_impl.cpp" bodystart="6" bodyend="9"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1a8d1ef3e384b1dbc9fe4c5be041f6296d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a0a6a0bd1fd15b8244ca42c73aca20bb0" kindref="member">secp256k1::UncompressedPublicKey</ref> &gt;</type>
+        <definition>outcome::result&lt; secp256k1::UncompressedPublicKey &gt; sgns::crypto::Secp256k1ProviderImpl::recoverPublickeyUncompressed</definition>
+        <argsstring>(const secp256k1::RSVSignature &amp;signature, const secp256k1::MessageHash &amp;message_hash) const override</argsstring>
+        <name>recoverPublickeyUncompressed</name>
+        <qualifiedname>sgns::crypto::Secp256k1ProviderImpl::recoverPublickeyUncompressed</qualifiedname>
+        <reimplements refid="d6/d6e/classsgns_1_1crypto_1_1_secp256k1_provider_1aa630234291a7b0c96491c583db451537">recoverPublickeyUncompressed</reimplements>
+        <param>
+          <type>const <ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1aa7cc5a710dcf2a1256a753b9a5005f29" kindref="member">secp256k1::RSVSignature</ref> &amp;</type>
+          <declname>signature</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1abcf0e108bd6f3bd69a355144a5111105" kindref="member">secp256k1::MessageHash</ref> &amp;</type>
+          <declname>message_hash</declname>
+        </param>
+        <briefdescription>
+<para>recover public key in uncompressed form </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>signature</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>signature </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>message_hash</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>blake2s message hash </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>uncompressed public key or error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1/secp256k1_provider_impl.hpp" line="23" column="21" bodyfile="src/crypto/secp256k1/secp256k1_provider_impl.cpp" bodystart="12" bodyend="29"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1afdefb806f28554a42d2e5ec53fdab638" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a7df417d5845ce5b3004e8a1f47b7ef5f" kindref="member">secp256k1::CompressedPublicKey</ref> &gt;</type>
+        <definition>outcome::result&lt; secp256k1::CompressedPublicKey &gt; sgns::crypto::Secp256k1ProviderImpl::recoverPublickeyCompressed</definition>
+        <argsstring>(const secp256k1::RSVSignature &amp;signature, const secp256k1::MessageHash &amp;message_hash) const override</argsstring>
+        <name>recoverPublickeyCompressed</name>
+        <qualifiedname>sgns::crypto::Secp256k1ProviderImpl::recoverPublickeyCompressed</qualifiedname>
+        <reimplements refid="d6/d6e/classsgns_1_1crypto_1_1_secp256k1_provider_1abb6786f2ea96f823b1a9cd56d9210ae9">recoverPublickeyCompressed</reimplements>
+        <param>
+          <type>const <ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1aa7cc5a710dcf2a1256a753b9a5005f29" kindref="member">secp256k1::RSVSignature</ref> &amp;</type>
+          <declname>signature</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1abcf0e108bd6f3bd69a355144a5111105" kindref="member">secp256k1::MessageHash</ref> &amp;</type>
+          <declname>message_hash</declname>
+        </param>
+        <briefdescription>
+<para>recover public key in compressed form </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>signature</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>signature </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>message_hash</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>blake2s message hash </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>compressed public key or error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1/secp256k1_provider_impl.hpp" line="27" column="21" bodyfile="src/crypto/secp256k1/secp256k1_provider_impl.cpp" bodystart="32" bodyend="49"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1a2943ab1783f89286fd7d72fe34df1afb" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; secp256k1_pubkey &gt;</type>
+        <definition>outcome::result&lt; secp256k1_pubkey &gt; sgns::crypto::Secp256k1ProviderImpl::recoverPublickey</definition>
+        <argsstring>(const secp256k1::RSVSignature &amp;signature, const secp256k1::MessageHash &amp;message_hash) const</argsstring>
+        <name>recoverPublickey</name>
+        <qualifiedname>sgns::crypto::Secp256k1ProviderImpl::recoverPublickey</qualifiedname>
+        <param>
+          <type>const <ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1aa7cc5a710dcf2a1256a753b9a5005f29" kindref="member">secp256k1::RSVSignature</ref> &amp;</type>
+          <declname>signature</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1abcf0e108bd6f3bd69a355144a5111105" kindref="member">secp256k1::MessageHash</ref> &amp;</type>
+          <declname>message_hash</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1/secp256k1_provider_impl.hpp" line="32" column="21" bodyfile="src/crypto/secp256k1/secp256k1_provider_impl.cpp" bodystart="73" bodyend="94"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::crypto::Secp256k1Provider</label>
+        <link refid="d6/d6e/classsgns_1_1crypto_1_1_secp256k1_provider"/>
+      </node>
+      <node id="1">
+        <label>sgns::crypto::Secp256k1ProviderImpl</label>
+        <link refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="5">
+        <label>T</label>
+      </node>
+      <node id="2">
+        <label>sgns::crypto::Secp256k1Provider</label>
+        <link refid="d6/d6e/classsgns_1_1crypto_1_1_secp256k1_provider"/>
+      </node>
+      <node id="1">
+        <label>sgns::crypto::Secp256k1ProviderImpl</label>
+        <link refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-context_</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::unique_ptr&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::unique_ptr&lt; secp256k1_context, void(*)(secp256k1_context *)&gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; secp256k1_context, void(*)(secp256k1_context *)&gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crypto/secp256k1/secp256k1_provider_impl.hpp" line="17" column="3" bodyfile="src/crypto/secp256k1/secp256k1_provider_impl.hpp" bodystart="17" bodyend="37"/>
+    <listofallmembers>
+      <member refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1a2cf6fcafcc3f3fd3d0fab3f56a4b3e7d" prot="private" virt="non-virtual"><scope>sgns::crypto::Secp256k1ProviderImpl</scope><name>context_</name></member>
+      <member refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1a2943ab1783f89286fd7d72fe34df1afb" prot="private" virt="non-virtual"><scope>sgns::crypto::Secp256k1ProviderImpl</scope><name>recoverPublickey</name></member>
+      <member refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1afdefb806f28554a42d2e5ec53fdab638" prot="public" virt="virtual"><scope>sgns::crypto::Secp256k1ProviderImpl</scope><name>recoverPublickeyCompressed</name></member>
+      <member refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1a8d1ef3e384b1dbc9fe4c5be041f6296d" prot="public" virt="virtual"><scope>sgns::crypto::Secp256k1ProviderImpl</scope><name>recoverPublickeyUncompressed</name></member>
+      <member refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1a40dd5d777303b4e27ebc877d5cd44d68" prot="public" virt="non-virtual"><scope>sgns::crypto::Secp256k1ProviderImpl</scope><name>Secp256k1ProviderImpl</name></member>
+      <member refid="d6/d6e/classsgns_1_1crypto_1_1_secp256k1_provider_1a5364eeba1c4806740d5ea84d1c1b3c35" prot="public" virt="virtual"><scope>sgns::crypto::Secp256k1ProviderImpl</scope><name>~Secp256k1Provider</name></member>
+      <member refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1ae913c506e597af859bd9067aa5519835" prot="public" virt="non-virtual"><scope>sgns::crypto::Secp256k1ProviderImpl</scope><name>~Secp256k1ProviderImpl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

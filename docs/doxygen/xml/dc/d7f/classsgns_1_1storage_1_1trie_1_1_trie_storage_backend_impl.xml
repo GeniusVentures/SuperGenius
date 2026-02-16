@@ -1,0 +1,718 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl" kind="class" language="C++" prot="public">
+    <compoundname>sgns::storage::trie::TrieStorageBackendImpl</compoundname>
+    <basecompoundref refid="dd/d95/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend" prot="public" virt="non-virtual">sgns::storage::trie::TrieStorageBackend</basecompoundref>
+    <includes refid="d4/d72/trie__storage__backend__impl_8hpp" local="no">trie_storage_backend_impl.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ad8296bbe11b927820aa37e67d27c2c3d" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d0/dbf/namespacesgns_1_1storage_1a1f822800c416f58b1bcc7b1d86c11797" kindref="member">BufferStorage</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;BufferStorage&gt; sgns::storage::trie::TrieStorageBackendImpl::storage_</definition>
+        <argsstring></argsstring>
+        <name>storage_</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendImpl::storage_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_impl.hpp" line="38" column="21" bodyfile="src/storage/trie/impl/trie_storage_backend_impl.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a8546ad0a56a1d6eaaea8d3293d2d1b1d" prot="private" static="no" mutable="no">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>base::Buffer sgns::storage::trie::TrieStorageBackendImpl::node_prefix_</definition>
+        <argsstring></argsstring>
+        <name>node_prefix_</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendImpl::node_prefix_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_impl.hpp" line="39" column="18" bodyfile="src/storage/trie/impl/trie_storage_backend_impl.hpp" bodystart="39" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a74f97467a8b0836648b55341fff41ee5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::TrieStorageBackendImpl::TrieStorageBackendImpl</definition>
+        <argsstring>(std::shared_ptr&lt; BufferStorage &gt; storage, base::Buffer node_prefix)</argsstring>
+        <name>TrieStorageBackendImpl</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendImpl::TrieStorageBackendImpl</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d0/dbf/namespacesgns_1_1storage_1a1f822800c416f58b1bcc7b1d86c11797" kindref="member">BufferStorage</ref> &gt;</type>
+          <declname>storage</declname>
+        </param>
+        <param>
+          <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+          <declname>node_prefix</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_impl.hpp" line="14" column="5" bodyfile="src/storage/trie/impl/trie_storage_backend_impl.cpp" bodystart="11" bodyend="15"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1acdd82cb2355539988f57d4e1250b686d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::TrieStorageBackendImpl::~TrieStorageBackendImpl</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~TrieStorageBackendImpl</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendImpl::~TrieStorageBackendImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_impl.hpp" line="17" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ace5586a67e2226a078d2df1df4787b7d" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>std::unique_ptr&lt; <ref refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor" kindref="compound">face::MapCursor</ref>&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref>, <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt; &gt;</type>
+        <definition>std::unique_ptr&lt; face::MapCursor&lt; Buffer, Buffer &gt; &gt; sgns::storage::trie::TrieStorageBackendImpl::cursor</definition>
+        <argsstring>() override</argsstring>
+        <name>cursor</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendImpl::cursor</qualifiedname>
+        <reimplements refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable_1a44ca82af98f642669b5237f535b58001">cursor</reimplements>
+        <briefdescription>
+<para>Returns new key-value iterator. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>kv iterator </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_impl.hpp" line="19" column="21" bodyfile="src/storage/trie/impl/trie_storage_backend_impl.cpp" bodystart="17" bodyend="20"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a3112c8f70d3ab0fb4bed2b77198491e7" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>std::unique_ptr&lt; <ref refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch" kindref="compound">face::WriteBatch</ref>&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref>, <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt; &gt;</type>
+        <definition>std::unique_ptr&lt; face::WriteBatch&lt; Buffer, Buffer &gt; &gt; sgns::storage::trie::TrieStorageBackendImpl::batch</definition>
+        <argsstring>() override</argsstring>
+        <name>batch</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendImpl::batch</qualifiedname>
+        <reimplements refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable_1af8f2ceafd524ec1a2180b3694f541fda">batch</reimplements>
+        <briefdescription>
+<para>Creates new Write Batch - an object, which can be used to efficiently write bulk data. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_impl.hpp" line="20" column="21" bodyfile="src/storage/trie/impl/trie_storage_backend_impl.cpp" bodystart="22" bodyend="25"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a869b6d570c450cbc3c1feae108c61266" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; Buffer &gt; sgns::storage::trie::TrieStorageBackendImpl::get</definition>
+        <argsstring>(const Buffer &amp;key) const override</argsstring>
+        <name>get</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendImpl::get</qualifiedname>
+        <reimplements refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a0aeb44c506c0f66a5d7bf3f3be4baebe">get</reimplements>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Get value by key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>K </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>V </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_impl.hpp" line="22" column="21" bodyfile="src/storage/trie/impl/trie_storage_backend_impl.cpp" bodystart="27" bodyend="29"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a76386048022218fe096bf7c1dd7f2b9c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>bool</type>
+        <definition>bool sgns::storage::trie::TrieStorageBackendImpl::contains</definition>
+        <argsstring>(const Buffer &amp;key) const override</argsstring>
+        <name>contains</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendImpl::contains</qualifiedname>
+        <reimplements refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a0d7d1047789a450de21caff78afc5c37">contains</reimplements>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Returns true if given key-value binding exists in the storage. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>K </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if key has value, false otherwise. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_impl.hpp" line="23" column="10" bodyfile="src/storage/trie/impl/trie_storage_backend_impl.cpp" bodystart="31" bodyend="33"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ac5022d2d3f4a01ddc95370d802b033e6" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>bool</type>
+        <definition>bool sgns::storage::trie::TrieStorageBackendImpl::empty</definition>
+        <argsstring>() const override</argsstring>
+        <name>empty</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendImpl::empty</qualifiedname>
+        <reimplements refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a829c8fbd3e864503defcaa43c8c2699b">empty</reimplements>
+        <briefdescription>
+<para>Returns true if the storage is empty. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_impl.hpp" line="24" column="10" bodyfile="src/storage/trie/impl/trie_storage_backend_impl.cpp" bodystart="35" bodyend="37"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a2304080c0e2458a255c49c554ca8c414" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::trie::TrieStorageBackendImpl::put</definition>
+        <argsstring>(const Buffer &amp;key, const Buffer &amp;value) override</argsstring>
+        <name>put</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendImpl::put</qualifiedname>
+        <reimplements refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a6c94f5ac466050295a32f93aeb5a0e8c">put</reimplements>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+<para>Store value by key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>result containing void if put successful, error otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_impl.hpp" line="26" column="21" bodyfile="src/storage/trie/impl/trie_storage_backend_impl.cpp" bodystart="39" bodyend="42"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a040cb008ce6bd9e4295f9109d26aceef" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::trie::TrieStorageBackendImpl::put</definition>
+        <argsstring>(const Buffer &amp;key, Buffer &amp;&amp;value) override</argsstring>
+        <name>put</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendImpl::put</qualifiedname>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;&amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_impl.hpp" line="27" column="21" bodyfile="src/storage/trie/impl/trie_storage_backend_impl.cpp" bodystart="44" bodyend="47"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ae4492690d22d99f6060724128990e076" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::trie::TrieStorageBackendImpl::remove</definition>
+        <argsstring>(const Buffer &amp;key) override</argsstring>
+        <name>remove</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendImpl::remove</qualifiedname>
+        <reimplements refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a13a83e4a2fa9540c366e277871701ac3">remove</reimplements>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Remove value by key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>K </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>error code if error happened </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_impl.hpp" line="28" column="21" bodyfile="src/storage/trie/impl/trie_storage_backend_impl.cpp" bodystart="49" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1aa8d1c843480e3766c8a6ecbd165db326" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::storage::trie::TrieStorageBackendImpl::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendImpl::GetName</qualifiedname>
+        <reimplements refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_impl.hpp" line="30" column="17" bodyfile="src/storage/trie/impl/trie_storage_backend_impl.hpp" bodystart="30" bodyend="33"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a16dc038ed0e103f0cbeda546be37ad41" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>base::Buffer sgns::storage::trie::TrieStorageBackendImpl::prefixKey</definition>
+        <argsstring>(const base::Buffer &amp;key) const</argsstring>
+        <name>prefixKey</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendImpl::prefixKey</qualifiedname>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_impl.hpp" line="36" column="18" bodyfile="src/storage/trie/impl/trie_storage_backend_impl.cpp" bodystart="53" bodyend="55"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>BufferStorage</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+        <childnode refid="20" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="19">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="16">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>sgns::storage::face::BatchWriteMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="13" relation="public-inheritance">
+        </childnode>
+        <childnode refid="15" relation="public-inheritance">
+        </childnode>
+        <childnode refid="16" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="22">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="18">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="20">
+        <label>sgns::storage::face::GenericStorage&lt; K, V &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="21" relation="public-inheritance">
+        </childnode>
+        <childnode refid="22" relation="public-inheritance">
+        </childnode>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="5">
+        <label>sgns::storage::face::Iterable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="9">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::storage::face::ReadOnlyMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+        <childnode refid="7" relation="public-inheritance">
+        </childnode>
+        <childnode refid="9" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="7">
+        <label>sgns::storage::face::Readable&lt; Buffer, Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="14">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="13">
+        <label>sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="2">
+        <label>sgns::storage::trie::TrieStorageBackend</label>
+        <link refid="dd/d95/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::TrieStorageBackendImpl</label>
+        <link refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="3">
+        <label>BufferStorage</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+        <childnode refid="20" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="19">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="26">
+        <label>T</label>
+      </node>
+      <node id="28">
+        <label>boost::equality_comparable&lt; Buffer &gt;</label>
+      </node>
+      <node id="29">
+        <label>boost::equality_comparable&lt; gsl::span&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="30">
+        <label>boost::equality_comparable&lt; std::vector&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="27">
+        <label>sgns::base::Buffer</label>
+        <link refid="de/dd5/classsgns_1_1base_1_1_buffer"/>
+        <childnode refid="28" relation="public-inheritance">
+        </childnode>
+        <childnode refid="29" relation="public-inheritance">
+        </childnode>
+        <childnode refid="30" relation="public-inheritance">
+        </childnode>
+        <childnode refid="31" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>sgns::storage::face::BatchWriteMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="13" relation="public-inheritance">
+        </childnode>
+        <childnode refid="15" relation="public-inheritance">
+        </childnode>
+        <childnode refid="16" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="22">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="18">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="20">
+        <label>sgns::storage::face::GenericStorage&lt; K, V &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="21" relation="public-inheritance">
+        </childnode>
+        <childnode refid="22" relation="public-inheritance">
+        </childnode>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>sgns::storage::face::GenericStorage&lt; Buffer, Buffer &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+        <childnode refid="20" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="5">
+        <label>sgns::storage::face::Iterable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="9">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::storage::face::ReadOnlyMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+        <childnode refid="7" relation="public-inheritance">
+        </childnode>
+        <childnode refid="9" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="7">
+        <label>sgns::storage::face::Readable&lt; Buffer, Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="14">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="13">
+        <label>sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="2">
+        <label>sgns::storage::trie::TrieStorageBackend</label>
+        <link refid="dd/d95/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::TrieStorageBackendImpl</label>
+        <link refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="23" relation="usage">
+          <edgelabel>-storage_</edgelabel>
+        </childnode>
+        <childnode refid="27" relation="usage">
+          <edgelabel>-node_prefix_</edgelabel>
+        </childnode>
+      </node>
+      <node id="25">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="26" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="23">
+        <label>std::shared_ptr&lt; sgns::storage::face::GenericStorage&lt; Buffer, Buffer &gt; &gt;</label>
+        <childnode refid="24" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="25" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::face::GenericStorage&lt; Buffer, Buffer &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="32">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="26" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="31">
+        <label>std::vector&lt; uint8_t &gt;</label>
+        <childnode refid="32" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/trie/impl/trie_storage_backend_impl.hpp" line="12" column="3" bodyfile="src/storage/trie/impl/trie_storage_backend_impl.hpp" bodystart="12" bodyend="42"/>
+    <listofallmembers>
+      <member refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a3112c8f70d3ab0fb4bed2b77198491e7" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>batch</name></member>
+      <member refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a76386048022218fe096bf7c1dd7f2b9c" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>contains</name></member>
+      <member refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ace5586a67e2226a078d2df1df4787b7d" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>cursor</name></member>
+      <member refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ac5022d2d3f4a01ddc95370d802b033e6" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>empty</name></member>
+      <member refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a869b6d570c450cbc3c1feae108c61266" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>get</name></member>
+      <member refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1aa8d1c843480e3766c8a6ecbd165db326" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>GetName</name></member>
+      <member refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a8546ad0a56a1d6eaaea8d3293d2d1b1d" prot="private" virt="non-virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>node_prefix_</name></member>
+      <member refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a16dc038ed0e103f0cbeda546be37ad41" prot="private" virt="non-virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>prefixKey</name></member>
+      <member refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a2304080c0e2458a255c49c554ca8c414" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>put</name></member>
+      <member refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a040cb008ce6bd9e4295f9109d26aceef" prot="public" virt="non-virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>put</name></member>
+      <member refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ae4492690d22d99f6060724128990e076" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>remove</name></member>
+      <member refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ad8296bbe11b927820aa37e67d27c2c3d" prot="private" virt="non-virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>storage_</name></member>
+      <member refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a74f97467a8b0836648b55341fff41ee5" prot="public" virt="non-virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>TrieStorageBackendImpl</name></member>
+      <member refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable_1a09ef385308b209ab00cf72ed42897e01" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>~Batchable</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>~IComponent</name></member>
+      <member refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable_1ad46259be5d5a46afb966c0ddfb78fa45" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>~Iterable</name></member>
+      <member refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a481cee90de071b4bc04fae066e25236f" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>~Readable</name></member>
+      <member refid="dd/d95/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_1aca6b3d2238d2c851729bc248abc74e87" prot="public" virt="non-virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>~TrieStorageBackend</name></member>
+      <member refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1acdd82cb2355539988f57d4e1250b686d" prot="public" virt="non-virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>~TrieStorageBackendImpl</name></member>
+      <member refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1adb986d79f420f5829cae3d6659430a00" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieStorageBackendImpl</scope><name>~Writeable</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

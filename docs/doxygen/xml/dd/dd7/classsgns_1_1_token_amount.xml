@@ -1,0 +1,498 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/dd7/classsgns_1_1_token_amount" kind="class" language="C++" prot="public">
+    <compoundname>sgns::TokenAmount</compoundname>
+    <includes refid="d9/d19/_token_amount_8hpp" local="no">TokenAmount.hpp</includes>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="dd/dd7/classsgns_1_1_token_amount_1a5201ef3b55e4bc890368b707f873fa1b" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::TokenAmount::PRECISION</definition>
+        <argsstring></argsstring>
+        <name>PRECISION</name>
+        <qualifiedname>sgns::TokenAmount::PRECISION</qualifiedname>
+        <initializer>= 6</initializer>
+        <briefdescription>
+<para>Fixed-point precision (1 minion = 10^-6 GNUS). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenAmount.hpp" line="23" column="35" bodyfile="src/account/TokenAmount.hpp" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/dd7/classsgns_1_1_token_amount_1ab1acc254948e2e1bafec2c7174de6715" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::TokenAmount::PRICE_PER_FLOP</definition>
+        <argsstring></argsstring>
+        <name>PRICE_PER_FLOP</name>
+        <qualifiedname>sgns::TokenAmount::PRICE_PER_FLOP</qualifiedname>
+        <initializer>= 500</initializer>
+        <briefdescription>
+<para>USD per FLOP rate scaled by 10^15. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenAmount.hpp" line="26" column="35" bodyfile="src/account/TokenAmount.hpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/dd7/classsgns_1_1_token_amount_1aff02559ba08fc57b84b0d2c8ae679391" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::TokenAmount::PRICE_PER_FLOP_FRACTIONAL_DIGITS</definition>
+        <argsstring></argsstring>
+        <name>PRICE_PER_FLOP_FRACTIONAL_DIGITS</name>
+        <qualifiedname>sgns::TokenAmount::PRICE_PER_FLOP_FRACTIONAL_DIGITS</qualifiedname>
+        <initializer>= 15</initializer>
+        <briefdescription>
+<para>Fractional digits used in USD/FLOP rate. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenAmount.hpp" line="29" column="35" bodyfile="src/account/TokenAmount.hpp" bodystart="29" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/dd7/classsgns_1_1_token_amount_1a19264251a8f7ab50f438f8557920ce55" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::TokenAmount::FLOPS_PER_BYTE</definition>
+        <argsstring></argsstring>
+        <name>FLOPS_PER_BYTE</name>
+        <qualifiedname>sgns::TokenAmount::FLOPS_PER_BYTE</qualifiedname>
+        <initializer>= 20</initializer>
+        <briefdescription>
+<para>Estimated number of FLOPs required per byte. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenAmount.hpp" line="32" column="35" bodyfile="src/account/TokenAmount.hpp" bodystart="32" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/dd7/classsgns_1_1_token_amount_1a077d12616f4373610b2715e0403fd9a1" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::TokenAmount::MIN_MINION_UNITS</definition>
+        <argsstring></argsstring>
+        <name>MIN_MINION_UNITS</name>
+        <qualifiedname>sgns::TokenAmount::MIN_MINION_UNITS</qualifiedname>
+        <initializer>= 1</initializer>
+        <briefdescription>
+<para>Minimum representable non-zero minion units. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenAmount.hpp" line="35" column="35" bodyfile="src/account/TokenAmount.hpp" bodystart="35" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="dd/dd7/classsgns_1_1_token_amount_1ae369025d0f9e8378305095f1f7e345bf" prot="private" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::TokenAmount::minions_</definition>
+        <argsstring></argsstring>
+        <name>minions_</name>
+        <qualifiedname>sgns::TokenAmount::minions_</qualifiedname>
+        <briefdescription>
+<para>Internal representation in minion units (GNUS * 10^6). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenAmount.hpp" line="121" column="18" bodyfile="src/account/TokenAmount.hpp" bodystart="121" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="dd/dd7/classsgns_1_1_token_amount_1a2c2b7b6e8613a421b7480e7f6ea0d8ab" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; <ref refid="dd/dd7/classsgns_1_1_token_amount_1a770cb6c7ad48c8938f46b411c0354d15" kindref="member">TokenAmount</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; TokenAmount &gt; &gt; sgns::TokenAmount::New</definition>
+        <argsstring>(uint64_t raw_minions)</argsstring>
+        <name>New</name>
+        <qualifiedname>sgns::TokenAmount::New</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>raw_minions</declname>
+        </param>
+        <briefdescription>
+<para>Creates a <ref refid="dd/dd7/classsgns_1_1_token_amount" kindref="compound">TokenAmount</ref> from already-scaled minion units. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>raw_minions</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Value in 10^6-scaled integer units. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A shared pointer to a <ref refid="dd/dd7/classsgns_1_1_token_amount" kindref="compound">TokenAmount</ref> instance or error code. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenAmount.hpp" line="43" column="32" bodyfile="src/account/TokenAmount.cpp" bodystart="16" bodyend="20"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dd7/classsgns_1_1_token_amount_1a6630522f7784faa43b11a61005879317" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; <ref refid="dd/dd7/classsgns_1_1_token_amount_1a770cb6c7ad48c8938f46b411c0354d15" kindref="member">TokenAmount</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; TokenAmount &gt; &gt; sgns::TokenAmount::New</definition>
+        <argsstring>(double value)</argsstring>
+        <name>New</name>
+        <qualifiedname>sgns::TokenAmount::New</qualifiedname>
+        <param>
+          <type>double</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+<para>Creates a <ref refid="dd/dd7/classsgns_1_1_token_amount" kindref="compound">TokenAmount</ref> from a floating point value. The value is rounded to 6 decimal digits internally. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Floating point value representing token amount. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A shared pointer to a <ref refid="dd/dd7/classsgns_1_1_token_amount" kindref="compound">TokenAmount</ref> instance or error code. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenAmount.hpp" line="52" column="32" bodyfile="src/account/TokenAmount.cpp" bodystart="22" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dd7/classsgns_1_1_token_amount_1a2984a1526fa35ca2549f12c41543f7b5" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; <ref refid="dd/dd7/classsgns_1_1_token_amount_1a770cb6c7ad48c8938f46b411c0354d15" kindref="member">TokenAmount</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; TokenAmount &gt; &gt; sgns::TokenAmount::New</definition>
+        <argsstring>(const std::string &amp;str)</argsstring>
+        <name>New</name>
+        <qualifiedname>sgns::TokenAmount::New</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>str</declname>
+        </param>
+        <briefdescription>
+<para>Creates a <ref refid="dd/dd7/classsgns_1_1_token_amount" kindref="compound">TokenAmount</ref> from a decimal string. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>str</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>String representation of the token amount. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A shared pointer to a <ref refid="dd/dd7/classsgns_1_1_token_amount" kindref="compound">TokenAmount</ref> instance or error code. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenAmount.hpp" line="59" column="32" bodyfile="src/account/TokenAmount.cpp" bodystart="29" bodyend="34"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dd7/classsgns_1_1_token_amount_1a0f8d0f847911f24418a0bd9cdf744f9b" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; uint64_t &gt;</type>
+        <definition>outcome::result&lt; uint64_t &gt; sgns::TokenAmount::ParseMinions</definition>
+        <argsstring>(const std::string &amp;str)</argsstring>
+        <name>ParseMinions</name>
+        <qualifiedname>sgns::TokenAmount::ParseMinions</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>str</declname>
+        </param>
+        <briefdescription>
+<para>Parses a token amount string into raw minion units. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>str</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Decimal string representation (e.g., &quot;0.001000&quot;). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Parsed minion value or error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenAmount.hpp" line="92" column="32" bodyfile="src/account/TokenAmount.cpp" bodystart="55" bodyend="58"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dd7/classsgns_1_1_token_amount_1afaef5c03d9bb48fdd9cd809c1f6cd03a" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::TokenAmount::FormatMinions</definition>
+        <argsstring>(uint64_t minions)</argsstring>
+        <name>FormatMinions</name>
+        <qualifiedname>sgns::TokenAmount::FormatMinions</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>minions</declname>
+        </param>
+        <briefdescription>
+<para>Converts raw minion units to a token string. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Ensures exactly 6 digits of precision in the result.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>minions</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Raw integer minion units. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Formatted string with fixed-point representation. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenAmount.hpp" line="102" column="28" bodyfile="src/account/TokenAmount.cpp" bodystart="60" bodyend="63"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dd7/classsgns_1_1_token_amount_1aed9b186c41e85e68a48896b633e0f1d6" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; uint64_t &gt;</type>
+        <definition>outcome::result&lt; uint64_t &gt; sgns::TokenAmount::CalculateCostMinions</definition>
+        <argsstring>(uint64_t total_bytes, double price_usd_per_genius)</argsstring>
+        <name>CalculateCostMinions</name>
+        <qualifiedname>sgns::TokenAmount::CalculateCostMinions</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>total_bytes</declname>
+        </param>
+        <param>
+          <type>double</type>
+          <declname>price_usd_per_genius</declname>
+        </param>
+        <briefdescription>
+<para>Calculates token cost for a given byte size and USD price. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Internally estimates FLOPs based on bytes, applies the FLOP pricing and converts to GNUS token units using the provided USD price.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>total_bytes</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Total number of bytes processed. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>price_usd_per_genius</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>GNUS token price in USD. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Total cost in minion units, or error on overflow/underflow. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenAmount.hpp" line="114" column="32" bodyfile="src/account/TokenAmount.cpp" bodystart="65" bodyend="113"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dd7/classsgns_1_1_token_amount_1a46a0c8510a2e05c8745a9ba3a6b55076" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::string &gt;</type>
+        <definition>outcome::result&lt; std::string &gt; sgns::TokenAmount::ConvertToChildToken</definition>
+        <argsstring>(uint64_t in, std::string ratio)</argsstring>
+        <name>ConvertToChildToken</name>
+        <qualifiedname>sgns::TokenAmount::ConvertToChildToken</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>in</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>ratio</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenAmount.hpp" line="116" column="32" bodyfile="src/account/TokenAmount.cpp" bodystart="115" bodyend="124"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dd7/classsgns_1_1_token_amount_1ac27b8de869e79d94aa5fc0f61af4ac3f" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; uint64_t &gt;</type>
+        <definition>outcome::result&lt; uint64_t &gt; sgns::TokenAmount::ConvertFromChildToken</definition>
+        <argsstring>(std::string in, std::string ratio)</argsstring>
+        <name>ConvertFromChildToken</name>
+        <qualifiedname>sgns::TokenAmount::ConvertFromChildToken</qualifiedname>
+        <param>
+          <type>std::string</type>
+          <declname>in</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>ratio</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenAmount.hpp" line="117" column="35" bodyfile="src/account/TokenAmount.cpp" bodystart="126" bodyend="135"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dd/dd7/classsgns_1_1_token_amount_1a15408a9c32549bfa130f6d8a9a210be5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="dd/dd7/classsgns_1_1_token_amount_1a770cb6c7ad48c8938f46b411c0354d15" kindref="member">TokenAmount</ref> &gt;</type>
+        <definition>outcome::result&lt; TokenAmount &gt; sgns::TokenAmount::Multiply</definition>
+        <argsstring>(const TokenAmount &amp;other) const</argsstring>
+        <name>Multiply</name>
+        <qualifiedname>sgns::TokenAmount::Multiply</qualifiedname>
+        <param>
+          <type>const <ref refid="dd/dd7/classsgns_1_1_token_amount_1a770cb6c7ad48c8938f46b411c0354d15" kindref="member">TokenAmount</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Multiplies this <ref refid="dd/dd7/classsgns_1_1_token_amount" kindref="compound">TokenAmount</ref> by another. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Result is rounded back to fixed 6-digit precision.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>other</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Another <ref refid="dd/dd7/classsgns_1_1_token_amount" kindref="compound">TokenAmount</ref> instance. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Result of the multiplication or error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenAmount.hpp" line="69" column="25" bodyfile="src/account/TokenAmount.cpp" bodystart="38" bodyend="42"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dd7/classsgns_1_1_token_amount_1af67c4ecfa635919b795b268ce620e7c0" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="dd/dd7/classsgns_1_1_token_amount_1a770cb6c7ad48c8938f46b411c0354d15" kindref="member">TokenAmount</ref> &gt;</type>
+        <definition>outcome::result&lt; TokenAmount &gt; sgns::TokenAmount::Divide</definition>
+        <argsstring>(const TokenAmount &amp;other) const</argsstring>
+        <name>Divide</name>
+        <qualifiedname>sgns::TokenAmount::Divide</qualifiedname>
+        <param>
+          <type>const <ref refid="dd/dd7/classsgns_1_1_token_amount_1a770cb6c7ad48c8938f46b411c0354d15" kindref="member">TokenAmount</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Divides this <ref refid="dd/dd7/classsgns_1_1_token_amount" kindref="compound">TokenAmount</ref> by another. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>other</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Another <ref refid="dd/dd7/classsgns_1_1_token_amount" kindref="compound">TokenAmount</ref> instance. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Result of the division or error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenAmount.hpp" line="77" column="25" bodyfile="src/account/TokenAmount.cpp" bodystart="44" bodyend="48"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dd7/classsgns_1_1_token_amount_1a771b5150e148b7efe24190d14290a6ef" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::TokenAmount::Value</definition>
+        <argsstring>() const</argsstring>
+        <name>Value</name>
+        <qualifiedname>sgns::TokenAmount::Value</qualifiedname>
+        <briefdescription>
+<para>Returns the raw scaled integer (minion) value. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Value in raw minion units (10^6 scaled). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenAmount.hpp" line="84" column="18" bodyfile="src/account/TokenAmount.cpp" bodystart="50" bodyend="53"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="dd/dd7/classsgns_1_1_token_amount_1a770cb6c7ad48c8938f46b411c0354d15" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::TokenAmount::TokenAmount</definition>
+        <argsstring>(uint64_t minion_units)</argsstring>
+        <name>TokenAmount</name>
+        <qualifiedname>sgns::TokenAmount::TokenAmount</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>minion_units</declname>
+        </param>
+        <briefdescription>
+<para>Constructs a <ref refid="dd/dd7/classsgns_1_1_token_amount" kindref="compound">TokenAmount</ref> directly from raw minion units. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>minion_units</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Scaled token value. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenAmount.hpp" line="128" column="9" bodyfile="src/account/TokenAmount.cpp" bodystart="36" bodyend="36"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Utility for GNUS token fixed-point parsing, formatting and cost calculation. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::TokenAmount</label>
+        <link refid="dd/dd7/classsgns_1_1_token_amount"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/account/TokenAmount.hpp" line="19" column="5" bodyfile="src/account/TokenAmount.hpp" bodystart="20" bodyend="129"/>
+    <listofallmembers>
+      <member refid="dd/dd7/classsgns_1_1_token_amount_1aed9b186c41e85e68a48896b633e0f1d6" prot="public" virt="non-virtual"><scope>sgns::TokenAmount</scope><name>CalculateCostMinions</name></member>
+      <member refid="dd/dd7/classsgns_1_1_token_amount_1ac27b8de869e79d94aa5fc0f61af4ac3f" prot="public" virt="non-virtual"><scope>sgns::TokenAmount</scope><name>ConvertFromChildToken</name></member>
+      <member refid="dd/dd7/classsgns_1_1_token_amount_1a46a0c8510a2e05c8745a9ba3a6b55076" prot="public" virt="non-virtual"><scope>sgns::TokenAmount</scope><name>ConvertToChildToken</name></member>
+      <member refid="dd/dd7/classsgns_1_1_token_amount_1af67c4ecfa635919b795b268ce620e7c0" prot="public" virt="non-virtual"><scope>sgns::TokenAmount</scope><name>Divide</name></member>
+      <member refid="dd/dd7/classsgns_1_1_token_amount_1a19264251a8f7ab50f438f8557920ce55" prot="public" virt="non-virtual"><scope>sgns::TokenAmount</scope><name>FLOPS_PER_BYTE</name></member>
+      <member refid="dd/dd7/classsgns_1_1_token_amount_1afaef5c03d9bb48fdd9cd809c1f6cd03a" prot="public" virt="non-virtual"><scope>sgns::TokenAmount</scope><name>FormatMinions</name></member>
+      <member refid="dd/dd7/classsgns_1_1_token_amount_1a077d12616f4373610b2715e0403fd9a1" prot="public" virt="non-virtual"><scope>sgns::TokenAmount</scope><name>MIN_MINION_UNITS</name></member>
+      <member refid="dd/dd7/classsgns_1_1_token_amount_1ae369025d0f9e8378305095f1f7e345bf" prot="private" virt="non-virtual"><scope>sgns::TokenAmount</scope><name>minions_</name></member>
+      <member refid="dd/dd7/classsgns_1_1_token_amount_1a15408a9c32549bfa130f6d8a9a210be5" prot="public" virt="non-virtual"><scope>sgns::TokenAmount</scope><name>Multiply</name></member>
+      <member refid="dd/dd7/classsgns_1_1_token_amount_1a2c2b7b6e8613a421b7480e7f6ea0d8ab" prot="public" virt="non-virtual"><scope>sgns::TokenAmount</scope><name>New</name></member>
+      <member refid="dd/dd7/classsgns_1_1_token_amount_1a6630522f7784faa43b11a61005879317" prot="public" virt="non-virtual"><scope>sgns::TokenAmount</scope><name>New</name></member>
+      <member refid="dd/dd7/classsgns_1_1_token_amount_1a2984a1526fa35ca2549f12c41543f7b5" prot="public" virt="non-virtual"><scope>sgns::TokenAmount</scope><name>New</name></member>
+      <member refid="dd/dd7/classsgns_1_1_token_amount_1a0f8d0f847911f24418a0bd9cdf744f9b" prot="public" virt="non-virtual"><scope>sgns::TokenAmount</scope><name>ParseMinions</name></member>
+      <member refid="dd/dd7/classsgns_1_1_token_amount_1a5201ef3b55e4bc890368b707f873fa1b" prot="public" virt="non-virtual"><scope>sgns::TokenAmount</scope><name>PRECISION</name></member>
+      <member refid="dd/dd7/classsgns_1_1_token_amount_1ab1acc254948e2e1bafec2c7174de6715" prot="public" virt="non-virtual"><scope>sgns::TokenAmount</scope><name>PRICE_PER_FLOP</name></member>
+      <member refid="dd/dd7/classsgns_1_1_token_amount_1aff02559ba08fc57b84b0d2c8ae679391" prot="public" virt="non-virtual"><scope>sgns::TokenAmount</scope><name>PRICE_PER_FLOP_FRACTIONAL_DIGITS</name></member>
+      <member refid="dd/dd7/classsgns_1_1_token_amount_1a770cb6c7ad48c8938f46b411c0354d15" prot="private" virt="non-virtual"><scope>sgns::TokenAmount</scope><name>TokenAmount</name></member>
+      <member refid="dd/dd7/classsgns_1_1_token_amount_1a771b5150e148b7efe24190d14290a6ef" prot="public" virt="non-virtual"><scope>sgns::TokenAmount</scope><name>Value</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

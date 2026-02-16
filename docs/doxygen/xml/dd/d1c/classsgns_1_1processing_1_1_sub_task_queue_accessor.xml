@@ -1,0 +1,220 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::processing::SubTaskQueueAccessor</compoundname>
+    <derivedcompoundref refid="d0/dab/classsgns_1_1processing_1_1_sub_task_queue_accessor_impl" prot="public" virt="non-virtual">sgns::processing::SubTaskQueueAccessorImpl</derivedcompoundref>
+    <includes refid="dd/db9/processing__subtask__queue__accessor_8hpp" local="no">processing_subtask_queue_accessor.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1a1a696bb65e6afc736edfdbd2e607ab97" prot="public" static="no">
+        <type>std::function&lt; void(boost::optional&lt; const SGProcessing::SubTask &amp; &gt;)&gt;</type>
+        <definition>using sgns::processing::SubTaskQueueAccessor::SubTaskGrabbedCallback = std::function&lt;void( boost::optional&lt;const SGProcessing::SubTask &amp;&gt; )&gt;</definition>
+        <argsstring></argsstring>
+        <name>SubTaskGrabbedCallback</name>
+        <qualifiedname>sgns::processing::SubTaskQueueAccessor::SubTaskGrabbedCallback</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_accessor.hpp" line="20" column="9" bodyfile="src/processing/processing_subtask_queue_accessor.hpp" bodystart="20" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1abbdee09e0a2c4f6f41ffc33ff49613ae" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::processing::SubTaskQueueAccessor::~SubTaskQueueAccessor</definition>
+        <argsstring>()=default</argsstring>
+        <name>~SubTaskQueueAccessor</name>
+        <qualifiedname>sgns::processing::SubTaskQueueAccessor::~SubTaskQueueAccessor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_accessor.hpp" line="22" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1ace433d44b572066fb521f44e2cb588c7" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>bool</type>
+        <definition>virtual bool sgns::processing::SubTaskQueueAccessor::ConnectToSubTaskQueue</definition>
+        <argsstring>(std::function&lt; void()&gt; onSubTaskQueueConnectedEventSink)=0</argsstring>
+        <name>ConnectToSubTaskQueue</name>
+        <qualifiedname>sgns::processing::SubTaskQueueAccessor::ConnectToSubTaskQueue</qualifiedname>
+        <reimplementedby refid="d0/dab/classsgns_1_1processing_1_1_sub_task_queue_accessor_impl_1ab0115603609a51420026674123b56cd1">ConnectToSubTaskQueue</reimplementedby>
+        <param>
+          <type>std::function&lt; void()&gt;</type>
+          <declname>onSubTaskQueueConnectedEventSink</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Starts a waiting for subtasks queue <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>onSubTaskQueueConnectedEventSink</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>hadnler which is called when subtask queue is connected </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_accessor.hpp" line="27" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1ac532f88cf45eeb488e109acbc3306a5d" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>bool</type>
+        <definition>virtual bool sgns::processing::SubTaskQueueAccessor::AssignSubTasks</definition>
+        <argsstring>(std::list&lt; SGProcessing::SubTask &gt; &amp;subTasks)=0</argsstring>
+        <name>AssignSubTasks</name>
+        <qualifiedname>sgns::processing::SubTaskQueueAccessor::AssignSubTasks</qualifiedname>
+        <reimplementedby refid="d0/dab/classsgns_1_1processing_1_1_sub_task_queue_accessor_impl_1a4f3cc2b549d2d04475f6049cb0eaaea9">AssignSubTasks</reimplementedby>
+        <param>
+          <type>std::list&lt; SGProcessing::SubTask &gt; &amp;</type>
+          <declname>subTasks</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Assigns a subtask list to processing queue <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>subTasks</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- a list of enqueued subtasks </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_accessor.hpp" line="32" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1a2ed5ed1f6df8e6ecbdbfa8f106b6d6bd" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::processing::SubTaskQueueAccessor::GrabSubTask</definition>
+        <argsstring>(SubTaskGrabbedCallback onSubTaskGrabbedCallback)=0</argsstring>
+        <name>GrabSubTask</name>
+        <qualifiedname>sgns::processing::SubTaskQueueAccessor::GrabSubTask</qualifiedname>
+        <reimplementedby refid="d0/dab/classsgns_1_1processing_1_1_sub_task_queue_accessor_impl_1a9a8b52d82f5a18120007abac96f12ca1">GrabSubTask</reimplementedby>
+        <param>
+          <type><ref refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1a1a696bb65e6afc736edfdbd2e607ab97" kindref="member">SubTaskGrabbedCallback</ref></type>
+          <declname>onSubTaskGrabbedCallback</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Asynchronous getting of a subtask from the queue <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>onSubTaskGrabbedCallback</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>a callback that is called when a subtask is grabbed by the local node </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_accessor.hpp" line="37" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1a950916f646605d9330c1e2b1d8200da4" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::processing::SubTaskQueueAccessor::CompleteSubTask</definition>
+        <argsstring>(const std::string &amp;subTaskId, const SGProcessing::SubTaskResult &amp;subTaskResult)=0</argsstring>
+        <name>CompleteSubTask</name>
+        <qualifiedname>sgns::processing::SubTaskQueueAccessor::CompleteSubTask</qualifiedname>
+        <reimplementedby refid="d0/dab/classsgns_1_1processing_1_1_sub_task_queue_accessor_impl_1ad5f275c45f852bf3b6a132f25a53a8f2">CompleteSubTask</reimplementedby>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>subTaskId</declname>
+        </param>
+        <param>
+          <type>const SGProcessing::SubTaskResult &amp;</type>
+          <declname>subTaskResult</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Finalizes subtask execution <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>subTaskId</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- id of processed subtask </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>subTaskResult</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- result of subtask processing </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_accessor.hpp" line="43" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1a836d9971bfaa4ad9561405b99fad9750" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>bool</type>
+        <definition>virtual bool sgns::processing::SubTaskQueueAccessor::CreateResultsChannel</definition>
+        <argsstring>(const std::string &amp;task_id)=0</argsstring>
+        <name>CreateResultsChannel</name>
+        <qualifiedname>sgns::processing::SubTaskQueueAccessor::CreateResultsChannel</qualifiedname>
+        <reimplementedby refid="d0/dab/classsgns_1_1processing_1_1_sub_task_queue_accessor_impl_1a6e8234f163293f9ac939d28337a0ae21">CreateResultsChannel</reimplementedby>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>task_id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_accessor.hpp" line="46" column="22"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Subtask queue accessor interface </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::processing::SubTaskQueueAccessor</label>
+        <link refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor"/>
+      </node>
+      <node id="2">
+        <label>sgns::processing::SubTaskQueueAccessorImpl</label>
+        <link refid="d0/dab/classsgns_1_1processing_1_1_sub_task_queue_accessor_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::processing::SubTaskQueueAccessor</label>
+        <link refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/processing/processing_subtask_queue_accessor.hpp" line="17" column="5" bodyfile="src/processing/processing_subtask_queue_accessor.hpp" bodystart="18" bodyend="49"/>
+    <listofallmembers>
+      <member refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1ac532f88cf45eeb488e109acbc3306a5d" prot="public" virt="pure-virtual"><scope>sgns::processing::SubTaskQueueAccessor</scope><name>AssignSubTasks</name></member>
+      <member refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1a950916f646605d9330c1e2b1d8200da4" prot="public" virt="pure-virtual"><scope>sgns::processing::SubTaskQueueAccessor</scope><name>CompleteSubTask</name></member>
+      <member refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1ace433d44b572066fb521f44e2cb588c7" prot="public" virt="pure-virtual"><scope>sgns::processing::SubTaskQueueAccessor</scope><name>ConnectToSubTaskQueue</name></member>
+      <member refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1a836d9971bfaa4ad9561405b99fad9750" prot="public" virt="pure-virtual"><scope>sgns::processing::SubTaskQueueAccessor</scope><name>CreateResultsChannel</name></member>
+      <member refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1a2ed5ed1f6df8e6ecbdbfa8f106b6d6bd" prot="public" virt="pure-virtual"><scope>sgns::processing::SubTaskQueueAccessor</scope><name>GrabSubTask</name></member>
+      <member refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1a1a696bb65e6afc736edfdbd2e607ab97" prot="public" virt="non-virtual"><scope>sgns::processing::SubTaskQueueAccessor</scope><name>SubTaskGrabbedCallback</name></member>
+      <member refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor_1abbdee09e0a2c4f6f41ffc33ff49613ae" prot="public" virt="virtual"><scope>sgns::processing::SubTaskQueueAccessor</scope><name>~SubTaskQueueAccessor</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,209 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/dbe/structsgns_1_1primitives_1_1_production_configuration" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::primitives::ProductionConfiguration</compoundname>
+    <basecompoundref refid="d1/dbf/class_i_component" prot="public" virt="non-virtual">IComponent</basecompoundref>
+    <includes refid="d6/d2c/production__configuration_8hpp" local="no">production_configuration.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d4/dbe/structsgns_1_1primitives_1_1_production_configuration_1aefd833d859495bc54d3e23c8e9243e78" prot="public" static="no" mutable="no">
+        <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a7e9830ecb34f6b06f932a3ad23b2fb63" kindref="member">ProductionDuration</ref></type>
+        <definition>ProductionDuration sgns::primitives::ProductionConfiguration::slot_duration</definition>
+        <argsstring></argsstring>
+        <name>slot_duration</name>
+        <qualifiedname>sgns::primitives::ProductionConfiguration::slot_duration</qualifiedname>
+        <initializer>{}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>The slot duration in milliseconds for PRODUCTION. Currently, only the value provided by this type at genesis will be used.</para>
+<para>Dynamic slot duration may be supported in the future. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/production_configuration.hpp" line="24" column="24" bodyfile="src/primitives/production_configuration.hpp" bodystart="24" bodyend="24"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/dbe/structsgns_1_1primitives_1_1_production_configuration_1a69d8f951d12f1e277da51cb8cae3c1b7" prot="public" static="no" mutable="no">
+        <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a9cddd982f876ce09ce9ef308479611c9" kindref="member">ProductionSlotNumber</ref></type>
+        <definition>ProductionSlotNumber sgns::primitives::ProductionConfiguration::epoch_length</definition>
+        <argsstring></argsstring>
+        <name>epoch_length</name>
+        <qualifiedname>sgns::primitives::ProductionConfiguration::epoch_length</qualifiedname>
+        <initializer>{}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/production_configuration.hpp" line="26" column="26" bodyfile="src/primitives/production_configuration.hpp" bodystart="26" bodyend="26"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/dbe/structsgns_1_1primitives_1_1_production_configuration_1a4e8373c55c829b12d9f6df7b4d3c7d7f" prot="public" static="no" mutable="no">
+        <type>std::pair&lt; uint64_t, uint64_t &gt;</type>
+        <definition>std::pair&lt;uint64_t, uint64_t&gt; sgns::primitives::ProductionConfiguration::leadership_rate</definition>
+        <argsstring></argsstring>
+        <name>leadership_rate</name>
+        <qualifiedname>sgns::primitives::ProductionConfiguration::leadership_rate</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>A constant value that is used in the threshold calculation formula. Expressed as a rational where the first member of the tuple is the numerator and the second is the denominator. The rational should represent a value between 0 and 1. In substrate it is called <computeroutput>c</computeroutput> In the threshold formula calculation, <computeroutput>1 - <ref refid="d4/dbe/structsgns_1_1primitives_1_1_production_configuration_1a4e8373c55c829b12d9f6df7b4d3c7d7f" kindref="member">leadership_rate</ref></computeroutput> represents the probability of a slot being empty. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/production_configuration.hpp" line="35" column="15" bodyfile="src/primitives/production_configuration.hpp" bodystart="35" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/dbe/structsgns_1_1primitives_1_1_production_configuration_1a0090ff73a2fc120106745b2549473829" prot="public" static="no" mutable="no">
+        <type><ref refid="d6/d76/structsgns_1_1primitives_1_1_authority_list" kindref="compound">primitives::AuthorityList</ref></type>
+        <definition>primitives::AuthorityList sgns::primitives::ProductionConfiguration::genesis_authorities</definition>
+        <argsstring></argsstring>
+        <name>genesis_authorities</name>
+        <qualifiedname>sgns::primitives::ProductionConfiguration::genesis_authorities</qualifiedname>
+        <briefdescription>
+<para>The authorities for the genesis epoch. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/production_configuration.hpp" line="38" column="31" bodyfile="src/primitives/production_configuration.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/dbe/structsgns_1_1primitives_1_1_production_configuration_1af727858f20c1841e5355685f215a4ae9" prot="public" static="no" mutable="no">
+        <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a66f7254721d2a6e72bb6c5cfe999bb3a" kindref="member">Randomness</ref></type>
+        <definition>Randomness sgns::primitives::ProductionConfiguration::randomness</definition>
+        <argsstring></argsstring>
+        <name>randomness</name>
+        <qualifiedname>sgns::primitives::ProductionConfiguration::randomness</qualifiedname>
+        <briefdescription>
+<para>The randomness for the genesis epoch. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/production_configuration.hpp" line="41" column="16" bodyfile="src/primitives/production_configuration.hpp" bodystart="41" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d4/dbe/structsgns_1_1primitives_1_1_production_configuration_1a01acae3c95e0d8f0b136e43bad56690b" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::primitives::ProductionConfiguration::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::primitives::ProductionConfiguration::GetName</qualifiedname>
+        <reimplements refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/production_configuration.hpp" line="42" column="17" bodyfile="src/primitives/production_configuration.hpp" bodystart="42" bodyend="45"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Configuration data used by the PRODUCTION verification engine. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::primitives::ProductionConfiguration</label>
+        <link refid="d4/dbe/structsgns_1_1primitives_1_1_production_configuration"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="9">
+        <label>T</label>
+      </node>
+      <node id="5">
+        <label>T1</label>
+      </node>
+      <node id="6">
+        <label>T2</label>
+      </node>
+      <node id="12">
+        <label>sgns::base::Blob&lt; size_ &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>sgns::base::Blob&lt; crypto::constants::sr25519::vrf::OUTPUT_SIZE &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+        <childnode refid="12" relation="template-instance">
+          <edgelabel>&lt; crypto::constants::sr25519::vrf::OUTPUT_SIZE &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::primitives::AuthorityList</label>
+        <link refid="d6/d76/structsgns_1_1primitives_1_1_authority_list"/>
+        <childnode refid="8" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::primitives::ProductionConfiguration</label>
+        <link refid="d4/dbe/structsgns_1_1primitives_1_1_production_configuration"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+leadership_rate</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+genesis_authorities</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>+randomness</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::pair&lt; T1, T2 &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+second_type</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::pair&lt; uint64_t, uint64_t &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; uint64_t, uint64_t &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/primitives/production_configuration.hpp" line="19" column="3" bodyfile="src/primitives/production_configuration.hpp" bodystart="19" bodyend="46"/>
+    <listofallmembers>
+      <member refid="d4/dbe/structsgns_1_1primitives_1_1_production_configuration_1a69d8f951d12f1e277da51cb8cae3c1b7" prot="public" virt="non-virtual"><scope>sgns::primitives::ProductionConfiguration</scope><name>epoch_length</name></member>
+      <member refid="d4/dbe/structsgns_1_1primitives_1_1_production_configuration_1a0090ff73a2fc120106745b2549473829" prot="public" virt="non-virtual"><scope>sgns::primitives::ProductionConfiguration</scope><name>genesis_authorities</name></member>
+      <member refid="d4/dbe/structsgns_1_1primitives_1_1_production_configuration_1a01acae3c95e0d8f0b136e43bad56690b" prot="public" virt="virtual"><scope>sgns::primitives::ProductionConfiguration</scope><name>GetName</name></member>
+      <member refid="d4/dbe/structsgns_1_1primitives_1_1_production_configuration_1a4e8373c55c829b12d9f6df7b4d3c7d7f" prot="public" virt="non-virtual"><scope>sgns::primitives::ProductionConfiguration</scope><name>leadership_rate</name></member>
+      <member refid="d4/dbe/structsgns_1_1primitives_1_1_production_configuration_1af727858f20c1841e5355685f215a4ae9" prot="public" virt="non-virtual"><scope>sgns::primitives::ProductionConfiguration</scope><name>randomness</name></member>
+      <member refid="d4/dbe/structsgns_1_1primitives_1_1_production_configuration_1aefd833d859495bc54d3e23c8e9243e78" prot="public" virt="non-virtual"><scope>sgns::primitives::ProductionConfiguration</scope><name>slot_duration</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::primitives::ProductionConfiguration</scope><name>~IComponent</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

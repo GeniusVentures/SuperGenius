@@ -1,0 +1,169 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/d9c/subscription__engine_8hpp" kind="file" language="C++">
+    <compoundname>subscription_engine.hpp</compoundname>
+    <includes local="no">list</includes>
+    <includes local="no">memory</includes>
+    <includes local="no">mutex</includes>
+    <includes local="no">shared_mutex</includes>
+    <includes local="no">unordered_map</includes>
+    <includedby refid="d8/df0/subscriber_8hpp" local="yes">src/subscription/subscriber.hpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/subscription/subscription_engine.hpp</label>
+        <link refid="d1/d9c/subscription__engine_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>list</label>
+      </node>
+      <node id="3">
+        <label>memory</label>
+      </node>
+      <node id="4">
+        <label>mutex</label>
+      </node>
+      <node id="5">
+        <label>shared_mutex</label>
+      </node>
+      <node id="6">
+        <label>unordered_map</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="4">
+        <label>src/storage/changes_trie/impl/storage_changes_tracker_impl.cpp</label>
+        <link refid="d8/d2c/storage__changes__tracker__impl_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp</label>
+        <link refid="d7/d4b/storage__changes__tracker__impl_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>src/subscription/subscriber.hpp</label>
+        <link refid="d8/df0/subscriber_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/subscription/subscription_engine.hpp</label>
+        <link refid="d1/d9c/subscription__engine_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine" prot="public">sgns::subscription::SubscriptionEngine</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d4/d82/namespacesgns_1_1subscription">sgns::subscription</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SUBSCRIPTION_ENGINE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SUBSCRIPTION_ENGINE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;list&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;memory&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;mutex&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;shared_mutex&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;unordered_map&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d4/d82/namespacesgns_1_1subscription" kindref="compound">sgns::subscription</ref><sp/>{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>Key,<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>Type,<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/>Arguments&gt;</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d4/de2/classsgns_1_1subscription_1_1_subscriber" kindref="compound">Subscriber</ref>;</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>Key,<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>Type,<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/>Arguments&gt;</highlight></codeline>
+<codeline lineno="16" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1adf18101cad133f17cf94bc2e156c5239" kindref="member">SubscriptionEngine</ref><sp/>final</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>std::enable_shared_from_this&lt;</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SubscriptionEngine&lt;Key,<sp/>Type,<sp/>Arguments...&gt;&gt;<sp/>{</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="20" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ae3ea3c28abb9da4ffb8cc7a27ce08add" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ae3ea3c28abb9da4ffb8cc7a27ce08add" kindref="member">KeyType</ref><sp/>=<sp/>Key;</highlight></codeline>
+<codeline lineno="21" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1abd8e9c644bd0be5ba90907f80ff7b05b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1abd8e9c644bd0be5ba90907f80ff7b05b" kindref="member">ValueType</ref><sp/>=<sp/>Type;</highlight></codeline>
+<codeline lineno="22" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1af4fde1dc1c04655ca43111289e39c6dd" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1af4fde1dc1c04655ca43111289e39c6dd" kindref="member">SubscriberType</ref><sp/>=<sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a022be5b7686f2ed57fc5e7eea5fa8a02" kindref="member">Subscriber</ref>&lt;<ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ae3ea3c28abb9da4ffb8cc7a27ce08add" kindref="member">KeyType</ref>,<sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1abd8e9c644bd0be5ba90907f80ff7b05b" kindref="member">ValueType</ref>,<sp/>Arguments...&gt;;</highlight></codeline>
+<codeline lineno="23" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a22b345290e2ace94a52c6f7d6a8e92ca" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a22b345290e2ace94a52c6f7d6a8e92ca" kindref="member">SubscriberPtr</ref><sp/>=<sp/>std::shared_ptr&lt;SubscriberType&gt;;</highlight></codeline>
+<codeline lineno="24" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a52637fcf02c441b1d9812b985dd9cbeb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a52637fcf02c441b1d9812b985dd9cbeb" kindref="member">SubscriberWPtr</ref><sp/>=<sp/>std::weak_ptr&lt;SubscriberType&gt;;</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a7ba39b25f8a3266548f0fca01b408fdd" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a7ba39b25f8a3266548f0fca01b408fdd" kindref="member">SubscribersContainer</ref><sp/>=<sp/>std::list&lt;SubscriberWPtr&gt;;</highlight></codeline>
+<codeline lineno="31" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a80f89a9fad317ee85b14db67f9b4b204" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a80f89a9fad317ee85b14db67f9b4b204" kindref="member">IteratorType</ref><sp/>=<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>SubscribersContainer::iterator;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ae3ea3c28abb9da4ffb8cc7a27ce08add" kindref="member">KeyType</ref>,<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1abd8e9c644bd0be5ba90907f80ff7b05b" kindref="member">ValueType</ref>,<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/>Args&gt;</highlight></codeline>
+<codeline lineno="35" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a022be5b7686f2ed57fc5e7eea5fa8a02" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">friend</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a022be5b7686f2ed57fc5e7eea5fa8a02" kindref="member">Subscriber</ref>;</highlight></codeline>
+<codeline lineno="36" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1aa6910db8feb6b804d4bb6518f2cbcc5d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1aa6910db8feb6b804d4bb6518f2cbcc5d" kindref="member">KeyValueContainer</ref><sp/>=<sp/>std::unordered_map&lt;KeyType,<sp/>SubscribersContainer&gt;;</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight></codeline>
+<codeline lineno="38" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a11fdfb20fed24990a75ae4bbdde640dc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">mutable</highlight><highlight class="normal"><sp/>std::shared_mutex<sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a11fdfb20fed24990a75ae4bbdde640dc" kindref="member">subscribers_map_cs_</ref>;</highlight></codeline>
+<codeline lineno="39" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ac7cab7bd3408c31c50cef55c0510c4d3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1aa6910db8feb6b804d4bb6518f2cbcc5d" kindref="member">KeyValueContainer</ref><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ac7cab7bd3408c31c50cef55c0510c4d3" kindref="member">subscribers_map_</ref>;</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="42" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1adf18101cad133f17cf94bc2e156c5239" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1adf18101cad133f17cf94bc2e156c5239" kindref="member">SubscriptionEngine</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="43" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a0bd801869b75c90cdfa289ad47abcfd0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a0bd801869b75c90cdfa289ad47abcfd0" kindref="member">~SubscriptionEngine</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ab4716d6a4300400e8cfed334f1997dc4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ab4716d6a4300400e8cfed334f1997dc4" kindref="member">SubscriptionEngine</ref>(<ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1adf18101cad133f17cf94bc2e156c5239" kindref="member">SubscriptionEngine</ref><sp/>&amp;&amp;)<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;<sp/></highlight><highlight class="comment">//<sp/>NOLINT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="46" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1afca7f965be3f45c21b03668deef38ea7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1adf18101cad133f17cf94bc2e156c5239" kindref="member">SubscriptionEngine</ref><sp/>&amp;<ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1afca7f965be3f45c21b03668deef38ea7" kindref="member">operator=</ref>(<ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1adf18101cad133f17cf94bc2e156c5239" kindref="member">SubscriptionEngine</ref><sp/>&amp;&amp;)<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;<sp/></highlight><highlight class="comment">//<sp/>NOLINT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="48" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a0a6202dc3652417249ec47ee74b81259" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a0a6202dc3652417249ec47ee74b81259" kindref="member">SubscriptionEngine</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1adf18101cad133f17cf94bc2e156c5239" kindref="member">SubscriptionEngine</ref><sp/>&amp;)<sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="49" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a25a7e70fbc0ea4bda7672dc3ec8805f1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1adf18101cad133f17cf94bc2e156c5239" kindref="member">SubscriptionEngine</ref><sp/>&amp;<ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a25a7e70fbc0ea4bda7672dc3ec8805f1" kindref="member">operator=</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1adf18101cad133f17cf94bc2e156c5239" kindref="member">SubscriptionEngine</ref><sp/>&amp;)<sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"></highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="52" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1aacfd8c39dfd7c945b133c15e80212682" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a80f89a9fad317ee85b14db67f9b4b204" kindref="member">IteratorType</ref><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1aacfd8c39dfd7c945b133c15e80212682" kindref="member">subscribe</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ae3ea3c28abb9da4ffb8cc7a27ce08add" kindref="member">KeyType</ref><sp/>&amp;key,<sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a52637fcf02c441b1d9812b985dd9cbeb" kindref="member">SubscriberWPtr</ref><sp/>ptr)<sp/>{</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::unique_lock<sp/>lock(<ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a11fdfb20fed24990a75ae4bbdde640dc" kindref="member">subscribers_map_cs_</ref>);</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;subscribers_list<sp/>=<sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ac7cab7bd3408c31c50cef55c0510c4d3" kindref="member">subscribers_map_</ref>[key];</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>subscribers_list.emplace(subscribers_list.end(),<sp/>std::move(ptr));</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight></codeline>
+<codeline lineno="58" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1aa37a493e45f7c04531d7b4ba7601b639" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1aa37a493e45f7c04531d7b4ba7601b639" kindref="member">unsubscribe</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ae3ea3c28abb9da4ffb8cc7a27ce08add" kindref="member">KeyType</ref><sp/>&amp;key,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a80f89a9fad317ee85b14db67f9b4b204" kindref="member">IteratorType</ref><sp/>&amp;it_remove)<sp/>{</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::unique_lock<sp/>lock(<ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a11fdfb20fed24990a75ae4bbdde640dc" kindref="member">subscribers_map_cs_</ref>);</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>it<sp/>=<sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ac7cab7bd3408c31c50cef55c0510c4d3" kindref="member">subscribers_map_</ref>.find(key);</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ac7cab7bd3408c31c50cef55c0510c4d3" kindref="member">subscribers_map_</ref>.end()<sp/>!=<sp/>it)<sp/>{</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>it-&gt;second.erase(it_remove);</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(it-&gt;second.empty())<sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ac7cab7bd3408c31c50cef55c0510c4d3" kindref="member">subscribers_map_</ref>.erase(it);</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"></highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="68" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a6d63d7d1132becdda6efe4933cfb1018" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a6d63d7d1132becdda6efe4933cfb1018" kindref="member">size</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ae3ea3c28abb9da4ffb8cc7a27ce08add" kindref="member">KeyType</ref><sp/>&amp;key)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_lock<sp/>lock(<ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a11fdfb20fed24990a75ae4bbdde640dc" kindref="member">subscribers_map_cs_</ref>);</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>it<sp/>=<sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ac7cab7bd3408c31c50cef55c0510c4d3" kindref="member">subscribers_map_</ref>.find(key);<sp/>it<sp/>!=<sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ac7cab7bd3408c31c50cef55c0510c4d3" kindref="member">subscribers_map_</ref>.end())</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>it-&gt;second.size();</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"></highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>0ull;</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"></highlight></codeline>
+<codeline lineno="76" refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a1421dff12271ea9a753e78e527053816" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a1421dff12271ea9a753e78e527053816" kindref="member">notify</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ae3ea3c28abb9da4ffb8cc7a27ce08add" kindref="member">KeyType</ref><sp/>&amp;key,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Arguments<sp/>&amp;...<sp/>args)<sp/>{</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_lock<sp/>lock(<ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1a11fdfb20fed24990a75ae4bbdde640dc" kindref="member">subscribers_map_cs_</ref>);</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>it<sp/>=<sp/><ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ac7cab7bd3408c31c50cef55c0510c4d3" kindref="member">subscribers_map_</ref>.find(key);</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d7/d3a/classsgns_1_1subscription_1_1_subscription_engine_1ac7cab7bd3408c31c50cef55c0510c4d3" kindref="member">subscribers_map_</ref>.end()<sp/>==<sp/>it)<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"></highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;subscribers_container<sp/>=<sp/>it-&gt;second;</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>it_sub<sp/>=<sp/>subscribers_container.begin();</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>it_sub<sp/>!=<sp/>subscribers_container.end();)<sp/>{</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>sub<sp/>=<sp/>it_sub-&gt;lock())<sp/>{</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>sub-&gt;on_notify(key,<sp/>args...);</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>++it_sub;</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">else</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>it_sub<sp/>=<sp/>subscribers_container.erase(it_sub);</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"></highlight></codeline>
+<codeline lineno="94"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::subscription</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="95"><highlight class="normal"></highlight></codeline>
+<codeline lineno="96"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_SUBSCRIPTION_ENGINE_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/subscription/subscription_engine.hpp"/>
+  </compounddef>
+</doxygen>

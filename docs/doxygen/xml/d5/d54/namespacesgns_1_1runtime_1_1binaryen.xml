@@ -1,0 +1,813 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/d54/namespacesgns_1_1runtime_1_1binaryen" kind="namespace" language="C++">
+    <compoundname>sgns::runtime::binaryen</compoundname>
+    <innerclass refid="d9/d10/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module" prot="public">sgns::runtime::binaryen::WasmModule</innerclass>
+    <innerclass refid="df/dd7/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_factory" prot="public">sgns::runtime::binaryen::WasmModuleFactory</innerclass>
+    <innerclass refid="dc/d1f/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_factory_impl" prot="public">sgns::runtime::binaryen::WasmModuleFactoryImpl</innerclass>
+    <innerclass refid="df/dea/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_impl" prot="public">sgns::runtime::binaryen::WasmModuleImpl</innerclass>
+    <innerclass refid="dc/dbb/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance" prot="public">sgns::runtime::binaryen::WasmModuleInstance</innerclass>
+    <innerclass refid="df/db4/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance_impl" prot="public">sgns::runtime::binaryen::WasmModuleInstanceImpl</innerclass>
+    <innerclass refid="db/d8c/classsgns_1_1runtime_1_1binaryen_1_1_block_builder_impl" prot="public">sgns::runtime::binaryen::BlockBuilderImpl</innerclass>
+    <innerclass refid="d5/dd8/classsgns_1_1runtime_1_1binaryen_1_1_core_factory_impl" prot="public">sgns::runtime::binaryen::CoreFactoryImpl</innerclass>
+    <innerclass refid="dc/d9a/classsgns_1_1runtime_1_1binaryen_1_1_core_impl" prot="public">sgns::runtime::binaryen::CoreImpl</innerclass>
+    <innerclass refid="df/d99/classsgns_1_1runtime_1_1binaryen_1_1_finality_api_impl" prot="public">sgns::runtime::binaryen::FinalityApiImpl</innerclass>
+    <innerclass refid="dc/dc5/classsgns_1_1runtime_1_1binaryen_1_1_metadata_impl" prot="public">sgns::runtime::binaryen::MetadataImpl</innerclass>
+    <innerclass refid="d0/d65/classsgns_1_1runtime_1_1binaryen_1_1_offchain_worker_impl" prot="public">sgns::runtime::binaryen::OffchainWorkerImpl</innerclass>
+    <innerclass refid="d4/d2b/classsgns_1_1runtime_1_1binaryen_1_1_parachain_host_impl" prot="public">sgns::runtime::binaryen::ParachainHostImpl</innerclass>
+    <innerclass refid="d5/dd6/classsgns_1_1runtime_1_1binaryen_1_1_production_api_impl" prot="public">sgns::runtime::binaryen::ProductionApiImpl</innerclass>
+    <innerclass refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api" prot="public">sgns::runtime::binaryen::RuntimeApi</innerclass>
+    <innerclass refid="d6/de7/classsgns_1_1runtime_1_1binaryen_1_1_tagged_transaction_queue_impl" prot="public">sgns::runtime::binaryen::TaggedTransactionQueueImpl</innerclass>
+    <innerclass refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment" prot="public">sgns::runtime::binaryen::RuntimeEnvironment</innerclass>
+    <innerclass refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface" prot="public">sgns::runtime::binaryen::RuntimeExternalInterface</innerclass>
+    <innerclass refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager" prot="public">sgns::runtime::binaryen::RuntimeManager</innerclass>
+    <innerclass refid="dc/dac/classsgns_1_1runtime_1_1binaryen_1_1_wasm_executor" prot="public">sgns::runtime::binaryen::WasmExecutor</innerclass>
+    <innerclass refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl" prot="public">sgns::runtime::binaryen::WasmMemoryImpl</innerclass>
+    <innerclass refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer" prot="public">sgns::runtime::binaryen::Buffer</innerclass>
+    <innerclass refid="d7/dbe/structsgns_1_1runtime_1_1binaryen_1_1_block" prot="public">sgns::runtime::binaryen::Block</innerclass>
+    <innerclass refid="d4/d8e/structsgns_1_1runtime_1_1binaryen_1_1_block_header" prot="public">sgns::runtime::binaryen::BlockHeader</innerclass>
+    <innerclass refid="d3/da7/structsgns_1_1runtime_1_1binaryen_1_1_check_inherents_result" prot="public">sgns::runtime::binaryen::CheckInherentsResult</innerclass>
+    <innerclass refid="d7/d59/structsgns_1_1runtime_1_1binaryen_1_1_extrinsic" prot="public">sgns::runtime::binaryen::Extrinsic</innerclass>
+    <innerclass refid="da/d45/structsgns_1_1runtime_1_1binaryen_1_1_inherent_data" prot="public">sgns::runtime::binaryen::InherentData</innerclass>
+    <innerclass refid="da/d37/structsgns_1_1runtime_1_1binaryen_1_1_authority_id" prot="public">sgns::runtime::binaryen::AuthorityId</innerclass>
+    <innerclass refid="de/d64/structsgns_1_1runtime_1_1binaryen_1_1_version" prot="public">sgns::runtime::binaryen::Version</innerclass>
+    <innerclass refid="d4/dc6/structsgns_1_1runtime_1_1binaryen_1_1_authority" prot="public">sgns::runtime::binaryen::Authority</innerclass>
+    <innerclass refid="dd/d5f/structsgns_1_1runtime_1_1binaryen_1_1_forced_change" prot="public">sgns::runtime::binaryen::ForcedChange</innerclass>
+    <innerclass refid="d7/d97/structsgns_1_1runtime_1_1binaryen_1_1_scheduled_change" prot="public">sgns::runtime::binaryen::ScheduledChange</innerclass>
+    <sectiondef kind="var">
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a2caff31df60c79dbd115a9d39ac0d334" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::env</definition>
+        <argsstring></argsstring>
+        <name>env</name>
+        <qualifiedname>sgns::runtime::binaryen::env</qualifiedname>
+        <initializer>= &quot;env&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="8" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="8" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1aba618acf2af98f147a219eb37d358e91" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_malloc</definition>
+        <argsstring></argsstring>
+        <name>ext_malloc</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_malloc</qualifiedname>
+        <initializer>= &quot;ext_malloc&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="10" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="10" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a9afea4bbb699eb3478d561eeefab7169" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_free</definition>
+        <argsstring></argsstring>
+        <name>ext_free</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_free</qualifiedname>
+        <initializer>= &quot;ext_free&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="11" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="11" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a0c4bbf5972e3b77b065506b7a1adf1cd" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_clear_prefix</definition>
+        <argsstring></argsstring>
+        <name>ext_clear_prefix</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_clear_prefix</qualifiedname>
+        <initializer>= &quot;ext_clear_prefix&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="13" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="13" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a46ae99d7408efb884f5e5ad4048386b0" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_clear_storage</definition>
+        <argsstring></argsstring>
+        <name>ext_clear_storage</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_clear_storage</qualifiedname>
+        <initializer>= &quot;ext_clear_storage&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="14" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="14" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a6bb90ae0ed47b29f7fbdf31e975fea11" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_exists_storage</definition>
+        <argsstring></argsstring>
+        <name>ext_exists_storage</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_exists_storage</qualifiedname>
+        <initializer>= &quot;ext_exists_storage&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="15" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="15" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1ade7e3b71090c32367385cab0c2f341e6" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_get_allocated_storage</definition>
+        <argsstring></argsstring>
+        <name>ext_get_allocated_storage</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_get_allocated_storage</qualifiedname>
+        <initializer>                                              =
+&quot;ext_get_allocated_storage&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="16" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="16" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a7ca4f2530b56bdbd4d229f0635820c49" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_get_storage_into</definition>
+        <argsstring></argsstring>
+        <name>ext_get_storage_into</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_get_storage_into</qualifiedname>
+        <initializer>= &quot;ext_get_storage_into&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="18" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="18" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1af7c72b5732e354cb953b3264ffa1ade5" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_set_storage</definition>
+        <argsstring></argsstring>
+        <name>ext_set_storage</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_set_storage</qualifiedname>
+        <initializer>= &quot;ext_set_storage&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="19" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="19" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1aa764916e9724324a2b6e5c891c2d5d2d" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_storage_read_version_1</definition>
+        <argsstring></argsstring>
+        <name>ext_storage_read_version_1</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_storage_read_version_1</qualifiedname>
+        <initializer>                                               =
+&quot;ext_storage_read_version_1&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="20" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="20" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a0efdadba6f0e0dac90efbbaf41096943" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_blake2_256_enumerated_trie_root</definition>
+        <argsstring></argsstring>
+        <name>ext_blake2_256_enumerated_trie_root</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_blake2_256_enumerated_trie_root</qualifiedname>
+        <initializer>                                                        =
+&quot;ext_blake2_256_enumerated_trie_root&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="22" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a8c0758fc888f0c6fc17046cf1d5edfdb" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_storage_changes_root</definition>
+        <argsstring></argsstring>
+        <name>ext_storage_changes_root</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_storage_changes_root</qualifiedname>
+        <initializer>= &quot;ext_storage_changes_root&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="24" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1aed09abb7031aafd442e7ddb5e0f98051" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_storage_root</definition>
+        <argsstring></argsstring>
+        <name>ext_storage_root</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_storage_root</qualifiedname>
+        <initializer>= &quot;ext_storage_root&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="25" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1ab3a860fb7f968296adb4ef94f90b40f9" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_child_storage_root</definition>
+        <argsstring></argsstring>
+        <name>ext_child_storage_root</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_child_storage_root</qualifiedname>
+        <initializer>= &quot;ext_child_storage_root&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="26" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a431f75c96bc1380fefb6420eaef87a6b" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_clear_child_storage</definition>
+        <argsstring></argsstring>
+        <name>ext_clear_child_storage</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_clear_child_storage</qualifiedname>
+        <initializer>= &quot;ext_clear_child_storage&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="27" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1abffee7fcbd7e959ad302b557d2c4680c" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_exists_child_storage</definition>
+        <argsstring></argsstring>
+        <name>ext_exists_child_storage</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_exists_child_storage</qualifiedname>
+        <initializer>= &quot;ext_exists_child_storage&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="28" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="28" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a1f5e3bacc3e357443a7e612654622f6a" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_get_allocated_child_storage</definition>
+        <argsstring></argsstring>
+        <name>ext_get_allocated_child_storage</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_get_allocated_child_storage</qualifiedname>
+        <initializer>                                                    =
+&quot;ext_get_allocated_child_storage&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="29" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="29" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1abd6da87f2e6a71d24ebb5b17b7845920" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_get_child_storage_into</definition>
+        <argsstring></argsstring>
+        <name>ext_get_child_storage_into</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_get_child_storage_into</qualifiedname>
+        <initializer>                                               =
+&quot;ext_get_child_storage_into&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="31" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="31" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a0e95932431b499adc7cda63e0a18f21a" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_kill_child_storage</definition>
+        <argsstring></argsstring>
+        <name>ext_kill_child_storage</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_kill_child_storage</qualifiedname>
+        <initializer>= &quot;ext_kill_child_storage&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="33" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="33" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a4a77f065a9feb518444cd18d7f5a97b1" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_set_child_storage</definition>
+        <argsstring></argsstring>
+        <name>ext_set_child_storage</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_set_child_storage</qualifiedname>
+        <initializer>= &quot;ext_set_child_storage&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="34" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="34" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a7839ee769425852ce2a7a9e7a3e1ca56" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_print_hex</definition>
+        <argsstring></argsstring>
+        <name>ext_print_hex</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_print_hex</qualifiedname>
+        <initializer>= &quot;ext_print_hex&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="36" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="36" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1adfd8a5ef5e1b893613d4c40ae09aeffb" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_logging_log_version_1</definition>
+        <argsstring></argsstring>
+        <name>ext_logging_log_version_1</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_logging_log_version_1</qualifiedname>
+        <initializer>                                              =
+&quot;ext_logging_log_version_1&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="37" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="37" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a278d0fc248b00f314208b37ce83f8814" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_print_num</definition>
+        <argsstring></argsstring>
+        <name>ext_print_num</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_print_num</qualifiedname>
+        <initializer>= &quot;ext_print_num&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="39" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="39" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1aca74368989e11223ac3eb5ce1ab56459" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_print_utf8</definition>
+        <argsstring></argsstring>
+        <name>ext_print_utf8</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_print_utf8</qualifiedname>
+        <initializer>= &quot;ext_print_utf8&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="40" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="40" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a3e27c55c0edc0f6157fb6820823561a1" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_blake2_128</definition>
+        <argsstring></argsstring>
+        <name>ext_blake2_128</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_blake2_128</qualifiedname>
+        <initializer>= &quot;ext_blake2_128&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="42" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="42" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a7e6e3aa70932b8f10841771d4e4029b5" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_blake2_256</definition>
+        <argsstring></argsstring>
+        <name>ext_blake2_256</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_blake2_256</qualifiedname>
+        <initializer>= &quot;ext_blake2_256&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="43" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="43" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1ae50a8792df9eb148171ba721d7d3c822" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_keccak_256</definition>
+        <argsstring></argsstring>
+        <name>ext_keccak_256</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_keccak_256</qualifiedname>
+        <initializer>= &quot;ext_keccak_256&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="44" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="44" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1ae8e7bc60488744a9dff3dd6d2e7ac42c" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_ed25519_verify</definition>
+        <argsstring></argsstring>
+        <name>ext_ed25519_verify</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_ed25519_verify</qualifiedname>
+        <initializer>= &quot;ext_ed25519_verify&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="45" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="45" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1ad158450ef387dd9d0a65dff368f800d9" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_sr25519_verify</definition>
+        <argsstring></argsstring>
+        <name>ext_sr25519_verify</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_sr25519_verify</qualifiedname>
+        <initializer>= &quot;ext_sr25519_verify&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="46" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="46" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1acd5f3cceed2438d28491e76f1bc988ed" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_twox_64</definition>
+        <argsstring></argsstring>
+        <name>ext_twox_64</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_twox_64</qualifiedname>
+        <initializer>= &quot;ext_twox_64&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="47" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="47" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a175306c77e96cc78469e3317fbca9f0b" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_twox_128</definition>
+        <argsstring></argsstring>
+        <name>ext_twox_128</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_twox_128</qualifiedname>
+        <initializer>= &quot;ext_twox_128&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="48" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="48" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a74cf2d0a245b015f322ae8ff05e5940f" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_twox_256</definition>
+        <argsstring></argsstring>
+        <name>ext_twox_256</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_twox_256</qualifiedname>
+        <initializer>= &quot;ext_twox_256&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="49" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="49" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1ab27f00bf97be0c46f0179b1a33f22769" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_ed25519_public_keys_v1</definition>
+        <argsstring></argsstring>
+        <name>ext_ed25519_public_keys_v1</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_ed25519_public_keys_v1</qualifiedname>
+        <initializer>                                               =
+&quot;ext_crypto_ed25519_public_keys_version_1&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="51" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="51" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1aec2f4fbd9a2d6b579ea58830bd3a1eb5" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_ed25519_generate_v1</definition>
+        <argsstring></argsstring>
+        <name>ext_ed25519_generate_v1</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_ed25519_generate_v1</qualifiedname>
+        <initializer>                                            =
+&quot;ext_crypto_ed25519_generate_version_1&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="53" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="53" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a179c1944dd44be5894587e017903fd14" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_ed25519_sign_v1</definition>
+        <argsstring></argsstring>
+        <name>ext_ed25519_sign_v1</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_ed25519_sign_v1</qualifiedname>
+        <initializer>                                        =
+&quot;ext_crypto_ed25519_sign_version_1&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="55" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="55" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a0f6692a5a87fced5da2cf4ae7431501f" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_ed25519_verify_v1</definition>
+        <argsstring></argsstring>
+        <name>ext_ed25519_verify_v1</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_ed25519_verify_v1</qualifiedname>
+        <initializer>                                          =
+&quot;ext_crypto_ed25519_verify_version_1&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="57" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="57" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1ad950a8ba74886ec575865c30df4a6c36" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_sr25519_public_keys_v1</definition>
+        <argsstring></argsstring>
+        <name>ext_sr25519_public_keys_v1</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_sr25519_public_keys_v1</qualifiedname>
+        <initializer>                                               =
+&quot;ext_crypto_sr25519_public_keys_version_1&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="60" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="60" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a21e23d4348292da8e4b23aba56da622a" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_sr25519_generate_v1</definition>
+        <argsstring></argsstring>
+        <name>ext_sr25519_generate_v1</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_sr25519_generate_v1</qualifiedname>
+        <initializer>                                            =
+&quot;ext_crypto_sr25519_generate_version_1&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="62" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="62" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1aa11a0456927c1f3599b7491bbcdc384d" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_sr25519_sign_v1</definition>
+        <argsstring></argsstring>
+        <name>ext_sr25519_sign_v1</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_sr25519_sign_v1</qualifiedname>
+        <initializer>                                        =
+&quot;ext_crypto_sr25519_sign_version_1&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="64" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="64" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a80076606265c6b36369bfea778df6296" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_sr25519_verify_v2</definition>
+        <argsstring></argsstring>
+        <name>ext_sr25519_verify_v2</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_sr25519_verify_v2</qualifiedname>
+        <initializer>                                          =
+&quot;ext_crypto_sr25519_verify_version_2&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="66" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="66" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1ac0c6d286d3e17bb005346b9d61010055" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_secp256k1_ecdsa_recover_v1</definition>
+        <argsstring></argsstring>
+        <name>ext_secp256k1_ecdsa_recover_v1</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_secp256k1_ecdsa_recover_v1</qualifiedname>
+        <initializer>                                                   =
+&quot;ext_crypto_secp256k1_ecdsa_recover_version_1&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="69" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="69" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a012e535764a45b19b4bbd1894d068599" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_secp256k1_ecdsa_recover_compressed_v1</definition>
+        <argsstring></argsstring>
+        <name>ext_secp256k1_ecdsa_recover_compressed_v1</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_secp256k1_ecdsa_recover_compressed_v1</qualifiedname>
+        <initializer>                                                              =
+&quot;ext_crypto_secp256k1_ecdsa_recover_compressed_version_1&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="71" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="71" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a9030179a66fbdaa706627b6c0d730ba7" prot="public" static="yes" mutable="no">
+        <type>const wasm::Name</type>
+        <definition>const wasm::Name sgns::runtime::binaryen::ext_chain_id</definition>
+        <argsstring></argsstring>
+        <name>ext_chain_id</name>
+        <qualifiedname>sgns::runtime::binaryen::ext_chain_id</qualifiedname>
+        <initializer>= &quot;ext_chain_id&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_external_interface.cpp" line="74" column="27" bodyfile="src/runtime/binaryen/runtime_external_interface.cpp" bodystart="74" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1ab8880d489009bfb6d376eb6dc0c1a855" prot="public" static="no">
+        <type>std::vector&lt; DigestItem &gt;</type>
+        <definition>using sgns::primitives::Digest = std::vector&lt;DigestItem&gt;</definition>
+        <argsstring></argsstring>
+        <name>Digest</name>
+        <qualifiedname>sgns::runtime::binaryen::Digest</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><ref refid="dd/dc5/namespacesgns_1_1primitives_1ab8880d489009bfb6d376eb6dc0c1a855" kindref="member">Digest</ref> is an implementation- and usage-defined entity, for example, information, needed to verify the block </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/finality_api_impl.cpp" line="9" column="3" bodyfile="src/primitives/digest.hpp" bodystart="103" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1ad392b4e4cac3ce9aea0bd7386ed8d7d9" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; 32 &gt;</type>
+        <definition>using sgns::primitives::SessionKey = base::Blob&lt;32&gt;</definition>
+        <argsstring></argsstring>
+        <name>SessionKey</name>
+        <qualifiedname>sgns::runtime::binaryen::SessionKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/finality_api_impl.cpp" line="12" column="3" bodyfile="src/primitives/session_key.hpp" bodystart="10" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a6eb0f88a12597cb3e901560eef802d27" prot="public" static="no">
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>using sgns::primitives::OpaqueMetadata = std::vector&lt;uint8_t&gt;</definition>
+        <argsstring></argsstring>
+        <name>OpaqueMetadata</name>
+        <qualifiedname>sgns::runtime::binaryen::OpaqueMetadata</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>SuperGenius primitive, which is opaque representation of RuntimeMetadata </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/metadata_impl.cpp" line="5" column="3" bodyfile="src/primitives/opaque_metadata.hpp" bodystart="13" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1ae3b6d3a71137641e26ceeae872e7fb44" prot="public" static="no">
+        <type>std::vector&lt; Chain &gt;</type>
+        <definition>using sgns::primitives::parachain::DutyRoster = std::vector&lt;Chain&gt;</definition>
+        <argsstring></argsstring>
+        <name>DutyRoster</name>
+        <qualifiedname>sgns::runtime::binaryen::DutyRoster</qualifiedname>
+        <briefdescription>
+<para><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1ae3b6d3a71137641e26ceeae872e7fb44" kindref="member">DutyRoster</ref> primitive. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/parachain_host_impl.cpp" line="5" column="3" bodyfile="src/primitives/parachain_host.hpp" bodystart="43" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a69a3305a38fab362c69a2665cc45b89f" prot="public" static="no">
+        <type>uint32_t</type>
+        <definition>using sgns::primitives::parachain::ParaId = uint32_t</definition>
+        <argsstring></argsstring>
+        <name>ParaId</name>
+        <qualifiedname>sgns::runtime::binaryen::ParaId</qualifiedname>
+        <briefdescription>
+<para>ParachainId primitive is an uint32_t. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/parachain_host_impl.cpp" line="6" column="3" bodyfile="src/primitives/parachain_host.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1af77fd397e09e5808e4fc788ebe8c7f04" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; 32 &gt;</type>
+        <definition>using sgns::primitives::parachain::ValidatorId = base::Blob&lt;32&gt;</definition>
+        <argsstring></argsstring>
+        <name>ValidatorId</name>
+        <qualifiedname>sgns::runtime::binaryen::ValidatorId</qualifiedname>
+        <briefdescription>
+<para><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1af77fd397e09e5808e4fc788ebe8c7f04" kindref="member">ValidatorId</ref> primitive is an ed25519 or sr25519 public key. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/parachain_host_impl.cpp" line="7" column="3" bodyfile="src/primitives/parachain_host.hpp" bodystart="17" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a9bb55b15560eee3089114cc1b52b30c6" prot="public" static="no">
+        <type>boost::variant&lt; ValidTransaction, TransactionValidityError &gt;</type>
+        <definition>using sgns::primitives::TransactionValidity = 
+boost::variant&lt;ValidTransaction, TransactionValidityError&gt;</definition>
+        <argsstring></argsstring>
+        <name>TransactionValidity</name>
+        <qualifiedname>sgns::runtime::binaryen::TransactionValidity</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Information on a transaction&apos;s validity and, if valid, on how it relate to other transactions. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.cpp" line="4" column="3" bodyfile="src/primitives/transaction_validity.hpp" bodystart="189" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/runtime/binaryen/module/wasm_module.hpp" line="7" column="1"/>
+  </compounddef>
+</doxygen>

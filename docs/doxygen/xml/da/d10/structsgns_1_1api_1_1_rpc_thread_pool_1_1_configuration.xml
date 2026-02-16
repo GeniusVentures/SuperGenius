@@ -1,0 +1,54 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/d10/structsgns_1_1api_1_1_rpc_thread_pool_1_1_configuration" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::api::RpcThreadPool::Configuration</compoundname>
+    <includes refid="d2/d58/rpc__thread__pool_8hpp" local="no">rpc_thread_pool.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="da/d10/structsgns_1_1api_1_1_rpc_thread_pool_1_1_configuration_1a8060fd2b4465266f15743905f4c5c9c3" prot="public" static="no" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::api::RpcThreadPool::Configuration::min_thread_number</definition>
+        <argsstring></argsstring>
+        <name>min_thread_number</name>
+        <qualifiedname>sgns::api::RpcThreadPool::Configuration::min_thread_number</qualifiedname>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/rpc_thread_pool.hpp" line="27" column="14" bodyfile="src/api/transport/rpc_thread_pool.hpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d10/structsgns_1_1api_1_1_rpc_thread_pool_1_1_configuration_1a9bc9b97a938f62ad55a91b235053498d" prot="public" static="no" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::api::RpcThreadPool::Configuration::max_thread_number</definition>
+        <argsstring></argsstring>
+        <name>max_thread_number</name>
+        <qualifiedname>sgns::api::RpcThreadPool::Configuration::max_thread_number</qualifiedname>
+        <initializer>= 10</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/rpc_thread_pool.hpp" line="28" column="14" bodyfile="src/api/transport/rpc_thread_pool.hpp" bodystart="28" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::api::RpcThreadPool::Configuration</label>
+        <link refid="da/d10/structsgns_1_1api_1_1_rpc_thread_pool_1_1_configuration"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/api/transport/rpc_thread_pool.hpp" line="26" column="5" bodyfile="src/api/transport/rpc_thread_pool.hpp" bodystart="26" bodyend="29"/>
+    <listofallmembers>
+      <member refid="da/d10/structsgns_1_1api_1_1_rpc_thread_pool_1_1_configuration_1a9bc9b97a938f62ad55a91b235053498d" prot="public" virt="non-virtual"><scope>sgns::api::RpcThreadPool::Configuration</scope><name>max_thread_number</name></member>
+      <member refid="da/d10/structsgns_1_1api_1_1_rpc_thread_pool_1_1_configuration_1a8060fd2b4465266f15743905f4c5c9c3" prot="public" virt="non-virtual"><scope>sgns::api::RpcThreadPool::Configuration</scope><name>min_thread_number</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

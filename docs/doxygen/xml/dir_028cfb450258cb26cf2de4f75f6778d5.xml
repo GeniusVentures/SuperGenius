@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_028cfb450258cb26cf2de4f75f6778d5" kind="dir">
+    <compoundname>src/blockchain</compoundname>
+    <innerdir refid="dir_5e61800ccbec81520cf7316f0ec1438e">src/blockchain/impl</innerdir>
+    <innerfile refid="d6/d4c/block__header__repository_8hpp">block_header_repository.hpp</innerfile>
+    <innerfile refid="d4/d5d/block__storage_8hpp">block_storage.hpp</innerfile>
+    <innerfile refid="d2/d0a/block__tree_8hpp">block_tree.hpp</innerfile>
+    <innerfile refid="d6/d2a/block__tree__error_8hpp">block_tree_error.hpp</innerfile>
+    <innerfile refid="dc/d59/_blockchain_8hpp">Blockchain.hpp</innerfile>
+    <innerfile refid="df/d00/_validator_registry_8cpp">ValidatorRegistry.cpp</innerfile>
+    <innerfile refid="df/df1/_validator_registry_8hpp">ValidatorRegistry.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/blockchain/"/>
+  </compounddef>
+</doxygen>

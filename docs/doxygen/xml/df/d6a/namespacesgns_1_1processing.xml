@@ -1,0 +1,68 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/d6a/namespacesgns_1_1processing" kind="namespace" language="C++">
+    <compoundname>sgns::processing</compoundname>
+    <innerclass refid="d0/d7f/classsgns_1_1processing_1_1_processing_core_impl" prot="public">sgns::processing::ProcessingCoreImpl</innerclass>
+    <innerclass refid="d3/df7/classsgns_1_1processing_1_1_sub_task_result_storage_impl" prot="public">sgns::processing::SubTaskResultStorageImpl</innerclass>
+    <innerclass refid="d6/d4e/classsgns_1_1processing_1_1_processing_task_queue_impl" prot="public">sgns::processing::ProcessingTaskQueueImpl</innerclass>
+    <innerclass refid="d6/da7/classsgns_1_1processing_1_1_processing_core" prot="public">sgns::processing::ProcessingCore</innerclass>
+    <innerclass refid="dc/d00/classsgns_1_1processing_1_1_processing_engine" prot="public">sgns::processing::ProcessingEngine</innerclass>
+    <innerclass refid="d2/d5b/classsgns_1_1processing_1_1_processing_node" prot="public">sgns::processing::ProcessingNode</innerclass>
+    <innerclass refid="dd/d81/classsgns_1_1processing_1_1_processing_service_impl" prot="public">sgns::processing::ProcessingServiceImpl</innerclass>
+    <innerclass refid="d2/d46/classsgns_1_1processing_1_1_sub_task_enqueuer" prot="public">sgns::processing::SubTaskEnqueuer</innerclass>
+    <innerclass refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl" prot="public">sgns::processing::SubTaskEnqueuerImpl</innerclass>
+    <innerclass refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue" prot="public">sgns::processing::ProcessingSubTaskQueue</innerclass>
+    <innerclass refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor" prot="public">sgns::processing::SubTaskQueueAccessor</innerclass>
+    <innerclass refid="d0/dab/classsgns_1_1processing_1_1_sub_task_queue_accessor_impl" prot="public">sgns::processing::SubTaskQueueAccessorImpl</innerclass>
+    <innerclass refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel" prot="public">sgns::processing::ProcessingSubTaskQueueChannel</innerclass>
+    <innerclass refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub" prot="public">sgns::processing::ProcessingSubTaskQueueChannelPubSub</innerclass>
+    <innerclass refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager" prot="public">sgns::processing::ProcessingSubTaskQueueManager</innerclass>
+    <innerclass refid="d0/d47/classsgns_1_1processing_1_1_sub_task_result_storage" prot="public">sgns::processing::SubTaskResultStorage</innerclass>
+    <innerclass refid="d7/de8/classsgns_1_1processing_1_1_process_task_splitter" prot="public">sgns::processing::ProcessTaskSplitter</innerclass>
+    <innerclass refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core" prot="public">sgns::processing::ProcessingValidationCore</innerclass>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="df/d6a/namespacesgns_1_1processing_1a147e5a81b50889b93a998e27ad4b6b5e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::processing::generate_uuid_with_ipfs_id</definition>
+        <argsstring>(const std::string &amp;ipfs_id)</argsstring>
+        <name>generate_uuid_with_ipfs_id</name>
+        <qualifiedname>sgns::processing::generate_uuid_with_ipfs_id</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>ipfs_id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_tasksplit.cpp" line="20" column="21" bodyfile="src/processing/processing_tasksplit.cpp" bodystart="20" bodyend="41"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Header file for creating a processing task queue <simplesect kind="author"><para>????? Updated by:Justin Church</para>
+</simplesect>
+Header file for the distrubuted processing Room <simplesect kind="author"><para>creativeid00</para>
+</simplesect>
+Header file for the distributed processing Room <simplesect kind="author"><para>creativeid00</para>
+</simplesect>
+Header file for the distrubuted processing node <simplesect kind="author"><para>creativeid00</para>
+</simplesect>
+Header file for the distributed subtasks queue <simplesect kind="author"><para>creativeid00</para>
+</simplesect>
+Header file for subtask queue accessor interface <simplesect kind="author"><para>creativeid00</para>
+</simplesect>
+Header file for subtask queue accessor implementation <simplesect kind="author"><para>creativeid00</para>
+</simplesect>
+Header file for subtask queue channel interface <simplesect kind="author"><para>creativeid00</para>
+</simplesect>
+Header file for the distributed subtasks queue <simplesect kind="author"><para>SuperGenius/Creative00 </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <location file="src/processing/impl/processing_core_impl.cpp" line="24" column="1"/>
+  </compounddef>
+</doxygen>

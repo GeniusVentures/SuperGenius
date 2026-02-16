@@ -1,0 +1,120 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/d06/classsgns_1_1crypto_1_1_pbkdf2_provider" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::crypto::Pbkdf2Provider</compoundname>
+    <derivedcompoundref refid="de/d3b/classsgns_1_1crypto_1_1_pbkdf2_provider_impl" prot="public" virt="non-virtual">sgns::crypto::Pbkdf2ProviderImpl</derivedcompoundref>
+    <includes refid="d7/d0f/pbkdf2__provider_8hpp" local="no">pbkdf2_provider.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d2/d06/classsgns_1_1crypto_1_1_pbkdf2_provider_1ac65f94f0e0c6316e39058cd1e4d42858" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::crypto::Pbkdf2Provider::~Pbkdf2Provider</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Pbkdf2Provider</name>
+        <qualifiedname>sgns::crypto::Pbkdf2Provider::~Pbkdf2Provider</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/pbkdf2/pbkdf2_provider.hpp" line="17" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d06/classsgns_1_1crypto_1_1_pbkdf2_provider_1a40ffec38f59ff59ff64be7d81bba8238" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; base::Buffer &gt; sgns::crypto::Pbkdf2Provider::deriveKey</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; data, gsl::span&lt; const uint8_t &gt; salt, size_t iterations, size_t key_length) const =0</argsstring>
+        <name>deriveKey</name>
+        <qualifiedname>sgns::crypto::Pbkdf2Provider::deriveKey</qualifiedname>
+        <reimplementedby refid="de/d3b/classsgns_1_1crypto_1_1_pbkdf2_provider_impl_1ae8185cadf1f548e4a18702b14ebfaaad">deriveKey</reimplementedby>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>data</declname>
+        </param>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>salt</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>iterations</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>key_length</declname>
+        </param>
+        <briefdescription>
+<para>derives key from password and salt </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>entropy or password </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>salt</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>salt </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>iterations</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>number of iterations </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>key_length</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>length of generated key </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>derived key </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/pbkdf2/pbkdf2_provider.hpp" line="27" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Interface for PBKDF2 key derivation. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::crypto::Pbkdf2Provider</label>
+        <link refid="d2/d06/classsgns_1_1crypto_1_1_pbkdf2_provider"/>
+      </node>
+      <node id="2">
+        <label>sgns::crypto::Pbkdf2ProviderImpl</label>
+        <link refid="de/d3b/classsgns_1_1crypto_1_1_pbkdf2_provider_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::crypto::Pbkdf2Provider</label>
+        <link refid="d2/d06/classsgns_1_1crypto_1_1_pbkdf2_provider"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/crypto/pbkdf2/pbkdf2_provider.hpp" line="15" column="3" bodyfile="src/crypto/pbkdf2/pbkdf2_provider.hpp" bodystart="15" bodyend="32"/>
+    <listofallmembers>
+      <member refid="d2/d06/classsgns_1_1crypto_1_1_pbkdf2_provider_1a40ffec38f59ff59ff64be7d81bba8238" prot="public" virt="pure-virtual"><scope>sgns::crypto::Pbkdf2Provider</scope><name>deriveKey</name></member>
+      <member refid="d2/d06/classsgns_1_1crypto_1_1_pbkdf2_provider_1ac65f94f0e0c6316e39058cd1e4d42858" prot="public" virt="virtual"><scope>sgns::crypto::Pbkdf2Provider</scope><name>~Pbkdf2Provider</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

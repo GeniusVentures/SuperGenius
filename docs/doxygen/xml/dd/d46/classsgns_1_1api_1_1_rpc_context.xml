@@ -1,0 +1,69 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/d46/classsgns_1_1api_1_1_rpc_context" kind="class" language="C++" prot="public">
+    <compoundname>sgns::api::RpcContext</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">boost::asio::io_context</basecompoundref>
+    <basecompoundref refid="d1/dbf/class_i_component" prot="public" virt="non-virtual">IComponent</basecompoundref>
+    <includes refid="d7/db2/rpc__io__context_8hpp" local="no">rpc_io_context.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dd/d46/classsgns_1_1api_1_1_rpc_context_1aab6adfdc1ba87d4b3687809bcbabf359" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::api::RpcContext::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::api::RpcContext::GetName</qualifiedname>
+        <reimplements refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/rpc_io_context.hpp" line="14" column="17" bodyfile="src/api/transport/rpc_io_context.hpp" bodystart="14" bodyend="17"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="2">
+        <label>boost::asio::io_context</label>
+      </node>
+      <node id="1">
+        <label>sgns::api::RpcContext</label>
+        <link refid="dd/d46/classsgns_1_1api_1_1_rpc_context"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="2">
+        <label>boost::asio::io_context</label>
+      </node>
+      <node id="1">
+        <label>sgns::api::RpcContext</label>
+        <link refid="dd/d46/classsgns_1_1api_1_1_rpc_context"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/api/transport/rpc_io_context.hpp" line="10" column="3" bodyfile="src/api/transport/rpc_io_context.hpp" bodystart="10" bodyend="18"/>
+    <listofallmembers>
+      <member refid="dd/d46/classsgns_1_1api_1_1_rpc_context_1aab6adfdc1ba87d4b3687809bcbabf359" prot="public" virt="virtual"><scope>sgns::api::RpcContext</scope><name>GetName</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::api::RpcContext</scope><name>~IComponent</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

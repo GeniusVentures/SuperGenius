@@ -1,0 +1,134 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/df7/predefined__keys_8hpp" kind="file" language="C++">
+    <compoundname>predefined_keys.hpp</compoundname>
+    <includes local="no">string</includes>
+    <includedby refid="de/de9/key__value__block__storage_8cpp" local="yes">src/blockchain/impl/key_value_block_storage.cpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/storage/predefined_keys.hpp</label>
+        <link refid="dc/df7/predefined__keys_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/blockchain/impl/key_value_block_storage.cpp</label>
+        <link refid="de/de9/key__value__block__storage_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/storage/predefined_keys.hpp</label>
+        <link refid="dc/df7/predefined__keys_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d0/dbf/namespacesgns_1_1storage">sgns::storage</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d0/dbf/namespacesgns_1_1storage_1aa255430f7d25e8bebec377a71ed9f1da" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>const std::string &amp;</type>
+        <definition>const std::string &amp; sgns::storage::GetAuthoritySetKey</definition>
+        <argsstring>()</argsstring>
+        <name>GetAuthoritySetKey</name>
+        <qualifiedname>sgns::storage::GetAuthoritySetKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/predefined_keys.hpp" line="10" column="23" bodyfile="src/storage/predefined_keys.hpp" bodystart="10" bodyend="14"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dbf/namespacesgns_1_1storage_1a72f94dc5c3c05b7c08aa885e4030eaab" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>const std::string &amp;</type>
+        <definition>const std::string &amp; sgns::storage::GetSetStateKey</definition>
+        <argsstring>()</argsstring>
+        <name>GetSetStateKey</name>
+        <qualifiedname>sgns::storage::GetSetStateKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/predefined_keys.hpp" line="16" column="23" bodyfile="src/storage/predefined_keys.hpp" bodystart="16" bodyend="20"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dbf/namespacesgns_1_1storage_1aa2c761e78880b764ef80200db5eb1f56" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>const std::string &amp;</type>
+        <definition>const std::string &amp; sgns::storage::GetGenesisBlockHashLookupKey</definition>
+        <argsstring>()</argsstring>
+        <name>GetGenesisBlockHashLookupKey</name>
+        <qualifiedname>sgns::storage::GetGenesisBlockHashLookupKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/predefined_keys.hpp" line="22" column="23" bodyfile="src/storage/predefined_keys.hpp" bodystart="22" bodyend="26"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dbf/namespacesgns_1_1storage_1aea7157bf6bdef7203727d670caf42cb0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>const std::string &amp;</type>
+        <definition>const std::string &amp; sgns::storage::GetLastFinalizedBlockHashLookupKey</definition>
+        <argsstring>()</argsstring>
+        <name>GetLastFinalizedBlockHashLookupKey</name>
+        <qualifiedname>sgns::storage::GetLastFinalizedBlockHashLookupKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/predefined_keys.hpp" line="28" column="23" bodyfile="src/storage/predefined_keys.hpp" bodystart="28" bodyend="32"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_STORAGE_PREDEFINED_KEYS_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_STORAGE_PREDEFINED_KEYS_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d0/dbf/namespacesgns_1_1storage" kindref="compound">sgns::storage</ref></highlight></codeline>
+<codeline lineno="9"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="10" refid="d0/dbf/namespacesgns_1_1storage_1aa255430f7d25e8bebec377a71ed9f1da" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<ref refid="d0/dbf/namespacesgns_1_1storage_1aa255430f7d25e8bebec377a71ed9f1da" kindref="member">GetAuthoritySetKey</ref>()</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>kAuthoritySetKey<sp/>=<sp/></highlight><highlight class="stringliteral">&quot;finality_voters&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>kAuthoritySetKey;</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16" refid="d0/dbf/namespacesgns_1_1storage_1a72f94dc5c3c05b7c08aa885e4030eaab" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<ref refid="d0/dbf/namespacesgns_1_1storage_1a72f94dc5c3c05b7c08aa885e4030eaab" kindref="member">GetSetStateKey</ref>()</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>kSetStateKey<sp/>=<sp/></highlight><highlight class="stringliteral">&quot;finality_completed_round&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>kSetStateKey;</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22" refid="d0/dbf/namespacesgns_1_1storage_1aa2c761e78880b764ef80200db5eb1f56" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<ref refid="d0/dbf/namespacesgns_1_1storage_1aa2c761e78880b764ef80200db5eb1f56" kindref="member">GetGenesisBlockHashLookupKey</ref>()</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>kGenesisBlockHashLookupKey<sp/>=<sp/></highlight><highlight class="stringliteral">&quot;:sgns:genesis_block_hash&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>kGenesisBlockHashLookupKey;</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28" refid="d0/dbf/namespacesgns_1_1storage_1aea7157bf6bdef7203727d670caf42cb0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<ref refid="d0/dbf/namespacesgns_1_1storage_1aea7157bf6bdef7203727d670caf42cb0" kindref="member">GetLastFinalizedBlockHashLookupKey</ref>()</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>kLastFinalizedBlockHashLookupKey<sp/>=<sp/></highlight><highlight class="stringliteral">&quot;:sgns:last_finalized_block_hash&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>kLastFinalizedBlockHashLookupKey;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight></codeline>
+<codeline lineno="34"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::storage</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_SRC_STORAGE_PREDEFINED_KEYS_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/storage/predefined_keys.hpp"/>
+  </compounddef>
+</doxygen>

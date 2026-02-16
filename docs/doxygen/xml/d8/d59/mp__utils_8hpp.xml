@@ -1,0 +1,255 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d8/d59/mp__utils_8hpp" kind="file" language="C++">
+    <compoundname>mp_utils.hpp</compoundname>
+    <includes local="no">boost/multiprecision/cpp_int.hpp</includes>
+    <includes local="no">gsl/span</includes>
+    <includedby refid="d7/d57/mp__utils_8cpp" local="yes">src/base/mp_utils.cpp</includedby>
+    <includedby refid="d5/d8f/vrf__provider__impl_8cpp" local="yes">src/crypto/vrf/vrf_provider_impl.cpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/base/mp_utils.hpp</label>
+        <link refid="d8/d59/mp__utils_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>boost/multiprecision/cpp_int.hpp</label>
+      </node>
+      <node id="3">
+        <label>gsl/span</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/base/mp_utils.cpp</label>
+        <link refid="d7/d57/mp__utils_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/base/mp_utils.hpp</label>
+        <link refid="d8/d59/mp__utils_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>src/crypto/vrf/vrf_provider_impl.cpp</label>
+        <link refid="d5/d8f/vrf__provider__impl_8cpp"/>
+      </node>
+    </invincdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d4/dcb/namespacesgns_1_1base">sgns::base</innernamespace>
+    <innernamespace refid="d0/d3c/namespacesgns_1_1base_1_1detail">sgns::base::detail</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d0/d3c/namespacesgns_1_1base_1_1detail_1a8921cde07e17bd0251022123b514d6aa" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>size_t</type>
+            <declname>size</declname>
+            <defname>size</defname>
+          </param>
+          <param>
+            <type>typename uint</type>
+          </param>
+        </templateparamlist>
+        <type>std::array&lt; uint8_t, size &gt;</type>
+        <definition>std::array&lt; uint8_t, size &gt; sgns::base::detail::uint_to_bytes</definition>
+        <argsstring>(uint &amp;&amp;i)</argsstring>
+        <name>uint_to_bytes</name>
+        <qualifiedname>sgns::base::detail::uint_to_bytes</qualifiedname>
+        <param>
+          <type>uint &amp;&amp;</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/mp_utils.cpp" line="9" column="16" bodyfile="src/base/mp_utils.cpp" bodystart="9" bodyend="14" declfile="src/base/mp_utils.hpp" declline="11" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d3c/namespacesgns_1_1base_1_1detail_1a3b0d0d4fcfe9c59025f02948ecec339a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>size_t</type>
+            <declname>size</declname>
+            <defname>size</defname>
+          </param>
+          <param>
+            <type>typename uint</type>
+          </param>
+        </templateparamlist>
+        <type>uint</type>
+        <definition>uint sgns::base::detail::bytes_to_uint</definition>
+        <argsstring>(gsl::span&lt; uint8_t, size &gt; bytes)</argsstring>
+        <name>bytes_to_uint</name>
+        <qualifiedname>sgns::base::detail::bytes_to_uint</qualifiedname>
+        <param>
+          <type>gsl::span&lt; uint8_t, size &gt;</type>
+          <declname>bytes</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/mp_utils.cpp" line="17" column="10" bodyfile="src/base/mp_utils.cpp" bodystart="17" bodyend="24" declfile="src/base/mp_utils.hpp" declline="14" declcolumn="10"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a21dc6bdd749b275f767262aaaf1064bf" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::array&lt; uint8_t, 8 &gt;</type>
+        <definition>std::array&lt; uint8_t, 8 &gt; sgns::base::uint64_t_to_bytes</definition>
+        <argsstring>(uint64_t number)</argsstring>
+        <name>uint64_t_to_bytes</name>
+        <qualifiedname>sgns::base::uint64_t_to_bytes</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>number</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/mp_utils.cpp" line="27" column="14" bodyfile="src/base/mp_utils.cpp" bodystart="27" bodyend="33" declfile="src/base/mp_utils.hpp" declline="17" declcolumn="14"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a09babae5a8bf57b573c46a0abbedc3df" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::base::bytes_to_uint64_t</definition>
+        <argsstring>(gsl::span&lt; uint8_t, 8 &gt; bytes)</argsstring>
+        <name>bytes_to_uint64_t</name>
+        <qualifiedname>sgns::base::bytes_to_uint64_t</qualifiedname>
+        <param>
+          <type>gsl::span&lt; uint8_t, 8 &gt;</type>
+          <declname>bytes</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/mp_utils.cpp" line="35" column="12" bodyfile="src/base/mp_utils.cpp" bodystart="35" bodyend="41" declfile="src/base/mp_utils.hpp" declline="19" declcolumn="12"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a0cdbd1812624ab91a5fd6ea69313734c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::array&lt; uint8_t, 16 &gt;</type>
+        <definition>std::array&lt; uint8_t, 16 &gt; sgns::base::uint128_t_to_bytes</definition>
+        <argsstring>(const boost::multiprecision::uint128_t &amp;i)</argsstring>
+        <name>uint128_t_to_bytes</name>
+        <qualifiedname>sgns::base::uint128_t_to_bytes</qualifiedname>
+        <param>
+          <type>const boost::multiprecision::uint128_t &amp;</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/mp_utils.cpp" line="43" column="14" bodyfile="src/base/mp_utils.cpp" bodystart="43" bodyend="46" declfile="src/base/mp_utils.hpp" declline="21" declcolumn="14"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a018d68b5aa488c5739f2a47faebe0856" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>boost::multiprecision::uint128_t</type>
+        <definition>boost::multiprecision::uint128_t sgns::base::bytes_to_uint128_t</definition>
+        <argsstring>(gsl::span&lt; uint8_t, 16 &gt; bytes)</argsstring>
+        <name>bytes_to_uint128_t</name>
+        <qualifiedname>sgns::base::bytes_to_uint128_t</qualifiedname>
+        <param>
+          <type>gsl::span&lt; uint8_t, 16 &gt;</type>
+          <declname>bytes</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/mp_utils.cpp" line="48" column="36" bodyfile="src/base/mp_utils.cpp" bodystart="48" bodyend="51" declfile="src/base/mp_utils.hpp" declline="24" declcolumn="36"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a5b96680618109525939be7fe14c2631b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::array&lt; uint8_t, 32 &gt;</type>
+        <definition>std::array&lt; uint8_t, 32 &gt; sgns::base::uint256_t_to_bytes</definition>
+        <argsstring>(const boost::multiprecision::uint256_t &amp;i)</argsstring>
+        <name>uint256_t_to_bytes</name>
+        <qualifiedname>sgns::base::uint256_t_to_bytes</qualifiedname>
+        <param>
+          <type>const boost::multiprecision::uint256_t &amp;</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/mp_utils.cpp" line="53" column="14" bodyfile="src/base/mp_utils.cpp" bodystart="53" bodyend="56" declfile="src/base/mp_utils.hpp" declline="27" declcolumn="14"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1a9f65272a956bf42d90bb5b4de9d77892" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>boost::multiprecision::uint256_t</type>
+        <definition>boost::multiprecision::uint256_t sgns::base::bytes_to_uint256_t</definition>
+        <argsstring>(gsl::span&lt; uint8_t, 32 &gt; bytes)</argsstring>
+        <name>bytes_to_uint256_t</name>
+        <qualifiedname>sgns::base::bytes_to_uint256_t</qualifiedname>
+        <param>
+          <type>gsl::span&lt; uint8_t, 32 &gt;</type>
+          <declname>bytes</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/mp_utils.cpp" line="58" column="36" bodyfile="src/base/mp_utils.cpp" bodystart="58" bodyend="61" declfile="src/base/mp_utils.hpp" declline="30" declcolumn="36"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_CRYPTO_MP_UTILS_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_CRYPTO_MP_UTILS_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/multiprecision/cpp_int.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;gsl/span&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d4/dcb/namespacesgns_1_1base" kindref="compound">sgns::base</ref><sp/>{</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d0/d3c/namespacesgns_1_1base_1_1detail" kindref="compound">detail</ref><sp/>{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>size,<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>u</highlight><highlight class="keywordtype">int</highlight><highlight class="normal">&gt;</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/>std::array&lt;uint8_t,<sp/>size&gt;<sp/><ref refid="d0/d3c/namespacesgns_1_1base_1_1detail_1a8921cde07e17bd0251022123b514d6aa" kindref="member">uint_to_bytes</ref>(uint<sp/>&amp;&amp;i);</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>size,<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>u</highlight><highlight class="keywordtype">int</highlight><highlight class="normal">&gt;</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/>uint<sp/><ref refid="d0/d3c/namespacesgns_1_1base_1_1detail_1a3b0d0d4fcfe9c59025f02948ecec339a" kindref="member">bytes_to_uint</ref>(gsl::span&lt;uint8_t,<sp/>size&gt;<sp/>bytes);</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/>}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>detail</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/>std::array&lt;uint8_t,<sp/>8&gt;<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a21dc6bdd749b275f767262aaaf1064bf" kindref="member">uint64_t_to_bytes</ref>(uint64_t<sp/>number);</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/>uint64_t<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a09babae5a8bf57b573c46a0abbedc3df" kindref="member">bytes_to_uint64_t</ref>(gsl::span&lt;uint8_t,<sp/>8&gt;<sp/>bytes);</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/>std::array&lt;uint8_t,<sp/>16&gt;<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a0cdbd1812624ab91a5fd6ea69313734c" kindref="member">uint128_t_to_bytes</ref>(</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::multiprecision::uint128_t<sp/>&amp;i);</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/>boost::multiprecision::uint128_t<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a018d68b5aa488c5739f2a47faebe0856" kindref="member">bytes_to_uint128_t</ref>(</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>gsl::span&lt;uint8_t,<sp/>16&gt;<sp/>bytes);</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/>std::array&lt;uint8_t,<sp/>32&gt;<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a5b96680618109525939be7fe14c2631b" kindref="member">uint256_t_to_bytes</ref>(</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::multiprecision::uint256_t<sp/>&amp;i);</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/>boost::multiprecision::uint256_t<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a9f65272a956bf42d90bb5b4de9d77892" kindref="member">bytes_to_uint256_t</ref>(</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>gsl::span&lt;uint8_t,<sp/>32&gt;<sp/>bytes);</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::base</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_SRC_CRYPTO_MP_UTILS_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/base/mp_utils.hpp"/>
+  </compounddef>
+</doxygen>

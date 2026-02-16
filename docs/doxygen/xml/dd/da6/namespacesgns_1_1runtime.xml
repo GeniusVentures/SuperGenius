@@ -1,0 +1,200 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/da6/namespacesgns_1_1runtime" kind="namespace" language="C++">
+    <compoundname>sgns::runtime</compoundname>
+    <innerclass refid="dd/da3/classsgns_1_1runtime_1_1_block_builder" prot="public">sgns::runtime::BlockBuilder</innerclass>
+    <innerclass refid="dc/d5f/classsgns_1_1runtime_1_1_const_wasm_provider" prot="public">sgns::runtime::ConstWasmProvider</innerclass>
+    <innerclass refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider" prot="public">sgns::runtime::StorageWasmProvider</innerclass>
+    <innerclass refid="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl" prot="public">sgns::runtime::TrieStorageProviderImpl</innerclass>
+    <innerclass refid="d4/df1/classsgns_1_1runtime_1_1_core" prot="public">sgns::runtime::Core</innerclass>
+    <innerclass refid="d0/d4b/classsgns_1_1runtime_1_1_core_factory" prot="public">sgns::runtime::CoreFactory</innerclass>
+    <innerclass refid="d8/d22/classsgns_1_1runtime_1_1_finality_api" prot="public">sgns::runtime::FinalityApi</innerclass>
+    <innerclass refid="dd/dd7/classsgns_1_1runtime_1_1_metadata" prot="public">sgns::runtime::Metadata</innerclass>
+    <innerclass refid="de/d3d/classsgns_1_1runtime_1_1_offchain_worker" prot="public">sgns::runtime::OffchainWorker</innerclass>
+    <innerclass refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host" prot="public">sgns::runtime::ParachainHost</innerclass>
+    <innerclass refid="df/d31/classsgns_1_1runtime_1_1_production_api" prot="public">sgns::runtime::ProductionApi</innerclass>
+    <innerclass refid="d2/dec/classsgns_1_1runtime_1_1_tagged_transaction_queue" prot="public">sgns::runtime::TaggedTransactionQueue</innerclass>
+    <innerclass refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider" prot="public">sgns::runtime::TrieStorageProvider</innerclass>
+    <innerclass refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory" prot="public">sgns::runtime::WasmMemory</innerclass>
+    <innerclass refid="d2/d00/classsgns_1_1runtime_1_1_wasm_provider" prot="public">sgns::runtime::WasmProvider</innerclass>
+    <innerclass refid="db/d26/structsgns_1_1runtime_1_1_wasm_result" prot="public">sgns::runtime::WasmResult</innerclass>
+    <innernamespace refid="d5/d54/namespacesgns_1_1runtime_1_1binaryen">sgns::runtime::binaryen</innernamespace>
+    <innernamespace refid="d7/dfb/namespacesgns_1_1runtime_1_1dummy">sgns::runtime::dummy</innernamespace>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968" prot="public" static="no" strong="no">
+        <type></type>
+        <name>WasmLogLevel</name>
+        <qualifiedname>sgns::runtime::WasmLogLevel</qualifiedname>
+        <enumvalue id="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968ac2970cc0375a499178e180e70b819654" prot="public">
+          <name>WasmLL_Error</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968abb2236af57c10bc2cc62724a649ebb0e" prot="public">
+          <name>WasmLL_Warn</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968ac9c446b016298ad2fe3cf38412e2c0f0" prot="public">
+          <name>WasmLL_Info</name>
+          <initializer>= 2</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968a0c9bf7a941a3a87f7216db8aa96d0885" prot="public">
+          <name>WasmLL_Debug</name>
+          <initializer>= 3</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968a3c30f56999f6766f82e2dd4513d5a828" prot="public">
+          <name>WasmLL_Trace</name>
+          <initializer>= 4</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>type of wasm log levels </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/types.hpp" line="12" column="3" bodyfile="src/runtime/types.hpp" bodystart="12" bodyend="18"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" prot="public" static="no">
+        <type>uint32_t</type>
+        <definition>using sgns::runtime::WasmPointer = uint32_t</definition>
+        <argsstring></argsstring>
+        <name>WasmPointer</name>
+        <qualifiedname>sgns::runtime::WasmPointer</qualifiedname>
+        <briefdescription>
+<para>type of wasm memory is 32 bit integer </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/types.hpp" line="22" column="3" bodyfile="src/runtime/types.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/da6/namespacesgns_1_1runtime_1adc9fc98228747f341ff4f49e2f8d9002" prot="public" static="no">
+        <type>uint64_t</type>
+        <definition>using sgns::runtime::WasmSpan = uint64_t</definition>
+        <argsstring></argsstring>
+        <name>WasmSpan</name>
+        <qualifiedname>sgns::runtime::WasmSpan</qualifiedname>
+        <briefdescription>
+<para>combination of pointer and size, where less significant part represents wasm pointer, and most significant represents size </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/types.hpp" line="27" column="3" bodyfile="src/runtime/types.hpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" prot="public" static="no">
+        <type>uint32_t</type>
+        <definition>using sgns::runtime::WasmSize = uint32_t</definition>
+        <argsstring></argsstring>
+        <name>WasmSize</name>
+        <qualifiedname>sgns::runtime::WasmSize</qualifiedname>
+        <briefdescription>
+<para>Size type is uint32_t because we are working in 32 bit address space. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/types.hpp" line="31" column="3" bodyfile="src/runtime/types.hpp" bodystart="31" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/da6/namespacesgns_1_1runtime_1a136a9e1c14ad086b6322b1feaf85534b" prot="public" static="no">
+        <type>uint32_t</type>
+        <definition>using sgns::runtime::WasmEnum = uint32_t</definition>
+        <argsstring></argsstring>
+        <name>WasmEnum</name>
+        <qualifiedname>sgns::runtime::WasmEnum</qualifiedname>
+        <briefdescription>
+<para>Enum value is uint32_t. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/types.hpp" line="35" column="3" bodyfile="src/runtime/types.hpp" bodystart="35" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/da6/namespacesgns_1_1runtime_1abfd6037b863b63cd7b52b00f3cb6a31f" prot="public" static="no">
+        <type>uint32_t</type>
+        <definition>using sgns::runtime::WasmOffset = uint32_t</definition>
+        <argsstring></argsstring>
+        <name>WasmOffset</name>
+        <qualifiedname>sgns::runtime::WasmOffset</qualifiedname>
+        <briefdescription>
+<para>Offset type is uint32_t because we are working in 32 bit address space. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/types.hpp" line="40" column="3" bodyfile="src/runtime/types.hpp" bodystart="40" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="var">
+      <memberdef kind="variable" id="dd/da6/namespacesgns_1_1runtime_1a6f421c95acf1c4db60a1f72ff04cabb2" prot="public" static="no" mutable="no">
+        <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>const base::Buffer sgns::runtime::kRuntimeKey</definition>
+        <argsstring></argsstring>
+        <name>kRuntimeKey</name>
+        <qualifiedname>sgns::runtime::kRuntimeKey</qualifiedname>
+        <initializer>                                  =
+<ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1abf03ac74ff0c37968afc5d40493f8f28" kindref="member">base::Buffer::fromHex</ref>(&quot;3a636f6465&quot;).value()</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/storage_wasm_provider.hpp" line="11" column="29" bodyfile="src/runtime/common/storage_wasm_provider.hpp" bodystart="11" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="dd/da6/namespacesgns_1_1runtime_1a4fe3375f85083a25353e338f4db4ce74" prot="public" static="yes" constexpr="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::pair&lt; <ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref>, <ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref> &gt;</type>
+        <definition>static constexpr std::pair&lt; WasmPointer, WasmSize &gt; sgns::runtime::splitSpan</definition>
+        <argsstring>(WasmSpan span)</argsstring>
+        <name>splitSpan</name>
+        <qualifiedname>sgns::runtime::splitSpan</qualifiedname>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1adc9fc98228747f341ff4f49e2f8d9002" kindref="member">WasmSpan</ref></type>
+          <declname>span</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Splits 64 bit wasm span on 32 bit pointer and 32 bit address </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/types.hpp" line="45" column="30" bodyfile="src/runtime/types.hpp" bodystart="45" bodyend="51"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/runtime/binaryen/module/wasm_module.hpp" line="7" column="1"/>
+  </compounddef>
+</doxygen>

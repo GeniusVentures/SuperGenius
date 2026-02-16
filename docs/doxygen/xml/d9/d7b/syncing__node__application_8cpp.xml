@@ -1,0 +1,156 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/d7b/syncing__node__application_8cpp" kind="file" language="C++">
+    <compoundname>syncing_node_application.cpp</compoundname>
+    <includes refid="d3/dde/syncing__node__application_8hpp" local="yes">application/impl/syncing_node_application.hpp</includes>
+    <includes local="yes">network/common.hpp</includes>
+    <incdepgraph>
+      <node id="4">
+        <label>application/app_config.hpp</label>
+        <link refid="dd/d95/app__config_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/application/impl/syncing_node_application.cpp</label>
+        <link refid="d9/d7b/syncing__node__application_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>application/impl/syncing_node_application.hpp</label>
+        <link refid="d3/dde/syncing__node__application_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>application/sgns_application.hpp</label>
+        <link refid="df/d62/sgns__application_8hpp"/>
+      </node>
+      <node id="9">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>boost/asio/ip/tcp.hpp</label>
+      </node>
+      <node id="11">
+        <label>injector/syncing_node_injector.hpp</label>
+      </node>
+      <node id="7">
+        <label>memory</label>
+      </node>
+      <node id="12">
+        <label>network/common.hpp</label>
+      </node>
+      <node id="10">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="5">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="8">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="db/d40/namespacesgns_1_1application">sgns::application</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d3/dde/syncing__node__application_8hpp" kindref="compound">application/impl/syncing_node_application.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;network/common.hpp&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="db/d40/namespacesgns_1_1application" kindref="compound">sgns::application</ref><sp/>{</highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7" refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a1c60c724fe9f9825b517a59dc2b7388c" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a1c60c724fe9f9825b517a59dc2b7388c" kindref="member">SyncingNodeApplication::SyncingNodeApplication</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="db/d40/namespacesgns_1_1application_1a584cedf80f0bf06ab9d676db4ee5b252" kindref="member">AppConfigPtr</ref><sp/>&amp;app_config)</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1aee81af868fecf5b55a5f4bb2cc31e04a" kindref="member">injector_</ref>{injector::makeSyncingNodeInjector(app_config)},</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a91aed5fcfd389b5c0b7451cf9eacf532" kindref="member">logger_</ref>{<ref refid="d4/dcb/namespacesgns_1_1base" kindref="compound">base</ref>::createLogger(</highlight><highlight class="stringliteral">&quot;SyncingNodeApplication&quot;</highlight><highlight class="normal">)}<sp/>{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/><sp/><sp/>spdlog::set_level(app_config-&gt;verbosity());</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>keep<sp/>important<sp/>instances,<sp/>the<sp/>must<sp/>exist<sp/>when<sp/>injector<sp/>destroyed</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>some<sp/>of<sp/>them<sp/>are<sp/>requested<sp/>by<sp/>reference<sp/>and<sp/>hence<sp/>not<sp/>copied</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a2519d24a85b65a523c07eff9894a6678" kindref="member">app_state_manager_</ref><sp/>=<sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1aee81af868fecf5b55a5f4bb2cc31e04a" kindref="member">injector_</ref>.create&lt;std::shared_ptr&lt;AppStateManager&gt;&gt;();</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a0520c20eaf522eb516bfe67d948ff4cf" kindref="member">io_context_</ref><sp/>=<sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1aee81af868fecf5b55a5f4bb2cc31e04a" kindref="member">injector_</ref>.create&lt;<ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1af1ce2c61c08499baf77ff8dbdea1aeeb" kindref="member">sptr&lt;boost::asio::io_context&gt;</ref>&gt;();</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1adab5902b3ba1d669539a11573d879747" kindref="member">config_storage_</ref><sp/>=<sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1aee81af868fecf5b55a5f4bb2cc31e04a" kindref="member">injector_</ref>.create&lt;<ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1af1ce2c61c08499baf77ff8dbdea1aeeb" kindref="member">sptr&lt;ConfigurationStorage&gt;</ref>&gt;();</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1ad100765bc790ba1eebcd29f049232c13" kindref="member">router_</ref><sp/>=<sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1aee81af868fecf5b55a5f4bb2cc31e04a" kindref="member">injector_</ref>.create&lt;<ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1af1ce2c61c08499baf77ff8dbdea1aeeb" kindref="member">sptr&lt;network::Router&gt;</ref>&gt;();</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a0a85ef3101d982bca6a8db510a65970f" kindref="member">jrpc_api_service_</ref><sp/>=<sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1aee81af868fecf5b55a5f4bb2cc31e04a" kindref="member">injector_</ref>.create&lt;<ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1af1ce2c61c08499baf77ff8dbdea1aeeb" kindref="member">sptr&lt;api::ApiService&gt;</ref>&gt;();</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23" refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1ab01c6e34ea934ddbc5541e93acfc5787" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1ab01c6e34ea934ddbc5541e93acfc5787" kindref="member">SyncingNodeApplication::run</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a91aed5fcfd389b5c0b7451cf9eacf532" kindref="member">logger_</ref>-&gt;info(</highlight><highlight class="stringliteral">&quot;Start<sp/>as<sp/>{}<sp/>with<sp/>PID<sp/>{}&quot;</highlight><highlight class="normal">,<sp/></highlight><highlight class="keyword">typeid</highlight><highlight class="normal">(*this).name(),<sp/>getpid());</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a2519d24a85b65a523c07eff9894a6678" kindref="member">app_state_manager_</ref>-&gt;atLaunch([</highlight><highlight class="keyword">this</highlight><highlight class="normal">]<sp/>{</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>execute<sp/>listeners</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a0520c20eaf522eb516bfe67d948ff4cf" kindref="member">io_context_</ref>-&gt;post([</highlight><highlight class="keyword">this</highlight><highlight class="normal">]<sp/>{</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;current_peer_info<sp/>=</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1aee81af868fecf5b55a5f4bb2cc31e04a" kindref="member">injector_</ref>.template<sp/>create&lt;network::OwnPeerInfo&gt;();</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;host<sp/>=<sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1aee81af868fecf5b55a5f4bb2cc31e04a" kindref="member">injector_</ref>.template<sp/>create&lt;libp2p::Host<sp/>&amp;&gt;();</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;ma<sp/>:<sp/>current_peer_info.addresses)<sp/>{</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>listen<sp/>=<sp/>host.listen(ma);</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!<sp/>listen)<sp/>{</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a91aed5fcfd389b5c0b7451cf9eacf532" kindref="member">logger_</ref>-&gt;error(</highlight><highlight class="stringliteral">&quot;Cannot<sp/>listen<sp/>address<sp/>{}.<sp/>Error:<sp/>{}&quot;</highlight><highlight class="normal">,</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ma.getStringAddress(),</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>listen.error().message());</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::exit(1);</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;boot_node<sp/>:<sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1adab5902b3ba1d669539a11573d879747" kindref="member">config_storage_</ref>-&gt;getBootNodes().peers)<sp/>{</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>host.newStream(</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boot_node,</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>network::kGossipProtocol,</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[</highlight><highlight class="keyword">this</highlight><highlight class="normal">,<sp/>boot_node](</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;stream_res)<sp/>{</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!<sp/>stream_res)<sp/>{</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>this-&gt;<ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a91aed5fcfd389b5c0b7451cf9eacf532" kindref="member">logger_</ref>-&gt;error(</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;Could<sp/>not<sp/>establish<sp/>connection<sp/>with<sp/>{}.<sp/>Error:<sp/>{}&quot;</highlight><highlight class="normal">,</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boot_node.id.toBase58(),</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>stream_res.error().message());</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>this-&gt;<ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1ad100765bc790ba1eebcd29f049232c13" kindref="member">router_</ref>-&gt;handleGossipProtocol(stream_res.value());</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>this-&gt;<ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1ad100765bc790ba1eebcd29f049232c13" kindref="member">router_</ref>-&gt;init();</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"></highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a2519d24a85b65a523c07eff9894a6678" kindref="member">app_state_manager_</ref>-&gt;atLaunch([ctx{<ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a0520c20eaf522eb516bfe67d948ff4cf" kindref="member">io_context_</ref>}]<sp/>{</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::thread<sp/>asio_runner([ctx{ctx}]<sp/>{<sp/>ctx-&gt;run();<sp/>});</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>asio_runner.detach();</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"></highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a2519d24a85b65a523c07eff9894a6678" kindref="member">app_state_manager_</ref>-&gt;atShutdown([ctx{<ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a0520c20eaf522eb516bfe67d948ff4cf" kindref="member">io_context_</ref>}]<sp/>{<sp/>ctx-&gt;stop();<sp/>});</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"></highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a2519d24a85b65a523c07eff9894a6678" kindref="member">app_state_manager_</ref>-&gt;run();</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"></highlight></codeline>
+<codeline lineno="72"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::application</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/application/impl/syncing_node_application.cpp"/>
+  </compounddef>
+</doxygen>

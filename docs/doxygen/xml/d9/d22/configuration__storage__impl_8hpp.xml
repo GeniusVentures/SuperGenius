@@ -1,0 +1,309 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/d22/configuration__storage__impl_8hpp" kind="file" language="C++">
+    <compoundname>configuration_storage_impl.hpp</compoundname>
+    <includes refid="d1/d83/configuration__storage_8hpp" local="yes">application/configuration_storage.hpp</includes>
+    <includes local="no">boost/property_tree/ptree.hpp</includes>
+    <includes refid="d6/da3/logger_8hpp" local="yes">base/logger.hpp</includes>
+    <includedby refid="d1/d90/configuration__storage__impl_8cpp" local="yes">src/application/impl/configuration_storage_impl.cpp</includedby>
+    <incdepgraph>
+      <node id="2">
+        <label>application/configuration_storage.hpp</label>
+        <link refid="d1/d83/configuration__storage_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>application/genesis_raw_config.hpp</label>
+        <link refid="db/dd2/genesis__raw__config_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/application/impl/configuration_storage_impl.hpp</label>
+        <link refid="d9/d22/configuration__storage__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>primitives/common.hpp</label>
+        <link refid="d4/d26/src_2primitives_2common_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>array</label>
+      </node>
+      <node id="9">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="22">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="10">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="25">
+        <label>boost/property_tree/ptree.hpp</label>
+      </node>
+      <node id="20">
+        <label>cstddef</label>
+      </node>
+      <node id="18">
+        <label>cstdint</label>
+      </node>
+      <node id="11">
+        <label>gsl/span</label>
+      </node>
+      <node id="24">
+        <label>iostream</label>
+      </node>
+      <node id="13">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="4">
+        <label>libp2p/peer/peer_info.hpp</label>
+      </node>
+      <node id="14">
+        <label>network/types/peer_list.hpp</label>
+      </node>
+      <node id="3">
+        <label>set</label>
+      </node>
+      <node id="27">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="28">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="16">
+        <label>string</label>
+      </node>
+      <node id="7">
+        <label>string_view</label>
+      </node>
+      <node id="8">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/application/impl/configuration_storage_impl.cpp</label>
+        <link refid="d1/d90/configuration__storage__impl_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/application/impl/configuration_storage_impl.hpp</label>
+        <link refid="d9/d22/configuration__storage__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl" prot="public">sgns::application::ConfigurationStorageImpl</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="db/d40/namespacesgns_1_1application">sgns::application</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_CONFIGURATION_STORAGE_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_CONFIGURATION_STORAGE_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d1/d83/configuration__storage_8hpp" kindref="compound">application/configuration_storage.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/property_tree/ptree.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/da3/logger_8hpp" kindref="compound">base/logger.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="db/d40/namespacesgns_1_1application" kindref="compound">sgns::application</ref></highlight></codeline>
+<codeline lineno="12"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1adfa6e74bd4c875dd02ba1b1980e016eb" kindref="member">ConfigurationStorageImpl</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d7/de2/classsgns_1_1application_1_1_configuration_storage" kindref="compound">ConfigurationStorage</ref></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>outcome::result&lt;std::shared_ptr&lt;ConfigurationStorageImpl&gt;&gt;<sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1ac1300f156d1ec24c2373f1cb579e0676" kindref="member">create</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;config_path<sp/>);</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a78557ac04c00f5fac19e6f770de81525" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a78557ac04c00f5fac19e6f770de81525" kindref="member">~ConfigurationStorageImpl</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1ac6cf31cc7a9498d017ff0a3e5aa4da62" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1ac6cf31cc7a9498d017ff0a3e5aa4da62" kindref="member">name</ref>()</highlight><highlight class="keyword"><sp/>const<sp/>override</highlight></codeline>
+<codeline lineno="22"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a435d576a0a8ed3c0e9b7ce1f4d58b2bf" kindref="member">name_</ref>;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1aa19325e59709a89106c1c461542748f0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1aa19325e59709a89106c1c461542748f0" kindref="member">id</ref>()</highlight><highlight class="keyword"><sp/>const<sp/>override</highlight></codeline>
+<codeline lineno="27"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a0af0cf9e22b2008c9c80a0ee53c5006d" kindref="member">id_</ref>;</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1af60ad0af95e7b0eb6395a6418e152421" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1af60ad0af95e7b0eb6395a6418e152421" kindref="member">chainType</ref>()</highlight><highlight class="keyword"><sp/>const<sp/>override</highlight></codeline>
+<codeline lineno="32"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a647d42a63b94a0b8a307817c0478d45f" kindref="member">chain_type_</ref>;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a1d17cb8e6256059d116e2b1a129cd71d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>network::PeerList<sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a1d17cb8e6256059d116e2b1a129cd71d" kindref="member">getBootNodes</ref>()</highlight><highlight class="keyword"><sp/>const<sp/>override</highlight></codeline>
+<codeline lineno="37"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a11d0290b5f25fc98e12e26f0af1a8189" kindref="member">boot_nodes_</ref>;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a80b9a325cfc80c45f007e6bfc1fa8b8c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;std::pair&lt;std::string,<sp/>size_t&gt;&gt;<sp/>&amp;<ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a80b9a325cfc80c45f007e6bfc1fa8b8c" kindref="member">telemetryEndpoints</ref>()</highlight><highlight class="keyword"><sp/>const<sp/>override</highlight></codeline>
+<codeline lineno="42"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1abf1bca0974e283a5b4eb59ba12bb2a82" kindref="member">telemetry_endpoints_</ref>;</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a1f855e633a60ffbc4af4ad76d373f078" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a1f855e633a60ffbc4af4ad76d373f078" kindref="member">protocolId</ref>()</highlight><highlight class="keyword"><sp/>const<sp/>override</highlight></codeline>
+<codeline lineno="47"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a486c0cd989c495d6f2872cd880fcbd7e" kindref="member">protocol_id_</ref>;</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"></highlight></codeline>
+<codeline lineno="51" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a41c603fa474417054cbe52eb62a40e11" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::map&lt;std::string,<sp/>std::string&gt;<sp/>&amp;<ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a41c603fa474417054cbe52eb62a40e11" kindref="member">properties</ref>()</highlight><highlight class="keyword"><sp/>const<sp/>override</highlight></codeline>
+<codeline lineno="52"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a42b1225b861ef5f13374d122b41667c7" kindref="member">properties_</ref>;</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"></highlight></codeline>
+<codeline lineno="56" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a30afb0b8b57225301ee7921e5fd7cfaa" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boost::optional&lt;std::reference_wrapper&lt;const<sp/>std::string&gt;&gt;<sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a30afb0b8b57225301ee7921e5fd7cfaa" kindref="member">getProperty</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;property<sp/>)</highlight><highlight class="keyword"><sp/>const<sp/>override</highlight></codeline>
+<codeline lineno="57"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>it<sp/>=<sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a42b1225b861ef5f13374d122b41667c7" kindref="member">properties_</ref>.find(<sp/>property<sp/>);</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>it<sp/>!=<sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a42b1225b861ef5f13374d122b41667c7" kindref="member">properties_</ref>.end()<sp/>)</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>{<sp/>{<sp/>it-&gt;second<sp/>}<sp/>};</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>boost::none;</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"></highlight></codeline>
+<codeline lineno="66" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a62bb63ab0cd6cc3b6e4321d1ec3a344d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::set&lt;primitives::BlockHash&gt;<sp/>&amp;<ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a62bb63ab0cd6cc3b6e4321d1ec3a344d" kindref="member">forkBlocks</ref>()</highlight><highlight class="keyword"><sp/>const<sp/>override</highlight></codeline>
+<codeline lineno="67"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a58f95a3074059af0bb4b76bd6ee7d1c4" kindref="member">fork_blocks_</ref>;</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"></highlight></codeline>
+<codeline lineno="71" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a0d3b414747b8486889af66c2bb90b4c5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::set&lt;primitives::BlockHash&gt;<sp/>&amp;<ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a0d3b414747b8486889af66c2bb90b4c5" kindref="member">badBlocks</ref>()</highlight><highlight class="keyword"><sp/>const<sp/>override</highlight></codeline>
+<codeline lineno="72"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a791ec287c6b7c6139a62fd2cae1bb6a1" kindref="member">bad_blocks_</ref>;</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"></highlight></codeline>
+<codeline lineno="76" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a6ea1716061c88ac9e6dfdfc221ebffcf" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boost::optional&lt;std::string&gt;<sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a6ea1716061c88ac9e6dfdfc221ebffcf" kindref="member">verificationEngine</ref>()</highlight><highlight class="keyword"><sp/>const<sp/>override</highlight></codeline>
+<codeline lineno="77"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a6c1922161655f7824edb5392d6ba75ad" kindref="member">verification_engine_</ref>;</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"></highlight></codeline>
+<codeline lineno="81" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1abf20ffe79e9edde0b2aadd06fcb6b7cc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="db/d40/namespacesgns_1_1application_1a8d33b5b411fb63cf4d022159053924a5" kindref="member">GenesisRawConfig</ref><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1abf20ffe79e9edde0b2aadd06fcb6b7cc" kindref="member">getGenesis</ref>()</highlight><highlight class="keyword"><sp/>const<sp/>override</highlight></codeline>
+<codeline lineno="82"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1ad6d028e0e6db15cbcb1ef78a9f8e61a8" kindref="member">genesis_</ref>;</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"></highlight></codeline>
+<codeline lineno="86" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a723a526b5b94c38e86edfff700180081" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a723a526b5b94c38e86edfff700180081" kindref="member">GetName</ref>()</highlight><highlight class="keyword"><sp/>override</highlight></codeline>
+<codeline lineno="87"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;ConfigurationStorageImpl&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"></highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a647eff73c0393d687a8f80188d8d4a06" kindref="member">loadFromJson</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;file_path<sp/>);</highlight></codeline>
+<codeline lineno="93" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a0c6236994a132811b490d9063c755081" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a0c6236994a132811b490d9063c755081" kindref="member">loadFields</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::property_tree::ptree<sp/>&amp;tree<sp/>);</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a5d09ff85e01a5517bf4452deafb62305" kindref="member">loadGenesis</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::property_tree::ptree<sp/>&amp;tree<sp/>);</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a0dda4c8b0a6bc77e999b4f96ae298a1c" kindref="member">loadBootNodes</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::property_tree::ptree<sp/>&amp;tree<sp/>);</highlight></codeline>
+<codeline lineno="96" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a69ddcc66e3c686560026a922e8626c5f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a69ddcc66e3c686560026a922e8626c5f" kindref="member">loadSessionKeys</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::property_tree::ptree<sp/>&amp;tree<sp/>);</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"></highlight></codeline>
+<codeline lineno="98" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1adfa6e74bd4c875dd02ba1b1980e016eb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1adfa6e74bd4c875dd02ba1b1980e016eb" kindref="member">ConfigurationStorageImpl</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"></highlight></codeline>
+<codeline lineno="100" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a435d576a0a8ed3c0e9b7ce1f4d58b2bf" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a435d576a0a8ed3c0e9b7ce1f4d58b2bf" kindref="member">name_</ref>;</highlight></codeline>
+<codeline lineno="101" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a0af0cf9e22b2008c9c80a0ee53c5006d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a0af0cf9e22b2008c9c80a0ee53c5006d" kindref="member">id_</ref>;</highlight></codeline>
+<codeline lineno="102" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a647d42a63b94a0b8a307817c0478d45f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a647d42a63b94a0b8a307817c0478d45f" kindref="member">chain_type_</ref>;</highlight></codeline>
+<codeline lineno="103" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a11d0290b5f25fc98e12e26f0af1a8189" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>network::PeerList<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a11d0290b5f25fc98e12e26f0af1a8189" kindref="member">boot_nodes_</ref>;</highlight></codeline>
+<codeline lineno="104" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1abf1bca0974e283a5b4eb59ba12bb2a82" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;std::pair&lt;std::string,<sp/>size_t&gt;&gt;<sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1abf1bca0974e283a5b4eb59ba12bb2a82" kindref="member">telemetry_endpoints_</ref>;</highlight></codeline>
+<codeline lineno="105" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a486c0cd989c495d6f2872cd880fcbd7e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a486c0cd989c495d6f2872cd880fcbd7e" kindref="member">protocol_id_</ref>{<sp/></highlight><highlight class="stringliteral">&quot;sup&quot;</highlight><highlight class="normal"><sp/>};</highlight></codeline>
+<codeline lineno="106" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a42b1225b861ef5f13374d122b41667c7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::map&lt;std::string,<sp/>std::string&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a42b1225b861ef5f13374d122b41667c7" kindref="member">properties_</ref>;</highlight></codeline>
+<codeline lineno="107" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a58f95a3074059af0bb4b76bd6ee7d1c4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::set&lt;primitives::BlockHash&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a58f95a3074059af0bb4b76bd6ee7d1c4" kindref="member">fork_blocks_</ref>;</highlight></codeline>
+<codeline lineno="108" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a791ec287c6b7c6139a62fd2cae1bb6a1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::set&lt;primitives::BlockHash&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a791ec287c6b7c6139a62fd2cae1bb6a1" kindref="member">bad_blocks_</ref>;</highlight></codeline>
+<codeline lineno="109" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a6c1922161655f7824edb5392d6ba75ad" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boost::optional&lt;std::string&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a6c1922161655f7824edb5392d6ba75ad" kindref="member">verification_engine_</ref>;</highlight></codeline>
+<codeline lineno="110" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1ad6d028e0e6db15cbcb1ef78a9f8e61a8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="db/d40/namespacesgns_1_1application_1a8d33b5b411fb63cf4d022159053924a5" kindref="member">GenesisRawConfig</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1ad6d028e0e6db15cbcb1ef78a9f8e61a8" kindref="member">genesis_</ref>;</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"></highlight></codeline>
+<codeline lineno="112" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a0ce1f5d559981d628adb0d9af8c688ca" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a0ce1f5d559981d628adb0d9af8c688ca" kindref="member">logger_</ref><sp/>=<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>(<sp/></highlight><highlight class="stringliteral">&quot;ConfigurationStorageImpl&quot;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"></highlight></codeline>
+<codeline lineno="115"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::application</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="116"><highlight class="normal"></highlight></codeline>
+<codeline lineno="117"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_SRC_CONFIGURATION_STORAGE_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/application/impl/configuration_storage_impl.hpp"/>
+  </compounddef>
+</doxygen>

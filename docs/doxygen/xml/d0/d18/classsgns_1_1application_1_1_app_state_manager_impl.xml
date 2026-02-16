@@ -1,0 +1,655 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl" kind="class" language="C++" prot="public">
+    <compoundname>sgns::application::AppStateManagerImpl</compoundname>
+    <basecompoundref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager" prot="public" virt="non-virtual">sgns::application::AppStateManager</basecompoundref>
+    <includes refid="db/df6/app__state__manager__impl_8hpp" local="no">app_state_manager_impl.hpp</includes>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a9069e4c932261874d3e9c3761200248b" prot="private" static="yes" mutable="no">
+        <type>std::weak_ptr&lt; <ref refid="d2/d3c/class_app_state_manager" kindref="compound">AppStateManager</ref> &gt;</type>
+        <definition>std::weak_ptr&lt; AppStateManager &gt; sgns::application::AppStateManagerImpl::wp_to_myself</definition>
+        <argsstring></argsstring>
+        <name>wp_to_myself</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::wp_to_myself</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="54" column="30" bodyfile="src/application/impl/app_state_manager_impl.hpp" bodystart="54" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a1d61966e31d38d87bcbcf5b9d37b1532" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::application::AppStateManagerImpl::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::logger_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="57" column="22" bodyfile="src/application/impl/app_state_manager_impl.hpp" bodystart="57" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027" kindref="member">State</ref></type>
+        <definition>State sgns::application::AppStateManagerImpl::state_</definition>
+        <argsstring></argsstring>
+        <name>state_</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::state_</qualifiedname>
+        <initializer>= <ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027a95b19f7739b0b7ea7d6b07586be54f36" kindref="member">State::Init</ref></initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="59" column="15" bodyfile="src/application/impl/app_state_manager_impl.hpp" bodystart="59" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a5a0fd642af8902c2c659ed0dffa39665" prot="private" static="no" mutable="no">
+        <type>std::recursive_mutex</type>
+        <definition>std::recursive_mutex sgns::application::AppStateManagerImpl::mutex_</definition>
+        <argsstring></argsstring>
+        <name>mutex_</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::mutex_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="61" column="30" bodyfile="src/application/impl/app_state_manager_impl.hpp" bodystart="61" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a130cfe883a525cb76460b70f52ecd496" prot="private" static="no" mutable="no">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::application::AppStateManagerImpl::cv_mutex_</definition>
+        <argsstring></argsstring>
+        <name>cv_mutex_</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::cv_mutex_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="63" column="33" bodyfile="src/application/impl/app_state_manager_impl.hpp" bodystart="63" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a28b5e4129a1600b8f0376e9945bf3522" prot="private" static="no" mutable="no">
+        <type>std::condition_variable</type>
+        <definition>std::condition_variable sgns::application::AppStateManagerImpl::cv_</definition>
+        <argsstring></argsstring>
+        <name>cv_</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::cv_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="64" column="33" bodyfile="src/application/impl/app_state_manager_impl.hpp" bodystart="64" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a57e97ebc55a80904437b73f3a29e2e88" prot="private" static="no" mutable="no">
+        <type>std::queue&lt; <ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a08df4d681f2b9624643ed6097e6882ed" kindref="member">OnPrepare</ref> &gt;</type>
+        <definition>std::queue&lt;OnPrepare&gt; sgns::application::AppStateManagerImpl::prepare_</definition>
+        <argsstring></argsstring>
+        <name>prepare_</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::prepare_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="66" column="21" bodyfile="src/application/impl/app_state_manager_impl.hpp" bodystart="66" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a45079659da731c8e49971a9e4132edd1" prot="private" static="no" mutable="no">
+        <type>std::queue&lt; <ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1ae45dfda2273189f37c3ae7a904597c8a" kindref="member">OnLaunch</ref> &gt;</type>
+        <definition>std::queue&lt;OnLaunch&gt; sgns::application::AppStateManagerImpl::launch_</definition>
+        <argsstring></argsstring>
+        <name>launch_</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::launch_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="67" column="22" bodyfile="src/application/impl/app_state_manager_impl.hpp" bodystart="67" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a9b560a7f46623d22fc6380fa4e516219" prot="private" static="no" mutable="no">
+        <type>std::queue&lt; <ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1aeedbe0b01ca92bbd2032cd6f5628a7cd" kindref="member">OnShutdown</ref> &gt;</type>
+        <definition>std::queue&lt;OnShutdown&gt; sgns::application::AppStateManagerImpl::shutdown_</definition>
+        <argsstring></argsstring>
+        <name>shutdown_</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::shutdown_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="68" column="20" bodyfile="src/application/impl/app_state_manager_impl.hpp" bodystart="68" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4a934063af24571f4e74fc67271460d" prot="private" static="no" mutable="no">
+        <type>std::atomic_bool</type>
+        <definition>std::atomic_bool sgns::application::AppStateManagerImpl::shutdown_requested_</definition>
+        <argsstring></argsstring>
+        <name>shutdown_requested_</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::shutdown_requested_</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="70" column="26" bodyfile="src/application/impl/app_state_manager_impl.hpp" bodystart="70" bodyend="70"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a1c6c1ba1e59aecbb6923f6f90bdbdf38" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::AppStateManagerImpl::AppStateManagerImpl</definition>
+        <argsstring>()</argsstring>
+        <name>AppStateManagerImpl</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::AppStateManagerImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="20" column="9" bodyfile="src/application/impl/app_state_manager_impl.cpp" bodystart="17" bodyend="34"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ace56156f4a29a8f656721a37e8350885" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::AppStateManagerImpl::AppStateManagerImpl</definition>
+        <argsstring>(const AppStateManagerImpl &amp;)=delete</argsstring>
+        <name>AppStateManagerImpl</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::AppStateManagerImpl</qualifiedname>
+        <param>
+          <type>const AppStateManagerImpl &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="21" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a6fab1aa995be8785ce228af3b34d740a" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::AppStateManagerImpl::AppStateManagerImpl</definition>
+        <argsstring>(AppStateManagerImpl &amp;&amp;) noexcept=delete</argsstring>
+        <name>AppStateManagerImpl</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::AppStateManagerImpl</qualifiedname>
+        <param>
+          <type>AppStateManagerImpl &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="22" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ad26a9ce4d9683b4c22a5e5406a2d782d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::AppStateManagerImpl::~AppStateManagerImpl</definition>
+        <argsstring>() override</argsstring>
+        <name>~AppStateManagerImpl</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::~AppStateManagerImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="24" column="9" bodyfile="src/application/impl/app_state_manager_impl.cpp" bodystart="36" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a9fe5c13b90e9b620ff886c012052ce77" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a1c6c1ba1e59aecbb6923f6f90bdbdf38" kindref="member">AppStateManagerImpl</ref> &amp;</type>
+        <definition>AppStateManagerImpl &amp; sgns::application::AppStateManagerImpl::operator=</definition>
+        <argsstring>(AppStateManagerImpl const &amp;)=delete</argsstring>
+        <name>operator=</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::operator=</qualifiedname>
+        <param>
+          <type><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a1c6c1ba1e59aecbb6923f6f90bdbdf38" kindref="member">AppStateManagerImpl</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="26" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a5a2b829a771ba5088bc8261766ba1a09" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a1c6c1ba1e59aecbb6923f6f90bdbdf38" kindref="member">AppStateManagerImpl</ref> &amp;</type>
+        <definition>AppStateManagerImpl &amp; sgns::application::AppStateManagerImpl::operator=</definition>
+        <argsstring>(AppStateManagerImpl &amp;&amp;) noexcept=delete</argsstring>
+        <name>operator=</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::operator=</qualifiedname>
+        <param>
+          <type><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a1c6c1ba1e59aecbb6923f6f90bdbdf38" kindref="member">AppStateManagerImpl</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="27" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ae2896612532647bc06674852d206daaa" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::application::AppStateManagerImpl::atPrepare</definition>
+        <argsstring>(OnPrepare &amp;&amp;cb) override</argsstring>
+        <name>atPrepare</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::atPrepare</qualifiedname>
+        <reimplements refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1ad417a55a329ac654b6254ff1d2cb8253">atPrepare</reimplements>
+        <param>
+          <type><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a08df4d681f2b9624643ed6097e6882ed" kindref="member">OnPrepare</ref> &amp;&amp;</type>
+          <declname>cb</declname>
+        </param>
+        <briefdescription>
+<para>Execute a callback at the prepare stage. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>cb</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Callback to execute. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="29" column="14" bodyfile="src/application/impl/app_state_manager_impl.cpp" bodystart="71" bodyend="77"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1aa7996ec25bdd26404cac20f0a5946140" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::application::AppStateManagerImpl::atLaunch</definition>
+        <argsstring>(OnLaunch &amp;&amp;cb) override</argsstring>
+        <name>atLaunch</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::atLaunch</qualifiedname>
+        <reimplements refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1ab55489012448f7647bd3834a8c68dbc6">atLaunch</reimplements>
+        <param>
+          <type><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1ae45dfda2273189f37c3ae7a904597c8a" kindref="member">OnLaunch</ref> &amp;&amp;</type>
+          <declname>cb</declname>
+        </param>
+        <briefdescription>
+<para>Execute a callback immediately before application start. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>cb</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Callback to execute. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="30" column="14" bodyfile="src/application/impl/app_state_manager_impl.cpp" bodystart="79" bodyend="85"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1afd139d6c6281c37751244c47a0791a7d" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::application::AppStateManagerImpl::atShutdown</definition>
+        <argsstring>(OnShutdown &amp;&amp;cb) override</argsstring>
+        <name>atShutdown</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::atShutdown</qualifiedname>
+        <reimplements refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a77a17df443b84370d25222de7e97ab37">atShutdown</reimplements>
+        <param>
+          <type><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1aeedbe0b01ca92bbd2032cd6f5628a7cd" kindref="member">OnShutdown</ref> &amp;&amp;</type>
+          <declname>cb</declname>
+        </param>
+        <briefdescription>
+<para>Execute a callback during shutdown. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>cb</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Callback to execute. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="31" column="14" bodyfile="src/application/impl/app_state_manager_impl.cpp" bodystart="87" bodyend="93"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a92fe06ab3d4fd6fce24c23c4e0bde8fe" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::application::AppStateManagerImpl::run</definition>
+        <argsstring>() override</argsstring>
+        <name>run</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::run</qualifiedname>
+        <reimplements refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1afb7fc5a47a6d0816024a040569f398b4">run</reimplements>
+        <briefdescription>
+<para>Start application life cycle. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="33" column="14" bodyfile="src/application/impl/app_state_manager_impl.cpp" bodystart="172" bodyend="189"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1af981827ba7adf78004b97be0f5c95955" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::application::AppStateManagerImpl::shutdown</definition>
+        <argsstring>() override</argsstring>
+        <name>shutdown</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::shutdown</qualifiedname>
+        <reimplements refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a1480334f3543a0e107fcf350a0900562">shutdown</reimplements>
+        <briefdescription>
+<para>Initiate shutting down (at any time). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="34" column="14" bodyfile="src/application/impl/app_state_manager_impl.cpp" bodystart="191" bodyend="195"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1afd0205cea0c776511839460fb50b123f" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="virtual">
+        <type><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027" kindref="member">State</ref></type>
+        <definition>State sgns::application::AppStateManagerImpl::state</definition>
+        <argsstring>() const override</argsstring>
+        <name>state</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::state</qualifiedname>
+        <reimplements refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a703595d72e82cd10d2f1d935709b4d16">state</reimplements>
+        <briefdescription>
+<para>Get current stage. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="36" column="15" bodyfile="src/application/impl/app_state_manager_impl.hpp" bodystart="36" bodyend="39"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ae298b89a2a868c8eda513383d1cfae7b" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::application::AppStateManagerImpl::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::GetName</qualifiedname>
+        <reimplements refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="40" column="21" bodyfile="src/application/impl/app_state_manager_impl.hpp" bodystart="40" bodyend="43"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="protected-func">
+      <memberdef kind="function" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a7453dd93d81e5bd938fa087f85eb6ae4" prot="protected" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::application::AppStateManagerImpl::reset</definition>
+        <argsstring>()</argsstring>
+        <name>reset</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::reset</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="47" column="14" bodyfile="src/application/impl/app_state_manager_impl.cpp" bodystart="53" bodyend="69"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac0aef26de9df110878056b5e13f1969a" prot="protected" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::application::AppStateManagerImpl::doPrepare</definition>
+        <argsstring>() override</argsstring>
+        <name>doPrepare</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::doPrepare</qualifiedname>
+        <reimplements refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a353eabd5ff05080effeb4cc7dbd6aa95">doPrepare</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="49" column="14" bodyfile="src/application/impl/app_state_manager_impl.cpp" bodystart="95" bodyend="118"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a41123b1308318ebe4c1078af704c334a" prot="protected" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::application::AppStateManagerImpl::doLaunch</definition>
+        <argsstring>() override</argsstring>
+        <name>doLaunch</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::doLaunch</qualifiedname>
+        <reimplements refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1ad982fea940630a8c08458ca76f3e648d">doLaunch</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="50" column="14" bodyfile="src/application/impl/app_state_manager_impl.cpp" bodystart="120" bodyend="143"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a966b5172322bc04df4d475c9bff3c5bc" prot="protected" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::application::AppStateManagerImpl::doShutdown</definition>
+        <argsstring>() override</argsstring>
+        <name>doShutdown</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::doShutdown</qualifiedname>
+        <reimplements refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a90eedf421f8bac9d4f77ff04c4a74275">doShutdown</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="51" column="14" bodyfile="src/application/impl/app_state_manager_impl.cpp" bodystart="145" bodyend="170"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a00a563cbee4ea6ed669d42c10f32e743" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::application::AppStateManagerImpl::shuttingDownSignalsHandler</definition>
+        <argsstring>(int)</argsstring>
+        <name>shuttingDownSignalsHandler</name>
+        <qualifiedname>sgns::application::AppStateManagerImpl::shuttingDownSignalsHandler</qualifiedname>
+        <param>
+          <type>int</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_state_manager_impl.hpp" line="55" column="47" bodyfile="src/application/impl/app_state_manager_impl.cpp" bodystart="11" bodyend="15"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="4">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="2">
+        <label>sgns::application::AppStateManager</label>
+        <link refid="d4/d75/classsgns_1_1application_1_1_app_state_manager"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::application::AppStateManagerImpl</label>
+        <link refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::enable_shared_from_this&lt; AppStateManager &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="4">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="2">
+        <label>sgns::application::AppStateManager</label>
+        <link refid="d4/d75/classsgns_1_1application_1_1_app_state_manager"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::application::AppStateManagerImpl</label>
+        <link refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-wp_to_myself</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>-mutex_</edgelabel>
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>-cv_mutex_</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>-prepare_</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="usage">
+          <edgelabel>-launch_</edgelabel>
+        </childnode>
+        <childnode refid="15" relation="usage">
+          <edgelabel>-shutdown_</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::enable_shared_from_this&lt; AppStateManager &gt;</label>
+      </node>
+      <node id="11">
+        <label>std::mutex</label>
+      </node>
+      <node id="13">
+        <label>std::queue&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="14">
+        <label>std::queue&lt; OnLaunch &gt;</label>
+        <childnode refid="13" relation="template-instance">
+          <edgelabel>&lt; OnLaunch &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::queue&lt; OnPrepare &gt;</label>
+        <childnode refid="13" relation="template-instance">
+          <edgelabel>&lt; OnPrepare &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="15">
+        <label>std::queue&lt; OnShutdown &gt;</label>
+        <childnode refid="13" relation="template-instance">
+          <edgelabel>&lt; OnShutdown &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::recursive_mutex</label>
+      </node>
+      <node id="9">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="9" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::weak_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::weak_ptr&lt; sgns::application::AppStateManager &gt;</label>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::application::AppStateManager &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/application/impl/app_state_manager_impl.hpp" line="17" column="5" bodyfile="src/application/impl/app_state_manager_impl.hpp" bodystart="18" bodyend="71"/>
+    <listofallmembers>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a1c6c1ba1e59aecbb6923f6f90bdbdf38" prot="public" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>AppStateManagerImpl</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ace56156f4a29a8f656721a37e8350885" prot="public" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>AppStateManagerImpl</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a6fab1aa995be8785ce228af3b34d740a" prot="public" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>AppStateManagerImpl</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1aa7996ec25bdd26404cac20f0a5946140" prot="public" virt="virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>atLaunch</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ae2896612532647bc06674852d206daaa" prot="public" virt="virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>atPrepare</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1afd139d6c6281c37751244c47a0791a7d" prot="public" virt="virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>atShutdown</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a28b5e4129a1600b8f0376e9945bf3522" prot="private" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>cv_</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a130cfe883a525cb76460b70f52ecd496" prot="private" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>cv_mutex_</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a41123b1308318ebe4c1078af704c334a" prot="protected" virt="virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>doLaunch</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac0aef26de9df110878056b5e13f1969a" prot="protected" virt="virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>doPrepare</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a966b5172322bc04df4d475c9bff3c5bc" prot="protected" virt="virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>doShutdown</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ae298b89a2a868c8eda513383d1cfae7b" prot="public" virt="virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>GetName</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a45079659da731c8e49971a9e4132edd1" prot="private" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>launch_</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a1d61966e31d38d87bcbcf5b9d37b1532" prot="private" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>logger_</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a5a0fd642af8902c2c659ed0dffa39665" prot="private" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>mutex_</name></member>
+      <member refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1ae45dfda2273189f37c3ae7a904597c8a" prot="public" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>OnLaunch</name></member>
+      <member refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a08df4d681f2b9624643ed6097e6882ed" prot="public" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>OnPrepare</name></member>
+      <member refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1aeedbe0b01ca92bbd2032cd6f5628a7cd" prot="public" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>OnShutdown</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a9fe5c13b90e9b620ff886c012052ce77" prot="public" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>operator=</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a5a2b829a771ba5088bc8261766ba1a09" prot="public" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>operator=</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a57e97ebc55a80904437b73f3a29e2e88" prot="private" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>prepare_</name></member>
+      <member refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1ae43293019479615c1ca0722dbd73a8e4" prot="public" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>registerHandlers</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a7453dd93d81e5bd938fa087f85eb6ae4" prot="protected" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>reset</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a92fe06ab3d4fd6fce24c23c4e0bde8fe" prot="public" virt="virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>run</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1af981827ba7adf78004b97be0f5c95955" prot="public" virt="virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>shutdown</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a9b560a7f46623d22fc6380fa4e516219" prot="private" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>shutdown_</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4a934063af24571f4e74fc67271460d" prot="private" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>shutdown_requested_</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a00a563cbee4ea6ed669d42c10f32e743" prot="private" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>shuttingDownSignalsHandler</name></member>
+      <member refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027" prot="public" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>State</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1afd0205cea0c776511839460fb50b123f" prot="public" virt="virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>state</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" prot="private" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>state_</name></member>
+      <member refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a8f1d6ffdb29ae915f1165e7da81ae739" prot="public" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>takeControl</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a9069e4c932261874d3e9c3761200248b" prot="private" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>wp_to_myself</name></member>
+      <member refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1aedcdb88b60c80bb0855003a17bce503a" prot="public" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>~AppStateManager</name></member>
+      <member refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ad26a9ce4d9683b4c22a5e5406a2d782d" prot="public" virt="non-virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>~AppStateManagerImpl</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::application::AppStateManagerImpl</scope><name>~IComponent</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,420 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/da8/namespacesgns_1_1scale_1_1detail" kind="namespace" language="C++">
+    <compoundname>sgns::scale::detail</compoundname>
+    <innernamespace refid="d5/d36/namespacesgns_1_1scale_1_1detail_1_1tuple__impl">sgns::scale::detail::tuple_impl</innernamespace>
+    <innernamespace refid="db/db9/namespacesgns_1_1scale_1_1detail_1_1variant__impl">sgns::scale::detail::variant_impl</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d4/da8/namespacesgns_1_1scale_1_1detail_1a00560eb012697d25626321b959eed7cf" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+          <param>
+            <type>class S</type>
+          </param>
+          <param>
+            <type>typename I</type>
+            <defval>std::decay_t&lt;T&gt;</defval>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;std::is_integral_v&lt;I&gt;&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::scale::detail::encodeInteger</definition>
+        <argsstring>(T value, S &amp;out)</argsstring>
+        <name>encodeInteger</name>
+        <qualifiedname>sgns::scale::detail::encodeInteger</qualifiedname>
+        <param>
+          <type>T</type>
+          <declname>value</declname>
+        </param>
+        <param>
+          <type>S &amp;</type>
+          <declname>out</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>encodeInteger encodes any integer type to little-endian representation <parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>integer type </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>S</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>integer value </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>out</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/fixed_witdh_integer.hpp" line="22" column="8" bodyfile="src/scale/detail/fixed_witdh_integer.hpp" bodystart="22" bodyend="32"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/da8/namespacesgns_1_1scale_1_1detail_1a6ae721a6080599764b6c37f68be05d1a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+          <param>
+            <type>class S</type>
+          </param>
+          <param>
+            <type>typename I</type>
+            <defval>std::decay_t&lt;T&gt;</defval>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;std::is_integral_v&lt;I&gt;&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>I</type>
+        <definition>I sgns::scale::detail::decodeInteger</definition>
+        <argsstring>(S &amp;stream)</argsstring>
+        <name>decodeInteger</name>
+        <qualifiedname>sgns::scale::detail::decodeInteger</qualifiedname>
+        <param>
+          <type>S &amp;</type>
+          <declname>stream</declname>
+        </param>
+        <briefdescription>
+<para>decodeInteger function decodes integer from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>integer type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>source stream </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>decoded value or error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/fixed_witdh_integer.hpp" line="44" column="5" bodyfile="src/scale/detail/fixed_witdh_integer.hpp" bodystart="44" bodyend="112"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/da8/namespacesgns_1_1scale_1_1detail_1ae7a6ca981524864e22cbbe1468057d19" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>class...</type>
+            <declname>T</declname>
+            <defname>T</defname>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::scale::detail::encodeTuple</definition>
+        <argsstring>(const std::tuple&lt; T... &gt; &amp;v, Stream &amp;s)</argsstring>
+        <name>encodeTuple</name>
+        <qualifiedname>sgns::scale::detail::encodeTuple</qualifiedname>
+        <param>
+          <type>const std::tuple&lt; T... &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+<para>encodes std::tuple value </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream type </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>T...</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>sequence of types of the tuple </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>tuple value </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>encoder stream </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/tuple.hpp" line="73" column="10" bodyfile="src/scale/detail/tuple.hpp" bodystart="73" bodyend="77"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/da8/namespacesgns_1_1scale_1_1detail_1aaec3525607f8593e4c99391e1431fcc4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>class...</type>
+            <declname>T</declname>
+            <defname>T</defname>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::scale::detail::decodeTuple</definition>
+        <argsstring>(Stream &amp;stream, std::tuple&lt; T... &gt; &amp;result)</argsstring>
+        <name>decodeTuple</name>
+        <qualifiedname>sgns::scale::detail::decodeTuple</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>stream</declname>
+        </param>
+        <param>
+          <type>std::tuple&lt; T... &gt; &amp;</type>
+          <declname>result</declname>
+        </param>
+        <briefdescription>
+<para>decodes std::tuple value </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input stream type </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>T...</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>sequence of types of the tuple </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>source stream </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>result</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>destination tuple </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>decoded value or error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/tuple.hpp" line="88" column="10" bodyfile="src/scale/detail/tuple.hpp" bodystart="88" bodyend="93"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/da8/namespacesgns_1_1scale_1_1detail_1ae21ca1babf260fa45ece6a3aba668125" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>class...</type>
+            <declname>T</declname>
+            <defname>T</defname>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::scale::detail::encodeVariant</definition>
+        <argsstring>(const boost::variant&lt; T... &gt; &amp;v, Stream &amp;s)</argsstring>
+        <name>encodeVariant</name>
+        <qualifiedname>sgns::scale::detail::encodeVariant</qualifiedname>
+        <param>
+          <type>const boost::variant&lt; T... &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+<para>encodes boost::variant value </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream type </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>T...</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>sequence of types </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>variant value </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>encoder stream </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/variant.hpp" line="85" column="10" bodyfile="src/scale/detail/variant.hpp" bodystart="85" bodyend="89"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/da8/namespacesgns_1_1scale_1_1detail_1ac6bb157d257323734f9f2802d6cf20c7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>class...</type>
+            <declname>T</declname>
+            <defname>T</defname>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::scale::detail::decodeVariant</definition>
+        <argsstring>(Stream &amp;stream, boost::variant&lt; T... &gt; &amp;result)</argsstring>
+        <name>decodeVariant</name>
+        <qualifiedname>sgns::scale::detail::decodeVariant</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>stream</declname>
+        </param>
+        <param>
+          <type>boost::variant&lt; T... &gt; &amp;</type>
+          <declname>result</declname>
+        </param>
+        <briefdescription>
+<para>decodes variant value </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input stream type </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>T...</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>sequence of types </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>source stream </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>result</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>destination variant </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>decoded value or error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/variant.hpp" line="100" column="10" bodyfile="src/scale/detail/variant.hpp" bodystart="100" bodyend="114"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/scale/detail/fixed_witdh_integer.hpp" line="13" column="1"/>
+  </compounddef>
+</doxygen>

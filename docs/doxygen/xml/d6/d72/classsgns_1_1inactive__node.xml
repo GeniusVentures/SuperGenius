@@ -1,0 +1,239 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/d72/classsgns_1_1inactive__node" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::inactive_node</compoundname>
+    <includes refid="dc/d78/node_2node_8hpp" local="no">node.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d6/d72/classsgns_1_1inactive__node_1aeb0fee56c245d1cd284cbc9cd4496225" prot="public" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="de/ddf/classsgns_1_1node" kindref="compound">sgns::node</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;sgns::node&gt; sgns::inactive_node::node</definition>
+        <argsstring></argsstring>
+        <name>node</name>
+        <qualifiedname>sgns::inactive_node::node</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="59" column="17" bodyfile="node/node.hpp" bodystart="59" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d6/d72/classsgns_1_1inactive__node_1a48eddcb791b6f67766d2c25394cf1c6a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::inactive_node::inactive_node</definition>
+        <argsstring>(boost::filesystem::path const &amp;path_a, sgns::node_flags const &amp;node_flags_a=sgns::inactive_node_flag_defaults())</argsstring>
+        <name>inactive_node</name>
+        <qualifiedname>sgns::inactive_node::inactive_node</qualifiedname>
+        <param>
+          <type>boost::filesystem::path const &amp;</type>
+          <declname>path_a</declname>
+        </param>
+        <param>
+          <type><ref refid="d0/d54/classsgns_1_1node__flags" kindref="compound">sgns::node_flags</ref> const &amp;</type>
+          <declname>node_flags_a</declname>
+          <defval><ref refid="d2/d2b/namespacesgns_1a658b4fbe1fd0cc4094b9a738cb1aa192" kindref="member">sgns::inactive_node_flag_defaults</ref>()</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="54" column="1" bodyfile="node/node.cpp" bodystart="287" bodyend="320"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d72/classsgns_1_1inactive__node_1a14905336c536d2d9ceb65bb2fb6b5d52" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::inactive_node::~inactive_node</definition>
+        <argsstring>()</argsstring>
+        <name>~inactive_node</name>
+        <qualifiedname>sgns::inactive_node::~inactive_node</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="55" column="1" bodyfile="node/node.cpp" bodystart="322" bodyend="325"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="15">
+        <label>T1</label>
+      </node>
+      <node id="16">
+        <label>T2</label>
+      </node>
+      <node id="1">
+        <label>sgns::inactive_node</label>
+        <link refid="d6/d72/classsgns_1_1inactive__node"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+node</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::logging</label>
+        <link refid="dd/d29/classsgns_1_1logging"/>
+      </node>
+      <node id="3">
+        <label>sgns::node</label>
+        <link refid="de/ddf/classsgns_1_1node"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+store_impl</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+config</edgelabel>
+        </childnode>
+        <childnode refid="20" relation="usage">
+          <edgelabel>+flags</edgelabel>
+        </childnode>
+        <childnode refid="21" relation="usage">
+          <edgelabel>+stopped</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>sgns::node_config</label>
+        <link refid="d1/d27/classsgns_1_1node__config"/>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+logging</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>+secondary_work_peers</edgelabel>
+          <edgelabel>+work_peers</edgelabel>
+        </childnode>
+        <childnode refid="18" relation="usage">
+          <edgelabel>+preconfigured_peers</edgelabel>
+        </childnode>
+        <childnode refid="19" relation="usage">
+          <edgelabel>+preconfigured_representatives</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+callback_address</edgelabel>
+          <edgelabel>+callback_target</edgelabel>
+          <edgelabel>+external_address</edgelabel>
+        </childnode>
+      </node>
+      <node id="20">
+        <label>sgns::node_flags</label>
+        <link refid="d0/d54/classsgns_1_1node__flags"/>
+        <childnode refid="18" relation="usage">
+          <edgelabel>+config_overrides</edgelabel>
+        </childnode>
+      </node>
+      <node id="22">
+        <label>std::atomic&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>std::atomic&lt; bool &gt;</label>
+        <childnode refid="22" relation="template-instance">
+          <edgelabel>&lt; bool &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="13">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="4">
+        <label>std::enable_shared_from_this&lt; sgns::node &gt;</label>
+      </node>
+      <node id="14">
+        <label>std::pair&lt; T1, T2 &gt;</label>
+        <childnode refid="15" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="16" relation="usage">
+          <edgelabel>+second_type</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::pair&lt; std::string, uint16_t &gt;</label>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; std::string, uint16_t &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="23">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::shared_ptr&lt; sgns::node &gt;</label>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="23" relation="template-instance">
+          <edgelabel>&lt; sgns::node &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::string</label>
+        <childnode refid="13" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::unique_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::unique_ptr&lt; sgns::block_store &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::block_store &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="19">
+        <label>std::vector&lt; sgns::account &gt;</label>
+        <childnode refid="17" relation="template-instance">
+          <edgelabel>&lt; sgns::account &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::vector&lt; std::pair&lt; std::string, uint16_t &gt; &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="17" relation="template-instance">
+          <edgelabel>&lt; std::pair&lt; std::string, uint16_t &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="18">
+        <label>std::vector&lt; std::string &gt;</label>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="17" relation="template-instance">
+          <edgelabel>&lt; std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="node/node.hpp" line="51" column="1" bodyfile="node/node.hpp" bodystart="52" bodyend="60"/>
+    <listofallmembers>
+      <member refid="d6/d72/classsgns_1_1inactive__node_1a48eddcb791b6f67766d2c25394cf1c6a" prot="public" virt="non-virtual"><scope>sgns::inactive_node</scope><name>inactive_node</name></member>
+      <member refid="d6/d72/classsgns_1_1inactive__node_1aeb0fee56c245d1cd284cbc9cd4496225" prot="public" virt="non-virtual"><scope>sgns::inactive_node</scope><name>node</name></member>
+      <member refid="d6/d72/classsgns_1_1inactive__node_1a14905336c536d2d9ceb65bb2fb6b5d52" prot="public" virt="non-virtual"><scope>sgns::inactive_node</scope><name>~inactive_node</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

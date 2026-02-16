@@ -1,0 +1,76 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/de8/classsgns_1_1processing_1_1_process_task_splitter" kind="class" language="C++" prot="public">
+    <compoundname>sgns::processing::ProcessTaskSplitter</compoundname>
+    <includes refid="df/d74/processing__tasksplit_8hpp" local="no">processing_tasksplit.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d7/de8/classsgns_1_1processing_1_1_process_task_splitter_1afdd1cb934c96f093bae19f562b1d229d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::processing::ProcessTaskSplitter::ProcessTaskSplitter</definition>
+        <argsstring>()</argsstring>
+        <name>ProcessTaskSplitter</name>
+        <qualifiedname>sgns::processing::ProcessTaskSplitter::ProcessTaskSplitter</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_tasksplit.hpp" line="23" column="13" bodyfile="src/processing/processing_tasksplit.cpp" bodystart="16" bodyend="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/de8/classsgns_1_1processing_1_1_process_task_splitter_1a714e5c786124cf43279afd57f595cccc" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessTaskSplitter::SplitTask</definition>
+        <argsstring>(const SGProcessing::Task &amp;task, std::list&lt; SGProcessing::SubTask &gt; &amp;subTasks, std::string json_data, uint32_t numchunks, bool addvalidationsubtask, std::string ipfsid)</argsstring>
+        <name>SplitTask</name>
+        <qualifiedname>sgns::processing::ProcessTaskSplitter::SplitTask</qualifiedname>
+        <param>
+          <type>const SGProcessing::Task &amp;</type>
+          <declname>task</declname>
+        </param>
+        <param>
+          <type>std::list&lt; SGProcessing::SubTask &gt; &amp;</type>
+          <declname>subTasks</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>json_data</declname>
+        </param>
+        <param>
+          <type>uint32_t</type>
+          <declname>numchunks</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>addvalidationsubtask</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>ipfsid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_tasksplit.hpp" line="25" column="18" bodyfile="src/processing/processing_tasksplit.cpp" bodystart="43" bodyend="97"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::processing::ProcessTaskSplitter</label>
+        <link refid="d7/de8/classsgns_1_1processing_1_1_process_task_splitter"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/processing/processing_tasksplit.hpp" line="20" column="9" bodyfile="src/processing/processing_tasksplit.hpp" bodystart="21" bodyend="31"/>
+    <listofallmembers>
+      <member refid="d7/de8/classsgns_1_1processing_1_1_process_task_splitter_1afdd1cb934c96f093bae19f562b1d229d" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessTaskSplitter</scope><name>ProcessTaskSplitter</name></member>
+      <member refid="d7/de8/classsgns_1_1processing_1_1_process_task_splitter_1a714e5c786124cf43279afd57f595cccc" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessTaskSplitter</scope><name>SplitTask</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

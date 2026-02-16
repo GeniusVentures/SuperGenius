@@ -1,0 +1,513 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager" kind="class" language="C++" prot="public">
+    <compoundname>sgns::crdt::CRDTCallbackManager</compoundname>
+    <includes refid="dc/d0f/crdt__callback__manager_8hpp" local="no">crdt_callback_manager.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a6d7c2728bb59cdef78288ab0989fbcda" prot="public" static="no">
+        <type>std::pair&lt; std::string, <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>using sgns::crdt::CRDTCallbackManager::NewDataPair = std::pair&lt;std::string, base::Buffer&gt;</definition>
+        <argsstring></argsstring>
+        <name>NewDataPair</name>
+        <qualifiedname>sgns::crdt::CRDTCallbackManager::NewDataPair</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_callback_manager.hpp" line="23" column="9" bodyfile="src/crdt/crdt_callback_manager.hpp" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a8e122565e4797c0e0b1cc2f144e13be9" prot="public" static="no">
+        <type>std::function&lt; void(<ref refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a6d7c2728bb59cdef78288ab0989fbcda" kindref="member">NewDataPair</ref> new_data, std::string cid)&gt;</type>
+        <definition>using sgns::crdt::CRDTCallbackManager::NewDataCallback = std::function&lt;void( NewDataPair new_data, std::string cid )&gt;</definition>
+        <argsstring></argsstring>
+        <name>NewDataCallback</name>
+        <qualifiedname>sgns::crdt::CRDTCallbackManager::NewDataCallback</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_callback_manager.hpp" line="24" column="9" bodyfile="src/crdt/crdt_callback_manager.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1adcb6f6719b2266575828511ca19803d0" prot="public" static="no">
+        <type>std::unordered_map&lt; std::string, <ref refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a8e122565e4797c0e0b1cc2f144e13be9" kindref="member">NewDataCallback</ref> &gt;</type>
+        <definition>using sgns::crdt::CRDTCallbackManager::NewDataCallbackRegistry = std::unordered_map&lt;std::string, NewDataCallback&gt;</definition>
+        <argsstring></argsstring>
+        <name>NewDataCallbackRegistry</name>
+        <qualifiedname>sgns::crdt::CRDTCallbackManager::NewDataCallbackRegistry</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_callback_manager.hpp" line="25" column="9" bodyfile="src/crdt/crdt_callback_manager.hpp" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a0121841c7eae86a0fb5e7009ae17c93e" prot="public" static="no">
+        <type>std::function&lt; void(std::string deleted_key, std::string cid)&gt;</type>
+        <definition>using sgns::crdt::CRDTCallbackManager::DeletedDataCallback = std::function&lt;void( std::string deleted_key, std::string cid )&gt;</definition>
+        <argsstring></argsstring>
+        <name>DeletedDataCallback</name>
+        <qualifiedname>sgns::crdt::CRDTCallbackManager::DeletedDataCallback</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_callback_manager.hpp" line="27" column="9" bodyfile="src/crdt/crdt_callback_manager.hpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a9efe18a1296a89bc330ff65be1500540" prot="public" static="no">
+        <type>std::unordered_map&lt; std::string, <ref refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a0121841c7eae86a0fb5e7009ae17c93e" kindref="member">DeletedDataCallback</ref> &gt;</type>
+        <definition>using sgns::crdt::CRDTCallbackManager::DeletedDataCallbackRegistry = std::unordered_map&lt;std::string, DeletedDataCallback&gt;</definition>
+        <argsstring></argsstring>
+        <name>DeletedDataCallbackRegistry</name>
+        <qualifiedname>sgns::crdt::CRDTCallbackManager::DeletedDataCallbackRegistry</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_callback_manager.hpp" line="28" column="9" bodyfile="src/crdt/crdt_callback_manager.hpp" bodystart="28" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a52bba6cb79e68b04bfd52caf3a229a46" prot="private" static="no" mutable="no">
+        <type>std::shared_mutex</type>
+        <definition>std::shared_mutex sgns::crdt::CRDTCallbackManager::new_data_callback_registry_mutex_</definition>
+        <argsstring></argsstring>
+        <name>new_data_callback_registry_mutex_</name>
+        <qualifiedname>sgns::crdt::CRDTCallbackManager::new_data_callback_registry_mutex_</qualifiedname>
+        <briefdescription>
+<para>Mutex to manipulate <ref refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a0ad376529cb47117f2605db0cfb99c2b" kindref="member">new_data_callback_registry_</ref>. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_callback_manager.hpp" line="79" column="27" bodyfile="src/crdt/crdt_callback_manager.hpp" bodystart="79" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a0ad376529cb47117f2605db0cfb99c2b" prot="private" static="no" mutable="no">
+        <type><ref refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1adcb6f6719b2266575828511ca19803d0" kindref="member">NewDataCallbackRegistry</ref></type>
+        <definition>NewDataCallbackRegistry sgns::crdt::CRDTCallbackManager::new_data_callback_registry_</definition>
+        <argsstring></argsstring>
+        <name>new_data_callback_registry_</name>
+        <qualifiedname>sgns::crdt::CRDTCallbackManager::new_data_callback_registry_</qualifiedname>
+        <briefdescription>
+<para>New data callback registry. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_callback_manager.hpp" line="80" column="33" bodyfile="src/crdt/crdt_callback_manager.hpp" bodystart="80" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1abe3cb31e0c829c26a68bd9c7e3612073" prot="private" static="no" mutable="no">
+        <type>std::shared_mutex</type>
+        <definition>std::shared_mutex sgns::crdt::CRDTCallbackManager::deleted_data_callback_registry_mutex_</definition>
+        <argsstring></argsstring>
+        <name>deleted_data_callback_registry_mutex_</name>
+        <qualifiedname>sgns::crdt::CRDTCallbackManager::deleted_data_callback_registry_mutex_</qualifiedname>
+        <briefdescription>
+<para>Mutex to manipulate <ref refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1af35e8e974e799f4b817aaf1e926d90f5" kindref="member">deleted_data_callback_registry_</ref>. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_callback_manager.hpp" line="82" column="13" bodyfile="src/crdt/crdt_callback_manager.hpp" bodystart="82" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1af35e8e974e799f4b817aaf1e926d90f5" prot="private" static="no" mutable="no">
+        <type><ref refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a9efe18a1296a89bc330ff65be1500540" kindref="member">DeletedDataCallbackRegistry</ref></type>
+        <definition>DeletedDataCallbackRegistry sgns::crdt::CRDTCallbackManager::deleted_data_callback_registry_</definition>
+        <argsstring></argsstring>
+        <name>deleted_data_callback_registry_</name>
+        <qualifiedname>sgns::crdt::CRDTCallbackManager::deleted_data_callback_registry_</qualifiedname>
+        <briefdescription>
+<para>Deleted data callback registry. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_callback_manager.hpp" line="83" column="37" bodyfile="src/crdt/crdt_callback_manager.hpp" bodystart="83" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a968259694f2b3c729bf5fbd274ab6ecd" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::crdt::CRDTCallbackManager::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::crdt::CRDTCallbackManager::logger_</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>( &quot;CRDTCallbackManager&quot; )</initializer>
+        <briefdescription>
+<para>Logger instance. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_callback_manager.hpp" line="85" column="22" bodyfile="src/crdt/crdt_callback_manager.hpp" bodystart="85" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1ad5bb10aae79972629a6223b5ccee22d4" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crdt::CRDTCallbackManager::CRDTCallbackManager</definition>
+        <argsstring>()</argsstring>
+        <name>CRDTCallbackManager</name>
+        <qualifiedname>sgns::crdt::CRDTCallbackManager::CRDTCallbackManager</qualifiedname>
+        <briefdescription>
+<para>Construct a new <ref refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager" kindref="compound">CRDTCallbackManager</ref> object. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_callback_manager.hpp" line="33" column="18" bodyfile="src/crdt/impl/crdt_callback_manager.cpp" bodystart="12" bodyend="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1ad22fb8953434c20e04eb6bec43376c76" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crdt::CRDTCallbackManager::~CRDTCallbackManager</definition>
+        <argsstring>()</argsstring>
+        <name>~CRDTCallbackManager</name>
+        <qualifiedname>sgns::crdt::CRDTCallbackManager::~CRDTCallbackManager</qualifiedname>
+        <briefdescription>
+<para>Destroy the <ref refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager" kindref="compound">CRDTCallbackManager</ref> object. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_callback_manager.hpp" line="37" column="9" bodyfile="src/crdt/impl/crdt_callback_manager.cpp" bodystart="18" bodyend="21"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a4399f2a689ba8df8dd6e0c8e61692fe9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::CRDTCallbackManager::RegisterNewDataCallback</definition>
+        <argsstring>(const std::string &amp;pattern, NewDataCallback callback)</argsstring>
+        <name>RegisterNewDataCallback</name>
+        <qualifiedname>sgns::crdt::CRDTCallbackManager::RegisterNewDataCallback</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>pattern</declname>
+        </param>
+        <param>
+          <type><ref refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a8e122565e4797c0e0b1cc2f144e13be9" kindref="member">NewDataCallback</ref></type>
+          <declname>callback</declname>
+        </param>
+        <briefdescription>
+<para>Registers a callback for when new data gets recorded to a specific pattern. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">pattern</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Regex pattern that the key should match to call the callback </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">callback</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The callback itself </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if registered, false otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_callback_manager.hpp" line="44" column="14" bodyfile="src/crdt/impl/crdt_callback_manager.cpp" bodystart="23" bodyend="43"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1aed898899b427afdec46e7750fea1ff21" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::CRDTCallbackManager::RegisterDeletedDataCallback</definition>
+        <argsstring>(const std::string &amp;pattern, DeletedDataCallback callback)</argsstring>
+        <name>RegisterDeletedDataCallback</name>
+        <qualifiedname>sgns::crdt::CRDTCallbackManager::RegisterDeletedDataCallback</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>pattern</declname>
+        </param>
+        <param>
+          <type><ref refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a0121841c7eae86a0fb5e7009ae17c93e" kindref="member">DeletedDataCallback</ref></type>
+          <declname>callback</declname>
+        </param>
+        <briefdescription>
+<para>Registers a callback for when data gets deleted to a specific pattern. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">pattern</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Regex pattern that the key should match to call the callback </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">callback</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The callback itself </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if registered, false otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_callback_manager.hpp" line="51" column="14" bodyfile="src/crdt/impl/crdt_callback_manager.cpp" bodystart="45" bodyend="65"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1afa8e4f7ae8ffb1a7d24bd7ebba18bb61" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::CRDTCallbackManager::UnregisterNewDataCallback</definition>
+        <argsstring>(const std::string &amp;pattern)</argsstring>
+        <name>UnregisterNewDataCallback</name>
+        <qualifiedname>sgns::crdt::CRDTCallbackManager::UnregisterNewDataCallback</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>pattern</declname>
+        </param>
+        <briefdescription>
+<para>Removes a previously registered new data callback. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">pattern</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The pattern of the callback to be deleted </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_callback_manager.hpp" line="56" column="14" bodyfile="src/crdt/impl/crdt_callback_manager.cpp" bodystart="67" bodyend="83"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a90cf0adba72a88cff764f4aba0683046" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::CRDTCallbackManager::UnregisterDeletedDataCallback</definition>
+        <argsstring>(const std::string &amp;pattern)</argsstring>
+        <name>UnregisterDeletedDataCallback</name>
+        <qualifiedname>sgns::crdt::CRDTCallbackManager::UnregisterDeletedDataCallback</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>pattern</declname>
+        </param>
+        <briefdescription>
+<para>Removes a previously registered deleted data callback. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">pattern</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The pattern of the callback to be deleted </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_callback_manager.hpp" line="61" column="14" bodyfile="src/crdt/impl/crdt_callback_manager.cpp" bodystart="85" bodyend="101"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a97b862791144470c0b5cb5cbc6d31a78" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::CRDTCallbackManager::PutDataCallback</definition>
+        <argsstring>(const std::string &amp;key, const base::Buffer &amp;value, const std::string &amp;cid)</argsstring>
+        <name>PutDataCallback</name>
+        <qualifiedname>sgns::crdt::CRDTCallbackManager::PutDataCallback</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>value</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+<para>Executes a registered new data callback that matches the key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key of the CRDT </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value contained on the key </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">cid</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>content identifier associated with the value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_callback_manager.hpp" line="69" column="14" bodyfile="src/crdt/impl/crdt_callback_manager.cpp" bodystart="103" bodyend="157"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a3c51be711b8dd8e2a9c83760b3337c72" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::CRDTCallbackManager::DeleteDataCallback</definition>
+        <argsstring>(const std::string &amp;deleted_key, const std::string &amp;cid)</argsstring>
+        <name>DeleteDataCallback</name>
+        <qualifiedname>sgns::crdt::CRDTCallbackManager::DeleteDataCallback</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>deleted_key</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+<para>Executes a registered deleted data callback that matches the key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">deleted_key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key of the CRDT that was deleted </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">cid</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>content identifier associated with the deletion </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_callback_manager.hpp" line="76" column="14" bodyfile="src/crdt/impl/crdt_callback_manager.cpp" bodystart="159" bodyend="210"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="5">
+        <label>K</label>
+      </node>
+      <node id="6">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::crdt::CRDTCallbackManager</label>
+        <link refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-deleted_data_callback_registry_mutex_</edgelabel>
+          <edgelabel>-new_data_callback_registry_mutex_</edgelabel>
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-new_data_callback_registry_</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>-deleted_data_callback_registry_</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::shared_mutex</label>
+      </node>
+      <node id="9">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="9" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::unordered_map&lt; K, T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::unordered_map&lt; std::string, DeletedDataCallback &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; std::string, DeletedDataCallback &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::unordered_map&lt; std::string, NewDataCallback &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; std::string, NewDataCallback &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crdt/crdt_callback_manager.hpp" line="20" column="5" bodyfile="src/crdt/crdt_callback_manager.hpp" bodystart="21" bodyend="86"/>
+    <listofallmembers>
+      <member refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1ad5bb10aae79972629a6223b5ccee22d4" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTCallbackManager</scope><name>CRDTCallbackManager</name></member>
+      <member refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1af35e8e974e799f4b817aaf1e926d90f5" prot="private" virt="non-virtual"><scope>sgns::crdt::CRDTCallbackManager</scope><name>deleted_data_callback_registry_</name></member>
+      <member refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1abe3cb31e0c829c26a68bd9c7e3612073" prot="private" virt="non-virtual"><scope>sgns::crdt::CRDTCallbackManager</scope><name>deleted_data_callback_registry_mutex_</name></member>
+      <member refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a3c51be711b8dd8e2a9c83760b3337c72" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTCallbackManager</scope><name>DeleteDataCallback</name></member>
+      <member refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a0121841c7eae86a0fb5e7009ae17c93e" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTCallbackManager</scope><name>DeletedDataCallback</name></member>
+      <member refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a9efe18a1296a89bc330ff65be1500540" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTCallbackManager</scope><name>DeletedDataCallbackRegistry</name></member>
+      <member refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a968259694f2b3c729bf5fbd274ab6ecd" prot="private" virt="non-virtual"><scope>sgns::crdt::CRDTCallbackManager</scope><name>logger_</name></member>
+      <member refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a0ad376529cb47117f2605db0cfb99c2b" prot="private" virt="non-virtual"><scope>sgns::crdt::CRDTCallbackManager</scope><name>new_data_callback_registry_</name></member>
+      <member refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a52bba6cb79e68b04bfd52caf3a229a46" prot="private" virt="non-virtual"><scope>sgns::crdt::CRDTCallbackManager</scope><name>new_data_callback_registry_mutex_</name></member>
+      <member refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a8e122565e4797c0e0b1cc2f144e13be9" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTCallbackManager</scope><name>NewDataCallback</name></member>
+      <member refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1adcb6f6719b2266575828511ca19803d0" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTCallbackManager</scope><name>NewDataCallbackRegistry</name></member>
+      <member refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a6d7c2728bb59cdef78288ab0989fbcda" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTCallbackManager</scope><name>NewDataPair</name></member>
+      <member refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a97b862791144470c0b5cb5cbc6d31a78" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTCallbackManager</scope><name>PutDataCallback</name></member>
+      <member refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1aed898899b427afdec46e7750fea1ff21" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTCallbackManager</scope><name>RegisterDeletedDataCallback</name></member>
+      <member refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a4399f2a689ba8df8dd6e0c8e61692fe9" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTCallbackManager</scope><name>RegisterNewDataCallback</name></member>
+      <member refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a90cf0adba72a88cff764f4aba0683046" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTCallbackManager</scope><name>UnregisterDeletedDataCallback</name></member>
+      <member refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1afa8e4f7ae8ffb1a7d24bd7ebba18bb61" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTCallbackManager</scope><name>UnregisterNewDataCallback</name></member>
+      <member refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1ad22fb8953434c20e04eb6bec43376c76" prot="public" virt="non-virtual"><scope>sgns::crdt::CRDTCallbackManager</scope><name>~CRDTCallbackManager</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

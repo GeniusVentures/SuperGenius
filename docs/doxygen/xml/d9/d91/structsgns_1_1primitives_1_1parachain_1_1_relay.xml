@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/d91/structsgns_1_1primitives_1_1parachain_1_1_relay" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::primitives::parachain::Relay</compoundname>
+    <includes refid="d1/dc8/primitives_2parachain__host_8hpp" local="no">parachain_host.hpp</includes>
+    <briefdescription>
+<para><ref refid="d9/d91/structsgns_1_1primitives_1_1parachain_1_1_relay" kindref="compound">Relay</ref> primitive is empty in supergenius for now. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::primitives::parachain::Relay</label>
+        <link refid="d9/d91/structsgns_1_1primitives_1_1parachain_1_1_relay"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/primitives/parachain_host.hpp" line="27" column="3" bodyfile="src/primitives/parachain_host.hpp" bodystart="27" bodyend="27"/>
+    <listofallmembers>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

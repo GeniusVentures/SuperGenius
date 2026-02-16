@@ -1,0 +1,274 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core" kind="class" language="C++" prot="public">
+    <compoundname>sgns::processing::ProcessingValidationCore</compoundname>
+    <includes refid="d1/dd9/processing__validation__core_8hpp" local="no">processing_validation_core.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64f" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>Error</name>
+        <qualifiedname>sgns::processing::ProcessingValidationCore::Error</qualifiedname>
+        <enumvalue id="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64faff7e1e9d3ad99547050e6083e54132f0" prot="public">
+          <name>NO_RESULTS_FOR_SUBTASK</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+<para>a subtask had no result entry </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fa94a2aa99daf9f4402fad17060b58f143" prot="public">
+          <name>WRONG_RESULT_HASHES_LENGTH</name>
+          <briefdescription>
+<para>number of hashes != number of chunks </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fa0f108a550cc77a1bca37ec2a1a4cc87e" prot="public">
+          <name>DUPLICATE_CHUNK_RESULT_HASH</name>
+          <briefdescription>
+<para>duplicate hash inside a result </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fa3da3a2accca8dc1ea340cd59978cc0e5" prot="public">
+          <name>EMPTY_CHUNK_RESULT_HASH</name>
+          <briefdescription>
+<para>empty hash seen </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fae24260a296c56a11496b39613b48d025" prot="public">
+          <name>MISSING_CHUNK_RESULT</name>
+          <briefdescription>
+<para>a chunk from subtask is missing from results map </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fa1b729146c56e28c7c88fa4a1bc4a9a3c" prot="public">
+          <name>INVALID_CHUNK_RESULT_HASH</name>
+          <briefdescription>
+<para>conflicting/invalid chunk result hash observed </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fa7a125db5c6d62fd1587b31c2733e8c2a" prot="public">
+          <name>SUBTASK_ID_MISMATCH</name>
+          <briefdescription>
+<para>subtask id != result id (individual check) </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fa05354d82728846d671610e257634f123" prot="public">
+          <name>INVALID_RESULTS_BATCH</name>
+          <briefdescription>
+<para>aggregated invalidities across subtasks </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>Enumeration of error codes used in the processing validation class. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_validation_core.hpp" line="30" column="9" bodyfile="src/processing/processing_validation_core.hpp" bodystart="31" bodyend="40"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a83a3dd5f66180281c6aa2b5c74cafc9e" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::processing::ProcessingValidationCore::m_logger</definition>
+        <argsstring></argsstring>
+        <name>m_logger</name>
+        <qualifiedname>sgns::processing::ProcessingValidationCore::m_logger</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>( &quot;ProcessingValidationCore&quot; )</initializer>
+        <briefdescription>
+<para>Logger instance for logging within the <ref refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core" kindref="compound">ProcessingValidationCore</ref> class. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_validation_core.hpp" line="72" column="22" bodyfile="src/processing/processing_validation_core.hpp" bodystart="72" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a4555222f83e0b8eabda65af484db82e0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::processing::ProcessingValidationCore::ProcessingValidationCore</definition>
+        <argsstring>()</argsstring>
+        <name>ProcessingValidationCore</name>
+        <qualifiedname>sgns::processing::ProcessingValidationCore::ProcessingValidationCore</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_validation_core.hpp" line="41" column="9" bodyfile="src/processing/processing_validation_core.cpp" bodystart="43" bodyend="43"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1ae6bdeff49c8b3f098f03eceafa101e14" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::processing::ProcessingValidationCore::ValidateResults</definition>
+        <argsstring>(const SGProcessing::SubTaskCollection &amp;subTasks, const std::map&lt; std::string, SGProcessing::SubTaskResult &gt; &amp;results, std::set&lt; std::string &gt; &amp;invalidSubTaskIds)</argsstring>
+        <name>ValidateResults</name>
+        <qualifiedname>sgns::processing::ProcessingValidationCore::ValidateResults</qualifiedname>
+        <param>
+          <type>const SGProcessing::SubTaskCollection &amp;</type>
+          <declname>subTasks</declname>
+        </param>
+        <param>
+          <type>const std::map&lt; std::string, SGProcessing::SubTaskResult &gt; &amp;</type>
+          <declname>results</declname>
+        </param>
+        <param>
+          <type>std::set&lt; std::string &gt; &amp;</type>
+          <declname>invalidSubTaskIds</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Checks if check result hashes are valid. If invalid chunk hashes found corresponding subtasks are invalidated and returned to processing queue <simplesect kind="return"><para>true if all chunk results are valid </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_validation_core.hpp" line="47" column="25" bodyfile="src/processing/processing_validation_core.cpp" bodystart="45" bodyend="125"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a9c897a3f9f67e3981b81b4151e4ead6c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::processing::ProcessingValidationCore::ValidateIndividualResult</definition>
+        <argsstring>(const SGProcessing::SubTask &amp;subTask, const SGProcessing::SubTaskResult &amp;result) const</argsstring>
+        <name>ValidateIndividualResult</name>
+        <qualifiedname>sgns::processing::ProcessingValidationCore::ValidateIndividualResult</qualifiedname>
+        <param>
+          <type>const SGProcessing::SubTask &amp;</type>
+          <declname>subTask</declname>
+        </param>
+        <param>
+          <type>const SGProcessing::SubTaskResult &amp;</type>
+          <declname>result</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Validates a single subtask result against its corresponding subtask <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>subTask</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The subtask definition </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>result</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The result to validate </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if the result is valid for the given subtask </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_validation_core.hpp" line="57" column="25" bodyfile="src/processing/processing_validation_core.cpp" bodystart="127" bodyend="171"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1aed932efe0b2d730ed21a1f6df604c6ce" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::processing::ProcessingValidationCore::CheckSubTaskResultHashes</definition>
+        <argsstring>(const SGProcessing::SubTask &amp;subTask, const std::map&lt; std::string, std::vector&lt; uint8_t &gt; &gt; &amp;chunks) const</argsstring>
+        <name>CheckSubTaskResultHashes</name>
+        <qualifiedname>sgns::processing::ProcessingValidationCore::CheckSubTaskResultHashes</qualifiedname>
+        <param>
+          <type>const SGProcessing::SubTask &amp;</type>
+          <declname>subTask</declname>
+        </param>
+        <param>
+          <type>const std::map&lt; std::string, std::vector&lt; uint8_t &gt; &gt; &amp;</type>
+          <declname>chunks</declname>
+        </param>
+        <briefdescription>
+<para>Checks the result hashes for a given subtask against the provided chunks. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">subTask</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The subtask whose results are to be checked </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">chunks</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A map of chunk identifiers to their corresponding byte vectors </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A result indicating success or failure of the hash checks </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_validation_core.hpp" line="67" column="25" bodyfile="src/processing/processing_validation_core.cpp" bodystart="173" bodyend="198"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="4">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::processing::ProcessingValidationCore</label>
+        <link refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-m_logger</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/processing/processing_validation_core.hpp" line="24" column="5" bodyfile="src/processing/processing_validation_core.hpp" bodystart="25" bodyend="73"/>
+    <listofallmembers>
+      <member refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1aed932efe0b2d730ed21a1f6df604c6ce" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingValidationCore</scope><name>CheckSubTaskResultHashes</name></member>
+      <member refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64f" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingValidationCore</scope><name>Error</name></member>
+      <member refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a83a3dd5f66180281c6aa2b5c74cafc9e" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingValidationCore</scope><name>m_logger</name></member>
+      <member refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a4555222f83e0b8eabda65af484db82e0" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingValidationCore</scope><name>ProcessingValidationCore</name></member>
+      <member refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a9c897a3f9f67e3981b81b4151e4ead6c" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingValidationCore</scope><name>ValidateIndividualResult</name></member>
+      <member refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1ae6bdeff49c8b3f098f03eceafa101e14" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingValidationCore</scope><name>ValidateResults</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

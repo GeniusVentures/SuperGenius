@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_c51af274d5282d190ba34361b8c34658" kind="dir">
+    <compoundname>src/watcher/impl</compoundname>
+    <innerfile refid="d5/d4d/evm__messaging__watcher_8cpp">evm_messaging_watcher.cpp</innerfile>
+    <innerfile refid="dc/d21/evm__messaging__watcher_8hpp">evm_messaging_watcher.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/watcher/impl/"/>
+  </compounddef>
+</doxygen>

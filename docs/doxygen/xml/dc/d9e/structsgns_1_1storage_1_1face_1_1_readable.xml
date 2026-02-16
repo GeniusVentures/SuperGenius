@@ -1,0 +1,327 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable" kind="struct" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::storage::face::Readable</compoundname>
+    <derivedcompoundref refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map" prot="public" virt="non-virtual">sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</derivedcompoundref>
+    <includes refid="d5/dd2/readable_8hpp" local="no">readable.hpp</includes>
+    <templateparamlist>
+      <param>
+        <type>typename K</type>
+      </param>
+      <param>
+        <type>typename V</type>
+      </param>
+    </templateparamlist>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a481cee90de071b4bc04fae066e25236f" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::storage::face::Readable&lt; K, V &gt;::~Readable</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Readable</name>
+        <qualifiedname>sgns::storage::face::Readable::~Readable</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/readable.hpp" line="17" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a0aeb44c506c0f66a5d7bf3f3be4baebe" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; V &gt;</type>
+        <definition>virtual outcome::result&lt; V &gt; sgns::storage::face::Readable&lt; K, V &gt;::get</definition>
+        <argsstring>(const K &amp;key) const =0</argsstring>
+        <name>get</name>
+        <qualifiedname>sgns::storage::face::Readable::get</qualifiedname>
+        <reimplementedby refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1af7cdb445cc3c02c4f8cc6083fa725d5b">get</reimplementedby>
+        <reimplementedby refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1abbd51767a3338a64b3db846bf3a22c16">get</reimplementedby>
+        <reimplementedby refid="d7/d40/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch_impl_1ae0d8b3850ae62879e19fbe87ce474cc9">get</reimplementedby>
+        <reimplementedby refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a6870a20efd581632ee1f6bf031c0f342">get</reimplementedby>
+        <reimplementedby refid="df/dfd/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_impl_1a82ee7cadb6ac656c87ae7dc02d72b67c">get</reimplementedby>
+        <reimplementedby refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aed779b066e2ffe01df0ac5e66eec6be9">get</reimplementedby>
+        <reimplementedby refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a869b6d570c450cbc3c1feae108c61266">get</reimplementedby>
+        <param>
+          <type>const K &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Get value by key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>K </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>V </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/readable.hpp" line="24" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a0d7d1047789a450de21caff78afc5c37" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>bool</type>
+        <definition>virtual bool sgns::storage::face::Readable&lt; K, V &gt;::contains</definition>
+        <argsstring>(const K &amp;key) const =0</argsstring>
+        <name>contains</name>
+        <qualifiedname>sgns::storage::face::Readable::contains</qualifiedname>
+        <reimplementedby refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1a62dd93d64fd9f9fa9ac029961da38063">contains</reimplementedby>
+        <reimplementedby refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1ac97834c7ce02ce1fe31f220b90d91ff1">contains</reimplementedby>
+        <reimplementedby refid="d7/d40/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch_impl_1a527c45f43d2cf9e4545aaa07d95a8398">contains</reimplementedby>
+        <reimplementedby refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a6e1bf96c765bd1009f95c8ff4b49dffb">contains</reimplementedby>
+        <reimplementedby refid="df/dfd/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_impl_1abcff796f44090180ca055b9aa4e4c18e">contains</reimplementedby>
+        <reimplementedby refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1ad4513dbf71e657ea135485d7094ba9a9">contains</reimplementedby>
+        <reimplementedby refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1a76386048022218fe096bf7c1dd7f2b9c">contains</reimplementedby>
+        <param>
+          <type>const K &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Returns true if given key-value binding exists in the storage. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>K </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if key has value, false otherwise. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/readable.hpp" line="31" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a829c8fbd3e864503defcaa43c8c2699b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>bool</type>
+        <definition>virtual bool sgns::storage::face::Readable&lt; K, V &gt;::empty</definition>
+        <argsstring>() const =0</argsstring>
+        <name>empty</name>
+        <qualifiedname>sgns::storage::face::Readable::empty</qualifiedname>
+        <reimplementedby refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1a0d899ec73ea7b6f0b6f8d324acba05d0">empty</reimplementedby>
+        <reimplementedby refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1acd1731393890033964295c54c938cff7">empty</reimplementedby>
+        <reimplementedby refid="d7/d40/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch_impl_1a5c7e689a8fd0657a8dd0fa700751383e">empty</reimplementedby>
+        <reimplementedby refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a94168acb03daeef6cb889ee49c0bb76c">empty</reimplementedby>
+        <reimplementedby refid="df/dfd/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_impl_1a0ff5c8b84693f8bf9890ed18a522ed52">empty</reimplementedby>
+        <reimplementedby refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a16cd7374bbfa9f97228045618749f202">empty</reimplementedby>
+        <reimplementedby refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ac5022d2d3f4a01ddc95370d802b033e6">empty</reimplementedby>
+        <briefdescription>
+<para>Returns true if the storage is empty. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/readable.hpp" line="36" column="18"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A mixin for read-only map. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>K</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key type </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>V</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="10">
+        <label>sgns::storage::InMemoryStorage</label>
+        <link refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::storage::face::GenericMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d01/structsgns_1_1storage_1_1face_1_1_generic_map"/>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::face::GenericMap&lt; K, V &gt;</label>
+        <link refid="d4/d01/structsgns_1_1storage_1_1face_1_1_generic_map"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::face::GenericMap&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d4/d01/structsgns_1_1storage_1_1face_1_1_generic_map"/>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+        <childnode refid="15" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::storage::face::GenericStorage&lt; Buffer, Buffer &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>sgns::storage::face::GenericStorage&lt; K, V &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>sgns::storage::face::ReadOnlyMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="2" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>sgns::storage::face::ReadOnlyMap&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="2" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>sgns::storage::face::Readable&lt; Buffer, Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="1" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="16">
+        <label>sgns::storage::face::Readable&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="1" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::storage::rocksdb</label>
+        <link refid="d5/dbf/classsgns_1_1storage_1_1rocksdb"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>sgns::storage::trie::EphemeralTrieBatch</label>
+        <link refid="de/d05/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch"/>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>sgns::storage::trie::EphemeralTrieBatchImpl</label>
+        <link refid="d7/d40/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch_impl"/>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>sgns::storage::trie::PersistentTrieBatch</label>
+        <link refid="db/d71/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch"/>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>sgns::storage::trie::PersistentTrieBatchImpl</label>
+        <link refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl"/>
+        <childnode refid="21" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>sgns::storage::trie::SuperGeniusTrie</label>
+        <link refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::storage::trie::SuperGeniusTrieImpl</label>
+        <link refid="df/dfd/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_impl"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>sgns::storage::trie::TopperTrieBatch</label>
+        <link refid="d2/d7a/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch"/>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>sgns::storage::trie::TopperTrieBatchImpl</label>
+        <link refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl"/>
+        <childnode refid="23" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>sgns::storage::trie::TrieBatch</label>
+        <link refid="dc/d88/classsgns_1_1storage_1_1trie_1_1_trie_batch"/>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>sgns::storage::trie::TrieStorageBackend</label>
+        <link refid="dd/d95/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>sgns::storage::trie::TrieStorageBackendImpl</label>
+        <link refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl"/>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/face/readable.hpp" line="16" column="3" bodyfile="src/storage/face/readable.hpp" bodystart="16" bodyend="37"/>
+    <listofallmembers>
+      <member refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a0d7d1047789a450de21caff78afc5c37" prot="public" virt="pure-virtual"><scope>sgns::storage::face::Readable</scope><name>contains</name></member>
+      <member refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a829c8fbd3e864503defcaa43c8c2699b" prot="public" virt="pure-virtual"><scope>sgns::storage::face::Readable</scope><name>empty</name></member>
+      <member refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a0aeb44c506c0f66a5d7bf3f3be4baebe" prot="public" virt="pure-virtual"><scope>sgns::storage::face::Readable</scope><name>get</name></member>
+      <member refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a481cee90de071b4bc04fae066e25236f" prot="public" virt="virtual"><scope>sgns::storage::face::Readable</scope><name>~Readable</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

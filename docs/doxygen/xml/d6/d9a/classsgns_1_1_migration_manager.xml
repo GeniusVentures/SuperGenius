@@ -1,0 +1,361 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/d9a/classsgns_1_1_migration_manager" kind="class" language="C++" prot="public">
+    <compoundname>sgns::MigrationManager</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">std::enable_shared_from_this&lt; MigrationManager &gt;</basecompoundref>
+    <includes refid="dc/d31/_migration_manager_8hpp" local="no">MigrationManager.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="d6/d9a/classsgns_1_1_migration_manager_1a4a9bb6d7cb4265143580723dfc6d76d6" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>Error</name>
+        <qualifiedname>sgns::MigrationManager::Error</qualifiedname>
+        <enumvalue id="d6/d9a/classsgns_1_1_migration_manager_1a4a9bb6d7cb4265143580723dfc6d76d6a935f4627717a2258a9354ea2c883a802" prot="public">
+          <name>BLOCKCHAIN_INIT_FAILED</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/MigrationManager.hpp" line="40" column="9" bodyfile="src/account/MigrationManager.hpp" bodystart="41" bodyend="43"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="d6/d9a/classsgns_1_1_migration_manager_1a3ad65de382cf3ceaf0b91f2341252233" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>std::string_view</type>
+        <definition>std::string_view sgns::MigrationManager::VERSION_INFO_KEY</definition>
+        <argsstring></argsstring>
+        <name>VERSION_INFO_KEY</name>
+        <qualifiedname>sgns::MigrationManager::VERSION_INFO_KEY</qualifiedname>
+        <initializer>= &quot;kSGNSCRDTVersion&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/MigrationManager.hpp" line="78" column="43" bodyfile="src/account/MigrationManager.hpp" bodystart="78" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d6/d9a/classsgns_1_1_migration_manager_1a3a748a6ec57c67dff7e605f782c27bbd" prot="private" static="no" mutable="no">
+        <type>std::deque&lt; std::shared_ptr&lt; <ref refid="d5/d0d/classsgns_1_1_i_migration_step" kindref="compound">IMigrationStep</ref> &gt; &gt;</type>
+        <definition>std::deque&lt;std::shared_ptr&lt;IMigrationStep&gt; &gt; sgns::MigrationManager::steps_</definition>
+        <argsstring></argsstring>
+        <name>steps_</name>
+        <qualifiedname>sgns::MigrationManager::steps_</qualifiedname>
+        <briefdescription>
+<para>Queue of registered migration steps. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/MigrationManager.hpp" line="86" column="20" bodyfile="src/account/MigrationManager.hpp" bodystart="86" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d9a/classsgns_1_1_migration_manager_1a3578b0dcfdd8ac1ccc1e16f25d0dfdc8" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::MigrationManager::m_logger</definition>
+        <argsstring></argsstring>
+        <name>m_logger</name>
+        <qualifiedname>sgns::MigrationManager::m_logger</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>( &quot;MigrationManager&quot; )</initializer>
+        <briefdescription>
+<para>Logger instance. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/MigrationManager.hpp" line="87" column="22" bodyfile="src/account/MigrationManager.hpp" bodystart="87" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d6/d9a/classsgns_1_1_migration_manager_1a4348919e9bb9e229843a28dcbaab3670" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="d6/d9a/classsgns_1_1_migration_manager_1afaca6e280d5cb022a4ff183227971abd" kindref="member">MigrationManager</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; MigrationManager &gt; sgns::MigrationManager::New</definition>
+        <argsstring>(std::shared_ptr&lt; boost::asio::io_context &gt; ioContext, std::shared_ptr&lt; ipfs_pubsub::GossipPubSub &gt; pubSub, std::shared_ptr&lt; ipfs_lite::ipfs::graphsync::Network &gt; graphsync, std::shared_ptr&lt; libp2p::protocol::Scheduler &gt; scheduler, std::shared_ptr&lt; ipfs_lite::ipfs::graphsync::RequestIdGenerator &gt; generator, std::string writeBasePath, std::string base58key, std::shared_ptr&lt; GeniusAccount &gt; account)</argsstring>
+        <name>New</name>
+        <qualifiedname>sgns::MigrationManager::New</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; boost::asio::io_context &gt;</type>
+          <declname>ioContext</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; ipfs_pubsub::GossipPubSub &gt;</type>
+          <declname>pubSub</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; ipfs_lite::ipfs::graphsync::Network &gt;</type>
+          <declname>graphsync</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; libp2p::protocol::Scheduler &gt;</type>
+          <declname>scheduler</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; ipfs_lite::ipfs::graphsync::RequestIdGenerator &gt;</type>
+          <declname>generator</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>writeBasePath</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>base58key</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="dc/d64/classsgns_1_1_genius_account" kindref="compound">GeniusAccount</ref> &gt;</type>
+          <declname>account</declname>
+        </param>
+        <briefdescription>
+<para>Factory function to create a <ref refid="d6/d9a/classsgns_1_1_migration_manager" kindref="compound">MigrationManager</ref> and register all known steps. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>ioContext</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Shared io_context for both legacy and new DB. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pubSub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Shared GossipPubSub instance. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>graphsync</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Shared GraphSync network object. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>scheduler</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Shared <ref refid="de/da8/namespacelibp2p" kindref="compound">libp2p</ref> scheduler. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>generator</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Shared GraphSync request ID generator. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>writeBasePath</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Base path for writing DB files. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>base58key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Key to build legacy paths. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>account</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><ref refid="dc/d64/classsgns_1_1_genius_account" kindref="compound">GeniusAccount</ref> used during migration (if required). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>std::shared_ptr&lt;MigrationManager&gt; to the created instance. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/MigrationManager.hpp" line="56" column="32" bodyfile="src/account/MigrationManager.cpp" bodystart="34" bodyend="82"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d6/d9a/classsgns_1_1_migration_manager_1a5d3e881ccb0b4f46b331af7dea19467d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::MigrationManager::RegisterStep</definition>
+        <argsstring>(std::shared_ptr&lt; IMigrationStep &gt; step)</argsstring>
+        <name>RegisterStep</name>
+        <qualifiedname>sgns::MigrationManager::RegisterStep</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d5/d0d/classsgns_1_1_i_migration_step" kindref="compound">IMigrationStep</ref> &gt;</type>
+          <declname>step</declname>
+        </param>
+        <briefdescription>
+<para>Register a migration step. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>step</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><ref refid="d5/d0d/classsgns_1_1_i_migration_step" kindref="compound">IMigrationStep</ref> to add. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/MigrationManager.hpp" line="70" column="14" bodyfile="src/account/MigrationManager.cpp" bodystart="86" bodyend="92"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d9a/classsgns_1_1_migration_manager_1a2b861cf7ebc1dba124344c111afdc1f4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::MigrationManager::Migrate</definition>
+        <argsstring>()</argsstring>
+        <name>Migrate</name>
+        <qualifiedname>sgns::MigrationManager::Migrate</qualifiedname>
+        <briefdescription>
+<para>Perform all registered migration steps in sequence. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Outcome of the migration process. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/MigrationManager.hpp" line="76" column="25" bodyfile="src/account/MigrationManager.cpp" bodystart="94" bodyend="125"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d6/d9a/classsgns_1_1_migration_manager_1afaca6e280d5cb022a4ff183227971abd" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::MigrationManager::MigrationManager</definition>
+        <argsstring>()</argsstring>
+        <name>MigrationManager</name>
+        <qualifiedname>sgns::MigrationManager::MigrationManager</qualifiedname>
+        <briefdescription>
+<para>Private default constructor. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/MigrationManager.hpp" line="84" column="9"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Executes a sequence of migration steps to update a CRDT store. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::MigrationManager</label>
+        <link refid="d6/d9a/classsgns_1_1_migration_manager"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; MigrationManager &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="9">
+        <label>T</label>
+      </node>
+      <node id="7">
+        <label>sgns::IMigrationStep</label>
+        <link refid="d5/d0d/classsgns_1_1_i_migration_step"/>
+      </node>
+      <node id="1">
+        <label>sgns::MigrationManager</label>
+        <link refid="d6/d9a/classsgns_1_1_migration_manager"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+VERSION_INFO_KEY</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-steps_</edgelabel>
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>-m_logger</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::basic_string_view&lt; Char &gt;</label>
+      </node>
+      <node id="10">
+        <label>std::deque&lt; T &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::deque&lt; std::shared_ptr&lt; sgns::IMigrationStep &gt; &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; std::shared_ptr&lt; sgns::IMigrationStep &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; MigrationManager &gt;</label>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; sgns::IMigrationStep &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; sgns::IMigrationStep &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::string_view</label>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/account/MigrationManager.hpp" line="37" column="5" bodyfile="src/account/MigrationManager.hpp" bodystart="38" bodyend="88"/>
+    <listofallmembers>
+      <member refid="d6/d9a/classsgns_1_1_migration_manager_1a4a9bb6d7cb4265143580723dfc6d76d6" prot="public" virt="non-virtual"><scope>sgns::MigrationManager</scope><name>Error</name></member>
+      <member refid="d6/d9a/classsgns_1_1_migration_manager_1a3578b0dcfdd8ac1ccc1e16f25d0dfdc8" prot="private" virt="non-virtual"><scope>sgns::MigrationManager</scope><name>m_logger</name></member>
+      <member refid="d6/d9a/classsgns_1_1_migration_manager_1a2b861cf7ebc1dba124344c111afdc1f4" prot="public" virt="non-virtual"><scope>sgns::MigrationManager</scope><name>Migrate</name></member>
+      <member refid="d6/d9a/classsgns_1_1_migration_manager_1afaca6e280d5cb022a4ff183227971abd" prot="private" virt="non-virtual"><scope>sgns::MigrationManager</scope><name>MigrationManager</name></member>
+      <member refid="d6/d9a/classsgns_1_1_migration_manager_1a4348919e9bb9e229843a28dcbaab3670" prot="public" virt="non-virtual"><scope>sgns::MigrationManager</scope><name>New</name></member>
+      <member refid="d6/d9a/classsgns_1_1_migration_manager_1a5d3e881ccb0b4f46b331af7dea19467d" prot="public" virt="non-virtual"><scope>sgns::MigrationManager</scope><name>RegisterStep</name></member>
+      <member refid="d6/d9a/classsgns_1_1_migration_manager_1a3a748a6ec57c67dff7e605f782c27bbd" prot="private" virt="non-virtual"><scope>sgns::MigrationManager</scope><name>steps_</name></member>
+      <member refid="d6/d9a/classsgns_1_1_migration_manager_1a3ad65de382cf3ceaf0b91f2341252233" prot="public" virt="non-virtual"><scope>sgns::MigrationManager</scope><name>VERSION_INFO_KEY</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

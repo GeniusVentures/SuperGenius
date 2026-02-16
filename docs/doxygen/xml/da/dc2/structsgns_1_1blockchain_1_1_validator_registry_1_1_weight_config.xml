@@ -1,0 +1,102 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::blockchain::ValidatorRegistry::WeightConfig</compoundname>
+    <includes refid="df/df1/_validator_registry_8hpp" local="no">ValidatorRegistry.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1a3e9de2dd1eb7ce45cd9464142cf68cf0" prot="public" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::blockchain::ValidatorRegistry::WeightConfig::base_weight_</definition>
+        <argsstring></argsstring>
+        <name>base_weight_</name>
+        <qualifiedname>sgns::blockchain::ValidatorRegistry::WeightConfig::base_weight_</qualifiedname>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/ValidatorRegistry.hpp" line="50" column="22" bodyfile="src/blockchain/ValidatorRegistry.hpp" bodystart="50" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1a6d41326f8e184bc09ad129a86f213635" prot="public" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::blockchain::ValidatorRegistry::WeightConfig::full_multiplier_</definition>
+        <argsstring></argsstring>
+        <name>full_multiplier_</name>
+        <qualifiedname>sgns::blockchain::ValidatorRegistry::WeightConfig::full_multiplier_</qualifiedname>
+        <initializer>= 3</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/ValidatorRegistry.hpp" line="51" column="22" bodyfile="src/blockchain/ValidatorRegistry.hpp" bodystart="51" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1add1307d4c181f66b9e0e1bb15de5d501" prot="public" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::blockchain::ValidatorRegistry::WeightConfig::genesis_multiplier_</definition>
+        <argsstring></argsstring>
+        <name>genesis_multiplier_</name>
+        <qualifiedname>sgns::blockchain::ValidatorRegistry::WeightConfig::genesis_multiplier_</qualifiedname>
+        <initializer>= 5</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/ValidatorRegistry.hpp" line="52" column="22" bodyfile="src/blockchain/ValidatorRegistry.hpp" bodystart="52" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1acc4fc9eb94b271d4a561d495e8dff668" prot="public" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::blockchain::ValidatorRegistry::WeightConfig::sharded_multiplier_</definition>
+        <argsstring></argsstring>
+        <name>sharded_multiplier_</name>
+        <qualifiedname>sgns::blockchain::ValidatorRegistry::WeightConfig::sharded_multiplier_</qualifiedname>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/ValidatorRegistry.hpp" line="53" column="22" bodyfile="src/blockchain/ValidatorRegistry.hpp" bodystart="53" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1a084384ef5fb4a8e39cc9ff27bad4a143" prot="public" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::blockchain::ValidatorRegistry::WeightConfig::max_weight_</definition>
+        <argsstring></argsstring>
+        <name>max_weight_</name>
+        <qualifiedname>sgns::blockchain::ValidatorRegistry::WeightConfig::max_weight_</qualifiedname>
+        <initializer>= 10</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/ValidatorRegistry.hpp" line="54" column="22" bodyfile="src/blockchain/ValidatorRegistry.hpp" bodystart="54" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::blockchain::ValidatorRegistry::WeightConfig</label>
+        <link refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/blockchain/ValidatorRegistry.hpp" line="48" column="9" bodyfile="src/blockchain/ValidatorRegistry.hpp" bodystart="49" bodyend="55"/>
+    <listofallmembers>
+      <member refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1a3e9de2dd1eb7ce45cd9464142cf68cf0" prot="public" virt="non-virtual"><scope>sgns::blockchain::ValidatorRegistry::WeightConfig</scope><name>base_weight_</name></member>
+      <member refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1a6d41326f8e184bc09ad129a86f213635" prot="public" virt="non-virtual"><scope>sgns::blockchain::ValidatorRegistry::WeightConfig</scope><name>full_multiplier_</name></member>
+      <member refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1add1307d4c181f66b9e0e1bb15de5d501" prot="public" virt="non-virtual"><scope>sgns::blockchain::ValidatorRegistry::WeightConfig</scope><name>genesis_multiplier_</name></member>
+      <member refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1a084384ef5fb4a8e39cc9ff27bad4a143" prot="public" virt="non-virtual"><scope>sgns::blockchain::ValidatorRegistry::WeightConfig</scope><name>max_weight_</name></member>
+      <member refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1acc4fc9eb94b271d4a561d495e8dff668" prot="public" virt="non-virtual"><scope>sgns::blockchain::ValidatorRegistry::WeightConfig</scope><name>sharded_multiplier_</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

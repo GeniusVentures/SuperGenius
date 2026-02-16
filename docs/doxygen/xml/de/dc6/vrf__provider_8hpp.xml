@@ -1,0 +1,192 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/dc6/vrf__provider_8hpp" kind="file" language="C++">
+    <compoundname>vrf_provider.hpp</compoundname>
+    <includes local="no">boost/optional.hpp</includes>
+    <includes refid="da/d1d/buffer_8hpp" local="yes">base/buffer.hpp</includes>
+    <includes refid="d2/d9c/sr25519__types_8hpp" local="yes">crypto/sr25519_types.hpp</includes>
+    <includes refid="df/dec/_i_component_8hpp" local="yes">singleton/IComponent.hpp</includes>
+    <includedby refid="d6/da3/vrf__provider__impl_8hpp" local="yes">src/crypto/vrf/vrf_provider_impl.hpp</includedby>
+    <incdepgraph>
+      <node id="14">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>crypto/sr25519_types.hpp</label>
+        <link refid="d2/d9c/sr25519__types_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crypto/vrf_provider.hpp</label>
+        <link refid="de/dc6/vrf__provider_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>array</label>
+      </node>
+      <node id="6">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="17">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="13">
+        <label>boost/multiprecision/cpp_int.hpp</label>
+      </node>
+      <node id="7">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="2">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="15">
+        <label>cstddef</label>
+      </node>
+      <node id="8">
+        <label>gsl/span</label>
+      </node>
+      <node id="19">
+        <label>iostream</label>
+      </node>
+      <node id="10">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="12">
+        <label>sr25519.h</label>
+      </node>
+      <node id="21">
+        <label>string</label>
+      </node>
+      <node id="4">
+        <label>string_view</label>
+      </node>
+      <node id="5">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="3">
+        <label>src/crypto/vrf/vrf_provider_impl.cpp</label>
+        <link refid="d5/d8f/vrf__provider__impl_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/crypto/vrf/vrf_provider_impl.hpp</label>
+        <link refid="d6/da3/vrf__provider__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crypto/vrf_provider.hpp</label>
+        <link refid="de/dc6/vrf__provider_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider" prot="public">sgns::crypto::VRFProvider</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6e/namespacesgns_1_1crypto">sgns::crypto</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_CRYPTO_VRF_VRF_PROVIDER_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_CRYPTO_VRF_VRF_PROVIDER_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/optional.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="da/d1d/buffer_8hpp" kindref="compound">base/buffer.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d2/d9c/sr25519__types_8hpp" kindref="compound">crypto/sr25519_types.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="df/dec/_i_component_8hpp" kindref="compound">singleton/IComponent.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d6e/namespacesgns_1_1crypto" kindref="compound">sgns::crypto</ref><sp/>{</highlight></codeline>
+<codeline lineno="14" refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider" kindref="compound">VRFProvider</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d1/dbf/class_i_component" kindref="compound">IComponent</ref><sp/>{</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="16" refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider_1a53887622f4039b93b6c8d8fb43e9aa7c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider_1a53887622f4039b93b6c8d8fb43e9aa7c" kindref="member">~VRFProvider</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21" refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider_1a200ad01e7591b95a61d283c49bd45fab" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair" kindref="compound">SR25519Keypair</ref><sp/><ref refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider_1a200ad01e7591b95a61d283c49bd45fab" kindref="member">generateKeypair</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30" refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider_1ad7d3fb8f768b6c03a3ccd1ea236b23fc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>boost::optional&lt;VRFOutput&gt;<sp/><ref refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider_1ad7d3fb8f768b6c03a3ccd1ea236b23fc" kindref="member">sign</ref>(</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;msg,</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair" kindref="compound">SR25519Keypair</ref><sp/>&amp;keypair,</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a8a4a63297ed3f41b909d3f14c068c6c4" kindref="member">VRFThreshold</ref><sp/>&amp;threshold)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="43" refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider_1a81af48eb41a5f2e68fdb1fb65d516816" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="d5/d9f/structsgns_1_1crypto_1_1_v_r_f_verify_output" kindref="compound">VRFVerifyOutput</ref><sp/><ref refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider_1a81af48eb41a5f2e68fdb1fb65d516816" kindref="member">verify</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;msg,</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output" kindref="compound">VRFOutput</ref><sp/>&amp;output,</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1ac763dcc567072893f82795e8d546ba88" kindref="member">SR25519PublicKey</ref><sp/>&amp;public_key,</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a8a4a63297ed3f41b909d3f14c068c6c4" kindref="member">VRFThreshold</ref><sp/>&amp;threshold)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="48"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight></codeline>
+<codeline lineno="50"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight></codeline>
+    </programlisting>
+    <location file="src/crypto/vrf_provider.hpp"/>
+  </compounddef>
+</doxygen>

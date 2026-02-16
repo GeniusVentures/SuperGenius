@@ -1,0 +1,557 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/dab/scale__decoder__stream_8hpp" kind="file" language="C++">
+    <compoundname>scale_decoder_stream.hpp</compoundname>
+    <includes local="no">array</includes>
+    <includes local="no">list</includes>
+    <includes local="no">boost/variant/variant.hpp</includes>
+    <includes local="no">boost/multiprecision/cpp_int.hpp</includes>
+    <includes local="no">boost/optional.hpp</includes>
+    <includes local="no">gsl/span</includes>
+    <includes refid="d6/d8d/outcome__throw_8hpp" local="yes">base/outcome_throw.hpp</includes>
+    <includes refid="de/d03/fixed__witdh__integer_8hpp" local="yes">scale/detail/fixed_witdh_integer.hpp</includes>
+    <includes refid="dd/d27/scale_2types_8hpp" local="yes">scale/types.hpp</includes>
+    <includedby refid="db/d80/scale_8hpp" local="yes">src/scale/scale.hpp</includedby>
+    <includedby refid="da/d0f/scale__decoder__stream_8cpp" local="yes">src/scale/scale_decoder_stream.cpp</includedby>
+    <includedby refid="d1/dc3/supergenius__codec_8cpp" local="yes">src/storage/trie/serialization/supergenius_codec.cpp</includedby>
+    <incdepgraph>
+      <node id="8">
+        <label>base/outcome_throw.hpp</label>
+        <link refid="d6/d8d/outcome__throw_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>macro/unreachable.hpp</label>
+        <link refid="d7/d10/unreachable_8hpp"/>
+      </node>
+      <node id="16">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>scale/detail/fixed_witdh_integer.hpp</label>
+        <link refid="de/d03/fixed__witdh__integer_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/scale/scale_decoder_stream.hpp</label>
+        <link refid="de/dab/scale__decoder__stream_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>scale/scale_error.hpp</label>
+        <link refid="d0/d8d/scale__error_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>scale/types.hpp</label>
+        <link refid="dd/d27/scale_2types_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>array</label>
+      </node>
+      <node id="13">
+        <label>boost/endian/arithmetic.hpp</label>
+      </node>
+      <node id="5">
+        <label>boost/multiprecision/cpp_int.hpp</label>
+      </node>
+      <node id="6">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="9">
+        <label>boost/system/system_error.hpp</label>
+      </node>
+      <node id="10">
+        <label>boost/throw_exception.hpp</label>
+      </node>
+      <node id="4">
+        <label>boost/variant/variant.hpp</label>
+      </node>
+      <node id="12">
+        <label>cstdint</label>
+      </node>
+      <node id="7">
+        <label>gsl/span</label>
+      </node>
+      <node id="17">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="3">
+        <label>list</label>
+      </node>
+      <node id="19">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="4">
+        <label>src/primitives/check_inherents_result.hpp</label>
+        <link refid="d9/d68/check__inherents__result_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>src/primitives/inherent_data.cpp</label>
+        <link refid="dc/d77/inherent__data_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/primitives/inherent_data.hpp</label>
+        <link refid="d7/dcf/inherent__data_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.cpp</label>
+        <link refid="d7/d6b/block__builder__impl_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.hpp</label>
+        <link refid="d3/d95/block__builder__impl_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.cpp</label>
+        <link refid="de/d5e/core__factory__impl_8cpp"/>
+      </node>
+      <node id="12">
+        <label>src/runtime/binaryen/runtime_api/core_impl.cpp</label>
+        <link refid="dc/d7c/core__impl_8cpp"/>
+      </node>
+      <node id="10">
+        <label>src/runtime/binaryen/runtime_api/core_impl.hpp</label>
+        <link refid="d7/dbc/core__impl_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.cpp</label>
+        <link refid="dc/def/finality__api__impl_8cpp"/>
+      </node>
+      <node id="13">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.hpp</label>
+        <link refid="db/dad/finality__api__impl_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>src/runtime/binaryen/runtime_api/metadata_impl.cpp</label>
+        <link refid="d0/dfc/metadata__impl_8cpp"/>
+      </node>
+      <node id="15">
+        <label>src/runtime/binaryen/runtime_api/metadata_impl.hpp</label>
+        <link refid="dc/dcf/metadata__impl_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>src/runtime/binaryen/runtime_api/offchain_worker_impl.cpp</label>
+        <link refid="d3/d58/offchain__worker__impl_8cpp"/>
+      </node>
+      <node id="17">
+        <label>src/runtime/binaryen/runtime_api/offchain_worker_impl.hpp</label>
+        <link refid="dd/d03/offchain__worker__impl_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.cpp</label>
+        <link refid="db/dae/parachain__host__impl_8cpp"/>
+      </node>
+      <node id="19">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.hpp</label>
+        <link refid="d6/d15/parachain__host__impl_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.cpp</label>
+        <link refid="d3/d02/production__api__impl_8cpp"/>
+      </node>
+      <node id="21">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.hpp</label>
+        <link refid="d1/d6a/production__api__impl_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>src/runtime/binaryen/runtime_api/runtime_api.hpp</label>
+        <link refid="dd/d87/runtime__api_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.cpp</label>
+        <link refid="db/d63/tagged__transaction__queue__impl_8cpp"/>
+      </node>
+      <node id="23">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.hpp</label>
+        <link refid="d4/d66/tagged__transaction__queue__impl_8hpp"/>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>src/runtime/block_builder.hpp</label>
+        <link refid="d7/d89/block__builder_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>src/scale/scale.hpp</label>
+        <link refid="db/d80/scale_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>src/scale/scale_decoder_stream.cpp</label>
+        <link refid="da/d0f/scale__decoder__stream_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/scale/scale_decoder_stream.hpp</label>
+        <link refid="de/dab/scale__decoder__stream_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>src/storage/changes_trie/impl/changes_trie.cpp</label>
+        <link refid="d9/d77/changes__trie_8cpp"/>
+      </node>
+      <node id="26">
+        <label>src/storage/changes_trie/impl/storage_changes_tracker_impl.cpp</label>
+        <link refid="d8/d2c/storage__changes__tracker__impl_8cpp"/>
+      </node>
+      <node id="27">
+        <label>src/storage/trie/impl/persistent_trie_batch_impl.cpp</label>
+        <link refid="dd/dda/persistent__trie__batch__impl_8cpp"/>
+      </node>
+      <node id="28">
+        <label>src/storage/trie/serialization/ordered_trie_hash.hpp</label>
+        <link refid="d9/dcb/ordered__trie__hash_8hpp"/>
+      </node>
+      <node id="29">
+        <label>src/storage/trie/serialization/supergenius_codec.cpp</label>
+        <link refid="d1/dc3/supergenius__codec_8cpp"/>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream" prot="public">sgns::scale::ScaleDecoderStream</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d1/d56/namespacesgns_1_1scale">sgns::scale</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_SCALE_SCALE_DECODER_STREAM_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_SCALE_SCALE_DECODER_STREAM_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;array&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;list&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/variant/variant.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/multiprecision/cpp_int.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/optional.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;gsl/span&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/d8d/outcome__throw_8hpp" kindref="compound">base/outcome_throw.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="de/d03/fixed__witdh__integer_8hpp" kindref="compound">scale/detail/fixed_witdh_integer.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dd/d27/scale_2types_8hpp" kindref="compound">scale/types.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d1/d56/namespacesgns_1_1scale" kindref="compound">sgns::scale</ref><sp/>{</highlight></codeline>
+<codeline lineno="19" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref><sp/>{</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>special<sp/>tag<sp/>to<sp/>differentiate<sp/>decoding<sp/>streams<sp/>from<sp/>others</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1af4e9e4ef5fc5053dcbd32c01dc4262b7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1af4e9e4ef5fc5053dcbd32c01dc4262b7" kindref="member">is_decoder_stream</ref><sp/>=<sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">explicit</highlight><highlight class="normal"><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref>(gsl::span&lt;const<sp/>uint8_t&gt;<sp/>span);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>F,<sp/></highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>S&gt;</highlight></codeline>
+<codeline lineno="34" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a013ae42ddc8f7b20e6e45e0cd20e9735" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref><sp/>&amp;<ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a013ae42ddc8f7b20e6e45e0cd20e9735" kindref="member">operator&gt;&gt;</ref>(std::pair&lt;F,<sp/>S&gt;<sp/>&amp;p)<sp/>{</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static_assert</highlight><highlight class="normal">(!std::is_reference_v&lt;F&gt;<sp/>&amp;&amp;<sp/>!std::is_reference_v&lt;S&gt;);</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal"><sp/>&gt;&gt;<sp/></highlight><highlight class="keyword">const_cast&lt;</highlight><highlight class="normal">std::remove_const_t&lt;F&gt;<sp/>&amp;</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(p.first)<sp/><sp/></highlight><highlight class="comment">//<sp/>NOLINT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&gt;&gt;<sp/></highlight><highlight class="keyword">const_cast&lt;</highlight><highlight class="normal">std::remove_const_t&lt;S&gt;<sp/>&amp;</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(p.second);<sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>NOLINT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal">...<sp/>T&gt;</highlight></codeline>
+<codeline lineno="47" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1ae0f4987a8b8a34032764c749357024cd" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref><sp/>&amp;<ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1ae0f4987a8b8a34032764c749357024cd" kindref="member">operator&gt;&gt;</ref>(std::tuple&lt;T...&gt;<sp/>&amp;v)<sp/>{</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">sizeof</highlight><highlight class="normal">...(T)<sp/>&gt;<sp/>0)<sp/>{</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a02c6f9e4d03c3d2d24602bdb4ecef85c" kindref="member">decodeElementOfTuple&lt;0&gt;</ref>(v);</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"></highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal">...<sp/>Ts&gt;</highlight></codeline>
+<codeline lineno="61" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a3fca5617cc5e13ba1eb8b5ec9594bebf" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref><sp/>&amp;<ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a3fca5617cc5e13ba1eb8b5ec9594bebf" kindref="member">operator&gt;&gt;</ref>(boost::variant&lt;Ts...&gt;<sp/>&amp;v)<sp/>{</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>first<sp/>byte<sp/>means<sp/>type<sp/>index</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>uint8_t<sp/>type_index<sp/>=<sp/>0u;</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal"><sp/>&gt;&gt;<sp/>type_index;<sp/><sp/></highlight><highlight class="comment">//<sp/>decode<sp/>type<sp/>index</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="65"><highlight class="normal"></highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>ensure<sp/>that<sp/>index<sp/>is<sp/>in<sp/>[0,<sp/>types_count)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(type_index<sp/>&gt;=<sp/></highlight><highlight class="keyword">sizeof</highlight><highlight class="normal">...(Ts))<sp/>{</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a6e3f4809320974468497c0cb0999e28a" kindref="member">base::raise</ref>(<ref refid="d1/d56/namespacesgns_1_1scale_1a0d667fc03d973094b2b7a257ecf074aface270dd59be11475cfa5dbc6d2412cca" kindref="member">DecodeError::WRONG_TYPE_INDEX</ref>);</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"></highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1aadba68b37081c7d309a4dc499dc3ac30" kindref="member">tryDecodeAsOneOfVariant&lt;0&gt;</ref>(v,<sp/>type_index);</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"></highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>T&gt;</highlight></codeline>
+<codeline lineno="82" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a2e010c505123dfe7ff36b533b0e28680" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref><sp/>&amp;<ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a2e010c505123dfe7ff36b533b0e28680" kindref="member">operator&gt;&gt;</ref>(std::shared_ptr&lt;T&gt;<sp/>&amp;v)<sp/>{</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">mutableT<sp/>=<sp/>std::remove_const_t&lt;T&gt;;</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"></highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static_assert</highlight><highlight class="normal">(std::is_default_constructible_v&lt;mutableT&gt;);</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"></highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>v<sp/>=<sp/>std::make_shared&lt;mutableT&gt;();</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal"><sp/>&gt;&gt;<sp/></highlight><highlight class="keyword">const_cast&lt;</highlight><highlight class="normal">mutableT<sp/>&amp;</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(*v);<sp/><sp/></highlight><highlight class="comment">//<sp/>NOLINT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"></highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>T&gt;</highlight></codeline>
+<codeline lineno="98" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1ab1cdba176324f204ae800f7f01c13c5d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref><sp/>&amp;<ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1ab1cdba176324f204ae800f7f01c13c5d" kindref="member">operator&gt;&gt;</ref>(std::unique_ptr&lt;T&gt;<sp/>&amp;v)<sp/>{</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">mutableT<sp/>=<sp/>std::remove_const_t&lt;T&gt;;</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"></highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static_assert</highlight><highlight class="normal">(std::is_default_constructible_v&lt;mutableT&gt;);</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"></highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>v<sp/>=<sp/>std::make_unique&lt;mutableT&gt;();</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal"><sp/>&gt;&gt;<sp/></highlight><highlight class="keyword">const_cast&lt;</highlight><highlight class="normal">mutableT<sp/>&amp;</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(*v);<sp/><sp/></highlight><highlight class="comment">//<sp/>NOLINT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"></highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>T,<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>I<sp/>=<sp/>std::decay_t&lt;T&gt;,<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>=<sp/>std::enable_if_t&lt;std::is_</highlight><highlight class="keywordtype">int</highlight><highlight class="normal">egral_v&lt;I&gt;&gt;&gt;</highlight></codeline>
+<codeline lineno="114" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a5aa17e57726bc916f93423490c14ce04" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref><sp/>&amp;<ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a5aa17e57726bc916f93423490c14ce04" kindref="member">operator&gt;&gt;</ref>(<sp/>T<sp/>&amp;v<sp/>)</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>check<sp/>bool</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>(<sp/>std::is_same&lt;I,<sp/>bool&gt;::value<sp/>)</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>v<sp/>=<sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a89ff2fd2acea34ffdf23780972586299" kindref="member">decodeBool</ref>();</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="122"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>check<sp/>byte</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>(<sp/></highlight><highlight class="keyword">sizeof</highlight><highlight class="normal">(<sp/>T<sp/>)<sp/>==<sp/>1u<sp/>)</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>v<sp/>=<sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a6855dfa577f7689c03cfd29d14d6474a" kindref="member">nextByte</ref>();</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>decode<sp/>any<sp/>other<sp/>integer</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>v<sp/>=<sp/><ref refid="d4/da8/namespacesgns_1_1scale_1_1detail_1a6ae721a6080599764b6c37f68be05d1a" kindref="member">detail::decodeInteger&lt;I&gt;</ref>(<sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="132"><highlight class="normal"></highlight></codeline>
+<codeline lineno="139"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>T&gt;</highlight></codeline>
+<codeline lineno="140" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a23512f82e5f169d1327fed8306ec8cb9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref><sp/>&amp;<ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a23512f82e5f169d1327fed8306ec8cb9" kindref="member">operator&gt;&gt;</ref>(boost::optional&lt;T&gt;<sp/>&amp;v)<sp/>{</highlight></codeline>
+<codeline lineno="141"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">mutableT<sp/>=<sp/>std::remove_const_t&lt;T&gt;;</highlight></codeline>
+<codeline lineno="142"><highlight class="normal"></highlight></codeline>
+<codeline lineno="143"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static_assert</highlight><highlight class="normal">(std::is_default_constructible_v&lt;mutableT&gt;);</highlight></codeline>
+<codeline lineno="144"><highlight class="normal"></highlight></codeline>
+<codeline lineno="145"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>optional<sp/>bool<sp/>is<sp/>special<sp/>case<sp/>of<sp/>optional<sp/>values</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="146"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>it<sp/>is<sp/>encoded<sp/>as<sp/>one<sp/>byte<sp/>instead<sp/>of<sp/>two</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="147"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>as<sp/>described<sp/>in<sp/>specification</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="148"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>(std::is_same&lt;mutableT,<sp/>bool&gt;::value)<sp/>{</highlight></codeline>
+<codeline lineno="149"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>v<sp/>=<sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a0a883ac9f9709af2001de5f5c5cf0c9b" kindref="member">decodeOptionalBool</ref>();</highlight></codeline>
+<codeline lineno="150"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="151"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="152"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>detect<sp/>if<sp/>optional<sp/>has<sp/>value</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="153"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>has_value<sp/>=<sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="154"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal"><sp/>&gt;&gt;<sp/>has_value;</highlight></codeline>
+<codeline lineno="155"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!has_value)<sp/>{</highlight></codeline>
+<codeline lineno="156"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>v.reset();</highlight></codeline>
+<codeline lineno="157"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="158"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="159"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>decode<sp/>value</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="160"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>v.emplace();</highlight></codeline>
+<codeline lineno="161"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal"><sp/>&gt;&gt;<sp/></highlight><highlight class="keyword">const_cast&lt;</highlight><highlight class="normal">mutableT<sp/>&amp;</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(*v);<sp/><sp/></highlight><highlight class="comment">//<sp/>NOLINT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="162"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="163"><highlight class="normal"></highlight></codeline>
+<codeline lineno="169"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream" kindref="compound">ScaleDecoderStream</ref><sp/>&amp;<ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a013ae42ddc8f7b20e6e45e0cd20e9735" kindref="member">operator&gt;&gt;</ref>(<ref refid="d1/d56/namespacesgns_1_1scale_1ac1997d51bb44310de23a0fd42d42aac0" kindref="member">CompactInteger</ref><sp/>&amp;v);</highlight></codeline>
+<codeline lineno="170"><highlight class="normal"></highlight></codeline>
+<codeline lineno="177"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>T&gt;</highlight></codeline>
+<codeline lineno="178" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1aea26badd8e2fefb812ebc9f9f5d5ddf0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref><sp/>&amp;<ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1aea26badd8e2fefb812ebc9f9f5d5ddf0" kindref="member">operator&gt;&gt;</ref>(std::vector&lt;T&gt;<sp/>&amp;v)<sp/>{</highlight></codeline>
+<codeline lineno="179"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">mutableT<sp/>=<sp/>std::remove_const_t&lt;T&gt;;</highlight></codeline>
+<codeline lineno="180"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">size_type<sp/>=<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>std::list&lt;T&gt;::size_type;</highlight></codeline>
+<codeline lineno="181"><highlight class="normal"></highlight></codeline>
+<codeline lineno="182"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static_assert</highlight><highlight class="normal">(std::is_default_constructible_v&lt;mutableT&gt;);</highlight></codeline>
+<codeline lineno="183"><highlight class="normal"></highlight></codeline>
+<codeline lineno="184"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d56/namespacesgns_1_1scale_1ac1997d51bb44310de23a0fd42d42aac0" kindref="member">CompactInteger</ref><sp/>size{0u};</highlight></codeline>
+<codeline lineno="185"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal"><sp/>&gt;&gt;<sp/>size;</highlight></codeline>
+<codeline lineno="186"><highlight class="normal"></highlight></codeline>
+<codeline lineno="187"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(size<sp/>&gt;<sp/>std::numeric_limits&lt;size_type&gt;::max())<sp/>{</highlight></codeline>
+<codeline lineno="188"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a6e3f4809320974468497c0cb0999e28a" kindref="member">base::raise</ref>(<ref refid="d1/d56/namespacesgns_1_1scale_1a0d667fc03d973094b2b7a257ecf074afa6421bfdc5ba473a906814bd361d714c4" kindref="member">DecodeError::TOO_MANY_ITEMS</ref>);</highlight></codeline>
+<codeline lineno="189"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="190"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>item_count<sp/>=<sp/>size.convert_to&lt;size_type&gt;();</highlight></codeline>
+<codeline lineno="191"><highlight class="normal"></highlight></codeline>
+<codeline lineno="192"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;mutableT&gt;<sp/>vec;</highlight></codeline>
+<codeline lineno="193"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>vec.resize(item_count);</highlight></codeline>
+<codeline lineno="194"><highlight class="normal"></highlight></codeline>
+<codeline lineno="195"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(size_type<sp/>i<sp/>=<sp/>0u;<sp/>i<sp/>&lt;<sp/>item_count;<sp/>++i)<sp/>{</highlight></codeline>
+<codeline lineno="196"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal"><sp/>&gt;&gt;<sp/>vec[i];</highlight></codeline>
+<codeline lineno="197"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="198"><highlight class="normal"></highlight></codeline>
+<codeline lineno="199"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>v<sp/>=<sp/>std::move(vec);</highlight></codeline>
+<codeline lineno="200"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="201"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="202"><highlight class="normal"></highlight></codeline>
+<codeline lineno="209"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>T&gt;</highlight></codeline>
+<codeline lineno="210" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1aa01976a6ebaf3049f0a37460aca5f65d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref><sp/>&amp;<ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1aa01976a6ebaf3049f0a37460aca5f65d" kindref="member">operator&gt;&gt;</ref>(std::list&lt;T&gt;<sp/>&amp;v)<sp/>{</highlight></codeline>
+<codeline lineno="211"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">mutableT<sp/>=<sp/>std::remove_const_t&lt;T&gt;;</highlight></codeline>
+<codeline lineno="212"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">size_type<sp/>=<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>std::list&lt;T&gt;::size_type;</highlight></codeline>
+<codeline lineno="213"><highlight class="normal"></highlight></codeline>
+<codeline lineno="214"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static_assert</highlight><highlight class="normal">(std::is_default_constructible_v&lt;mutableT&gt;);</highlight></codeline>
+<codeline lineno="215"><highlight class="normal"></highlight></codeline>
+<codeline lineno="216"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d56/namespacesgns_1_1scale_1ac1997d51bb44310de23a0fd42d42aac0" kindref="member">CompactInteger</ref><sp/>size{0u};</highlight></codeline>
+<codeline lineno="217"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal"><sp/>&gt;&gt;<sp/>size;</highlight></codeline>
+<codeline lineno="218"><highlight class="normal"></highlight></codeline>
+<codeline lineno="219"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(size<sp/>&gt;<sp/>std::numeric_limits&lt;size_type&gt;::max())<sp/>{</highlight></codeline>
+<codeline lineno="220"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a6e3f4809320974468497c0cb0999e28a" kindref="member">base::raise</ref>(<ref refid="d1/d56/namespacesgns_1_1scale_1a0d667fc03d973094b2b7a257ecf074afa6421bfdc5ba473a906814bd361d714c4" kindref="member">DecodeError::TOO_MANY_ITEMS</ref>);</highlight></codeline>
+<codeline lineno="221"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="222"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>item_count<sp/>=<sp/>size.convert_to&lt;size_type&gt;();</highlight></codeline>
+<codeline lineno="223"><highlight class="normal"></highlight></codeline>
+<codeline lineno="224"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::list&lt;T&gt;<sp/>lst;</highlight></codeline>
+<codeline lineno="225"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>lst.reserve(item_count);</highlight></codeline>
+<codeline lineno="226"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(size_type<sp/>i<sp/>=<sp/>0u;<sp/>i<sp/>&lt;<sp/>item_count;<sp/>++i)<sp/>{</highlight></codeline>
+<codeline lineno="227"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>lst.emplace_back();</highlight></codeline>
+<codeline lineno="228"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal"><sp/>&gt;&gt;<sp/>lst.back();</highlight></codeline>
+<codeline lineno="229"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="230"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>v<sp/>=<sp/>std::move(lst);</highlight></codeline>
+<codeline lineno="231"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="232"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="233"><highlight class="normal"></highlight></codeline>
+<codeline lineno="241"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>T,<sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>size&gt;</highlight></codeline>
+<codeline lineno="242" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1af458fc505fbc7a961522af040d040dfc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref><sp/>&amp;<ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1af458fc505fbc7a961522af040d040dfc" kindref="member">operator&gt;&gt;</ref>(std::array&lt;T,<sp/>size&gt;<sp/>&amp;a)<sp/>{</highlight></codeline>
+<codeline lineno="243"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">mutableT<sp/>=<sp/>std::remove_const_t&lt;T&gt;;</highlight></codeline>
+<codeline lineno="244"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>i<sp/>=<sp/>0u;<sp/>i<sp/>&lt;<sp/>size;<sp/>++i)<sp/>{</highlight></codeline>
+<codeline lineno="245"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal"><sp/>&gt;&gt;<sp/></highlight><highlight class="keyword">const_cast&lt;</highlight><highlight class="normal">mutableT<sp/>&amp;</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(a[i]);<sp/><sp/></highlight><highlight class="comment">//<sp/>NOLINT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="246"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="247"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="248"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="249"><highlight class="normal"></highlight></codeline>
+<codeline lineno="255" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1aac901134647abe33ee11e722d51b1d50" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref><sp/>&amp;<ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1aac901134647abe33ee11e722d51b1d50" kindref="member">operator&gt;&gt;</ref>(boost::multiprecision::uint256_t<sp/>&amp;i)<sp/>{</highlight></codeline>
+<codeline lineno="256"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>TODO(akvinikym)<sp/>PRE-285:<sp/>maybe<sp/>move<sp/>to<sp/>another<sp/>file<sp/>and<sp/>implement<sp/>it</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="257"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="258"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="259"><highlight class="normal"></highlight></codeline>
+<codeline lineno="265"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream" kindref="compound">ScaleDecoderStream</ref><sp/>&amp;<ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a013ae42ddc8f7b20e6e45e0cd20e9735" kindref="member">operator&gt;&gt;</ref>(std::string<sp/>&amp;v);</highlight></codeline>
+<codeline lineno="266"><highlight class="normal"></highlight></codeline>
+<codeline lineno="272"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1ad1ca65c5464e444aa3cddfd7bc1385e2" kindref="member">hasMore</ref>(uint64_t<sp/>n)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="273"><highlight class="normal"></highlight></codeline>
+<codeline lineno="279"><highlight class="normal"><sp/><sp/><sp/><sp/>uint8_t<sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a6855dfa577f7689c03cfd29d14d6474a" kindref="member">nextByte</ref>();</highlight></codeline>
+<codeline lineno="280"><highlight class="normal"></highlight></codeline>
+<codeline lineno="281"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="282"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a89ff2fd2acea34ffdf23780972586299" kindref="member">decodeBool</ref>();</highlight></codeline>
+<codeline lineno="287"><highlight class="normal"><sp/><sp/><sp/><sp/>boost::optional&lt;bool&gt;<sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a0a883ac9f9709af2001de5f5c5cf0c9b" kindref="member">decodeOptionalBool</ref>();</highlight></codeline>
+<codeline lineno="288"><highlight class="normal"></highlight></codeline>
+<codeline lineno="289"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>I,<sp/></highlight><highlight class="keyword">class</highlight><highlight class="normal">...<sp/>Ts&gt;</highlight></codeline>
+<codeline lineno="290" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a02c6f9e4d03c3d2d24602bdb4ecef85c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a02c6f9e4d03c3d2d24602bdb4ecef85c" kindref="member">decodeElementOfTuple</ref>(std::tuple&lt;Ts...&gt;<sp/>&amp;v)<sp/>{</highlight></codeline>
+<codeline lineno="291"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">T<sp/>=<sp/>std::remove_const_t&lt;std::tuple_element_t&lt;I,<sp/>std::tuple&lt;Ts...&gt;&gt;&gt;;</highlight></codeline>
+<codeline lineno="292"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal"><sp/>&gt;&gt;<sp/></highlight><highlight class="keyword">const_cast&lt;</highlight><highlight class="normal">T<sp/>&amp;</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(std::get&lt;I&gt;(v));<sp/><sp/></highlight><highlight class="comment">//<sp/>NOLINT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="293"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">sizeof</highlight><highlight class="normal">...(Ts)<sp/>&gt;<sp/>I<sp/>+<sp/>1)<sp/>{</highlight></codeline>
+<codeline lineno="294"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a02c6f9e4d03c3d2d24602bdb4ecef85c" kindref="member">decodeElementOfTuple&lt;I + 1&gt;</ref>(v);</highlight></codeline>
+<codeline lineno="295"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="296"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="297"><highlight class="normal"></highlight></codeline>
+<codeline lineno="298"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>I,<sp/></highlight><highlight class="keyword">class</highlight><highlight class="normal">...<sp/>Ts&gt;</highlight></codeline>
+<codeline lineno="299" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1aadba68b37081c7d309a4dc499dc3ac30" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1aadba68b37081c7d309a4dc499dc3ac30" kindref="member">tryDecodeAsOneOfVariant</ref>(boost::variant&lt;Ts...&gt;<sp/>&amp;v,<sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>i)<sp/>{</highlight></codeline>
+<codeline lineno="300"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">T<sp/>=<sp/>std::remove_const_t&lt;std::tuple_element_t&lt;I,<sp/>std::tuple&lt;Ts...&gt;&gt;&gt;;</highlight></codeline>
+<codeline lineno="301"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static_assert</highlight><highlight class="normal">(std::is_default_constructible_v&lt;T&gt;);</highlight></codeline>
+<codeline lineno="302"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(I<sp/>==<sp/>i)<sp/>{</highlight></codeline>
+<codeline lineno="303"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>T<sp/>val;</highlight></codeline>
+<codeline lineno="304"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal"><sp/>&gt;&gt;<sp/>val;</highlight></codeline>
+<codeline lineno="305"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>v<sp/>=<sp/>std::forward&lt;T&gt;(val);</highlight></codeline>
+<codeline lineno="306"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="307"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="308"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">sizeof</highlight><highlight class="normal">...(Ts)<sp/>&gt;<sp/>I<sp/>+<sp/>1)<sp/>{</highlight></codeline>
+<codeline lineno="309"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1aadba68b37081c7d309a4dc499dc3ac30" kindref="member">tryDecodeAsOneOfVariant&lt;I + 1&gt;</ref>(v,<sp/>i);</highlight></codeline>
+<codeline lineno="310"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="311"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="312"><highlight class="normal"></highlight></codeline>
+<codeline lineno="313" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a3f04953dfeecb55a3fc013acc2f296c0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a3f04953dfeecb55a3fc013acc2f296c0" kindref="member">ByteSpan</ref><sp/>=<sp/>gsl::span&lt;const<sp/>uint8_t&gt;;</highlight></codeline>
+<codeline lineno="314" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1afaf2670c206d35064b5444ba7ac883a6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1afaf2670c206d35064b5444ba7ac883a6" kindref="member">SpanIterator</ref><sp/>=<sp/>ByteSpan::const_iterator;</highlight></codeline>
+<codeline lineno="315" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a1ee8cbf4ba09cac31ae220386500a31b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a1ee8cbf4ba09cac31ae220386500a31b" kindref="member">SizeType</ref><sp/>=<sp/>ByteSpan::size_type;</highlight></codeline>
+<codeline lineno="316"><highlight class="normal"></highlight></codeline>
+<codeline lineno="317" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a89aaab8667c2d050b308aeffb8ef9d72" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a3f04953dfeecb55a3fc013acc2f296c0" kindref="member">ByteSpan</ref><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a89aaab8667c2d050b308aeffb8ef9d72" kindref="member">span_</ref>;</highlight></codeline>
+<codeline lineno="318" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1ac6bfff793eb12f7d22a299dd208e52ae" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1afaf2670c206d35064b5444ba7ac883a6" kindref="member">SpanIterator</ref><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1ac6bfff793eb12f7d22a299dd208e52ae" kindref="member">current_iterator_</ref>;</highlight></codeline>
+<codeline lineno="319" refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1af9cf04cd7f058bcdcf1d50e1f376bf7e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a1ee8cbf4ba09cac31ae220386500a31b" kindref="member">SizeType</ref><sp/><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1af9cf04cd7f058bcdcf1d50e1f376bf7e" kindref="member">current_index_</ref>;</highlight></codeline>
+<codeline lineno="320"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="321"><highlight class="normal"></highlight></codeline>
+<codeline lineno="322"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::scale</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="323"><highlight class="normal"></highlight></codeline>
+<codeline lineno="324"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_SRC_SCALE_SCALE_DECODER_STREAM_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/scale/scale_decoder_stream.hpp"/>
+  </compounddef>
+</doxygen>

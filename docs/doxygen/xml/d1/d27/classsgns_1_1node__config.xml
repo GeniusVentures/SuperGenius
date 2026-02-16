@@ -1,0 +1,1063 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/d27/classsgns_1_1node__config" kind="class" language="C++" prot="public">
+    <compoundname>sgns::node_config</compoundname>
+    <includes refid="d5/d60/node__config_8hpp" local="no">node_config.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a311347ba8effd41b48fb10d3b130ca62" prot="public" static="no" mutable="no">
+        <type>sgns::network_params</type>
+        <definition>sgns::network_params sgns::node_config::network_params</definition>
+        <argsstring></argsstring>
+        <name>network_params</name>
+        <qualifiedname>sgns::node_config::network_params</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="26" column="22" bodyfile="node/node_config.hpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1abd36e2280898c5433ee0bb52b12e6002" prot="public" static="no" mutable="no">
+        <type>uint16_t</type>
+        <definition>uint16_t sgns::node_config::peering_port</definition>
+        <argsstring></argsstring>
+        <name>peering_port</name>
+        <qualifiedname>sgns::node_config::peering_port</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="27" column="10" bodyfile="node/node_config.hpp" bodystart="27" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a0bcb36c9ece3278fb063195fddab9bc2" prot="public" static="no" mutable="no">
+        <type><ref refid="dd/d29/classsgns_1_1logging" kindref="compound">sgns::logging</ref></type>
+        <definition>sgns::logging sgns::node_config::logging</definition>
+        <argsstring></argsstring>
+        <name>logging</name>
+        <qualifiedname>sgns::node_config::logging</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="28" column="15" bodyfile="node/node_config.hpp" bodystart="28" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a6cac99230b691d67c7bc6555f6a66cb7" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; std::pair&lt; std::string, uint16_t &gt; &gt;</type>
+        <definition>std::vector&lt;std::pair&lt;std::string, uint16_t&gt; &gt; sgns::node_config::work_peers</definition>
+        <argsstring></argsstring>
+        <name>work_peers</name>
+        <qualifiedname>sgns::node_config::work_peers</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="29" column="13" bodyfile="node/node_config.hpp" bodystart="29" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a3a1d518c4246643f5674b794e3fc16d8" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; std::pair&lt; std::string, uint16_t &gt; &gt;</type>
+        <definition>std::vector&lt;std::pair&lt;std::string, uint16_t&gt; &gt; sgns::node_config::secondary_work_peers</definition>
+        <argsstring></argsstring>
+        <name>secondary_work_peers</name>
+        <qualifiedname>sgns::node_config::secondary_work_peers</qualifiedname>
+        <initializer>{ { &quot;127.0.0.1&quot;, 8076 } }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="30" column="13" bodyfile="node/node_config.hpp" bodystart="30" bodyend="30"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1ada395edf8cb764c6cedb32cd2a1a7438" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; std::string &gt;</type>
+        <definition>std::vector&lt;std::string&gt; sgns::node_config::preconfigured_peers</definition>
+        <argsstring></argsstring>
+        <name>preconfigured_peers</name>
+        <qualifiedname>sgns::node_config::preconfigured_peers</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="31" column="13" bodyfile="node/node_config.hpp" bodystart="31" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a6835d1193d3be8d0a766546920743632" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; sgns::account &gt;</type>
+        <definition>std::vector&lt;sgns::account&gt; sgns::node_config::preconfigured_representatives</definition>
+        <argsstring></argsstring>
+        <name>preconfigured_representatives</name>
+        <qualifiedname>sgns::node_config::preconfigured_representatives</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="32" column="13" bodyfile="node/node_config.hpp" bodystart="32" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a6e9bf4315e101044b99cd6ad1a7868f2" prot="public" static="no" mutable="no">
+        <type>unsigned</type>
+        <definition>unsigned sgns::node_config::bootstrap_fraction_numerator</definition>
+        <argsstring></argsstring>
+        <name>bootstrap_fraction_numerator</name>
+        <qualifiedname>sgns::node_config::bootstrap_fraction_numerator</qualifiedname>
+        <initializer>{ 1 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="33" column="10" bodyfile="node/node_config.hpp" bodystart="33" bodyend="33"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a3545beadae567b22c20121b1aaeff1d2" prot="public" static="no" mutable="no">
+        <type>sgns::amount</type>
+        <definition>sgns::amount sgns::node_config::receive_minimum</definition>
+        <argsstring></argsstring>
+        <name>receive_minimum</name>
+        <qualifiedname>sgns::node_config::receive_minimum</qualifiedname>
+        <initializer>{ sgns::xrb_ratio }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="34" column="14" bodyfile="node/node_config.hpp" bodystart="34" bodyend="34"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1ac7e90191f46003feb2afd611511ec183" prot="public" static="no" mutable="no">
+        <type>sgns::amount</type>
+        <definition>sgns::amount sgns::node_config::vote_minimum</definition>
+        <argsstring></argsstring>
+        <name>vote_minimum</name>
+        <qualifiedname>sgns::node_config::vote_minimum</qualifiedname>
+        <initializer>{ sgns::Gxrb_ratio }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="35" column="14" bodyfile="node/node_config.hpp" bodystart="35" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1aadad636057b05a2c2a7c5cdb1fea3aca" prot="public" static="no" mutable="no">
+        <type>std::chrono::milliseconds</type>
+        <definition>std::chrono::milliseconds sgns::node_config::vote_generator_delay</definition>
+        <argsstring></argsstring>
+        <name>vote_generator_delay</name>
+        <qualifiedname>sgns::node_config::vote_generator_delay</qualifiedname>
+        <initializer>{ std::chrono::milliseconds (100) }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="36" column="27" bodyfile="node/node_config.hpp" bodystart="36" bodyend="36"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a1ad7d50aed58ae6018520bfd709397cc" prot="public" static="no" mutable="no">
+        <type>unsigned</type>
+        <definition>unsigned sgns::node_config::vote_generator_threshold</definition>
+        <argsstring></argsstring>
+        <name>vote_generator_threshold</name>
+        <qualifiedname>sgns::node_config::vote_generator_threshold</qualifiedname>
+        <initializer>{ 3 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="37" column="10" bodyfile="node/node_config.hpp" bodystart="37" bodyend="37"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a96f45a44c5e2825f1fdcc55c7121b123" prot="public" static="no" mutable="no">
+        <type>sgns::amount</type>
+        <definition>sgns::amount sgns::node_config::online_weight_minimum</definition>
+        <argsstring></argsstring>
+        <name>online_weight_minimum</name>
+        <qualifiedname>sgns::node_config::online_weight_minimum</qualifiedname>
+        <initializer>{ 60000 * sgns::Gxrb_ratio }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="38" column="14" bodyfile="node/node_config.hpp" bodystart="38" bodyend="38"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1ac15463dcd325f16e29696475c57c66c4" prot="public" static="no" mutable="no">
+        <type>unsigned</type>
+        <definition>unsigned sgns::node_config::online_weight_quorum</definition>
+        <argsstring></argsstring>
+        <name>online_weight_quorum</name>
+        <qualifiedname>sgns::node_config::online_weight_quorum</qualifiedname>
+        <initializer>{ 50 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="39" column="10" bodyfile="node/node_config.hpp" bodystart="39" bodyend="39"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1abf235f5afdc27f638f4a04c88b460411" prot="public" static="no" mutable="no">
+        <type>unsigned</type>
+        <definition>unsigned sgns::node_config::password_fanout</definition>
+        <argsstring></argsstring>
+        <name>password_fanout</name>
+        <qualifiedname>sgns::node_config::password_fanout</qualifiedname>
+        <initializer>{ 1024 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="40" column="10" bodyfile="node/node_config.hpp" bodystart="40" bodyend="40"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a068866687690a3e6efc254aef91e7f5e" prot="public" static="no" mutable="no">
+        <type>unsigned</type>
+        <definition>unsigned sgns::node_config::io_threads</definition>
+        <argsstring></argsstring>
+        <name>io_threads</name>
+        <qualifiedname>sgns::node_config::io_threads</qualifiedname>
+        <initializer>{ std::max&lt;unsigned&gt; (4, std::thread::hardware_concurrency ()) }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="41" column="10" bodyfile="node/node_config.hpp" bodystart="41" bodyend="41"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a99e31a8a272bdda4653f916915622b7d" prot="public" static="no" mutable="no">
+        <type>unsigned</type>
+        <definition>unsigned sgns::node_config::network_threads</definition>
+        <argsstring></argsstring>
+        <name>network_threads</name>
+        <qualifiedname>sgns::node_config::network_threads</qualifiedname>
+        <initializer>{ std::max&lt;unsigned&gt; (4, std::thread::hardware_concurrency ()) }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="42" column="10" bodyfile="node/node_config.hpp" bodystart="42" bodyend="42"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a895602e572d2756f689a919c60377b0d" prot="public" static="no" mutable="no">
+        <type>unsigned</type>
+        <definition>unsigned sgns::node_config::work_threads</definition>
+        <argsstring></argsstring>
+        <name>work_threads</name>
+        <qualifiedname>sgns::node_config::work_threads</qualifiedname>
+        <initializer>{ std::max&lt;unsigned&gt; (4, std::thread::hardware_concurrency ()) }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="43" column="10" bodyfile="node/node_config.hpp" bodystart="43" bodyend="43"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a74a14a05478fa9d88c4da5899ff22dc8" prot="public" static="no" mutable="no">
+        <type>unsigned</type>
+        <definition>unsigned sgns::node_config::signature_checker_threads</definition>
+        <argsstring></argsstring>
+        <name>signature_checker_threads</name>
+        <qualifiedname>sgns::node_config::signature_checker_threads</qualifiedname>
+        <initializer>{ std::thread::hardware_concurrency () / 2 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="45" column="10" bodyfile="node/node_config.hpp" bodystart="45" bodyend="45"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a0f74924f47a34a4b7b810405fb5dd597" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_config::enable_voting</definition>
+        <argsstring></argsstring>
+        <name>enable_voting</name>
+        <qualifiedname>sgns::node_config::enable_voting</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="46" column="6" bodyfile="node/node_config.hpp" bodystart="46" bodyend="46"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a99dbb4da909d8fd449eb10c78302e647" prot="public" static="no" mutable="no">
+        <type>unsigned</type>
+        <definition>unsigned sgns::node_config::bootstrap_connections</definition>
+        <argsstring></argsstring>
+        <name>bootstrap_connections</name>
+        <qualifiedname>sgns::node_config::bootstrap_connections</qualifiedname>
+        <initializer>{ 4 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="47" column="10" bodyfile="node/node_config.hpp" bodystart="47" bodyend="47"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a1a291228ecd4685e208e165f669898d4" prot="public" static="no" mutable="no">
+        <type>unsigned</type>
+        <definition>unsigned sgns::node_config::bootstrap_connections_max</definition>
+        <argsstring></argsstring>
+        <name>bootstrap_connections_max</name>
+        <qualifiedname>sgns::node_config::bootstrap_connections_max</qualifiedname>
+        <initializer>{ 64 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="48" column="10" bodyfile="node/node_config.hpp" bodystart="48" bodyend="48"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a2bb8dd4072c23c8ebd24b75c8270c7e5" prot="public" static="no" mutable="no">
+        <type>unsigned</type>
+        <definition>unsigned sgns::node_config::bootstrap_initiator_threads</definition>
+        <argsstring></argsstring>
+        <name>bootstrap_initiator_threads</name>
+        <qualifiedname>sgns::node_config::bootstrap_initiator_threads</qualifiedname>
+        <initializer>{ network_params.network.is_test_network () ? 1u : std::min&lt;unsigned&gt; (2, std::max&lt;unsigned&gt; (1, std::thread::hardware_concurrency ())) }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="49" column="10" bodyfile="node/node_config.hpp" bodystart="49" bodyend="49"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a57e96fbb0ba1696bd7e7aaf38b2c2cf5" prot="public" static="no" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::node_config::confirmation_history_size</definition>
+        <argsstring></argsstring>
+        <name>confirmation_history_size</name>
+        <qualifiedname>sgns::node_config::confirmation_history_size</qualifiedname>
+        <initializer>{ 2048 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="52" column="8" bodyfile="node/node_config.hpp" bodystart="52" bodyend="52"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1ac42d5ffc40ebd668bff94cc22be19fd0" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::node_config::callback_address</definition>
+        <argsstring></argsstring>
+        <name>callback_address</name>
+        <qualifiedname>sgns::node_config::callback_address</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="53" column="13" bodyfile="node/node_config.hpp" bodystart="53" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a2a5c36e5661d748595a94191eb6e825c" prot="public" static="no" mutable="no">
+        <type>uint16_t</type>
+        <definition>uint16_t sgns::node_config::callback_port</definition>
+        <argsstring></argsstring>
+        <name>callback_port</name>
+        <qualifiedname>sgns::node_config::callback_port</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="54" column="10" bodyfile="node/node_config.hpp" bodystart="54" bodyend="54"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a34fcaade3fb2ed512098fb8b21657aa9" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::node_config::callback_target</definition>
+        <argsstring></argsstring>
+        <name>callback_target</name>
+        <qualifiedname>sgns::node_config::callback_target</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="55" column="13" bodyfile="node/node_config.hpp" bodystart="55" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a095054a3ecf985cfb8b38a939dfa9669" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int sgns::node_config::deprecated_lmdb_max_dbs</definition>
+        <argsstring></argsstring>
+        <name>deprecated_lmdb_max_dbs</name>
+        <qualifiedname>sgns::node_config::deprecated_lmdb_max_dbs</qualifiedname>
+        <initializer>{ 128 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="56" column="5" bodyfile="node/node_config.hpp" bodystart="56" bodyend="56"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1ac9a7a142c1fc1e5f3ebe3050d0493576" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_config::allow_local_peers</definition>
+        <argsstring></argsstring>
+        <name>allow_local_peers</name>
+        <qualifiedname>sgns::node_config::allow_local_peers</qualifiedname>
+        <initializer>{ !network_params.network.is_live_network () }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="57" column="6" bodyfile="node/node_config.hpp" bodystart="57" bodyend="57"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a23dc3f9429e0162c5447b1869d1e8171" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::node_config::external_address</definition>
+        <argsstring></argsstring>
+        <name>external_address</name>
+        <qualifiedname>sgns::node_config::external_address</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="60" column="13" bodyfile="node/node_config.hpp" bodystart="60" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1ac7e8103fdebd0d762dd1697dff606137" prot="public" static="no" mutable="no">
+        <type>uint16_t</type>
+        <definition>uint16_t sgns::node_config::external_port</definition>
+        <argsstring></argsstring>
+        <name>external_port</name>
+        <qualifiedname>sgns::node_config::external_port</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="61" column="10" bodyfile="node/node_config.hpp" bodystart="61" bodyend="61"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1ae232b0e997b2df4aedaf4814b689164d" prot="public" static="no" mutable="no">
+        <type>std::chrono::milliseconds</type>
+        <definition>std::chrono::milliseconds sgns::node_config::block_processor_batch_max_time</definition>
+        <argsstring></argsstring>
+        <name>block_processor_batch_max_time</name>
+        <qualifiedname>sgns::node_config::block_processor_batch_max_time</qualifiedname>
+        <initializer>{ std::chrono::milliseconds (5000) }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="62" column="27" bodyfile="node/node_config.hpp" bodystart="62" bodyend="62"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1aff397120c1a9349f518734ed895cd780" prot="public" static="no" mutable="no">
+        <type>std::chrono::seconds</type>
+        <definition>std::chrono::seconds sgns::node_config::unchecked_cutoff_time</definition>
+        <argsstring></argsstring>
+        <name>unchecked_cutoff_time</name>
+        <qualifiedname>sgns::node_config::unchecked_cutoff_time</qualifiedname>
+        <initializer>{ std::chrono::seconds (4 * 60 * 60) }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="63" column="22" bodyfile="node/node_config.hpp" bodystart="63" bodyend="63"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a0993aae89f486ee75249bf87b1dee58d" prot="public" static="no" mutable="no">
+        <type>std::chrono::seconds</type>
+        <definition>std::chrono::seconds sgns::node_config::tcp_io_timeout</definition>
+        <argsstring></argsstring>
+        <name>tcp_io_timeout</name>
+        <qualifiedname>sgns::node_config::tcp_io_timeout</qualifiedname>
+        <initializer>{ (network_params.network.is_test_network () &amp;&amp; !is_sanitizer_build) ? std::chrono::seconds (5) : std::chrono::seconds (15) }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Timeout for initiated async operations </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="65" column="22" bodyfile="node/node_config.hpp" bodystart="65" bodyend="65"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a65a468a3003d4671bdcdaf792eaa7f52" prot="public" static="no" mutable="no">
+        <type>std::chrono::nanoseconds</type>
+        <definition>std::chrono::nanoseconds sgns::node_config::pow_sleep_interval</definition>
+        <argsstring></argsstring>
+        <name>pow_sleep_interval</name>
+        <qualifiedname>sgns::node_config::pow_sleep_interval</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="66" column="26" bodyfile="node/node_config.hpp" bodystart="66" bodyend="66"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a22e260ae92f7b0d892faffcc909f1368" prot="public" static="no" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::node_config::active_elections_size</definition>
+        <argsstring></argsstring>
+        <name>active_elections_size</name>
+        <qualifiedname>sgns::node_config::active_elections_size</qualifiedname>
+        <initializer>{ 50000 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="67" column="8" bodyfile="node/node_config.hpp" bodystart="67" bodyend="67"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a93f395ba9a0abbc89d82cee950240da7" prot="public" static="no" mutable="no">
+        <type>unsigned</type>
+        <definition>unsigned sgns::node_config::tcp_incoming_connections_max</definition>
+        <argsstring></argsstring>
+        <name>tcp_incoming_connections_max</name>
+        <qualifiedname>sgns::node_config::tcp_incoming_connections_max</qualifiedname>
+        <initializer>{ 1024 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Default maximum incoming TCP connections, including realtime network &amp; bootstrap </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="69" column="10" bodyfile="node/node_config.hpp" bodystart="69" bodyend="69"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1ae1200544468a5acec02ad17704ce76a6" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_config::use_memory_pools</definition>
+        <argsstring></argsstring>
+        <name>use_memory_pools</name>
+        <qualifiedname>sgns::node_config::use_memory_pools</qualifiedname>
+        <initializer>{ true }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="70" column="6" bodyfile="node/node_config.hpp" bodystart="70" bodyend="70"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a04c41bae4aeca7a14ba5322ae60c4d25" prot="public" static="no" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::node_config::bandwidth_limit</definition>
+        <argsstring></argsstring>
+        <name>bandwidth_limit</name>
+        <qualifiedname>sgns::node_config::bandwidth_limit</qualifiedname>
+        <initializer>{ 5 * 1024 * 1024 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Default outbound traffic shaping is 5MB/s </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="75" column="8" bodyfile="node/node_config.hpp" bodystart="75" bodyend="75"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a4bccd9c9319f22f699a68b93975b8817" prot="public" static="no" mutable="no">
+        <type>double</type>
+        <definition>double sgns::node_config::bandwidth_limit_burst_ratio</definition>
+        <argsstring></argsstring>
+        <name>bandwidth_limit_burst_ratio</name>
+        <qualifiedname>sgns::node_config::bandwidth_limit_burst_ratio</qualifiedname>
+        <initializer>{ 3. }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>By default, allow bursts of 15MB/s (not sustainable) </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="77" column="8" bodyfile="node/node_config.hpp" bodystart="77" bodyend="77"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a569b916a0072e0da20bdc146d45b049c" prot="public" static="no" mutable="no">
+        <type>std::chrono::milliseconds</type>
+        <definition>std::chrono::milliseconds sgns::node_config::conf_height_processor_batch_min_time</definition>
+        <argsstring></argsstring>
+        <name>conf_height_processor_batch_min_time</name>
+        <qualifiedname>sgns::node_config::conf_height_processor_batch_min_time</qualifiedname>
+        <initializer>{ 50 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="78" column="27" bodyfile="node/node_config.hpp" bodystart="78" bodyend="78"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a2b1cb19369010375145549d0956c2923" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::node_config::backup_before_upgrade</definition>
+        <argsstring></argsstring>
+        <name>backup_before_upgrade</name>
+        <qualifiedname>sgns::node_config::backup_before_upgrade</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="79" column="6" bodyfile="node/node_config.hpp" bodystart="79" bodyend="79"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a6ad66a50a3ac39d6f0cf74d2069dfebc" prot="public" static="no" mutable="no">
+        <type>std::chrono::seconds</type>
+        <definition>std::chrono::seconds sgns::node_config::work_watcher_period</definition>
+        <argsstring></argsstring>
+        <name>work_watcher_period</name>
+        <qualifiedname>sgns::node_config::work_watcher_period</qualifiedname>
+        <initializer>{ std::chrono::seconds (5) }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="80" column="22" bodyfile="node/node_config.hpp" bodystart="80" bodyend="80"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1ae20b7083e8d8b6a90d2a9df786bc37f3" prot="public" static="no" mutable="no">
+        <type>double</type>
+        <definition>double sgns::node_config::max_work_generate_multiplier</definition>
+        <argsstring></argsstring>
+        <name>max_work_generate_multiplier</name>
+        <qualifiedname>sgns::node_config::max_work_generate_multiplier</qualifiedname>
+        <initializer>{ 64. }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="81" column="8" bodyfile="node/node_config.hpp" bodystart="81" bodyend="81"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a90c74fd0465fa13beaac2f629b129fe9" prot="public" static="no" mutable="no">
+        <type>uint32_t</type>
+        <definition>uint32_t sgns::node_config::max_queued_requests</definition>
+        <argsstring></argsstring>
+        <name>max_queued_requests</name>
+        <qualifiedname>sgns::node_config::max_queued_requests</qualifiedname>
+        <initializer>{ 512 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="82" column="10" bodyfile="node/node_config.hpp" bodystart="82" bodyend="82"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1a3754296bd0279ac355f430bd30fbb6ac" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>std::chrono::seconds constexpr</type>
+        <definition>std::chrono::seconds constexpr sgns::node_config::keepalive_period</definition>
+        <argsstring></argsstring>
+        <name>keepalive_period</name>
+        <qualifiedname>sgns::node_config::keepalive_period</qualifiedname>
+        <initializer>= std::chrono::seconds (60)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="71" column="39" bodyfile="node/node_config.hpp" bodystart="71" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1ad7fb72d810842fb9d7cfcf89b949fdbe" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>std::chrono::seconds constexpr</type>
+        <definition>std::chrono::seconds constexpr sgns::node_config::keepalive_cutoff</definition>
+        <argsstring></argsstring>
+        <name>keepalive_cutoff</name>
+        <qualifiedname>sgns::node_config::keepalive_cutoff</qualifiedname>
+        <initializer>= <ref refid="d1/d27/classsgns_1_1node__config_1a3754296bd0279ac355f430bd30fbb6ac" kindref="member">keepalive_period</ref> * 5</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="72" column="39" bodyfile="node/node_config.hpp" bodystart="72" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d27/classsgns_1_1node__config_1abfa9c6282cde64c62e3f4cbf8aef0750" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>std::chrono::minutes constexpr</type>
+        <definition>std::chrono::minutes constexpr sgns::node_config::wallet_backup_interval</definition>
+        <argsstring></argsstring>
+        <name>wallet_backup_interval</name>
+        <qualifiedname>sgns::node_config::wallet_backup_interval</qualifiedname>
+        <initializer>= std::chrono::minutes (5)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="73" column="39" bodyfile="node/node_config.hpp" bodystart="73" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d1/d27/classsgns_1_1node__config_1aaa2fbe41a5f0c93bb4f6eada07f95423" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::node_config::node_config</definition>
+        <argsstring>()</argsstring>
+        <name>node_config</name>
+        <qualifiedname>sgns::node_config::node_config</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="18" column="1" bodyfile="node/node_config.cpp" bodystart="2" bodyend="4"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d27/classsgns_1_1node__config_1a5215cfa406e25802da8f4388c04f8f4e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::node_config::node_config</definition>
+        <argsstring>(uint16_t, sgns::logging const &amp;)</argsstring>
+        <name>node_config</name>
+        <qualifiedname>sgns::node_config::node_config</qualifiedname>
+        <param>
+          <type>uint16_t</type>
+        </param>
+        <param>
+          <type><ref refid="dd/d29/classsgns_1_1logging" kindref="compound">sgns::logging</ref> const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="19" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d27/classsgns_1_1node__config_1a5796df3ab8d80d27f22b1db8302b9e28" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::error_</type>
+        <definition>sgns::error_ sgns::node_config::serialize_json</definition>
+        <argsstring>(sgns::jsonconfig &amp;) const</argsstring>
+        <name>serialize_json</name>
+        <qualifiedname>sgns::node_config::serialize_json</qualifiedname>
+        <param>
+          <type>sgns::jsonconfig &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="20" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d27/classsgns_1_1node__config_1a60848261161d03c07ffe8cd687c376bf" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::error_</type>
+        <definition>sgns::error_ sgns::node_config::deserialize_json</definition>
+        <argsstring>(bool &amp;, sgns::jsonconfig &amp;)</argsstring>
+        <name>deserialize_json</name>
+        <qualifiedname>sgns::node_config::deserialize_json</qualifiedname>
+        <param>
+          <type>bool &amp;</type>
+        </param>
+        <param>
+          <type>sgns::jsonconfig &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="21" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d27/classsgns_1_1node__config_1ab9ed534e12956996298759d1ee04f5f8" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::error_</type>
+        <definition>sgns::error_ sgns::node_config::serialize_toml</definition>
+        <argsstring>(sgns::tomlconfig &amp;) const</argsstring>
+        <name>serialize_toml</name>
+        <qualifiedname>sgns::node_config::serialize_toml</qualifiedname>
+        <param>
+          <type>sgns::tomlconfig &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="22" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d27/classsgns_1_1node__config_1a94b1766ac52b7fb7e36c529a394c10ba" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::error_</type>
+        <definition>sgns::error_ sgns::node_config::deserialize_toml</definition>
+        <argsstring>(sgns::tomlconfig &amp;)</argsstring>
+        <name>deserialize_toml</name>
+        <qualifiedname>sgns::node_config::deserialize_toml</qualifiedname>
+        <param>
+          <type>sgns::tomlconfig &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="23" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d27/classsgns_1_1node__config_1a73f295fab515850a43a01d00a919eefc" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::node_config::upgrade_json</definition>
+        <argsstring>(unsigned, sgns::jsonconfig &amp;)</argsstring>
+        <name>upgrade_json</name>
+        <qualifiedname>sgns::node_config::upgrade_json</qualifiedname>
+        <param>
+          <type>unsigned</type>
+        </param>
+        <param>
+          <type>sgns::jsonconfig &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="24" column="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d27/classsgns_1_1node__config_1ac05bde01132bfac488ea6bb1fe7c2a32" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::account</type>
+        <definition>sgns::account sgns::node_config::random_representative</definition>
+        <argsstring>() const</argsstring>
+        <name>random_representative</name>
+        <qualifiedname>sgns::node_config::random_representative</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="25" column="15"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d27/classsgns_1_1node__config_1ac880a0b28380573ea66dccd51c4229e4" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::node_config::deserialize_address</definition>
+        <argsstring>(std::string const &amp;, std::vector&lt; std::pair&lt; std::string, uint16_t &gt; &gt; &amp;) const</argsstring>
+        <name>deserialize_address</name>
+        <qualifiedname>sgns::node_config::deserialize_address</qualifiedname>
+        <param>
+          <type>std::string const &amp;</type>
+        </param>
+        <param>
+          <type>std::vector&lt; std::pair&lt; std::string, uint16_t &gt; &gt; &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Entry is ignored if it cannot be parsed as a valid address:port </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="89" column="6"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d1/d27/classsgns_1_1node__config_1acd702e28ad02d07d0cead88e2557f4d0" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>unsigned</type>
+        <definition>static unsigned sgns::node_config::json_version</definition>
+        <argsstring>()</argsstring>
+        <name>json_version</name>
+        <qualifiedname>sgns::node_config::json_version</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node_config.hpp" line="91" column="17" bodyfile="node/node_config.hpp" bodystart="91" bodyend="94"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="11">
+        <label>T</label>
+      </node>
+      <node id="8">
+        <label>T1</label>
+      </node>
+      <node id="9">
+        <label>T2</label>
+      </node>
+      <node id="2">
+        <label>sgns::logging</label>
+        <link refid="dd/d29/classsgns_1_1logging"/>
+      </node>
+      <node id="1">
+        <label>sgns::node_config</label>
+        <link refid="d1/d27/classsgns_1_1node__config"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+logging</edgelabel>
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+secondary_work_peers</edgelabel>
+          <edgelabel>+work_peers</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+preconfigured_peers</edgelabel>
+        </childnode>
+        <childnode refid="13" relation="usage">
+          <edgelabel>+preconfigured_representatives</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+callback_address</edgelabel>
+          <edgelabel>+callback_target</edgelabel>
+          <edgelabel>+external_address</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="7">
+        <label>std::pair&lt; T1, T2 &gt;</label>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+second_type</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::pair&lt; std::string, uint16_t &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; std::string, uint16_t &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::string</label>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="13">
+        <label>std::vector&lt; sgns::account &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; sgns::account &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::vector&lt; std::pair&lt; std::string, uint16_t &gt; &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; std::pair&lt; std::string, uint16_t &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::vector&lt; std::string &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="node/node_config.hpp" line="15" column="1" bodyfile="node/node_config.hpp" bodystart="16" bodyend="96"/>
+    <listofallmembers>
+      <member refid="d1/d27/classsgns_1_1node__config_1a22e260ae92f7b0d892faffcc909f1368" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>active_elections_size</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1ac9a7a142c1fc1e5f3ebe3050d0493576" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>allow_local_peers</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a2b1cb19369010375145549d0956c2923" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>backup_before_upgrade</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a04c41bae4aeca7a14ba5322ae60c4d25" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>bandwidth_limit</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a4bccd9c9319f22f699a68b93975b8817" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>bandwidth_limit_burst_ratio</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1ae232b0e997b2df4aedaf4814b689164d" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>block_processor_batch_max_time</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a99dbb4da909d8fd449eb10c78302e647" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>bootstrap_connections</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a1a291228ecd4685e208e165f669898d4" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>bootstrap_connections_max</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a6e9bf4315e101044b99cd6ad1a7868f2" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>bootstrap_fraction_numerator</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a2bb8dd4072c23c8ebd24b75c8270c7e5" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>bootstrap_initiator_threads</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1ac42d5ffc40ebd668bff94cc22be19fd0" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>callback_address</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a2a5c36e5661d748595a94191eb6e825c" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>callback_port</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a34fcaade3fb2ed512098fb8b21657aa9" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>callback_target</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a569b916a0072e0da20bdc146d45b049c" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>conf_height_processor_batch_min_time</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a57e96fbb0ba1696bd7e7aaf38b2c2cf5" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>confirmation_history_size</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a095054a3ecf985cfb8b38a939dfa9669" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>deprecated_lmdb_max_dbs</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1ac880a0b28380573ea66dccd51c4229e4" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>deserialize_address</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a60848261161d03c07ffe8cd687c376bf" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>deserialize_json</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a94b1766ac52b7fb7e36c529a394c10ba" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>deserialize_toml</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a0f74924f47a34a4b7b810405fb5dd597" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>enable_voting</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a23dc3f9429e0162c5447b1869d1e8171" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>external_address</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1ac7e8103fdebd0d762dd1697dff606137" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>external_port</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a068866687690a3e6efc254aef91e7f5e" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>io_threads</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1acd702e28ad02d07d0cead88e2557f4d0" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>json_version</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1ad7fb72d810842fb9d7cfcf89b949fdbe" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>keepalive_cutoff</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a3754296bd0279ac355f430bd30fbb6ac" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>keepalive_period</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a0bcb36c9ece3278fb063195fddab9bc2" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>logging</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a90c74fd0465fa13beaac2f629b129fe9" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>max_queued_requests</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1ae20b7083e8d8b6a90d2a9df786bc37f3" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>max_work_generate_multiplier</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a311347ba8effd41b48fb10d3b130ca62" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>network_params</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a99e31a8a272bdda4653f916915622b7d" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>network_threads</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1aaa2fbe41a5f0c93bb4f6eada07f95423" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>node_config</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a5215cfa406e25802da8f4388c04f8f4e" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>node_config</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a96f45a44c5e2825f1fdcc55c7121b123" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>online_weight_minimum</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1ac15463dcd325f16e29696475c57c66c4" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>online_weight_quorum</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1abf235f5afdc27f638f4a04c88b460411" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>password_fanout</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1abd36e2280898c5433ee0bb52b12e6002" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>peering_port</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a65a468a3003d4671bdcdaf792eaa7f52" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>pow_sleep_interval</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1ada395edf8cb764c6cedb32cd2a1a7438" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>preconfigured_peers</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a6835d1193d3be8d0a766546920743632" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>preconfigured_representatives</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1ac05bde01132bfac488ea6bb1fe7c2a32" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>random_representative</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a3545beadae567b22c20121b1aaeff1d2" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>receive_minimum</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a3a1d518c4246643f5674b794e3fc16d8" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>secondary_work_peers</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a5796df3ab8d80d27f22b1db8302b9e28" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>serialize_json</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1ab9ed534e12956996298759d1ee04f5f8" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>serialize_toml</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a74a14a05478fa9d88c4da5899ff22dc8" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>signature_checker_threads</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a93f395ba9a0abbc89d82cee950240da7" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>tcp_incoming_connections_max</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a0993aae89f486ee75249bf87b1dee58d" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>tcp_io_timeout</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1aff397120c1a9349f518734ed895cd780" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>unchecked_cutoff_time</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a73f295fab515850a43a01d00a919eefc" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>upgrade_json</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1ae1200544468a5acec02ad17704ce76a6" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>use_memory_pools</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1aadad636057b05a2c2a7c5cdb1fea3aca" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>vote_generator_delay</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a1ad7d50aed58ae6018520bfd709397cc" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>vote_generator_threshold</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1ac7e90191f46003feb2afd611511ec183" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>vote_minimum</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1abfa9c6282cde64c62e3f4cbf8aef0750" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>wallet_backup_interval</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a6cac99230b691d67c7bc6555f6a66cb7" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>work_peers</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a895602e572d2756f689a919c60377b0d" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>work_threads</name></member>
+      <member refid="d1/d27/classsgns_1_1node__config_1a6ad66a50a3ac39d6f0cf74d2069dfebc" prot="public" virt="non-virtual"><scope>sgns::node_config</scope><name>work_watcher_period</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_25eec3bec74cab00f86ed4b5e2c8f7c8" kind="dir">
+    <compoundname>src/crypto/random_generator</compoundname>
+    <innerfile refid="d5/dca/boost__generator_8hpp">boost_generator.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/random_generator/"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,434 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/d6b/hasher_8hpp" kind="file" language="C++">
+    <compoundname>hasher.hpp</compoundname>
+    <includes refid="d4/d16/blob_8hpp" local="yes">base/blob.hpp</includes>
+    <includes refid="df/dec/_i_component_8hpp" local="yes">singleton/IComponent.hpp</includes>
+    <includedby refid="de/d54/_transaction_manager_8hpp" local="yes">src/account/TransactionManager.hpp</includedby>
+    <includedby refid="d7/d87/block__tree__impl_8hpp" local="yes">src/blockchain/impl/block_tree_impl.hpp</includedby>
+    <includedby refid="dd/dc6/key__value__block__header__repository_8hpp" local="yes">src/blockchain/impl/key_value_block_header_repository.hpp</includedby>
+    <includedby refid="d4/d6b/key__value__block__storage_8hpp" local="yes">src/blockchain/impl/key_value_block_storage.hpp</includedby>
+    <includedby refid="d0/d62/hasher__impl_8hpp" local="yes">src/crypto/hasher/hasher_impl.hpp</includedby>
+    <includedby refid="d1/d6f/runtime__environment_8cpp" local="yes">src/runtime/binaryen/runtime_environment.cpp</includedby>
+    <includedby refid="d3/d10/runtime__manager_8hpp" local="yes">src/runtime/binaryen/runtime_manager.hpp</includedby>
+    <incdepgraph>
+      <node id="2">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crypto/hasher.hpp</label>
+        <link refid="da/d6b/hasher_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>array</label>
+      </node>
+      <node id="5">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="3">
+        <label>cstddef</label>
+      </node>
+      <node id="9">
+        <label>gsl/span</label>
+      </node>
+      <node id="12">
+        <label>iostream</label>
+      </node>
+      <node id="11">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="14">
+        <label>string</label>
+      </node>
+      <node id="7">
+        <label>string_view</label>
+      </node>
+      <node id="8">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="17">
+        <label>src/account/AccountMessenger.cpp</label>
+        <link refid="d0/d58/_account_messenger_8cpp"/>
+      </node>
+      <node id="18">
+        <label>src/account/EscrowReleaseTransaction.cpp</label>
+        <link refid="d5/dab/_escrow_release_transaction_8cpp"/>
+      </node>
+      <node id="19">
+        <label>src/account/EscrowTransaction.cpp</label>
+        <link refid="d7/d12/_escrow_transaction_8cpp"/>
+      </node>
+      <node id="20">
+        <label>src/account/GeniusAccount.cpp</label>
+        <link refid="dd/dd9/_genius_account_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/account/GeniusNode.cpp</label>
+        <link refid="df/de0/_genius_node_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/account/GeniusNode.hpp</label>
+        <link refid="d3/d63/_genius_node_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>src/account/IGeniusTransactions.cpp</label>
+        <link refid="da/dcc/_i_genius_transactions_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/account/Migration0_2_0To1_0_0.cpp</label>
+        <link refid="dc/dfe/_migration0__2__0_to1__0__0_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/account/Migration3_4_0To3_5_0.cpp</label>
+        <link refid="d6/d71/_migration3__4__0_to3__5__0_8cpp"/>
+      </node>
+      <node id="7">
+        <label>src/account/Migration3_5_0To3_5_1.cpp</label>
+        <link refid="da/d32/_migration3__5__0_to3__5__1_8cpp"/>
+      </node>
+      <node id="8">
+        <label>src/account/Migration3_5_1To3_6_0.cpp</label>
+        <link refid="db/da7/_migration3__5__1_to3__6__0_8cpp"/>
+      </node>
+      <node id="22">
+        <label>src/account/MintTransaction.cpp</label>
+        <link refid="d8/d70/_mint_transaction_8cpp"/>
+      </node>
+      <node id="23">
+        <label>src/account/ProcessingTransaction.cpp</label>
+        <link refid="d2/d15/_processing_transaction_8cpp"/>
+      </node>
+      <node id="9">
+        <label>src/account/TransactionManager.cpp</label>
+        <link refid="d0/dcc/_transaction_manager_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/account/TransactionManager.hpp</label>
+        <link refid="de/d54/_transaction_manager_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>src/account/TransferTransaction.cpp</label>
+        <link refid="db/dbb/_transfer_transaction_8cpp"/>
+      </node>
+      <node id="11">
+        <label>src/blockchain/impl/block_tree_impl.cpp</label>
+        <link refid="d5/df4/block__tree__impl_8cpp"/>
+      </node>
+      <node id="10">
+        <label>src/blockchain/impl/block_tree_impl.hpp</label>
+        <link refid="d7/d87/block__tree__impl_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>src/blockchain/impl/key_value_block_header_repository.cpp</label>
+        <link refid="de/d1b/key__value__block__header__repository_8cpp"/>
+      </node>
+      <node id="12">
+        <label>src/blockchain/impl/key_value_block_header_repository.hpp</label>
+        <link refid="dd/dc6/key__value__block__header__repository_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>src/blockchain/impl/key_value_block_storage.cpp</label>
+        <link refid="de/de9/key__value__block__storage_8cpp"/>
+      </node>
+      <node id="14">
+        <label>src/blockchain/impl/key_value_block_storage.hpp</label>
+        <link refid="d4/d6b/key__value__block__storage_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crypto/hasher.hpp</label>
+        <link refid="da/d6b/hasher_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>src/crypto/hasher/hasher_impl.cpp</label>
+        <link refid="d3/d84/hasher__impl_8cpp"/>
+      </node>
+      <node id="16">
+        <label>src/crypto/hasher/hasher_impl.hpp</label>
+        <link refid="d0/d62/hasher__impl_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>src/local_secure_storage/impl/Linux.cpp</label>
+        <link refid="de/d39/_linux_8cpp"/>
+      </node>
+      <node id="34">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.cpp</label>
+        <link refid="d7/d6b/block__builder__impl_8cpp"/>
+      </node>
+      <node id="33">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.hpp</label>
+        <link refid="d3/d95/block__builder__impl_8hpp"/>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.cpp</label>
+        <link refid="de/d5e/core__factory__impl_8cpp"/>
+      </node>
+      <node id="30">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.hpp</label>
+        <link refid="d7/de4/core__factory__impl_8hpp"/>
+        <childnode refid="31" relation="include">
+        </childnode>
+      </node>
+      <node id="36">
+        <label>src/runtime/binaryen/runtime_api/core_impl.cpp</label>
+        <link refid="dc/d7c/core__impl_8cpp"/>
+      </node>
+      <node id="35">
+        <label>src/runtime/binaryen/runtime_api/core_impl.hpp</label>
+        <link refid="d7/dbc/core__impl_8hpp"/>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+      </node>
+      <node id="38">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.cpp</label>
+        <link refid="dc/def/finality__api__impl_8cpp"/>
+      </node>
+      <node id="37">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.hpp</label>
+        <link refid="db/dad/finality__api__impl_8hpp"/>
+        <childnode refid="38" relation="include">
+        </childnode>
+      </node>
+      <node id="40">
+        <label>src/runtime/binaryen/runtime_api/metadata_impl.cpp</label>
+        <link refid="d0/dfc/metadata__impl_8cpp"/>
+      </node>
+      <node id="39">
+        <label>src/runtime/binaryen/runtime_api/metadata_impl.hpp</label>
+        <link refid="dc/dcf/metadata__impl_8hpp"/>
+        <childnode refid="40" relation="include">
+        </childnode>
+      </node>
+      <node id="42">
+        <label>src/runtime/binaryen/runtime_api/offchain_worker_impl.cpp</label>
+        <link refid="d3/d58/offchain__worker__impl_8cpp"/>
+      </node>
+      <node id="41">
+        <label>src/runtime/binaryen/runtime_api/offchain_worker_impl.hpp</label>
+        <link refid="dd/d03/offchain__worker__impl_8hpp"/>
+        <childnode refid="42" relation="include">
+        </childnode>
+      </node>
+      <node id="44">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.cpp</label>
+        <link refid="db/dae/parachain__host__impl_8cpp"/>
+      </node>
+      <node id="43">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.hpp</label>
+        <link refid="d6/d15/parachain__host__impl_8hpp"/>
+        <childnode refid="44" relation="include">
+        </childnode>
+      </node>
+      <node id="46">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.cpp</label>
+        <link refid="d3/d02/production__api__impl_8cpp"/>
+      </node>
+      <node id="45">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.hpp</label>
+        <link refid="d1/d6a/production__api__impl_8hpp"/>
+        <childnode refid="46" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>src/runtime/binaryen/runtime_api/runtime_api.hpp</label>
+        <link refid="dd/d87/runtime__api_8hpp"/>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+        <childnode refid="47" relation="include">
+        </childnode>
+      </node>
+      <node id="48">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.cpp</label>
+        <link refid="db/d63/tagged__transaction__queue__impl_8cpp"/>
+      </node>
+      <node id="47">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.hpp</label>
+        <link refid="d4/d66/tagged__transaction__queue__impl_8hpp"/>
+        <childnode refid="48" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>src/runtime/binaryen/runtime_environment.cpp</label>
+        <link refid="d1/d6f/runtime__environment_8cpp"/>
+      </node>
+      <node id="27">
+        <label>src/runtime/binaryen/runtime_manager.cpp</label>
+        <link refid="da/dc5/runtime__manager_8cpp"/>
+      </node>
+      <node id="29">
+        <label>src/runtime/binaryen/runtime_manager.hpp</label>
+        <link refid="d3/d10/runtime__manager_8hpp"/>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="dd/d14/classsgns_1_1crypto_1_1_hasher" prot="public">sgns::crypto::Hasher</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6e/namespacesgns_1_1crypto">sgns::crypto</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_HASHER_HASHER_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_HASHER_HASHER_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d4/d16/blob_8hpp" kindref="compound">base/blob.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="df/dec/_i_component_8hpp" kindref="compound">singleton/IComponent.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d6e/namespacesgns_1_1crypto" kindref="compound">sgns::crypto</ref><sp/>{</highlight></codeline>
+<codeline lineno="8" refid="dd/d14/classsgns_1_1crypto_1_1_hasher" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher" kindref="compound">Hasher</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d1/dbf/class_i_component" kindref="compound">IComponent</ref><sp/>{</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">protected</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="10" refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a140a50019470b7f717657b8ab6590956" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a140a50019470b7f717657b8ab6590956" kindref="member">Hash64</ref><sp/>=<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a6fcc14244fc08a51e93f6c85d24f3562" kindref="member">base::Hash64</ref>;</highlight></codeline>
+<codeline lineno="11" refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a227db21449d9ce711fee9d152a600906" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a227db21449d9ce711fee9d152a600906" kindref="member">Hash128</ref><sp/>=<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a13f0ff8307c68dd02b7474681fffbe98" kindref="member">base::Hash128</ref>;</highlight></codeline>
+<codeline lineno="12" refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ac18b1fe64670d4605b3537023088e101" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ac18b1fe64670d4605b3537023088e101" kindref="member">Hash256</ref><sp/>=<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref>;</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="15" refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a9e04ab8eea4cc88ccf98c4bce17abf61" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a9e04ab8eea4cc88ccf98c4bce17abf61" kindref="member">~Hasher</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//------------<sp/>by<sp/>ruymaster<sp/>----//</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="23" refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a7e8909b5075e885692253dc2f487c6cd" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a140a50019470b7f717657b8ab6590956" kindref="member">Hash64</ref><sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a7e8909b5075e885692253dc2f487c6cd" kindref="member">twox_64</ref>(<sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/>buffer<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//------------<sp/>by<sp/>ruymaster<sp/>----//</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="31" refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a45876d83902bf68955f90c7a08757db7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a227db21449d9ce711fee9d152a600906" kindref="member">Hash128</ref><sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a45876d83902bf68955f90c7a08757db7" kindref="member">twox_128</ref>(<sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/>buffer<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="38" refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ab5adadf11d6a3494970be3c689e4e36c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a227db21449d9ce711fee9d152a600906" kindref="member">Hash128</ref><sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ab5adadf11d6a3494970be3c689e4e36c" kindref="member">blake2b_128</ref>(<sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/>buffer<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//---------------------</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="46" refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a19c8909ef4f15893eb59055685464e52" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ac18b1fe64670d4605b3537023088e101" kindref="member">Hash256</ref><sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a19c8909ef4f15893eb59055685464e52" kindref="member">twox_256</ref>(<sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/>buffer<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="53" refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a664c6beae5f689383829c3fc33ab96ca" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ac18b1fe64670d4605b3537023088e101" kindref="member">Hash256</ref><sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a664c6beae5f689383829c3fc33ab96ca" kindref="member">blake2b_256</ref>(<sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/>buffer<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight></codeline>
+<codeline lineno="60" refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a0782b760dc6ee7dc043888090a325bab" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ac18b1fe64670d4605b3537023088e101" kindref="member">Hash256</ref><sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a0782b760dc6ee7dc043888090a325bab" kindref="member">keccak_256</ref>(<sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/>buffer<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"></highlight></codeline>
+<codeline lineno="67" refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1aac85545c0a0c5c6fe2dbe2f4f113ce49" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ac18b1fe64670d4605b3537023088e101" kindref="member">Hash256</ref><sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1aac85545c0a0c5c6fe2dbe2f4f113ce49" kindref="member">blake2s_256</ref>(<sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/>buffer<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"></highlight></codeline>
+<codeline lineno="74" refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ad3071dc9962b178ef9fa84875fdf9f9f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ac18b1fe64670d4605b3537023088e101" kindref="member">Hash256</ref><sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ad3071dc9962b178ef9fa84875fdf9f9f" kindref="member">sha2_256</ref>(<sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/>buffer<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="76"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"></highlight></codeline>
+<codeline lineno="78"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/crypto/hasher.hpp"/>
+  </compounddef>
+</doxygen>

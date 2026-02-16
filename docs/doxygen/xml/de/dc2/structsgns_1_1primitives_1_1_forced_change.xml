@@ -1,0 +1,100 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/dc2/structsgns_1_1primitives_1_1_forced_change" kind="struct" language="C++" prot="public" final="yes">
+    <compoundname>sgns::primitives::ForcedChange</compoundname>
+    <basecompoundref refid="d4/d7b/structsgns_1_1primitives_1_1_authority_list_change" prot="public" virt="non-virtual">sgns::primitives::AuthorityListChange</basecompoundref>
+    <includes refid="d7/d5f/scheduled__change_8hpp" local="no">scheduled_change.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="de/dc2/structsgns_1_1primitives_1_1_forced_change_1ab51598e590af9662f2edee14ffb7e21e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::primitives::AuthorityListChange::AuthorityListChange</definition>
+        <argsstring>()=default</argsstring>
+        <name>AuthorityListChange</name>
+        <qualifiedname>sgns::primitives::ForcedChange::AuthorityListChange</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/scheduled_change.hpp" line="30" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="de/dc2/structsgns_1_1primitives_1_1_forced_change_1a3badae8cd0a15dd55bbe189e3522815b" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::primitives::AuthorityListChange::AuthorityListChange</definition>
+        <argsstring>(AuthorityList authorities, uint32_t delay)</argsstring>
+        <name>AuthorityListChange</name>
+        <qualifiedname>sgns::primitives::ForcedChange::AuthorityListChange</qualifiedname>
+        <param>
+          <type><ref refid="d6/d76/structsgns_1_1primitives_1_1_authority_list" kindref="compound">AuthorityList</ref></type>
+          <declname>authorities</declname>
+        </param>
+        <param>
+          <type>uint32_t</type>
+          <declname>delay</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/scheduled_change.hpp" line="30" column="5" bodyfile="src/primitives/scheduled_change.hpp" bodystart="21" bodyend="22"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::primitives::AuthorityListChange</label>
+        <link refid="d4/d7b/structsgns_1_1primitives_1_1_authority_list_change"/>
+      </node>
+      <node id="1">
+        <label>sgns::primitives::ForcedChange</label>
+        <link refid="de/dc2/structsgns_1_1primitives_1_1_forced_change"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="5">
+        <label>T</label>
+      </node>
+      <node id="3">
+        <label>sgns::primitives::AuthorityList</label>
+        <link refid="d6/d76/structsgns_1_1primitives_1_1_authority_list"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::primitives::AuthorityListChange</label>
+        <link refid="d4/d7b/structsgns_1_1primitives_1_1_authority_list_change"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+authorities</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::primitives::ForcedChange</label>
+        <link refid="de/dc2/structsgns_1_1primitives_1_1_forced_change"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/primitives/scheduled_change.hpp" line="29" column="3" bodyfile="src/primitives/scheduled_change.hpp" bodystart="29" bodyend="31"/>
+    <listofallmembers>
+      <member refid="d4/d7b/structsgns_1_1primitives_1_1_authority_list_change_1ac678cb0a66493cb6b04840627a05a638" prot="public" virt="non-virtual"><scope>sgns::primitives::ForcedChange</scope><name>authorities</name></member>
+      <member refid="de/dc2/structsgns_1_1primitives_1_1_forced_change_1ab51598e590af9662f2edee14ffb7e21e" prot="public" virt="non-virtual"><scope>sgns::primitives::ForcedChange</scope><name>AuthorityListChange</name></member>
+      <member refid="de/dc2/structsgns_1_1primitives_1_1_forced_change_1a3badae8cd0a15dd55bbe189e3522815b" prot="public" virt="non-virtual"><scope>sgns::primitives::ForcedChange</scope><name>AuthorityListChange</name></member>
+      <member refid="d4/d7b/structsgns_1_1primitives_1_1_authority_list_change_1a9e30de50d36ff3115503811e9195351e" prot="public" virt="non-virtual"><scope>sgns::primitives::ForcedChange</scope><name>subchain_lenght</name></member>
+      <member refid="d4/d7b/structsgns_1_1primitives_1_1_authority_list_change_1a5f3f486b1de95c73601d9850c6103997" prot="public" virt="virtual"><scope>sgns::primitives::ForcedChange</scope><name>~AuthorityListChange</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

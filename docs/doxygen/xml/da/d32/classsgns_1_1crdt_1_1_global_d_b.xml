@@ -1,0 +1,2320 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/d32/classsgns_1_1crdt_1_1_global_d_b" kind="class" language="C++" prot="public">
+    <compoundname>sgns::crdt::GlobalDB</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">std::enable_shared_from_this&lt; GlobalDB &gt;</basecompoundref>
+    <includes refid="d0/d0e/globaldb_8hpp" local="no">globaldb.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a2744ff19e01715f81064f1d55097edc3" prot="public" static="no" strong="yes">
+        <type>uint8_t</type>
+        <name>Error</name>
+        <qualifiedname>sgns::crdt::GlobalDB::Error</qualifiedname>
+        <enumvalue id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a2744ff19e01715f81064f1d55097edc3ae21e1617d5a239088159a3acaf8067a8" prot="public">
+          <name>ROCKSDB_IO</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+<para><ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a5bd41607a862fb04e645bb89bfbaaf71" kindref="member">RocksDB</ref> wasn&apos;t opened. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a2744ff19e01715f81064f1d55097edc3a4cb8b957bcd61cd24a0781f76e89ff48" prot="public">
+          <name>IPFS_DB_NOT_CREATED</name>
+          <briefdescription>
+<para>IPFS datastore not created. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a2744ff19e01715f81064f1d55097edc3ad2954ca5904f6dbccda9e1d8f21bbe79" prot="public">
+          <name>DAG_SYNCHER_NOT_LISTENING</name>
+          <briefdescription>
+<para>DAG Syncher listen error. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a2744ff19e01715f81064f1d55097edc3abea51c9d07f01941188c6e6eafc43e55" prot="public">
+          <name>CRDT_DATASTORE_NOT_CREATED</name>
+          <briefdescription>
+<para>CRDT DataStore not created. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a2744ff19e01715f81064f1d55097edc3afd628c25e17caca3d956080b7fd9c155" prot="public">
+          <name>PUBSUB_BROADCASTER_NOT_CREATED</name>
+          <briefdescription>
+<para>CRDT DataStore not created. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a2744ff19e01715f81064f1d55097edc3a457f6695d27b7258d272b6d1e56b1006" prot="public">
+          <name>INVALID_PARAMETERS</name>
+          <briefdescription>
+<para>Invalid parameters. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a2744ff19e01715f81064f1d55097edc3a33850ff27aa865e0bb1544b491be20c3" prot="public">
+          <name>GLOBALDB_NOT_STARTED</name>
+          <briefdescription>
+<para>Start wasn&apos;t called. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>Enumeration of error codes used in the proof classes. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="70" column="9" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="71" bodyend="79"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1ab1a7057ffec940e17aff04759e54fec2" prot="public" static="no">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>using sgns::crdt::GlobalDB::Buffer = base::Buffer</definition>
+        <argsstring></argsstring>
+        <name>Buffer</name>
+        <qualifiedname>sgns::crdt::GlobalDB::Buffer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="27" column="9" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a8ba84bb2f0ddd5780f5d6a3f44cf0dcf" prot="public" static="no">
+        <type><ref refid="db/dbb/classsgns_1_1crdt_1_1_crdt_datastore_1a53bba1484993f1addce63b598993cff8" kindref="member">CrdtDatastore::QueryResult</ref></type>
+        <definition>using sgns::crdt::GlobalDB::QueryResult = CrdtDatastore::QueryResult</definition>
+        <argsstring></argsstring>
+        <name>QueryResult</name>
+        <qualifiedname>sgns::crdt::GlobalDB::QueryResult</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="28" column="9" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="28" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a5bd41607a862fb04e645bb89bfbaaf71" prot="public" static="no">
+        <type><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb" kindref="compound">storage::rocksdb</ref></type>
+        <definition>using sgns::crdt::GlobalDB::RocksDB = storage::rocksdb</definition>
+        <argsstring></argsstring>
+        <name>RocksDB</name>
+        <qualifiedname>sgns::crdt::GlobalDB::RocksDB</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="29" column="9" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="29" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a143a4e10d9369a966e6841eed5c13046" prot="public" static="no">
+        <type><ref refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1aaf18c63f04f27439947f69f90e9be3ce" kindref="member">CrdtHeads::CRDTListResult</ref></type>
+        <definition>using sgns::crdt::GlobalDB::CRDTHeadListResult = CrdtHeads::CRDTListResult</definition>
+        <argsstring></argsstring>
+        <name>CRDTHeadListResult</name>
+        <qualifiedname>sgns::crdt::GlobalDB::CRDTHeadListResult</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="30" column="9" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="30" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a73c920cab417f9e323dc844276a0d001" prot="public" static="no">
+        <type>std::pair&lt; <ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref>, <ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1ab1a7057ffec940e17aff04759e54fec2" kindref="member">Buffer</ref> &gt;</type>
+        <definition>using sgns::crdt::GlobalDB::DataPair = std::pair&lt;HierarchicalKey, Buffer&gt;</definition>
+        <argsstring></argsstring>
+        <name>DataPair</name>
+        <qualifiedname>sgns::crdt::GlobalDB::DataPair</qualifiedname>
+        <briefdescription>
+<para>Pair of key and value to be stored in CRDT. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="60" column="9" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="60" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1abf1c6d450bca281fd4d3c79074b21afa" prot="public" static="no">
+        <type><ref refid="db/dbb/classsgns_1_1crdt_1_1_crdt_datastore_1a621f1643fef0c3764ebd7e4740a69918" kindref="member">CrdtDatastore::CRDTElementFilterCallback</ref></type>
+        <definition>using sgns::crdt::GlobalDB::GlobalDBFilterCallback = CrdtDatastore::CRDTElementFilterCallback</definition>
+        <argsstring></argsstring>
+        <name>GlobalDBFilterCallback</name>
+        <qualifiedname>sgns::crdt::GlobalDB::GlobalDBFilterCallback</qualifiedname>
+        <briefdescription>
+<para>CRDT Filter callback type. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="62" column="9" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="62" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a8eed256b71f5a03343e46e90fd855d5b" prot="public" static="no">
+        <type><ref refid="db/dbb/classsgns_1_1crdt_1_1_crdt_datastore_1a6a79367282d81db30e4951f046f13ee8" kindref="member">CrdtDatastore::CRDTNewElementCallback</ref></type>
+        <definition>using sgns::crdt::GlobalDB::GlobalDBNewElementCallback = CrdtDatastore::CRDTNewElementCallback</definition>
+        <argsstring></argsstring>
+        <name>GlobalDBNewElementCallback</name>
+        <qualifiedname>sgns::crdt::GlobalDB::GlobalDBNewElementCallback</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="63" column="9" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="63" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a6678631f9070c14925f5e3bb892c366e" prot="public" static="no">
+        <type><ref refid="db/dbb/classsgns_1_1crdt_1_1_crdt_datastore_1a469d8b76e33d631811b3e6aad8f8da0b" kindref="member">CrdtDatastore::CRDTDeletedElementCallback</ref></type>
+        <definition>using sgns::crdt::GlobalDB::GlobalDBDeletedElementCallback = CrdtDatastore::CRDTDeletedElementCallback</definition>
+        <argsstring></argsstring>
+        <name>GlobalDBDeletedElementCallback</name>
+        <qualifiedname>sgns::crdt::GlobalDB::GlobalDBDeletedElementCallback</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="64" column="9" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="64" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a07d69415f044acd16595d2fac552be08" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; boost::asio::io_context &gt;</type>
+        <definition>std::shared_ptr&lt;boost::asio::io_context&gt; sgns::crdt::GlobalDB::m_context</definition>
+        <argsstring></argsstring>
+        <name>m_context</name>
+        <qualifiedname>sgns::crdt::GlobalDB::m_context</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="198" column="25" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="198" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a1c0f4cfcb428943743bc5c343a9a585b" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::crdt::GlobalDB::m_databasePath</definition>
+        <argsstring></argsstring>
+        <name>m_databasePath</name>
+        <qualifiedname>sgns::crdt::GlobalDB::m_databasePath</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="199" column="50" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="199" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a9f04d3992d7ee1a80bfbddb273cb3f6a" prot="private" static="no" mutable="no">
+        <type>int</type>
+        <definition>int sgns::crdt::GlobalDB::m_dagSyncPort</definition>
+        <argsstring></argsstring>
+        <name>m_dagSyncPort</name>
+        <qualifiedname>sgns::crdt::GlobalDB::m_dagSyncPort</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="200" column="50" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="200" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a10e4052c143fc95152de89c055a8d528" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::crdt::GlobalDB::m_graphSyncAddrs</definition>
+        <argsstring></argsstring>
+        <name>m_graphSyncAddrs</name>
+        <qualifiedname>sgns::crdt::GlobalDB::m_graphSyncAddrs</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="201" column="50" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="201" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a3463a0b317967ccdc14cc14518af2945" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; sgns::ipfs_pubsub::GossipPubSub &gt;</type>
+        <definition>std::shared_ptr&lt;sgns::ipfs_pubsub::GossipPubSub&gt; sgns::crdt::GlobalDB::m_pubsub</definition>
+        <argsstring></argsstring>
+        <name>m_pubsub</name>
+        <qualifiedname>sgns::crdt::GlobalDB::m_pubsub</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="203" column="26" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="203" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a5c87131f93c6566e071bf7aa6e82660e" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="da/d80/classsgns_1_1crdt_1_1_pub_sub_broadcaster_ext" kindref="compound">sgns::crdt::PubSubBroadcasterExt</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;sgns::crdt::PubSubBroadcasterExt&gt; sgns::crdt::GlobalDB::m_broadcaster</definition>
+        <argsstring></argsstring>
+        <name>m_broadcaster</name>
+        <qualifiedname>sgns::crdt::GlobalDB::m_broadcaster</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="204" column="25" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="204" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1aa818e5416d57542ba021f7632a58516a" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a5bd41607a862fb04e645bb89bfbaaf71" kindref="member">RocksDB</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;RocksDB&gt; sgns::crdt::GlobalDB::m_datastore</definition>
+        <argsstring></argsstring>
+        <name>m_datastore</name>
+        <qualifiedname>sgns::crdt::GlobalDB::m_datastore</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="205" column="50" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="205" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a9349672bc25050fb49f1885da213262f" prot="private" static="no" mutable="no">
+        <type>std::atomic_bool</type>
+        <definition>std::atomic_bool sgns::crdt::GlobalDB::started_</definition>
+        <argsstring></argsstring>
+        <name>started_</name>
+        <qualifiedname>sgns::crdt::GlobalDB::started_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="206" column="59" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="206" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1adaabf5c868f68055e3c043a474a0d118" prot="private" static="no" mutable="no">
+        <type>int</type>
+        <definition>int sgns::crdt::GlobalDB::obsAddrRetries</definition>
+        <argsstring></argsstring>
+        <name>obsAddrRetries</name>
+        <qualifiedname>sgns::crdt::GlobalDB::obsAddrRetries</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="214" column="13" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="214" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a8454afd01a5a11eeacc014d64208e926" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="db/dbb/classsgns_1_1crdt_1_1_crdt_datastore" kindref="compound">CrdtDatastore</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;CrdtDatastore&gt; sgns::crdt::GlobalDB::m_crdtDatastore</definition>
+        <argsstring></argsstring>
+        <name>m_crdtDatastore</name>
+        <qualifiedname>sgns::crdt::GlobalDB::m_crdtDatastore</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="216" column="25" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="216" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a8f9fc6c6599ad5d671d1665970e3c31e" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; std::string &gt;</type>
+        <definition>std::vector&lt;std::string&gt; sgns::crdt::GlobalDB::bootstrapAddresses_</definition>
+        <argsstring></argsstring>
+        <name>bootstrapAddresses_</name>
+        <qualifiedname>sgns::crdt::GlobalDB::bootstrapAddresses_</qualifiedname>
+        <initializer>                                = {
+    
+    
+    
+    
+    
+    
+    &quot;/ip4/104.131.131.82/tcp/4001/ipfs/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ&quot;,  
+    &quot;/ip4/104.236.179.241/tcp/4001/ipfs/QmSoLPppuBtQSGwKDZT2M73ULpjvfd3aZ6ha4oFGL1KrGM&quot;, 
+    &quot;/ip4/128.199.219.111/tcp/4001/ipfs/QmSoLSafTMBsPKadTEgaXctDQVcqN88CNLHXMkTNwMKPnu&quot;, 
+    &quot;/ip4/104.236.76.40/tcp/4001/ipfs/QmSoLV4Bbm51jM9C4gDYZQ9Cy3U6aXMJDAbzgu2fzaDs64&quot;,   
+    &quot;/ip4/178.62.158.247/tcp/4001/ipfs/QmSoLer265NRgSp2LA3dPaeykiS1J6DifTC88f5uVQKNAd&quot;,  
+    &quot;/ip6/2604:a880:1:20::203:d001/tcp/4001/ipfs/QmSoLPppuBtQSGwKDZT2M73ULpjvfd3aZ6ha4oFGL1KrGM&quot;, 
+    &quot;/ip6/2400:6180:0:d0::151:6001/tcp/4001/ipfs/QmSoLSafTMBsPKadTEgaXctDQVcqN88CNLHXMkTNwMKPnu&quot;, 
+    &quot;/ip6/2604:a880:800:10::4a:5001/tcp/4001/ipfs/QmSoLV4Bbm51jM9C4gDYZQ9Cy3U6aXMJDAbzgu2fzaDs64&quot;, 
+    &quot;/ip6/2a03:b0c0:0:1010::23:1001/tcp/4001/ipfs/QmSoLer265NRgSp2LA3dPaeykiS1J6DifTC88f5uVQKNAd&quot;, 
+    
+    
+    
+    
+    
+    
+}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="219" column="21" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="219" bodyend="241"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1af8e1b4525c58fefec669bef73432d721" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">sgns::base::Logger</ref></type>
+        <definition>sgns::base::Logger sgns::crdt::GlobalDB::m_logger</definition>
+        <argsstring></argsstring>
+        <name>m_logger</name>
+        <qualifiedname>sgns::crdt::GlobalDB::m_logger</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">sgns::base::createLogger</ref>( &quot;GlobalDB&quot; )</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="243" column="28" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="243" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a27843c52232b158f16967ee01df444a4" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; <ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1aae9b0ee7a2d5bdb88422406fdbd275f1" kindref="member">GlobalDB</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; GlobalDB &gt; &gt; sgns::crdt::GlobalDB::New</definition>
+        <argsstring>(std::shared_ptr&lt; boost::asio::io_context &gt; context, std::string databasePath, std::shared_ptr&lt; sgns::ipfs_pubsub::GossipPubSub &gt; pubsub, std::shared_ptr&lt; CrdtOptions &gt; crdtOptions, std::shared_ptr&lt; sgns::ipfs_lite::ipfs::graphsync::Network &gt; graphsyncnetwork, std::shared_ptr&lt; libp2p::protocol::Scheduler &gt; scheduler, std::shared_ptr&lt; sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator &gt; generator, std::shared_ptr&lt; RocksDB &gt; datastore=nullptr)</argsstring>
+        <name>New</name>
+        <qualifiedname>sgns::crdt::GlobalDB::New</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; boost::asio::io_context &gt;</type>
+          <declname>context</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>databasePath</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; sgns::ipfs_pubsub::GossipPubSub &gt;</type>
+          <declname>pubsub</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="db/d77/structsgns_1_1crdt_1_1_crdt_options" kindref="compound">CrdtOptions</ref> &gt;</type>
+          <declname>crdtOptions</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; sgns::ipfs_lite::ipfs::graphsync::Network &gt;</type>
+          <declname>graphsyncnetwork</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; libp2p::protocol::Scheduler &gt;</type>
+          <declname>scheduler</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator &gt;</type>
+          <declname>generator</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a5bd41607a862fb04e645bb89bfbaaf71" kindref="member">RocksDB</ref> &gt;</type>
+          <declname>datastore</declname>
+          <defval>nullptr</defval>
+        </param>
+        <briefdescription>
+<para>Factory method to create a <ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b" kindref="compound">GlobalDB</ref> instance. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">context</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The io context used to run its inner methods </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">databasePath</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Local system&apos;s path where data will be stored, not used if datastore is not nullptr </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">pubsub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The pubsub instance used to communicate </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">crdtOptions</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>CRDT options </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">graphsyncnetwork</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The graphsync networks used </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">scheduler</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><ref refid="de/da8/namespacelibp2p" kindref="compound">libp2p</ref> scheduler </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">generator</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The request ID generator from graphsync </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">datastore</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>datastore to be used. If not defined, created using databasePath </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Instance of the <ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b" kindref="compound">GlobalDB</ref> initialized or <ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a2744ff19e01715f81064f1d55097edc3" kindref="member">Error</ref> </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="44" column="32" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="63" bodyend="87"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1aa0f5467e0944617b12e33da51e25531a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crdt::GlobalDB::~GlobalDB</definition>
+        <argsstring>()</argsstring>
+        <name>~GlobalDB</name>
+        <qualifiedname>sgns::crdt::GlobalDB::~GlobalDB</qualifiedname>
+        <briefdescription>
+<para>Destructor or <ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b" kindref="compound">GlobalDB</ref>. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="57" column="9" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="99" bodyend="110"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a98bc1e1fab5fe08fd72c14145628a555" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; CID &gt;</type>
+        <definition>outcome::result&lt; CID &gt; sgns::crdt::GlobalDB::Put</definition>
+        <argsstring>(const HierarchicalKey &amp;key, const Buffer &amp;value, const std::unordered_set&lt; std::string &gt; &amp;topics)</argsstring>
+        <name>Put</name>
+        <qualifiedname>sgns::crdt::GlobalDB::Put</qualifiedname>
+        <param>
+          <type>const <ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type>const <ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1ab1a7057ffec940e17aff04759e54fec2" kindref="member">Buffer</ref> &amp;</type>
+          <declname>value</declname>
+        </param>
+        <param>
+          <type>const std::unordered_set&lt; std::string &gt; &amp;</type>
+          <declname>topics</declname>
+        </param>
+        <briefdescription>
+<para>Puts key-value pair to the CRDT store, optionally specifying a broadcast topic. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The hierarchical key where the value should be stored. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The value to store. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">topics</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Topics to publish to. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>outcome::success on success, or outcome::failure otherwise. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="88" column="25" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="240" bodyend="251"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1aa31ea60b52bda6746b0aa18a973800a1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; CID &gt;</type>
+        <definition>outcome::result&lt; CID &gt; sgns::crdt::GlobalDB::Put</definition>
+        <argsstring>(const std::vector&lt; DataPair &gt; &amp;data_vector, const std::unordered_set&lt; std::string &gt; &amp;topics)</argsstring>
+        <name>Put</name>
+        <qualifiedname>sgns::crdt::GlobalDB::Put</qualifiedname>
+        <param>
+          <type>const std::vector&lt; <ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a73c920cab417f9e323dc844276a0d001" kindref="member">DataPair</ref> &gt; &amp;</type>
+          <declname>data_vector</declname>
+        </param>
+        <param>
+          <type>const std::unordered_set&lt; std::string &gt; &amp;</type>
+          <declname>topics</declname>
+        </param>
+        <briefdescription>
+<para>Writes a batch of CRDT data all at once. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">data_vector</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A set of crdt to be written in a single transaction </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">topics</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Topics to publish to. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>outcome::failure on error or success otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="98" column="25" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="253" bodyend="269"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1afe88361317092f6d0568e5bf2e7e5479" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1ab1a7057ffec940e17aff04759e54fec2" kindref="member">Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; GlobalDB::Buffer &gt; sgns::crdt::GlobalDB::Get</definition>
+        <argsstring>(const HierarchicalKey &amp;key)</argsstring>
+        <name>Get</name>
+        <qualifiedname>sgns::crdt::GlobalDB::Get</qualifiedname>
+        <param>
+          <type>const <ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Gets a value that corresponds to specified key. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- value key </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>value as a <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="105" column="25" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="271" bodyend="274"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1ae92b787996a45447aaa87abfe0a9c089" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; CID &gt;</type>
+        <definition>outcome::result&lt; CID &gt; sgns::crdt::GlobalDB::Remove</definition>
+        <argsstring>(const HierarchicalKey &amp;key, const std::unordered_set&lt; std::string &gt; &amp;topics)</argsstring>
+        <name>Remove</name>
+        <qualifiedname>sgns::crdt::GlobalDB::Remove</qualifiedname>
+        <param>
+          <type>const <ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type>const std::unordered_set&lt; std::string &gt; &amp;</type>
+          <declname>topics</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Removes value for a given key. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>to remove from storage </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>topics</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Topics to publish to </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>outcome::failure on error or success otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="112" column="25" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="276" bodyend="285"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a67082ec37e45f5d43764de246d9e22c1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a8ba84bb2f0ddd5780f5d6a3f44cf0dcf" kindref="member">QueryResult</ref> &gt;</type>
+        <definition>outcome::result&lt; GlobalDB::QueryResult &gt; sgns::crdt::GlobalDB::QueryKeyValues</definition>
+        <argsstring>(std::string_view keyPrefix)</argsstring>
+        <name>QueryKeyValues</name>
+        <qualifiedname>sgns::crdt::GlobalDB::QueryKeyValues</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>keyPrefix</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Queries CRDT key-value pairs by prefix. If the prefix is empty returns all elements that were not tombstoned <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>keyPrefix</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- keys prefix to match. An empty prefix matches any key. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>list of key-value pairs matches prefix </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="118" column="25" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="287" bodyend="290"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a4fe961053ac3c76473601ced50b25653" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a8ba84bb2f0ddd5780f5d6a3f44cf0dcf" kindref="member">QueryResult</ref> &gt;</type>
+        <definition>outcome::result&lt; GlobalDB::QueryResult &gt; sgns::crdt::GlobalDB::QueryKeyValues</definition>
+        <argsstring>(const std::string &amp;prefix_base, const std::string &amp;middle_part, const std::string &amp;remainder_prefix)</argsstring>
+        <name>QueryKeyValues</name>
+        <qualifiedname>sgns::crdt::GlobalDB::QueryKeyValues</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>prefix_base</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>middle_part</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>remainder_prefix</declname>
+        </param>
+        <briefdescription>
+<para>Queries with a middle part that can be a wildcard, negated string or normal string. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">prefix_base</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The base prefix to query </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">middle_part</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Either a string (normal query), &apos;*&apos; or !string </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">remainder_prefix</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The remainder part of the query prefix </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A list of key value pairs </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="127" column="25" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="292" bodyend="297"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a4c28486817228dd895e2ddf2d9f674ce" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::string &gt;</type>
+        <definition>outcome::result&lt; std::string &gt; sgns::crdt::GlobalDB::KeyToString</definition>
+        <argsstring>(const Buffer &amp;key) const</argsstring>
+        <name>KeyToString</name>
+        <qualifiedname>sgns::crdt::GlobalDB::KeyToString</qualifiedname>
+        <param>
+          <type>const <ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1ab1a7057ffec940e17aff04759e54fec2" kindref="member">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Converts a unique key part to a string representation <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- binary key to convert </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>string represenation of a unique key part </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="135" column="25" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="299" bodyend="321"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a6942c61cfbfbdf536122a7dda6999cb2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="d8/da6/classsgns_1_1crdt_1_1_atomic_transaction" kindref="compound">AtomicTransaction</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; AtomicTransaction &gt; sgns::crdt::GlobalDB::BeginTransaction</definition>
+        <argsstring>()</argsstring>
+        <name>BeginTransaction</name>
+        <qualifiedname>sgns::crdt::GlobalDB::BeginTransaction</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Create a transaction object <simplesect kind="return"><para>new transaction </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="140" column="25" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="328" bodyend="331"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a73b86fbd0b0a16a15f71895ecea606e3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::GlobalDB::AddBroadcastTopic</definition>
+        <argsstring>(const std::string &amp;topicName)</argsstring>
+        <name>AddBroadcastTopic</name>
+        <qualifiedname>sgns::crdt::GlobalDB::AddBroadcastTopic</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>topicName</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="142" column="25" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="333" bodyend="336"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a5fdbfb0e56c3ca2ce7c639d497a90cf2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::GlobalDB::AddListenTopic</definition>
+        <argsstring>(const std::string &amp;topicName)</argsstring>
+        <name>AddListenTopic</name>
+        <qualifiedname>sgns::crdt::GlobalDB::AddListenTopic</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>topicName</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="143" column="31" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="338" bodyend="342"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1aaf55cdde3f3f6b75f230af16c3a5f306" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::GlobalDB::PrintDataStore</definition>
+        <argsstring>()</argsstring>
+        <name>PrintDataStore</name>
+        <qualifiedname>sgns::crdt::GlobalDB::PrintDataStore</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="145" column="14" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="323" bodyend="326"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a5bb8865c9e93310178a3674c10878928" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a5bd41607a862fb04e645bb89bfbaaf71" kindref="member">RocksDB</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; GlobalDB::RocksDB &gt; sgns::crdt::GlobalDB::GetDataStore</definition>
+        <argsstring>()</argsstring>
+        <name>GetDataStore</name>
+        <qualifiedname>sgns::crdt::GlobalDB::GetDataStore</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="147" column="50" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="359" bodyend="362"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a89608dabc9c72db232617208cc8259a1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="da/d80/classsgns_1_1crdt_1_1_pub_sub_broadcaster_ext" kindref="compound">sgns::crdt::PubSubBroadcasterExt</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; PubSubBroadcasterExt &gt; sgns::crdt::GlobalDB::GetBroadcaster</definition>
+        <argsstring>()</argsstring>
+        <name>GetBroadcaster</name>
+        <qualifiedname>sgns::crdt::GlobalDB::GetBroadcaster</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="148" column="25" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="384" bodyend="387"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a21a9bdac6338723cfd33437fadff200c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::GlobalDB::RegisterElementFilter</definition>
+        <argsstring>(const std::string &amp;pattern, GlobalDBFilterCallback filter)</argsstring>
+        <name>RegisterElementFilter</name>
+        <qualifiedname>sgns::crdt::GlobalDB::RegisterElementFilter</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>pattern</declname>
+        </param>
+        <param>
+          <type><ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1abf1c6d450bca281fd4d3c79074b21afa" kindref="member">GlobalDBFilterCallback</ref></type>
+          <declname>filter</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="150" column="14" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="344" bodyend="347"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1ae7cf288f11d0d3614ab85e0c29035715" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::GlobalDB::RegisterNewElementCallback</definition>
+        <argsstring>(const std::string &amp;pattern, GlobalDBNewElementCallback callback)</argsstring>
+        <name>RegisterNewElementCallback</name>
+        <qualifiedname>sgns::crdt::GlobalDB::RegisterNewElementCallback</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>pattern</declname>
+        </param>
+        <param>
+          <type><ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a8eed256b71f5a03343e46e90fd855d5b" kindref="member">GlobalDBNewElementCallback</ref></type>
+          <declname>callback</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="151" column="14" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="349" bodyend="352"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a6fbe6e5938671e767e2b5c5e7c903736" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::GlobalDB::RegisterDeletedElementCallback</definition>
+        <argsstring>(const std::string &amp;pattern, GlobalDBDeletedElementCallback callback)</argsstring>
+        <name>RegisterDeletedElementCallback</name>
+        <qualifiedname>sgns::crdt::GlobalDB::RegisterDeletedElementCallback</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>pattern</declname>
+        </param>
+        <param>
+          <type><ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a6678631f9070c14925f5e3bb892c366e" kindref="member">GlobalDBDeletedElementCallback</ref></type>
+          <declname>callback</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="152" column="14" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="354" bodyend="357"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1ad79212c924170460e0fb9bd0d0f75bde" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::GlobalDB::Start</definition>
+        <argsstring>()</argsstring>
+        <name>Start</name>
+        <qualifiedname>sgns::crdt::GlobalDB::Start</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="154" column="14" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="230" bodyend="238"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a40abdbaa6ae6cbf125833afd4d11c926" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a143a4e10d9369a966e6841eed5c13046" kindref="member">CRDTHeadListResult</ref> &gt;</type>
+        <definition>outcome::result&lt; GlobalDB::CRDTHeadListResult &gt; sgns::crdt::GlobalDB::GetCRDTHeadList</definition>
+        <argsstring>()</argsstring>
+        <name>GetCRDTHeadList</name>
+        <qualifiedname>sgns::crdt::GlobalDB::GetCRDTHeadList</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="156" column="25" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="364" bodyend="367"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1ab474345636328e2b4277e14edea512aa" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; uint64_t &gt;</type>
+        <definition>outcome::result&lt; uint64_t &gt; sgns::crdt::GlobalDB::GetCRDTHeadHeight</definition>
+        <argsstring>(const CID &amp;aCid, const std::string &amp;topic)</argsstring>
+        <name>GetCRDTHeadHeight</name>
+        <qualifiedname>sgns::crdt::GlobalDB::GetCRDTHeadHeight</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>aCid</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>topic</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="158" column="25" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="369" bodyend="372"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1af65a7d1df6ddbb6d8ca8f89f3ccd12fd" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::GlobalDB::CRDTHeadRemove</definition>
+        <argsstring>(const CID &amp;aCid, const std::string &amp;topic)</argsstring>
+        <name>CRDTHeadRemove</name>
+        <qualifiedname>sgns::crdt::GlobalDB::CRDTHeadRemove</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>aCid</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>topic</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="159" column="29" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="374" bodyend="377"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a14dc6b2ba6ca4e390a618a8dbead122a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::GlobalDB::CRDTHeadAdd</definition>
+        <argsstring>(const CID &amp;aCid, const std::string &amp;topic, uint64_t priority)</argsstring>
+        <name>CRDTHeadAdd</name>
+        <qualifiedname>sgns::crdt::GlobalDB::CRDTHeadAdd</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>aCid</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>topic</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>priority</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="160" column="29" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="379" bodyend="382"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a06b44960a33154ad1ec723954d74ec25" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="db/dbb/classsgns_1_1crdt_1_1_crdt_datastore_1ab06839ca5daaef53700cc8f3f7c8ba8b" kindref="member">crdt::CrdtDatastore::JobStatus</ref> &gt;</type>
+        <definition>outcome::result&lt; CrdtDatastore::JobStatus &gt; sgns::crdt::GlobalDB::GetCIDJobStatus</definition>
+        <argsstring>(const CID &amp;cid) const</argsstring>
+        <name>GetCIDJobStatus</name>
+        <qualifiedname>sgns::crdt::GlobalDB::GetCIDJobStatus</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="161" column="25" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="389" bodyend="396"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1ad8c5b87cef75840e70c9e9b268143e14" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::GlobalDB::RequestHeadBroadcast</definition>
+        <argsstring>(const std::set&lt; std::string &gt; &amp;topics)</argsstring>
+        <name>RequestHeadBroadcast</name>
+        <qualifiedname>sgns::crdt::GlobalDB::RequestHeadBroadcast</qualifiedname>
+        <param>
+          <type>const std::set&lt; std::string &gt; &amp;</type>
+          <declname>topics</declname>
+        </param>
+        <briefdescription>
+<para>Request head broadcast for specified topics. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">topics</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Vector of topic names to broadcast heads for </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>outcome::success on success, or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="168" column="25" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="398" bodyend="414"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a37ba07f59ad14f74c85dd3c556f9e5e3" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::unordered_set&lt; std::string &gt; &gt;</type>
+        <definition>outcome::result&lt; std::unordered_set&lt; std::string &gt; &gt; sgns::crdt::GlobalDB::GetMonitoredTopics</definition>
+        <argsstring>() const</argsstring>
+        <name>GetMonitoredTopics</name>
+        <qualifiedname>sgns::crdt::GlobalDB::GetMonitoredTopics</qualifiedname>
+        <briefdescription>
+<para>Get the topics that are being listened to. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A set of the monitored topic names </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="174" column="25" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="416" bodyend="425"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a053e97c0db987ba16010c427a2dd4b63" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="db/dbb/classsgns_1_1crdt_1_1_crdt_datastore" kindref="compound">crdt::CrdtDatastore</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; crdt::CrdtDatastore &gt; sgns::crdt::GlobalDB::GetCRDTDataStore</definition>
+        <argsstring>()</argsstring>
+        <name>GetCRDTDataStore</name>
+        <qualifiedname>sgns::crdt::GlobalDB::GetCRDTDataStore</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="176" column="25" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="427" bodyend="430"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1aae9b0ee7a2d5bdb88422406fdbd275f1" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crdt::GlobalDB::GlobalDB</definition>
+        <argsstring>(std::shared_ptr&lt; boost::asio::io_context &gt; context, std::string databasePath, std::shared_ptr&lt; sgns::ipfs_pubsub::GossipPubSub &gt; pubsub)</argsstring>
+        <name>GlobalDB</name>
+        <qualifiedname>sgns::crdt::GlobalDB::GlobalDB</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; boost::asio::io_context &gt;</type>
+          <declname>context</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>databasePath</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; sgns::ipfs_pubsub::GossipPubSub &gt;</type>
+          <declname>pubsub</declname>
+        </param>
+        <briefdescription>
+<para>Constructs a new Global D B object. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">context</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the io context used to run inner methods </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">databasePath</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the local path where the files are gonna be stored </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">pubsub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the pubsub instance used to communicate </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="185" column="9" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="89" bodyend="97"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a82a92450d5a01462ca427c31b763d3b5" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::GlobalDB::Init</definition>
+        <argsstring>(std::shared_ptr&lt; CrdtOptions &gt; crdtOptions, std::shared_ptr&lt; sgns::ipfs_lite::ipfs::graphsync::Network &gt; graphsyncnetwork, std::shared_ptr&lt; libp2p::protocol::Scheduler &gt; scheduler, std::shared_ptr&lt; sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator &gt; generator, std::shared_ptr&lt; RocksDB &gt; datastore=nullptr)</argsstring>
+        <name>Init</name>
+        <qualifiedname>sgns::crdt::GlobalDB::Init</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="db/d77/structsgns_1_1crdt_1_1_crdt_options" kindref="compound">CrdtOptions</ref> &gt;</type>
+          <declname>crdtOptions</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; sgns::ipfs_lite::ipfs::graphsync::Network &gt;</type>
+          <declname>graphsyncnetwork</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; libp2p::protocol::Scheduler &gt;</type>
+          <declname>scheduler</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator &gt;</type>
+          <declname>generator</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a5bd41607a862fb04e645bb89bfbaaf71" kindref="member">RocksDB</ref> &gt;</type>
+          <declname>datastore</declname>
+          <defval>nullptr</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="189" column="25" bodyfile="src/crdt/globaldb/globaldb.cpp" bodystart="112" bodyend="228"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a957e58bba6b29df2c6394cc3897e0108" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::GlobalDB::scheduleBootstrap</definition>
+        <argsstring>(std::shared_ptr&lt; boost::asio::io_context &gt; io_context, std::shared_ptr&lt; libp2p::Host &gt; host)</argsstring>
+        <name>scheduleBootstrap</name>
+        <qualifiedname>sgns::crdt::GlobalDB::scheduleBootstrap</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; boost::asio::io_context &gt;</type>
+          <declname>io_context</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; libp2p::Host &gt;</type>
+          <declname>host</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/globaldb.hpp" line="195" column="14"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::crdt::GlobalDB</label>
+        <link refid="da/d32/classsgns_1_1crdt_1_1_global_d_b"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; GlobalDB &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="55">
+        <label>BufferStorage</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="56" relation="public-inheritance">
+        </childnode>
+        <childnode refid="64" relation="public-inheritance">
+        </childnode>
+        <childnode refid="71" relation="public-inheritance">
+        </childnode>
+        <childnode refid="72" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="71">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="15">
+        <label>K</label>
+      </node>
+      <node id="5">
+        <label>T</label>
+      </node>
+      <node id="32">
+        <label>T1</label>
+      </node>
+      <node id="33">
+        <label>T2</label>
+      </node>
+      <node id="19">
+        <label>ipfs_lite::ipfs::merkledag::MerkleDagService</label>
+      </node>
+      <node id="11">
+        <label>sgns::crdt::Broadcaster</label>
+        <link refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster"/>
+      </node>
+      <node id="110">
+        <label>sgns::crdt::CRDTCallbackManager</label>
+        <link refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager"/>
+        <childnode refid="89" relation="usage">
+          <edgelabel>-deleted_data_callback_registry_mutex_</edgelabel>
+          <edgelabel>-new_data_callback_registry_mutex_</edgelabel>
+        </childnode>
+        <childnode refid="111" relation="usage">
+          <edgelabel>-new_data_callback_registry_</edgelabel>
+        </childnode>
+        <childnode refid="112" relation="usage">
+          <edgelabel>-deleted_data_callback_registry_</edgelabel>
+        </childnode>
+        <childnode refid="26" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="106">
+        <label>sgns::crdt::CRDTDataFilter</label>
+        <link refid="dd/d9b/classsgns_1_1crdt_1_1_c_r_d_t_data_filter"/>
+        <childnode refid="89" relation="usage">
+          <edgelabel>-element_registry_mutex_</edgelabel>
+          <edgelabel>-tombstone_registry_mutex_</edgelabel>
+        </childnode>
+        <childnode refid="107" relation="usage">
+          <edgelabel>-element_registry_</edgelabel>
+          <edgelabel>-tombstone_registry_</edgelabel>
+        </childnode>
+      </node>
+      <node id="78">
+        <label>sgns::crdt::CrdtDatastore</label>
+        <link refid="db/dbb/classsgns_1_1crdt_1_1_crdt_datastore"/>
+        <childnode refid="79" relation="public-inheritance">
+        </childnode>
+        <childnode refid="53" relation="usage">
+          <edgelabel>-dataStore_</edgelabel>
+        </childnode>
+        <childnode refid="80" relation="usage">
+          <edgelabel>-options_</edgelabel>
+        </childnode>
+        <childnode refid="82" relation="usage">
+          <edgelabel>-namespaceKey_</edgelabel>
+        </childnode>
+        <childnode refid="83" relation="usage">
+          <edgelabel>-set_</edgelabel>
+        </childnode>
+        <childnode refid="87" relation="usage">
+          <edgelabel>-heads_</edgelabel>
+        </childnode>
+        <childnode refid="93" relation="usage">
+          <edgelabel>-broadcaster_</edgelabel>
+        </childnode>
+        <childnode refid="94" relation="usage">
+          <edgelabel>-dagSyncer_</edgelabel>
+        </childnode>
+        <childnode refid="26" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="85" relation="usage">
+          <edgelabel>-headsNamespace_</edgelabel>
+          <edgelabel>-setsNamespace_</edgelabel>
+        </childnode>
+        <childnode refid="47" relation="usage">
+          <edgelabel>-dagWorkerJobListThreadRunning_</edgelabel>
+          <edgelabel>-handleNextThreadRunning_</edgelabel>
+          <edgelabel>-rebroadcastThreadRunning_</edgelabel>
+        </childnode>
+        <childnode refid="95" relation="usage">
+          <edgelabel>-dagWorkers_</edgelabel>
+        </childnode>
+        <childnode refid="23" relation="usage">
+          <edgelabel>-cid_string_cache_mutex_</edgelabel>
+          <edgelabel>-dagWorkerCvMutex_</edgelabel>
+          <edgelabel>-dagWorkerMutex_</edgelabel>
+          <edgelabel>-pendingBroadcastMutex_</edgelabel>
+          <edgelabel>-pendingHeadsMutex_</edgelabel>
+          <edgelabel>-rebroadcastMutex_</edgelabel>
+          <edgelabel>-topicNamesMutex_</edgelabel>
+        </childnode>
+        <childnode refid="99" relation="usage">
+          <edgelabel>-rootCIDJobList_</edgelabel>
+          <edgelabel>-selfCreatedJobList_</edgelabel>
+        </childnode>
+        <childnode refid="102" relation="usage">
+          <edgelabel>-pendingHeadsByRootCID_</edgelabel>
+        </childnode>
+        <childnode refid="105" relation="usage">
+          <edgelabel>-pendingRootQueue_</edgelabel>
+        </childnode>
+        <childnode refid="106" relation="usage">
+          <edgelabel>-crdt_filter_</edgelabel>
+        </childnode>
+        <childnode refid="108" relation="usage">
+          <edgelabel>-pendingBroadcastTopics_</edgelabel>
+          <edgelabel>-topicNames_</edgelabel>
+        </childnode>
+        <childnode refid="110" relation="usage">
+          <edgelabel>-crdt_cb_manager_</edgelabel>
+        </childnode>
+        <childnode refid="113" relation="usage">
+          <edgelabel>-pending_jobs_</edgelabel>
+        </childnode>
+        <childnode refid="114" relation="usage">
+          <edgelabel>-cid_string_cache_</edgelabel>
+        </childnode>
+      </node>
+      <node id="97">
+        <label>sgns::crdt::CrdtDatastore::DagWorker</label>
+        <link refid="db/d23/structsgns_1_1crdt_1_1_crdt_datastore_1_1_dag_worker"/>
+        <childnode refid="47" relation="usage">
+          <edgelabel>+dagWorkerThreadRunning_</edgelabel>
+        </childnode>
+      </node>
+      <node id="100">
+        <label>sgns::crdt::CrdtDatastore::RootCIDJob</label>
+        <link refid="d1/de1/structsgns_1_1crdt_1_1_crdt_datastore_1_1_root_c_i_d_job"/>
+        <childnode refid="101" relation="usage">
+          <edgelabel>+node_</edgelabel>
+          <edgelabel>+root_node_</edgelabel>
+        </childnode>
+      </node>
+      <node id="88">
+        <label>sgns::crdt::CrdtHeads</label>
+        <link refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads"/>
+        <childnode refid="89" relation="usage">
+          <edgelabel>-mutex_</edgelabel>
+        </childnode>
+        <childnode refid="53" relation="usage">
+          <edgelabel>-dataStore_</edgelabel>
+        </childnode>
+        <childnode refid="90" relation="usage">
+          <edgelabel>-cache_</edgelabel>
+        </childnode>
+        <childnode refid="82" relation="usage">
+          <edgelabel>-namespaceKey_</edgelabel>
+        </childnode>
+        <childnode refid="26" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="81">
+        <label>sgns::crdt::CrdtOptions</label>
+        <link refid="db/d77/structsgns_1_1crdt_1_1_crdt_options"/>
+        <childnode refid="26" relation="usage">
+          <edgelabel>+logger</edgelabel>
+        </childnode>
+      </node>
+      <node id="84">
+        <label>sgns::crdt::CrdtSet</label>
+        <link refid="dd/d80/classsgns_1_1crdt_1_1_crdt_set"/>
+        <childnode refid="53" relation="usage">
+          <edgelabel>-dataStore_</edgelabel>
+        </childnode>
+        <childnode refid="82" relation="usage">
+          <edgelabel>-namespaceKey_</edgelabel>
+        </childnode>
+        <childnode refid="23" relation="usage">
+          <edgelabel>-mutex_</edgelabel>
+        </childnode>
+        <childnode refid="85" relation="usage">
+          <edgelabel>-elemsNamespace_</edgelabel>
+          <edgelabel>-keysNamespace_</edgelabel>
+          <edgelabel>-prioritySuffix_</edgelabel>
+          <edgelabel>-tombsNamespace_</edgelabel>
+          <edgelabel>-valueSuffix_</edgelabel>
+        </childnode>
+      </node>
+      <node id="18">
+        <label>sgns::crdt::DAGSyncer</label>
+        <link refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer"/>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::crdt::GlobalDB</label>
+        <link refid="da/d32/classsgns_1_1crdt_1_1_global_d_b"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-m_context</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>-m_databasePath</edgelabel>
+          <edgelabel>-m_graphSyncAddrs</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-m_pubsub</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-m_broadcaster</edgelabel>
+        </childnode>
+        <childnode refid="53" relation="usage">
+          <edgelabel>-m_datastore</edgelabel>
+        </childnode>
+        <childnode refid="77" relation="usage">
+          <edgelabel>-m_crdtDatastore</edgelabel>
+        </childnode>
+        <childnode refid="115" relation="usage">
+          <edgelabel>-bootstrapAddresses_</edgelabel>
+        </childnode>
+        <childnode refid="26" relation="usage">
+          <edgelabel>-m_logger</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>sgns::crdt::GraphsyncDAGSyncer</label>
+        <link refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer"/>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+        <childnode refid="20" relation="public-inheritance">
+        </childnode>
+        <childnode refid="21" relation="usage">
+          <edgelabel>-unexpected_blocks</edgelabel>
+        </childnode>
+        <childnode refid="23" relation="usage">
+          <edgelabel>-blacklist_mutex_</edgelabel>
+          <edgelabel>-cid_failures_mutex_</edgelabel>
+          <edgelabel>-dagMutex_</edgelabel>
+          <edgelabel>-registry_mutex_</edgelabel>
+          <edgelabel>-routing_mutex_</edgelabel>
+        </childnode>
+        <childnode refid="24" relation="usage">
+          <edgelabel>-graphsync_</edgelabel>
+        </childnode>
+        <childnode refid="25" relation="usage">
+          <edgelabel>-host_</edgelabel>
+        </childnode>
+        <childnode refid="26" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="27" relation="usage">
+          <edgelabel>-requests_</edgelabel>
+        </childnode>
+        <childnode refid="29" relation="usage">
+          <edgelabel>-peer_registry_</edgelabel>
+        </childnode>
+        <childnode refid="34" relation="usage">
+          <edgelabel>-peer_index_</edgelabel>
+        </childnode>
+        <childnode refid="35" relation="usage">
+          <edgelabel>-routing_</edgelabel>
+        </childnode>
+        <childnode refid="36" relation="usage">
+          <edgelabel>-blacklist_</edgelabel>
+        </childnode>
+        <childnode refid="38" relation="usage">
+          <edgelabel>-cid_failures_</edgelabel>
+        </childnode>
+        <childnode refid="40" relation="usage">
+          <edgelabel>-received_blocks_</edgelabel>
+        </childnode>
+        <childnode refid="42" relation="usage">
+          <edgelabel>-lru_cid_cache_</edgelabel>
+        </childnode>
+        <childnode refid="47" relation="usage">
+          <edgelabel>-is_stopped_</edgelabel>
+        </childnode>
+      </node>
+      <node id="37">
+        <label>sgns::crdt::GraphsyncDAGSyncer::BlacklistEntry</label>
+        <link refid="d8/dea/structsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_blacklist_entry"/>
+      </node>
+      <node id="42">
+        <label>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache</label>
+        <link refid="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache"/>
+        <childnode refid="43" relation="usage">
+          <edgelabel>+cache_map_</edgelabel>
+        </childnode>
+        <childnode refid="45" relation="usage">
+          <edgelabel>+lru_list_</edgelabel>
+        </childnode>
+        <childnode refid="23" relation="usage">
+          <edgelabel>+mutex_</edgelabel>
+        </childnode>
+      </node>
+      <node id="82">
+        <label>sgns::crdt::HierarchicalKey</label>
+        <link refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key"/>
+        <childnode refid="6" relation="usage">
+          <edgelabel>-key_</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>sgns::crdt::PubSubBroadcasterExt</label>
+        <link refid="da/d80/classsgns_1_1crdt_1_1_pub_sub_broadcaster_ext"/>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+        <childnode refid="13" relation="usage">
+          <edgelabel>-topicsToBroadcast_</edgelabel>
+          <edgelabel>-topicsToListen_</edgelabel>
+        </childnode>
+        <childnode refid="16" relation="usage">
+          <edgelabel>-dagSyncer_</edgelabel>
+        </childnode>
+        <childnode refid="49" relation="usage">
+          <edgelabel>-messageQueue_</edgelabel>
+        </childnode>
+        <childnode refid="51" relation="usage">
+          <edgelabel>-pubSub_</edgelabel>
+        </childnode>
+        <childnode refid="23" relation="usage">
+          <edgelabel>-broadcastTopicsMutex_</edgelabel>
+          <edgelabel>-listenTopicsMutex_</edgelabel>
+          <edgelabel>-queueMutex_</edgelabel>
+          <edgelabel>-subscriptionMutex_</edgelabel>
+        </childnode>
+        <childnode refid="26" relation="usage">
+          <edgelabel>-m_logger</edgelabel>
+        </childnode>
+        <childnode refid="52" relation="usage">
+          <edgelabel>-subscriptionFutures_</edgelabel>
+        </childnode>
+      </node>
+      <node id="68">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="69" relation="public-inheritance">
+        </childnode>
+        <childnode refid="70" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="64">
+        <label>sgns::storage::face::BatchWriteMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="65" relation="public-inheritance">
+        </childnode>
+        <childnode refid="67" relation="public-inheritance">
+        </childnode>
+        <childnode refid="68" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="74">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="69" relation="public-inheritance">
+        </childnode>
+        <childnode refid="70" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="67">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="70">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="72">
+        <label>sgns::storage::face::GenericStorage&lt; K, V &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="73" relation="public-inheritance">
+        </childnode>
+        <childnode refid="74" relation="public-inheritance">
+        </childnode>
+        <childnode refid="71" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="58">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="57">
+        <label>sgns::storage::face::Iterable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="58" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="62">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="61">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="62" relation="public-inheritance">
+        </childnode>
+        <childnode refid="63" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="56">
+        <label>sgns::storage::face::ReadOnlyMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="57" relation="public-inheritance">
+        </childnode>
+        <childnode refid="59" relation="public-inheritance">
+        </childnode>
+        <childnode refid="61" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="73">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="62" relation="public-inheritance">
+        </childnode>
+        <childnode refid="63" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="60">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="59">
+        <label>sgns::storage::face::Readable&lt; Buffer, Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="60" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="63">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="66">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="65">
+        <label>sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="66" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="69">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="54">
+        <label>sgns::storage::rocksdb</label>
+        <link refid="d5/dbf/classsgns_1_1storage_1_1rocksdb"/>
+        <childnode refid="55" relation="public-inheritance">
+        </childnode>
+        <childnode refid="75" relation="usage">
+          <edgelabel>-db_</edgelabel>
+        </childnode>
+        <childnode refid="26" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="76" relation="usage">
+          <edgelabel>-options_</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>-path_</edgelabel>
+        </childnode>
+      </node>
+      <node id="48">
+        <label>std::atomic&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="47">
+        <label>std::atomic&lt; bool &gt;</label>
+        <childnode refid="48" relation="template-instance">
+          <edgelabel>&lt; bool &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="86">
+        <label>std::basic_string_view&lt; Char &gt;</label>
+      </node>
+      <node id="79">
+        <label>std::enable_shared_from_this&lt; CrdtDatastore &gt;</label>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; GlobalDB &gt;</label>
+      </node>
+      <node id="20">
+        <label>std::enable_shared_from_this&lt; GraphsyncDAGSyncer &gt;</label>
+      </node>
+      <node id="12">
+        <label>std::enable_shared_from_this&lt; PubSubBroadcasterExt &gt;</label>
+      </node>
+      <node id="46">
+        <label>std::list&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="45">
+        <label>std::list&lt; CID &gt;</label>
+        <childnode refid="46" relation="template-instance">
+          <edgelabel>&lt; CID &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="28">
+        <label>std::map&lt; K, T &gt;</label>
+        <childnode refid="15" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="113">
+        <label>std::map&lt; CID, JobStatus &gt;</label>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; CID, JobStatus &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="35">
+        <label>std::map&lt; CID, PeerKey &gt;</label>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; CID, PeerKey &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="43">
+        <label>std::map&lt; CID, std::pair&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;, std::list&lt; CID &gt;::iterator &gt; &gt;</label>
+        <childnode refid="44" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; CID, std::pair&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;, std::list&lt; CID &gt;::iterator &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="102">
+        <label>std::map&lt; CID, std::set&lt; std::pair&lt; CID, std::string &gt; &gt; &gt;</label>
+        <childnode refid="103" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; CID, std::set&lt; std::pair&lt; CID, std::string &gt; &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="40">
+        <label>std::map&lt; CID, std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt;</label>
+        <childnode refid="41" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; CID, std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="114">
+        <label>std::map&lt; CID, std::string &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; CID, std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="27">
+        <label>std::map&lt; CID, std::tuple&lt; std::shared_ptr&lt; Subscription &gt;, std::shared_ptr&lt; std::promise&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt; &gt; &gt; &gt;</label>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; CID, std::tuple&lt; std::shared_ptr&lt; Subscription &gt;, std::shared_ptr&lt; std::promise&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt; &gt; &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="91">
+        <label>std::map&lt; CID, uint64_t &gt;</label>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; CID, uint64_t &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="36">
+        <label>std::map&lt; Multihash, sgns::crdt::GraphsyncDAGSyncer::BlacklistEntry &gt;</label>
+        <childnode refid="37" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; Multihash, sgns::crdt::GraphsyncDAGSyncer::BlacklistEntry &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="34">
+        <label>std::map&lt; PeerId, PeerKey &gt;</label>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; PeerId, PeerKey &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="38">
+        <label>std::map&lt; std::pair&lt; Multihash, CID &gt;, uint64_t &gt;</label>
+        <childnode refid="39" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; std::pair&lt; Multihash, CID &gt;, uint64_t &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="23">
+        <label>std::mutex</label>
+      </node>
+      <node id="31">
+        <label>std::pair&lt; T1, T2 &gt;</label>
+        <childnode refid="32" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="33" relation="usage">
+          <edgelabel>+second_type</edgelabel>
+        </childnode>
+      </node>
+      <node id="104">
+        <label>std::pair&lt; CID, std::string &gt;</label>
+        <childnode refid="31" relation="template-instance">
+          <edgelabel>&lt; CID, std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="39">
+        <label>std::pair&lt; Multihash, CID &gt;</label>
+        <childnode refid="31" relation="template-instance">
+          <edgelabel>&lt; Multihash, CID &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="30">
+        <label>std::pair&lt; PeerId, std::vector&lt; Multiaddress &gt; &gt;</label>
+        <childnode refid="31" relation="template-instance">
+          <edgelabel>&lt; PeerId, std::vector&lt; Multiaddress &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="44">
+        <label>std::pair&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;, std::list&lt; CID &gt;::iterator &gt;</label>
+        <childnode refid="41" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="45" relation="usage">
+          <edgelabel>+second_type</edgelabel>
+        </childnode>
+        <childnode refid="31" relation="template-instance">
+          <edgelabel>&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;, std::list&lt; CID &gt;::iterator &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="50">
+        <label>std::queue&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="105">
+        <label>std::queue&lt; CID &gt;</label>
+        <childnode refid="50" relation="template-instance">
+          <edgelabel>&lt; CID &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="99">
+        <label>std::queue&lt; sgns::crdt::CrdtDatastore::RootCIDJob &gt;</label>
+        <childnode refid="100" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="50" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::CrdtDatastore::RootCIDJob &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="49">
+        <label>std::queue&lt; std::tuple&lt; libp2p::peer::PeerId, std::string &gt; &gt;</label>
+        <childnode refid="50" relation="template-instance">
+          <edgelabel>&lt; std::tuple&lt; libp2p::peer::PeerId, std::string &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="14">
+        <label>std::set&lt; K &gt;</label>
+        <childnode refid="15" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+      </node>
+      <node id="103">
+        <label>std::set&lt; std::pair&lt; CID, std::string &gt; &gt;</label>
+        <childnode refid="104" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; std::pair&lt; CID, std::string &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="13">
+        <label>std::set&lt; std::string &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="89">
+        <label>std::shared_mutex</label>
+      </node>
+      <node id="4">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="75">
+        <label>std::shared_ptr&lt; DB &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; DB &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="51">
+        <label>std::shared_ptr&lt; GossipPubSub &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; GossipPubSub &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="24">
+        <label>std::shared_ptr&lt; Graphsync &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; Graphsync &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="101">
+        <label>std::shared_ptr&lt; IPLDNode &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; IPLDNode &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="76">
+        <label>std::shared_ptr&lt; Options &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; Options &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; boost::asio::io_context &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; boost::asio::io_context &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="41">
+        <label>std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; ipfs_lite::ipld::IPLDNode &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="25">
+        <label>std::shared_ptr&lt; libp2p::Host &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; libp2p::Host &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="93">
+        <label>std::shared_ptr&lt; sgns::crdt::Broadcaster &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::Broadcaster &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="77">
+        <label>std::shared_ptr&lt; sgns::crdt::CrdtDatastore &gt;</label>
+        <childnode refid="78" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::CrdtDatastore &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="87">
+        <label>std::shared_ptr&lt; sgns::crdt::CrdtHeads &gt;</label>
+        <childnode refid="88" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::CrdtHeads &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="80">
+        <label>std::shared_ptr&lt; sgns::crdt::CrdtOptions &gt;</label>
+        <childnode refid="81" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::CrdtOptions &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="83">
+        <label>std::shared_ptr&lt; sgns::crdt::CrdtSet &gt;</label>
+        <childnode refid="84" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::CrdtSet &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="94">
+        <label>std::shared_ptr&lt; sgns::crdt::DAGSyncer &gt;</label>
+        <childnode refid="18" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::DAGSyncer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>std::shared_ptr&lt; sgns::crdt::GraphsyncDAGSyncer &gt;</label>
+        <childnode refid="17" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::GraphsyncDAGSyncer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::shared_ptr&lt; sgns::crdt::PubSubBroadcasterExt &gt;</label>
+        <childnode refid="10" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::PubSubBroadcasterExt &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; sgns::ipfs_pubsub::GossipPubSub &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; sgns::ipfs_pubsub::GossipPubSub &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="53">
+        <label>std::shared_ptr&lt; sgns::storage::rocksdb &gt;</label>
+        <childnode refid="54" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::rocksdb &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="26">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::string</label>
+        <childnode refid="7" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="85">
+        <label>std::string_view</label>
+        <childnode refid="86" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="98">
+        <label>std::unique_ptr&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="96">
+        <label>std::unique_ptr&lt; sgns::crdt::CrdtDatastore::DagWorker &gt;</label>
+        <childnode refid="97" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="98" relation="template-instance">
+          <edgelabel>&lt; sgns::crdt::CrdtDatastore::DagWorker &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="92">
+        <label>std::unordered_map&lt; K, T &gt;</label>
+        <childnode refid="15" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="112">
+        <label>std::unordered_map&lt; std::string, DeletedDataCallback &gt;</label>
+        <childnode refid="92" relation="template-instance">
+          <edgelabel>&lt; std::string, DeletedDataCallback &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="107">
+        <label>std::unordered_map&lt; std::string, ElementFilterCallback &gt;</label>
+        <childnode refid="92" relation="template-instance">
+          <edgelabel>&lt; std::string, ElementFilterCallback &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="111">
+        <label>std::unordered_map&lt; std::string, NewDataCallback &gt;</label>
+        <childnode refid="92" relation="template-instance">
+          <edgelabel>&lt; std::string, NewDataCallback &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="90">
+        <label>std::unordered_map&lt; std::string, std::map&lt; CID, uint64_t &gt; &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="91" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="92" relation="template-instance">
+          <edgelabel>&lt; std::string, std::map&lt; CID, uint64_t &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="109">
+        <label>std::unordered_set&lt; K &gt;</label>
+        <childnode refid="15" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+      </node>
+      <node id="108">
+        <label>std::unordered_set&lt; std::string &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="109" relation="template-instance">
+          <edgelabel>&lt; std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="22">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>std::vector&lt; CID &gt;</label>
+        <childnode refid="22" relation="template-instance">
+          <edgelabel>&lt; CID &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="29">
+        <label>std::vector&lt; PeerEntry &gt;</label>
+        <childnode refid="30" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="22" relation="template-instance">
+          <edgelabel>&lt; PeerEntry &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="52">
+        <label>std::vector&lt; std::shared_future&lt; std::shared_ptr&lt; libp2p::protocol::Subscription &gt; &gt; &gt;</label>
+        <childnode refid="22" relation="template-instance">
+          <edgelabel>&lt; std::shared_future&lt; std::shared_ptr&lt; libp2p::protocol::Subscription &gt; &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="115">
+        <label>std::vector&lt; std::string &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="22" relation="template-instance">
+          <edgelabel>&lt; std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="95">
+        <label>std::vector&lt; std::unique_ptr&lt; sgns::crdt::CrdtDatastore::DagWorker &gt; &gt;</label>
+        <childnode refid="96" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="22" relation="template-instance">
+          <edgelabel>&lt; std::unique_ptr&lt; sgns::crdt::CrdtDatastore::DagWorker &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crdt/globaldb/globaldb.hpp" line="24" column="5" bodyfile="src/crdt/globaldb/globaldb.hpp" bodystart="25" bodyend="244"/>
+    <listofallmembers>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a73b86fbd0b0a16a15f71895ecea606e3" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>AddBroadcastTopic</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a5fdbfb0e56c3ca2ce7c639d497a90cf2" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>AddListenTopic</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a6942c61cfbfbdf536122a7dda6999cb2" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>BeginTransaction</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a8f9fc6c6599ad5d671d1665970e3c31e" prot="private" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>bootstrapAddresses_</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1ab1a7057ffec940e17aff04759e54fec2" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>Buffer</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a14dc6b2ba6ca4e390a618a8dbead122a" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>CRDTHeadAdd</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a143a4e10d9369a966e6841eed5c13046" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>CRDTHeadListResult</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1af65a7d1df6ddbb6d8ca8f89f3ccd12fd" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>CRDTHeadRemove</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a73c920cab417f9e323dc844276a0d001" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>DataPair</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a2744ff19e01715f81064f1d55097edc3" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>Error</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1afe88361317092f6d0568e5bf2e7e5479" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>Get</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a89608dabc9c72db232617208cc8259a1" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>GetBroadcaster</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a06b44960a33154ad1ec723954d74ec25" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>GetCIDJobStatus</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a053e97c0db987ba16010c427a2dd4b63" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>GetCRDTDataStore</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1ab474345636328e2b4277e14edea512aa" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>GetCRDTHeadHeight</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a40abdbaa6ae6cbf125833afd4d11c926" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>GetCRDTHeadList</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a5bb8865c9e93310178a3674c10878928" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>GetDataStore</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a37ba07f59ad14f74c85dd3c556f9e5e3" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>GetMonitoredTopics</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1aae9b0ee7a2d5bdb88422406fdbd275f1" prot="private" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>GlobalDB</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a6678631f9070c14925f5e3bb892c366e" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>GlobalDBDeletedElementCallback</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1abf1c6d450bca281fd4d3c79074b21afa" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>GlobalDBFilterCallback</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a8eed256b71f5a03343e46e90fd855d5b" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>GlobalDBNewElementCallback</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a82a92450d5a01462ca427c31b763d3b5" prot="private" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>Init</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a4c28486817228dd895e2ddf2d9f674ce" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>KeyToString</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a5c87131f93c6566e071bf7aa6e82660e" prot="private" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>m_broadcaster</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a07d69415f044acd16595d2fac552be08" prot="private" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>m_context</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a8454afd01a5a11eeacc014d64208e926" prot="private" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>m_crdtDatastore</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a9f04d3992d7ee1a80bfbddb273cb3f6a" prot="private" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>m_dagSyncPort</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a1c0f4cfcb428943743bc5c343a9a585b" prot="private" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>m_databasePath</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1aa818e5416d57542ba021f7632a58516a" prot="private" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>m_datastore</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a10e4052c143fc95152de89c055a8d528" prot="private" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>m_graphSyncAddrs</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1af8e1b4525c58fefec669bef73432d721" prot="private" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>m_logger</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a3463a0b317967ccdc14cc14518af2945" prot="private" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>m_pubsub</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a27843c52232b158f16967ee01df444a4" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>New</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1adaabf5c868f68055e3c043a474a0d118" prot="private" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>obsAddrRetries</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1aaf55cdde3f3f6b75f230af16c3a5f306" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>PrintDataStore</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a98bc1e1fab5fe08fd72c14145628a555" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>Put</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1aa31ea60b52bda6746b0aa18a973800a1" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>Put</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a67082ec37e45f5d43764de246d9e22c1" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>QueryKeyValues</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a4fe961053ac3c76473601ced50b25653" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>QueryKeyValues</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a8ba84bb2f0ddd5780f5d6a3f44cf0dcf" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>QueryResult</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a6fbe6e5938671e767e2b5c5e7c903736" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>RegisterDeletedElementCallback</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a21a9bdac6338723cfd33437fadff200c" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>RegisterElementFilter</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1ae7cf288f11d0d3614ab85e0c29035715" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>RegisterNewElementCallback</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1ae92b787996a45447aaa87abfe0a9c089" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>Remove</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1ad8c5b87cef75840e70c9e9b268143e14" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>RequestHeadBroadcast</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a5bd41607a862fb04e645bb89bfbaaf71" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>RocksDB</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a957e58bba6b29df2c6394cc3897e0108" prot="private" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>scheduleBootstrap</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1ad79212c924170460e0fb9bd0d0f75bde" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>Start</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a9349672bc25050fb49f1885da213262f" prot="private" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>started_</name></member>
+      <member refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1aa0f5467e0944617b12e33da51e25531a" prot="public" virt="non-virtual"><scope>sgns::crdt::GlobalDB</scope><name>~GlobalDB</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

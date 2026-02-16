@@ -1,0 +1,957 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kind="class" language="C++" prot="public">
+    <compoundname>sgns::scale::ScaleEncoderStream</compoundname>
+    <includes refid="dc/da0/scale__encoder__stream_8hpp" local="no">scale_encoder_stream.hpp</includes>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a8b6388be7fce13bcc2fd9465d0f0ef55" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>auto</type>
+        <definition>auto sgns::scale::ScaleEncoderStream::is_encoder_stream</definition>
+        <argsstring></argsstring>
+        <name>is_encoder_stream</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::is_encoder_stream</qualifiedname>
+        <initializer>= true</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="24" column="27" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a782f24f1a39287c38d9e608527759630" prot="private" static="no" mutable="no">
+        <type>std::deque&lt; uint8_t &gt;</type>
+        <definition>std::deque&lt;uint8_t&gt; sgns::scale::ScaleEncoderStream::stream_</definition>
+        <argsstring></argsstring>
+        <name>stream_</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::stream_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="278" column="16" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="278" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a638d2a4efec1d78eeb79475869f55409" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>ByteArray sgns::scale::ScaleEncoderStream::data</definition>
+        <argsstring>() const</argsstring>
+        <name>data</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::data</qualifiedname>
+        <briefdescription>
+<para>Getters. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>vector of bytes containing encoded data </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="30" column="17" bodyfile="src/scale/scale_encoder_stream.cpp" bodystart="119" bodyend="127"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1aad63a0fb2f27e82477c36c89dd90f59e" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class F</type>
+          </param>
+          <param>
+            <type>class S</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref> &amp;</type>
+        <definition>ScaleEncoderStream &amp; sgns::scale::ScaleEncoderStream::operator&lt;&lt;</definition>
+        <argsstring>(const std::pair&lt; F, S &gt; &amp;p)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>const std::pair&lt; F, S &gt; &amp;</type>
+          <declname>p</declname>
+        </param>
+        <briefdescription>
+<para>scale-encodes pair of values </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>F</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>first value type </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>S</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>second value type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>p</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>pair of values to encode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="40" column="5" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="40" bodyend="42"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a6510baf2aafc0e95a8b79098d2766a8c" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class...</type>
+            <declname>Ts</declname>
+            <defname>Ts</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref> &amp;</type>
+        <definition>ScaleEncoderStream &amp; sgns::scale::ScaleEncoderStream::operator&lt;&lt;</definition>
+        <argsstring>(const std::tuple&lt; Ts... &gt; &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>const std::tuple&lt; Ts... &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>scale-encodes tuple of values </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>enumeration of types </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>tuple value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="51" column="5" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="51" bodyend="56"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a18ea2fa104429b362c0dcd38c25eae28" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class...</type>
+            <declname>T</declname>
+            <defname>T</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref> &amp;</type>
+        <definition>ScaleEncoderStream &amp; sgns::scale::ScaleEncoderStream::operator&lt;&lt;</definition>
+        <argsstring>(const boost::variant&lt; T... &gt; &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>const boost::variant&lt; T... &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>scale-encodes variant value </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>type list </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to encode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="65" column="5" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="65" bodyend="68"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1ab56404152705427f6abb44a118189874" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref> &amp;</type>
+        <definition>ScaleEncoderStream &amp; sgns::scale::ScaleEncoderStream::operator&lt;&lt;</definition>
+        <argsstring>(const std::shared_ptr&lt; T &gt; &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>const std::shared_ptr&lt; T &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>scale-encodes sharead_ptr value </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>type list </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to encode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="77" column="5" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="77" bodyend="82"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a776762cdc6596ceb79ec61fd2ebe956d" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref> &amp;</type>
+        <definition>ScaleEncoderStream &amp; sgns::scale::ScaleEncoderStream::operator&lt;&lt;</definition>
+        <argsstring>(const std::unique_ptr&lt; T &gt; &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>const std::unique_ptr&lt; T &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>scale-encodes unique_ptr value </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>type list </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to encode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="91" column="5" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="91" bodyend="96"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a96864cc83808ab82509ea06786ea0bb5" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref> &amp;</type>
+        <definition>ScaleEncoderStream &amp; sgns::scale::ScaleEncoderStream::operator&lt;&lt;</definition>
+        <argsstring>(const std::vector&lt; T &gt; &amp;c)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>const std::vector&lt; T &gt; &amp;</type>
+          <declname>c</declname>
+        </param>
+        <briefdescription>
+<para>scale-encodes collection of same time items </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>type of item </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>c</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>collection to encode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="105" column="5" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="105" bodyend="107"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a0e365ea5c03c8685b384c8ee715f70af" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref> &amp;</type>
+        <definition>ScaleEncoderStream &amp; sgns::scale::ScaleEncoderStream::operator&lt;&lt;</definition>
+        <argsstring>(const std::list&lt; T &gt; &amp;c)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>const std::list&lt; T &gt; &amp;</type>
+          <declname>c</declname>
+        </param>
+        <briefdescription>
+<para>scale-encodes collection of same time items </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>type of item </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>c</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>collection to encode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="116" column="5" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="116" bodyend="118"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a7023b3c9ec18622e06ef08459d0ab2fe" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref> &amp;</type>
+        <definition>ScaleEncoderStream &amp; sgns::scale::ScaleEncoderStream::operator&lt;&lt;</definition>
+        <argsstring>(const boost::optional&lt; T &gt; &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>const boost::optional&lt; T &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>scale-encodes optional value </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to encode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="127" column="5" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="127" bodyend="138"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1afdee4afedcd9bd07f03deec21a1b092f" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref> &amp;</type>
+        <definition>ScaleEncoderStream &amp; sgns::scale::ScaleEncoderStream::operator&lt;&lt;</definition>
+        <argsstring>(const gsl::span&lt; T &gt; &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>const gsl::span&lt; T &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>appends sequence of bytes </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>bytes sequence </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="146" column="5" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="146" bodyend="148"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a0bcb7c8e19f3b4e342e83e676064f291" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+          <param>
+            <type>size_t</type>
+            <declname>size</declname>
+            <defname>size</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref> &amp;</type>
+        <definition>ScaleEncoderStream &amp; sgns::scale::ScaleEncoderStream::operator&lt;&lt;</definition>
+        <argsstring>(const std::array&lt; T, size &gt; &amp;a)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>const std::array&lt; T, size &gt; &amp;</type>
+          <declname>a</declname>
+        </param>
+        <briefdescription>
+<para>scale-encodes array of items </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>item type </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>of the array </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>a</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>reference to the array </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="158" column="5" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="158" bodyend="162"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1aac86c1010be679383f5a23178841b3b3" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref> &amp;</type>
+        <definition>ScaleEncoderStream &amp; sgns::scale::ScaleEncoderStream::operator&lt;&lt;</definition>
+        <argsstring>(const boost::multiprecision::uint256_t &amp;i)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>const boost::multiprecision::uint256_t &amp;</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+<para>scale-encodes uint256_t to stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>i</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to decode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="169" column="5" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="169" bodyend="172"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1ac9c9ce014362bed0d551a535ffd57918" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref> &amp;</type>
+        <definition>ScaleEncoderStream &amp; sgns::scale::ScaleEncoderStream::operator&lt;&lt;</definition>
+        <argsstring>(const std::reference_wrapper&lt; T &gt; &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>const std::reference_wrapper&lt; T &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>scale-encodes std::reference_wrapper of a type </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>underlying type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to encode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream; </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="181" column="5" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="181" bodyend="183"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a28f02b0553f540eaea96f48e4e63cff3" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref> &amp;</type>
+        <definition>ScaleEncoderStream &amp; sgns::scale::ScaleEncoderStream::operator&lt;&lt;</definition>
+        <argsstring>(std::string_view sv)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>sv</declname>
+        </param>
+        <briefdescription>
+<para>scale-encodes a string view </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>sv</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>string_view item </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="190" column="5" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="190" bodyend="192"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a76426e09fd4f9261895d222ea1513abe" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+          <param>
+            <type>typename I</type>
+            <defval>std::decay_t&lt;T&gt;</defval>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;std::is_integral_v&lt;I&gt;&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref> &amp;</type>
+        <definition>ScaleEncoderStream &amp; sgns::scale::ScaleEncoderStream::operator&lt;&lt;</definition>
+        <argsstring>(T &amp;&amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>T &amp;&amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>scale-encodes any integral type including bool </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>integral type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value of integral type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="201" column="5" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="201" bodyend="218"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a7b8c0f4cedfeebcac0de66649e627575" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref> &amp;</type>
+        <definition>ScaleEncoderStream &amp; sgns::scale::ScaleEncoderStream::operator&lt;&lt;</definition>
+        <argsstring>(const CompactInteger &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>const <ref refid="d1/d56/namespacesgns_1_1scale_1ac1997d51bb44310de23a0fd42d42aac0" kindref="member">CompactInteger</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>scale-encodes <ref refid="d1/d56/namespacesgns_1_1scale_1ac1997d51bb44310de23a0fd42d42aac0" kindref="member">CompactInteger</ref> value as compact integer </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to encode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="225" column="5" bodyfile="src/scale/scale_encoder_stream.cpp" bodystart="134" bodyend="137"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="protected-func">
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a5491b9a9baca0d50dd077a92bf552d6a" prot="protected" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>size_t</type>
+            <declname>I</declname>
+            <defname>I</defname>
+          </param>
+          <param>
+            <type>class...</type>
+            <declname>Ts</declname>
+            <defname>Ts</defname>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::scale::ScaleEncoderStream::encodeElementOfTuple</definition>
+        <argsstring>(const std::tuple&lt; Ts... &gt; &amp;v)</argsstring>
+        <name>encodeElementOfTuple</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::encodeElementOfTuple</qualifiedname>
+        <param>
+          <type>const std::tuple&lt; Ts... &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="229" column="10" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="229" bodyend="234"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a2611c0349d927a511ccc7f7abff6ccf6" prot="protected" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>uint8_t</type>
+            <declname>I</declname>
+            <defname>I</defname>
+          </param>
+          <param>
+            <type>class...</type>
+            <declname>Ts</declname>
+            <defname>Ts</defname>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::scale::ScaleEncoderStream::tryEncodeAsOneOfVariant</definition>
+        <argsstring>(const boost::variant&lt; Ts... &gt; &amp;v)</argsstring>
+        <name>tryEncodeAsOneOfVariant</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::tryEncodeAsOneOfVariant</qualifiedname>
+        <param>
+          <type>const boost::variant&lt; Ts... &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="237" column="10" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="237" bodyend="246"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1aa07d7a5210e31774dae827564a2c482d" prot="protected" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class It</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref> &amp;</type>
+        <definition>ScaleEncoderStream &amp; sgns::scale::ScaleEncoderStream::encodeCollection</definition>
+        <argsstring>(const CompactInteger &amp;size, It &amp;&amp;begin, It &amp;&amp;end)</argsstring>
+        <name>encodeCollection</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::encodeCollection</qualifiedname>
+        <param>
+          <type>const <ref refid="d1/d56/namespacesgns_1_1scale_1ac1997d51bb44310de23a0fd42d42aac0" kindref="member">CompactInteger</ref> &amp;</type>
+          <declname>size</declname>
+        </param>
+        <param>
+          <type>It &amp;&amp;</type>
+          <declname>begin</declname>
+        </param>
+        <param>
+          <type>It &amp;&amp;</type>
+          <declname>end</declname>
+        </param>
+        <briefdescription>
+<para>scale-encodes any collection </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>It</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>iterator over collection of bytes </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>size of the collection </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>begin</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>iterator pointing to the begin of collection </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>end</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>iterator pointing to the end of collection </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="257" column="24" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="257" bodyend="266"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a7a85365d5e404c47f5471313f2d4a662" prot="protected" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref> &amp;</type>
+        <definition>ScaleEncoderStream &amp; sgns::scale::ScaleEncoderStream::putByte</definition>
+        <argsstring>(uint8_t v)</argsstring>
+        <name>putByte</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::putByte</qualifiedname>
+        <param>
+          <type>uint8_t</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>Appenders. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>puts a byte to buffer <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>byte value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="274" column="24" bodyfile="src/scale/scale_encoder_stream.cpp" bodystart="129" bodyend="132"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1ad38befc944f9f1ba96d3b6709f62bd05" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream" kindref="compound">ScaleEncoderStream</ref> &amp;</type>
+        <definition>ScaleEncoderStream &amp; sgns::scale::ScaleEncoderStream::encodeOptionalBool</definition>
+        <argsstring>(const boost::optional&lt; bool &gt; &amp;v)</argsstring>
+        <name>encodeOptionalBool</name>
+        <qualifiedname>sgns::scale::ScaleEncoderStream::encodeOptionalBool</qualifiedname>
+        <param>
+          <type>const boost::optional&lt; bool &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_encoder_stream.hpp" line="277" column="24" bodyfile="src/scale/scale_encoder_stream.cpp" bodystart="139" bodyend="150"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Scale-encodes data into a byte stream. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="4">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::scale::ScaleEncoderStream</label>
+        <link refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-stream_</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::deque&lt; T &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::deque&lt; uint8_t &gt;</label>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/scale/scale_encoder_stream.hpp" line="21" column="3" bodyfile="src/scale/scale_encoder_stream.hpp" bodystart="21" bodyend="279"/>
+    <listofallmembers>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a638d2a4efec1d78eeb79475869f55409" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>data</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1aa07d7a5210e31774dae827564a2c482d" prot="protected" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>encodeCollection</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a5491b9a9baca0d50dd077a92bf552d6a" prot="protected" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>encodeElementOfTuple</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1ad38befc944f9f1ba96d3b6709f62bd05" prot="private" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>encodeOptionalBool</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a8b6388be7fce13bcc2fd9465d0f0ef55" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>is_encoder_stream</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1aad63a0fb2f27e82477c36c89dd90f59e" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a6510baf2aafc0e95a8b79098d2766a8c" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a18ea2fa104429b362c0dcd38c25eae28" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1ab56404152705427f6abb44a118189874" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a776762cdc6596ceb79ec61fd2ebe956d" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a96864cc83808ab82509ea06786ea0bb5" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a0e365ea5c03c8685b384c8ee715f70af" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a7023b3c9ec18622e06ef08459d0ab2fe" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1afdee4afedcd9bd07f03deec21a1b092f" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a0bcb7c8e19f3b4e342e83e676064f291" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1aac86c1010be679383f5a23178841b3b3" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1ac9c9ce014362bed0d551a535ffd57918" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a28f02b0553f540eaea96f48e4e63cff3" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a76426e09fd4f9261895d222ea1513abe" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a7b8c0f4cedfeebcac0de66649e627575" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a7a85365d5e404c47f5471313f2d4a662" prot="protected" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>putByte</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a782f24f1a39287c38d9e608527759630" prot="private" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>stream_</name></member>
+      <member refid="d9/d48/classsgns_1_1scale_1_1_scale_encoder_stream_1a2611c0349d927a511ccc7f7abff6ccf6" prot="protected" virt="non-virtual"><scope>sgns::scale::ScaleEncoderStream</scope><name>tryEncodeAsOneOfVariant</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

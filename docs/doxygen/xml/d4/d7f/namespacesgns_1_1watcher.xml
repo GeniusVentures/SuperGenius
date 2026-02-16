@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/d7f/namespacesgns_1_1watcher" kind="namespace" language="C++">
+    <compoundname>sgns::watcher</compoundname>
+    <innerclass refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher" prot="public">sgns::watcher::MessagingWatcher</innerclass>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/watcher/messaging_watcher.cpp" line="5" column="1"/>
+  </compounddef>
+</doxygen>

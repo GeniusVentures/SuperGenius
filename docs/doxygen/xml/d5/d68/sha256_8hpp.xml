@@ -1,0 +1,214 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/d68/sha256_8hpp" kind="file" language="C++">
+    <compoundname>sha256.hpp</compoundname>
+    <includes local="no">string_view</includes>
+    <includes local="no">gsl/span</includes>
+    <includes refid="d4/d16/blob_8hpp" local="yes">base/blob.hpp</includes>
+    <includedby refid="d4/d0c/entropy__accumulator_8cpp" local="yes">src/crypto/bip39/entropy_accumulator.cpp</includedby>
+    <includedby refid="d3/d84/hasher__impl_8cpp" local="yes">src/crypto/hasher/hasher_impl.cpp</includedby>
+    <includedby refid="d4/d08/sha256_8cpp" local="yes">src/crypto/sha/sha256.cpp</includedby>
+    <incdepgraph>
+      <node id="4">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crypto/sha/sha256.hpp</label>
+        <link refid="d5/d68/sha256_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>array</label>
+      </node>
+      <node id="7">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="5">
+        <label>cstddef</label>
+      </node>
+      <node id="3">
+        <label>gsl/span</label>
+      </node>
+      <node id="12">
+        <label>iostream</label>
+      </node>
+      <node id="11">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="2">
+        <label>string_view</label>
+      </node>
+      <node id="9">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/crypto/bip39/entropy_accumulator.cpp</label>
+        <link refid="d4/d0c/entropy__accumulator_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/crypto/hasher/hasher_impl.cpp</label>
+        <link refid="d3/d84/hasher__impl_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/crypto/sha/sha256.cpp</label>
+        <link refid="d4/d08/sha256_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/crypto/sha/sha256.hpp</label>
+        <link refid="d5/d68/sha256_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6e/namespacesgns_1_1crypto">sgns::crypto</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1a6af465e58a4956eb5164f6c400a1a6ed" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="de/d1b/key__value__block__header__repository_8cpp_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+        <definition>base::Hash256 sgns::crypto::sha256</definition>
+        <argsstring>(std::string_view input)</argsstring>
+        <name>sha256</name>
+        <qualifiedname>sgns::crypto::sha256</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>input</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Take a SHA-256 hash from string <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>input</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>to be hashed </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>hashed bytes </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sha/sha256.cpp" line="9" column="19" bodyfile="src/crypto/sha/sha256.cpp" bodystart="9" bodyend="13" declfile="src/crypto/sha/sha256.hpp" declline="15" declcolumn="17"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1aa8b926395147f6b4be6b248dc337ab42" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="de/d1b/key__value__block__header__repository_8cpp_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+        <definition>base::Hash256 sgns::crypto::sha256</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; input)</argsstring>
+        <name>sha256</name>
+        <qualifiedname>sgns::crypto::sha256</qualifiedname>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>input</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Take a SHA-256 hash from bytes <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>input</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>to be hashed </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>hashed bytes </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sha/sha256.cpp" line="15" column="19" bodyfile="src/crypto/sha/sha256.cpp" bodystart="15" bodyend="26" declfile="src/crypto/sha/sha256.hpp" declline="22" declcolumn="17"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1a468cf73de793bd2f1a8a5bedfe26b380" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>std::vector&lt; uint8_t &gt; sgns::crypto::sha256</definition>
+        <argsstring>(const void *data, size_t dataSize)</argsstring>
+        <name>sha256</name>
+        <qualifiedname>sgns::crypto::sha256</qualifiedname>
+        <param>
+          <type>const void *</type>
+          <declname>data</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>dataSize</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sha/sha256.cpp" line="28" column="17" bodyfile="src/crypto/sha/sha256.cpp" bodystart="28" bodyend="40" declfile="src/crypto/sha/sha256.hpp" declline="24" declcolumn="15"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SHA256_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SHA256_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string_view&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;gsl/span&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d4/d16/blob_8hpp" kindref="compound">base/blob.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d6e/namespacesgns_1_1crypto" kindref="compound">sgns::crypto</ref><sp/>{</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a6af465e58a4956eb5164f6c400a1a6ed" kindref="member">sha256</ref>(std::string_view<sp/>input);</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a6af465e58a4956eb5164f6c400a1a6ed" kindref="member">sha256</ref>(gsl::span&lt;const<sp/>uint8_t&gt;<sp/>input);</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/>std::vector&lt;uint8_t&gt;<sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a6af465e58a4956eb5164f6c400a1a6ed" kindref="member">sha256</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>data,<sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>dataSize);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/crypto/sha/sha256.hpp"/>
+  </compounddef>
+</doxygen>

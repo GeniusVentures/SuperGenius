@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_8b7acb397e6053a9fdf7b2acfd527342" kind="dir">
+    <compoundname>src/storage/rocksdb</compoundname>
+    <innerfile refid="dc/d6d/rocksdb_8cpp">rocksdb.cpp</innerfile>
+    <innerfile refid="d1/d07/rocksdb_8hpp">rocksdb.hpp</innerfile>
+    <innerfile refid="d6/d9a/rocksdb__batch_8cpp">rocksdb_batch.cpp</innerfile>
+    <innerfile refid="dc/d5f/rocksdb__batch_8hpp">rocksdb_batch.hpp</innerfile>
+    <innerfile refid="da/dd7/rocksdb__cursor_8cpp">rocksdb_cursor.cpp</innerfile>
+    <innerfile refid="db/d06/rocksdb__cursor_8hpp">rocksdb_cursor.hpp</innerfile>
+    <innerfile refid="d8/d00/rocksdb__util_8hpp">rocksdb_util.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/storage/rocksdb/"/>
+  </compounddef>
+</doxygen>

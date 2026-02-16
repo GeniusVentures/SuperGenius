@@ -1,0 +1,38 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/d91/structsgns_1_1primitives_1_1_on_disabled" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::primitives::OnDisabled</compoundname>
+    <includes refid="d7/d5f/scheduled__change_8hpp" local="no">scheduled_change.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d2/d91/structsgns_1_1primitives_1_1_on_disabled_1a24e4c4508d8a6b7b3a47bafcf9eb8673" prot="public" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::primitives::OnDisabled::authority_index</definition>
+        <argsstring></argsstring>
+        <name>authority_index</name>
+        <qualifiedname>sgns::primitives::OnDisabled::authority_index</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/scheduled_change.hpp" line="33" column="14" bodyfile="src/primitives/scheduled_change.hpp" bodystart="33" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::primitives::OnDisabled</label>
+        <link refid="d2/d91/structsgns_1_1primitives_1_1_on_disabled"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/primitives/scheduled_change.hpp" line="32" column="3" bodyfile="src/primitives/scheduled_change.hpp" bodystart="32" bodyend="34"/>
+    <listofallmembers>
+      <member refid="d2/d91/structsgns_1_1primitives_1_1_on_disabled_1a24e4c4508d8a6b7b3a47bafcf9eb8673" prot="public" virt="non-virtual"><scope>sgns::primitives::OnDisabled</scope><name>authority_index</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

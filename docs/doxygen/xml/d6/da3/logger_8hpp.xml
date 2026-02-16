@@ -1,0 +1,1287 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/da3/logger_8hpp" kind="file" language="C++">
+    <compoundname>logger.hpp</compoundname>
+    <includes local="no">spdlog/fmt/ostr.h</includes>
+    <includes local="no">spdlog/spdlog.h</includes>
+    <includedby refid="d5/df0/app__delegate_8cpp" local="yes">node/app_delegate.cpp</includedby>
+    <includedby refid="d8/d7a/_account_messenger_8hpp" local="yes">src/account/AccountMessenger.hpp</includedby>
+    <includedby refid="d1/d31/_migration0__2__0_to1__0__0_8hpp" local="yes">src/account/Migration0_2_0To1_0_0.hpp</includedby>
+    <includedby refid="dc/db1/_migration1__0__0_to3__4__0_8hpp" local="yes">src/account/Migration1_0_0To3_4_0.hpp</includedby>
+    <includedby refid="de/d71/_migration3__4__0_to3__5__0_8hpp" local="yes">src/account/Migration3_4_0To3_5_0.hpp</includedby>
+    <includedby refid="df/dd5/_migration3__5__1_to3__6__0_8hpp" local="yes">src/account/Migration3_5_1To3_6_0.hpp</includedby>
+    <includedby refid="dc/d31/_migration_manager_8hpp" local="yes">src/account/MigrationManager.hpp</includedby>
+    <includedby refid="de/d54/_transaction_manager_8hpp" local="yes">src/account/TransactionManager.hpp</includedby>
+    <includedby refid="d1/dac/_u_t_x_o_manager_8hpp" local="yes">src/account/UTXOManager.hpp</includedby>
+    <includedby refid="d0/d4a/http__listener__impl_8hpp" local="yes">src/api/transport/impl/http/http_listener_impl.hpp</includedby>
+    <includedby refid="df/df4/http__session_8hpp" local="yes">src/api/transport/impl/http/http_session.hpp</includedby>
+    <includedby refid="dc/d23/ws__listener__impl_8hpp" local="yes">src/api/transport/impl/ws/ws_listener_impl.hpp</includedby>
+    <includedby refid="d4/d57/ws__session_8hpp" local="yes">src/api/transport/impl/ws/ws_session.hpp</includedby>
+    <includedby refid="d2/d58/rpc__thread__pool_8hpp" local="yes">src/api/transport/rpc_thread_pool.hpp</includedby>
+    <includedby refid="d3/d0d/app__config__impl_8hpp" local="yes">src/application/impl/app_config_impl.hpp</includedby>
+    <includedby refid="db/df6/app__state__manager__impl_8hpp" local="yes">src/application/impl/app_state_manager_impl.hpp</includedby>
+    <includedby refid="de/d54/bridging__node__application_8hpp" local="yes">src/application/impl/bridging_node_application.hpp</includedby>
+    <includedby refid="d9/d22/configuration__storage__impl_8hpp" local="yes">src/application/impl/configuration_storage_impl.hpp</includedby>
+    <includedby refid="d3/dde/syncing__node__application_8hpp" local="yes">src/application/impl/syncing_node_application.hpp</includedby>
+    <includedby refid="d3/d30/logger_8cpp" local="yes">src/base/logger.cpp</includedby>
+    <includedby refid="df/df1/_validator_registry_8hpp" local="yes">src/blockchain/ValidatorRegistry.hpp</includedby>
+    <includedby refid="d7/d87/block__tree__impl_8hpp" local="yes">src/blockchain/impl/block_tree_impl.hpp</includedby>
+    <includedby refid="d4/d6b/key__value__block__storage_8hpp" local="yes">src/blockchain/impl/key_value_block_storage.hpp</includedby>
+    <includedby refid="d2/d97/coinprices_8hpp" local="yes">src/coinprices/coinprices.hpp</includedby>
+    <includedby refid="dc/d0f/crdt__callback__manager_8hpp" local="yes">src/crdt/crdt_callback_manager.hpp</includedby>
+    <includedby refid="d5/d29/crdt__datastore_8hpp" local="yes">src/crdt/crdt_datastore.hpp</includedby>
+    <includedby refid="dc/d76/crdt__heads_8hpp" local="yes">src/crdt/crdt_heads.hpp</includedby>
+    <includedby refid="d0/d2d/crdt__options_8hpp" local="yes">src/crdt/crdt_options.hpp</includedby>
+    <includedby refid="d1/d13/keypair__file__storage_8hpp" local="yes">src/crdt/globaldb/keypair_file_storage.hpp</includedby>
+    <includedby refid="d8/dfe/pubsub__broadcaster_8hpp" local="yes">src/crdt/globaldb/pubsub_broadcaster.hpp</includedby>
+    <includedby refid="d7/db9/pubsub__broadcaster__ext_8hpp" local="yes">src/crdt/globaldb/pubsub_broadcaster_ext.hpp</includedby>
+    <includedby refid="d6/dea/graphsync__dagsyncer_8hpp" local="yes">src/crdt/graphsync_dagsyncer.hpp</includedby>
+    <includedby refid="da/df8/bip39__provider__impl_8hpp" local="yes">src/crypto/bip39/impl/bip39_provider_impl.hpp</includedby>
+    <includedby refid="d3/d73/mnemonic_8cpp" local="yes">src/crypto/bip39/mnemonic.cpp</includedby>
+    <includedby refid="d4/d05/crypto__store__impl_8hpp" local="yes">src/crypto/crypto_store/crypto_store_impl.hpp</includedby>
+    <includedby refid="d3/d33/processing__engine_8hpp" local="yes">src/processing/processing_engine.hpp</includedby>
+    <includedby refid="df/d39/processing__subtask__enqueuer__impl_8hpp" local="yes">src/processing/processing_subtask_enqueuer_impl.hpp</includedby>
+    <includedby refid="d7/d97/processing__subtask__queue_8hpp" local="yes">src/processing/processing_subtask_queue.hpp</includedby>
+    <includedby refid="d7/d8d/processing__subtask__queue__channel__pubsub_8hpp" local="yes">src/processing/processing_subtask_queue_channel_pubsub.hpp</includedby>
+    <includedby refid="d1/dd9/processing__validation__core_8hpp" local="yes">src/processing/processing_validation_core.hpp</includedby>
+    <includedby refid="d3/d95/block__builder__impl_8hpp" local="yes">src/runtime/binaryen/runtime_api/block_builder_impl.hpp</includedby>
+    <includedby refid="d7/dbc/core__impl_8hpp" local="yes">src/runtime/binaryen/runtime_api/core_impl.hpp</includedby>
+    <includedby refid="db/dad/finality__api__impl_8hpp" local="yes">src/runtime/binaryen/runtime_api/finality_api_impl.hpp</includedby>
+    <includedby refid="d1/d6a/production__api__impl_8hpp" local="yes">src/runtime/binaryen/runtime_api/production_api_impl.hpp</includedby>
+    <includedby refid="dd/d87/runtime__api_8hpp" local="yes">src/runtime/binaryen/runtime_api/runtime_api.hpp</includedby>
+    <includedby refid="d0/d78/runtime__external__interface_8hpp" local="yes">src/runtime/binaryen/runtime_external_interface.hpp</includedby>
+    <includedby refid="d3/d10/runtime__manager_8hpp" local="yes">src/runtime/binaryen/runtime_manager.hpp</includedby>
+    <includedby refid="d4/d2e/wasm__executor_8hpp" local="yes">src/runtime/binaryen/wasm_executor.hpp</includedby>
+    <includedby refid="d1/dfb/changes__trie_8hpp" local="yes">src/storage/changes_trie/impl/changes_trie.hpp</includedby>
+    <includedby refid="d1/d07/rocksdb_8hpp" local="yes">src/storage/rocksdb/rocksdb.hpp</includedby>
+    <includedby refid="d8/d00/rocksdb__util_8hpp" local="yes">src/storage/rocksdb/rocksdb_util.hpp</includedby>
+    <includedby refid="d8/dd1/trie__storage__impl_8hpp" local="yes">src/storage/trie/impl/trie_storage_impl.hpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="3">
+        <label>spdlog/spdlog.h</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>node/app_delegate.cpp</label>
+        <link refid="d5/df0/app__delegate_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/account/AccountMessenger.cpp</label>
+        <link refid="d0/d58/_account_messenger_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/account/AccountMessenger.hpp</label>
+        <link refid="d8/d7a/_account_messenger_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>src/account/GeniusAccount.cpp</label>
+        <link refid="dd/dd9/_genius_account_8cpp"/>
+      </node>
+      <node id="17">
+        <label>src/account/GeniusNode.cpp</label>
+        <link refid="df/de0/_genius_node_8cpp"/>
+      </node>
+      <node id="20">
+        <label>src/account/GeniusNode.hpp</label>
+        <link refid="d3/d63/_genius_node_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>src/account/Migration0_2_0To1_0_0.cpp</label>
+        <link refid="dc/dfe/_migration0__2__0_to1__0__0_8cpp"/>
+      </node>
+      <node id="7">
+        <label>src/account/Migration0_2_0To1_0_0.hpp</label>
+        <link refid="d1/d31/_migration0__2__0_to1__0__0_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>src/account/Migration1_0_0To3_4_0.cpp</label>
+        <link refid="d8/d30/_migration1__0__0_to3__4__0_8cpp"/>
+      </node>
+      <node id="10">
+        <label>src/account/Migration1_0_0To3_4_0.hpp</label>
+        <link refid="dc/db1/_migration1__0__0_to3__4__0_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>src/account/Migration3_4_0To3_5_0.cpp</label>
+        <link refid="d6/d71/_migration3__4__0_to3__5__0_8cpp"/>
+      </node>
+      <node id="12">
+        <label>src/account/Migration3_4_0To3_5_0.hpp</label>
+        <link refid="de/d71/_migration3__4__0_to3__5__0_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>src/account/Migration3_5_0To3_5_1.cpp</label>
+        <link refid="da/d32/_migration3__5__0_to3__5__1_8cpp"/>
+      </node>
+      <node id="57">
+        <label>src/account/Migration3_5_0To3_5_1.hpp</label>
+        <link refid="d6/d6e/_migration3__5__0_to3__5__1_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>src/account/Migration3_5_1To3_6_0.cpp</label>
+        <link refid="db/da7/_migration3__5__1_to3__6__0_8cpp"/>
+      </node>
+      <node id="14">
+        <label>src/account/Migration3_5_1To3_6_0.hpp</label>
+        <link refid="df/dd5/_migration3__5__1_to3__6__0_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>src/account/MigrationManager.cpp</label>
+        <link refid="d2/d4b/_migration_manager_8cpp"/>
+      </node>
+      <node id="16">
+        <label>src/account/MigrationManager.hpp</label>
+        <link refid="dc/d31/_migration_manager_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>src/account/TransactionManager.cpp</label>
+        <link refid="d0/dcc/_transaction_manager_8cpp"/>
+      </node>
+      <node id="19">
+        <label>src/account/TransactionManager.hpp</label>
+        <link refid="de/d54/_transaction_manager_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>src/account/UTXOManager.cpp</label>
+        <link refid="dc/d76/_u_t_x_o_manager_8cpp"/>
+      </node>
+      <node id="21">
+        <label>src/account/UTXOManager.hpp</label>
+        <link refid="d1/dac/_u_t_x_o_manager_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>src/api/transport/impl/http/http_listener_impl.cpp</label>
+        <link refid="d3/d43/http__listener__impl_8cpp"/>
+      </node>
+      <node id="23">
+        <label>src/api/transport/impl/http/http_listener_impl.hpp</label>
+        <link refid="d0/d4a/http__listener__impl_8hpp"/>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>src/api/transport/impl/http/http_session.cpp</label>
+        <link refid="d7/db4/http__session_8cpp"/>
+      </node>
+      <node id="25">
+        <label>src/api/transport/impl/http/http_session.hpp</label>
+        <link refid="df/df4/http__session_8hpp"/>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>src/api/transport/impl/ws/ws_listener_impl.cpp</label>
+        <link refid="db/d20/ws__listener__impl_8cpp"/>
+      </node>
+      <node id="27">
+        <label>src/api/transport/impl/ws/ws_listener_impl.hpp</label>
+        <link refid="dc/d23/ws__listener__impl_8hpp"/>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>src/api/transport/impl/ws/ws_session.cpp</label>
+        <link refid="d4/d5b/ws__session_8cpp"/>
+      </node>
+      <node id="29">
+        <label>src/api/transport/impl/ws/ws_session.hpp</label>
+        <link refid="d4/d57/ws__session_8hpp"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>src/api/transport/rpc_thread_pool.cpp</label>
+        <link refid="d7/d5c/rpc__thread__pool_8cpp"/>
+      </node>
+      <node id="31">
+        <label>src/api/transport/rpc_thread_pool.hpp</label>
+        <link refid="d2/d58/rpc__thread__pool_8hpp"/>
+        <childnode refid="32" relation="include">
+        </childnode>
+      </node>
+      <node id="34">
+        <label>src/application/impl/app_config_impl.cpp</label>
+        <link refid="da/de2/app__config__impl_8cpp"/>
+      </node>
+      <node id="33">
+        <label>src/application/impl/app_config_impl.hpp</label>
+        <link refid="d3/d0d/app__config__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="36">
+        <label>src/application/impl/app_state_manager_impl.cpp</label>
+        <link refid="de/d61/app__state__manager__impl_8cpp"/>
+      </node>
+      <node id="35">
+        <label>src/application/impl/app_state_manager_impl.hpp</label>
+        <link refid="db/df6/app__state__manager__impl_8hpp"/>
+        <childnode refid="36" relation="include">
+        </childnode>
+      </node>
+      <node id="37">
+        <label>src/application/impl/bridging_node_application.hpp</label>
+        <link refid="de/d54/bridging__node__application_8hpp"/>
+      </node>
+      <node id="39">
+        <label>src/application/impl/configuration_storage_impl.cpp</label>
+        <link refid="d1/d90/configuration__storage__impl_8cpp"/>
+      </node>
+      <node id="38">
+        <label>src/application/impl/configuration_storage_impl.hpp</label>
+        <link refid="d9/d22/configuration__storage__impl_8hpp"/>
+        <childnode refid="39" relation="include">
+        </childnode>
+      </node>
+      <node id="41">
+        <label>src/application/impl/syncing_node_application.cpp</label>
+        <link refid="d9/d7b/syncing__node__application_8cpp"/>
+      </node>
+      <node id="40">
+        <label>src/application/impl/syncing_node_application.hpp</label>
+        <link refid="d3/dde/syncing__node__application_8hpp"/>
+        <childnode refid="41" relation="include">
+        </childnode>
+      </node>
+      <node id="42">
+        <label>src/base/logger.cpp</label>
+        <link refid="d3/d30/logger_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="46" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="50" relation="include">
+        </childnode>
+        <childnode refid="52" relation="include">
+        </childnode>
+        <childnode refid="54" relation="include">
+        </childnode>
+        <childnode refid="75" relation="include">
+        </childnode>
+        <childnode refid="77" relation="include">
+        </childnode>
+        <childnode refid="78" relation="include">
+        </childnode>
+        <childnode refid="80" relation="include">
+        </childnode>
+        <childnode refid="71" relation="include">
+        </childnode>
+        <childnode refid="82" relation="include">
+        </childnode>
+        <childnode refid="84" relation="include">
+        </childnode>
+        <childnode refid="86" relation="include">
+        </childnode>
+        <childnode refid="87" relation="include">
+        </childnode>
+        <childnode refid="89" relation="include">
+        </childnode>
+        <childnode refid="95" relation="include">
+        </childnode>
+        <childnode refid="97" relation="include">
+        </childnode>
+        <childnode refid="104" relation="include">
+        </childnode>
+        <childnode refid="106" relation="include">
+        </childnode>
+        <childnode refid="107" relation="include">
+        </childnode>
+        <childnode refid="109" relation="include">
+        </childnode>
+        <childnode refid="112" relation="include">
+        </childnode>
+        <childnode refid="114" relation="include">
+        </childnode>
+        <childnode refid="116" relation="include">
+        </childnode>
+        <childnode refid="125" relation="include">
+        </childnode>
+        <childnode refid="130" relation="include">
+        </childnode>
+        <childnode refid="136" relation="include">
+        </childnode>
+        <childnode refid="141" relation="include">
+        </childnode>
+        <childnode refid="144" relation="include">
+        </childnode>
+        <childnode refid="152" relation="include">
+        </childnode>
+        <childnode refid="153" relation="include">
+        </childnode>
+      </node>
+      <node id="53">
+        <label>src/blockchain/Blockchain.hpp</label>
+        <link refid="dc/d59/_blockchain_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+      </node>
+      <node id="44">
+        <label>src/blockchain/ValidatorRegistry.cpp</label>
+        <link refid="df/d00/_validator_registry_8cpp"/>
+      </node>
+      <node id="43">
+        <label>src/blockchain/ValidatorRegistry.hpp</label>
+        <link refid="df/df1/_validator_registry_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="44" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+      </node>
+      <node id="45">
+        <label>src/blockchain/impl/Blockchain.cpp</label>
+        <link refid="da/d8c/_blockchain_8cpp"/>
+      </node>
+      <node id="47">
+        <label>src/blockchain/impl/block_tree_impl.cpp</label>
+        <link refid="d5/df4/block__tree__impl_8cpp"/>
+      </node>
+      <node id="46">
+        <label>src/blockchain/impl/block_tree_impl.hpp</label>
+        <link refid="d7/d87/block__tree__impl_8hpp"/>
+        <childnode refid="47" relation="include">
+        </childnode>
+      </node>
+      <node id="58">
+        <label>src/blockchain/impl/common.hpp</label>
+        <link refid="db/d1e/src_2blockchain_2impl_2common_8hpp"/>
+        <childnode refid="59" relation="include">
+        </childnode>
+        <childnode refid="49" relation="include">
+        </childnode>
+        <childnode refid="60" relation="include">
+        </childnode>
+        <childnode refid="61" relation="include">
+        </childnode>
+      </node>
+      <node id="59">
+        <label>src/blockchain/impl/key_value_block_header_repository.cpp</label>
+        <link refid="de/d1b/key__value__block__header__repository_8cpp"/>
+      </node>
+      <node id="62">
+        <label>src/blockchain/impl/key_value_block_header_repository.hpp</label>
+        <link refid="dd/dc6/key__value__block__header__repository_8hpp"/>
+        <childnode refid="59" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+      </node>
+      <node id="49">
+        <label>src/blockchain/impl/key_value_block_storage.cpp</label>
+        <link refid="de/de9/key__value__block__storage_8cpp"/>
+      </node>
+      <node id="48">
+        <label>src/blockchain/impl/key_value_block_storage.hpp</label>
+        <link refid="d4/d6b/key__value__block__storage_8hpp"/>
+        <childnode refid="49" relation="include">
+        </childnode>
+      </node>
+      <node id="60">
+        <label>src/blockchain/impl/storage_util.cpp</label>
+        <link refid="d3/d2f/storage__util_8cpp"/>
+      </node>
+      <node id="63">
+        <label>src/blockchain/impl/storage_util.hpp</label>
+        <link refid="dd/d87/storage__util_8hpp"/>
+        <childnode refid="47" relation="include">
+        </childnode>
+        <childnode refid="59" relation="include">
+        </childnode>
+        <childnode refid="49" relation="include">
+        </childnode>
+        <childnode refid="60" relation="include">
+        </childnode>
+        <childnode refid="61" relation="include">
+        </childnode>
+      </node>
+      <node id="61">
+        <label>src/blockchain/impl/types.cpp</label>
+        <link refid="da/ddf/types_8cpp"/>
+      </node>
+      <node id="51">
+        <label>src/coinprices/coinprices.cpp</label>
+        <link refid="d4/d1b/coinprices_8cpp"/>
+      </node>
+      <node id="50">
+        <label>src/coinprices/coinprices.hpp</label>
+        <link refid="d2/d97/coinprices_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="51" relation="include">
+        </childnode>
+      </node>
+      <node id="52">
+        <label>src/crdt/crdt_callback_manager.hpp</label>
+        <link refid="dc/d0f/crdt__callback__manager_8hpp"/>
+        <childnode refid="53" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="54" relation="include">
+        </childnode>
+        <childnode refid="74" relation="include">
+        </childnode>
+      </node>
+      <node id="54">
+        <label>src/crdt/crdt_datastore.hpp</label>
+        <link refid="d5/d29/crdt__datastore_8hpp"/>
+        <childnode refid="55" relation="include">
+        </childnode>
+        <childnode refid="56" relation="include">
+        </childnode>
+        <childnode refid="70" relation="include">
+        </childnode>
+        <childnode refid="71" relation="include">
+        </childnode>
+        <childnode refid="72" relation="include">
+        </childnode>
+        <childnode refid="73" relation="include">
+        </childnode>
+      </node>
+      <node id="75">
+        <label>src/crdt/crdt_heads.hpp</label>
+        <link refid="dc/d76/crdt__heads_8hpp"/>
+        <childnode refid="54" relation="include">
+        </childnode>
+        <childnode refid="76" relation="include">
+        </childnode>
+      </node>
+      <node id="77">
+        <label>src/crdt/crdt_options.hpp</label>
+        <link refid="d0/d2d/crdt__options_8hpp"/>
+        <childnode refid="54" relation="include">
+        </childnode>
+        <childnode refid="56" relation="include">
+        </childnode>
+      </node>
+      <node id="145">
+        <label>src/crdt/crdt_set.hpp</label>
+        <link refid="d4/d2e/crdt__set_8hpp"/>
+        <childnode refid="54" relation="include">
+        </childnode>
+        <childnode refid="146" relation="include">
+        </childnode>
+      </node>
+      <node id="55">
+        <label>src/crdt/globaldb/globaldb.cpp</label>
+        <link refid="d6/de2/globaldb_8cpp"/>
+      </node>
+      <node id="56">
+        <label>src/crdt/globaldb/globaldb.hpp</label>
+        <link refid="d0/d0e/globaldb_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="57" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="53" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="58" relation="include">
+        </childnode>
+        <childnode refid="62" relation="include">
+        </childnode>
+        <childnode refid="60" relation="include">
+        </childnode>
+        <childnode refid="63" relation="include">
+        </childnode>
+        <childnode refid="55" relation="include">
+        </childnode>
+        <childnode refid="64" relation="include">
+        </childnode>
+        <childnode refid="66" relation="include">
+        </childnode>
+        <childnode refid="68" relation="include">
+        </childnode>
+      </node>
+      <node id="79">
+        <label>src/crdt/globaldb/keypair_file_storage.cpp</label>
+        <link refid="d7/dda/keypair__file__storage_8cpp"/>
+      </node>
+      <node id="78">
+        <label>src/crdt/globaldb/keypair_file_storage.hpp</label>
+        <link refid="d1/d13/keypair__file__storage_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="63" relation="include">
+        </childnode>
+        <childnode refid="55" relation="include">
+        </childnode>
+        <childnode refid="79" relation="include">
+        </childnode>
+      </node>
+      <node id="81">
+        <label>src/crdt/globaldb/pubsub_broadcaster.cpp</label>
+        <link refid="d2/d86/pubsub__broadcaster_8cpp"/>
+      </node>
+      <node id="80">
+        <label>src/crdt/globaldb/pubsub_broadcaster.hpp</label>
+        <link refid="d8/dfe/pubsub__broadcaster_8hpp"/>
+        <childnode refid="81" relation="include">
+        </childnode>
+      </node>
+      <node id="70">
+        <label>src/crdt/globaldb/pubsub_broadcaster_ext.cpp</label>
+        <link refid="d1/dc9/pubsub__broadcaster__ext_8cpp"/>
+      </node>
+      <node id="71">
+        <label>src/crdt/globaldb/pubsub_broadcaster_ext.hpp</label>
+        <link refid="d7/db9/pubsub__broadcaster__ext_8hpp"/>
+        <childnode refid="55" relation="include">
+        </childnode>
+        <childnode refid="56" relation="include">
+        </childnode>
+        <childnode refid="70" relation="include">
+        </childnode>
+      </node>
+      <node id="82">
+        <label>src/crdt/graphsync_dagsyncer.hpp</label>
+        <link refid="d6/dea/graphsync__dagsyncer_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="44" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+        <childnode refid="55" relation="include">
+        </childnode>
+        <childnode refid="71" relation="include">
+        </childnode>
+        <childnode refid="73" relation="include">
+        </childnode>
+        <childnode refid="83" relation="include">
+        </childnode>
+      </node>
+      <node id="72">
+        <label>src/crdt/impl/atomic_transaction.cpp</label>
+        <link refid="d3/db3/atomic__transaction_8cpp"/>
+      </node>
+      <node id="74">
+        <label>src/crdt/impl/crdt_callback_manager.cpp</label>
+        <link refid="d2/d51/crdt__callback__manager_8cpp"/>
+      </node>
+      <node id="73">
+        <label>src/crdt/impl/crdt_datastore.cpp</label>
+        <link refid="d9/d51/crdt__datastore_8cpp"/>
+      </node>
+      <node id="76">
+        <label>src/crdt/impl/crdt_heads.cpp</label>
+        <link refid="d1/de6/crdt__heads_8cpp"/>
+      </node>
+      <node id="146">
+        <label>src/crdt/impl/crdt_set.cpp</label>
+        <link refid="d4/d84/crdt__set_8cpp"/>
+      </node>
+      <node id="83">
+        <label>src/crdt/impl/graphsync_dagsyncer.cpp</label>
+        <link refid="d5/d9b/graphsync__dagsyncer_8cpp"/>
+      </node>
+      <node id="85">
+        <label>src/crypto/bip39/impl/bip39_provider_impl.cpp</label>
+        <link refid="d4/d53/bip39__provider__impl_8cpp"/>
+      </node>
+      <node id="84">
+        <label>src/crypto/bip39/impl/bip39_provider_impl.hpp</label>
+        <link refid="da/df8/bip39__provider__impl_8hpp"/>
+        <childnode refid="85" relation="include">
+        </childnode>
+      </node>
+      <node id="86">
+        <label>src/crypto/bip39/mnemonic.cpp</label>
+        <link refid="d3/d73/mnemonic_8cpp"/>
+      </node>
+      <node id="88">
+        <label>src/crypto/crypto_store/crypto_store_impl.cpp</label>
+        <link refid="dd/d14/crypto__store__impl_8cpp"/>
+      </node>
+      <node id="87">
+        <label>src/crypto/crypto_store/crypto_store_impl.hpp</label>
+        <link refid="d4/d05/crypto__store__impl_8hpp"/>
+        <childnode refid="88" relation="include">
+        </childnode>
+      </node>
+      <node id="65">
+        <label>src/processing/impl/processing_core_impl.cpp</label>
+        <link refid="db/d83/processing__core__impl_8cpp"/>
+      </node>
+      <node id="64">
+        <label>src/processing/impl/processing_core_impl.hpp</label>
+        <link refid="dd/da6/processing__core__impl_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="65" relation="include">
+        </childnode>
+      </node>
+      <node id="67">
+        <label>src/processing/impl/processing_subtask_result_storage_impl.cpp</label>
+        <link refid="d5/d95/processing__subtask__result__storage__impl_8cpp"/>
+      </node>
+      <node id="66">
+        <label>src/processing/impl/processing_subtask_result_storage_impl.hpp</label>
+        <link refid="d6/dd6/processing__subtask__result__storage__impl_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="67" relation="include">
+        </childnode>
+      </node>
+      <node id="69">
+        <label>src/processing/impl/processing_task_queue_impl.cpp</label>
+        <link refid="d1/dff/processing__task__queue__impl_8cpp"/>
+      </node>
+      <node id="68">
+        <label>src/processing/impl/processing_task_queue_impl.hpp</label>
+        <link refid="d2/d76/processing__task__queue__impl_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="69" relation="include">
+        </childnode>
+      </node>
+      <node id="90">
+        <label>src/processing/processing_engine.cpp</label>
+        <link refid="df/d3c/processing__engine_8cpp"/>
+      </node>
+      <node id="89">
+        <label>src/processing/processing_engine.hpp</label>
+        <link refid="d3/d33/processing__engine_8hpp"/>
+        <childnode refid="90" relation="include">
+        </childnode>
+        <childnode refid="91" relation="include">
+        </childnode>
+      </node>
+      <node id="92">
+        <label>src/processing/processing_node.cpp</label>
+        <link refid="de/d98/processing__node_8cpp"/>
+      </node>
+      <node id="91">
+        <label>src/processing/processing_node.hpp</label>
+        <link refid="df/dac/processing__node_8hpp"/>
+        <childnode refid="92" relation="include">
+        </childnode>
+        <childnode refid="93" relation="include">
+        </childnode>
+      </node>
+      <node id="94">
+        <label>src/processing/processing_service.cpp</label>
+        <link refid="d3/d3a/processing__service_8cpp"/>
+      </node>
+      <node id="93">
+        <label>src/processing/processing_service.hpp</label>
+        <link refid="d5/d37/processing__service_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="94" relation="include">
+        </childnode>
+      </node>
+      <node id="96">
+        <label>src/processing/processing_subtask_enqueuer_impl.cpp</label>
+        <link refid="dd/d16/processing__subtask__enqueuer__impl_8cpp"/>
+      </node>
+      <node id="95">
+        <label>src/processing/processing_subtask_enqueuer_impl.hpp</label>
+        <link refid="df/d39/processing__subtask__enqueuer__impl_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="96" relation="include">
+        </childnode>
+      </node>
+      <node id="98">
+        <label>src/processing/processing_subtask_queue.cpp</label>
+        <link refid="db/d9a/processing__subtask__queue_8cpp"/>
+      </node>
+      <node id="97">
+        <label>src/processing/processing_subtask_queue.hpp</label>
+        <link refid="d7/d97/processing__subtask__queue_8hpp"/>
+        <childnode refid="98" relation="include">
+        </childnode>
+        <childnode refid="99" relation="include">
+        </childnode>
+        <childnode refid="103" relation="include">
+        </childnode>
+      </node>
+      <node id="101">
+        <label>src/processing/processing_subtask_queue_accessor_impl.cpp</label>
+        <link refid="dd/d14/processing__subtask__queue__accessor__impl_8cpp"/>
+      </node>
+      <node id="100">
+        <label>src/processing/processing_subtask_queue_accessor_impl.hpp</label>
+        <link refid="de/d17/processing__subtask__queue__accessor__impl_8hpp"/>
+        <childnode refid="92" relation="include">
+        </childnode>
+        <childnode refid="101" relation="include">
+        </childnode>
+      </node>
+      <node id="105">
+        <label>src/processing/processing_subtask_queue_channel_pubsub.cpp</label>
+        <link refid="d8/d6f/processing__subtask__queue__channel__pubsub_8cpp"/>
+      </node>
+      <node id="104">
+        <label>src/processing/processing_subtask_queue_channel_pubsub.hpp</label>
+        <link refid="d7/d8d/processing__subtask__queue__channel__pubsub_8hpp"/>
+        <childnode refid="92" relation="include">
+        </childnode>
+        <childnode refid="105" relation="include">
+        </childnode>
+      </node>
+      <node id="102">
+        <label>src/processing/processing_subtask_queue_manager.cpp</label>
+        <link refid="da/d9e/processing__subtask__queue__manager_8cpp"/>
+      </node>
+      <node id="99">
+        <label>src/processing/processing_subtask_queue_manager.hpp</label>
+        <link refid="dd/dd8/processing__subtask__queue__manager_8hpp"/>
+        <childnode refid="91" relation="include">
+        </childnode>
+        <childnode refid="100" relation="include">
+        </childnode>
+        <childnode refid="102" relation="include">
+        </childnode>
+      </node>
+      <node id="103">
+        <label>src/processing/processing_validation_core.cpp</label>
+        <link refid="d4/deb/processing__validation__core_8cpp"/>
+      </node>
+      <node id="106">
+        <label>src/processing/processing_validation_core.hpp</label>
+        <link refid="d1/dd9/processing__validation__core_8hpp"/>
+        <childnode refid="100" relation="include">
+        </childnode>
+        <childnode refid="103" relation="include">
+        </childnode>
+      </node>
+      <node id="126">
+        <label>src/runtime/binaryen/module/wasm_module.hpp</label>
+        <link refid="dd/dbc/wasm__module_8hpp"/>
+        <childnode refid="127" relation="include">
+        </childnode>
+        <childnode refid="133" relation="include">
+        </childnode>
+        <childnode refid="135" relation="include">
+        </childnode>
+        <childnode refid="136" relation="include">
+        </childnode>
+      </node>
+      <node id="127">
+        <label>src/runtime/binaryen/module/wasm_module_factory.hpp</label>
+        <link refid="d4/dc9/wasm__module__factory_8hpp"/>
+        <childnode refid="128" relation="include">
+        </childnode>
+        <childnode refid="130" relation="include">
+        </childnode>
+      </node>
+      <node id="129">
+        <label>src/runtime/binaryen/module/wasm_module_factory_impl.cpp</label>
+        <link refid="d5/def/wasm__module__factory__impl_8cpp"/>
+      </node>
+      <node id="128">
+        <label>src/runtime/binaryen/module/wasm_module_factory_impl.hpp</label>
+        <link refid="d8/d01/wasm__module__factory__impl_8hpp"/>
+        <childnode refid="129" relation="include">
+        </childnode>
+      </node>
+      <node id="134">
+        <label>src/runtime/binaryen/module/wasm_module_impl.cpp</label>
+        <link refid="d9/df2/wasm__module__impl_8cpp"/>
+      </node>
+      <node id="133">
+        <label>src/runtime/binaryen/module/wasm_module_impl.hpp</label>
+        <link refid="d5/d13/wasm__module__impl_8hpp"/>
+        <childnode refid="129" relation="include">
+        </childnode>
+        <childnode refid="134" relation="include">
+        </childnode>
+      </node>
+      <node id="139">
+        <label>src/runtime/binaryen/module/wasm_module_instance_impl.cpp</label>
+        <link refid="d7/d13/wasm__module__instance__impl_8cpp"/>
+      </node>
+      <node id="138">
+        <label>src/runtime/binaryen/module/wasm_module_instance_impl.hpp</label>
+        <link refid="da/d86/wasm__module__instance__impl_8hpp"/>
+        <childnode refid="134" relation="include">
+        </childnode>
+        <childnode refid="139" relation="include">
+        </childnode>
+      </node>
+      <node id="108">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.cpp</label>
+        <link refid="d7/d6b/block__builder__impl_8cpp"/>
+      </node>
+      <node id="107">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.hpp</label>
+        <link refid="d3/d95/block__builder__impl_8hpp"/>
+        <childnode refid="108" relation="include">
+        </childnode>
+      </node>
+      <node id="110">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.cpp</label>
+        <link refid="de/d5e/core__factory__impl_8cpp"/>
+      </node>
+      <node id="131">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.hpp</label>
+        <link refid="d7/de4/core__factory__impl_8hpp"/>
+        <childnode refid="110" relation="include">
+        </childnode>
+      </node>
+      <node id="111">
+        <label>src/runtime/binaryen/runtime_api/core_impl.cpp</label>
+        <link refid="dc/d7c/core__impl_8cpp"/>
+      </node>
+      <node id="109">
+        <label>src/runtime/binaryen/runtime_api/core_impl.hpp</label>
+        <link refid="d7/dbc/core__impl_8hpp"/>
+        <childnode refid="110" relation="include">
+        </childnode>
+        <childnode refid="111" relation="include">
+        </childnode>
+      </node>
+      <node id="113">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.cpp</label>
+        <link refid="dc/def/finality__api__impl_8cpp"/>
+      </node>
+      <node id="112">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.hpp</label>
+        <link refid="db/dad/finality__api__impl_8hpp"/>
+        <childnode refid="113" relation="include">
+        </childnode>
+      </node>
+      <node id="118">
+        <label>src/runtime/binaryen/runtime_api/metadata_impl.cpp</label>
+        <link refid="d0/dfc/metadata__impl_8cpp"/>
+      </node>
+      <node id="117">
+        <label>src/runtime/binaryen/runtime_api/metadata_impl.hpp</label>
+        <link refid="dc/dcf/metadata__impl_8hpp"/>
+        <childnode refid="118" relation="include">
+        </childnode>
+      </node>
+      <node id="120">
+        <label>src/runtime/binaryen/runtime_api/offchain_worker_impl.cpp</label>
+        <link refid="d3/d58/offchain__worker__impl_8cpp"/>
+      </node>
+      <node id="119">
+        <label>src/runtime/binaryen/runtime_api/offchain_worker_impl.hpp</label>
+        <link refid="dd/d03/offchain__worker__impl_8hpp"/>
+        <childnode refid="120" relation="include">
+        </childnode>
+      </node>
+      <node id="122">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.cpp</label>
+        <link refid="db/dae/parachain__host__impl_8cpp"/>
+      </node>
+      <node id="121">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.hpp</label>
+        <link refid="d6/d15/parachain__host__impl_8hpp"/>
+        <childnode refid="122" relation="include">
+        </childnode>
+      </node>
+      <node id="115">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.cpp</label>
+        <link refid="d3/d02/production__api__impl_8cpp"/>
+      </node>
+      <node id="114">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.hpp</label>
+        <link refid="d1/d6a/production__api__impl_8hpp"/>
+        <childnode refid="115" relation="include">
+        </childnode>
+      </node>
+      <node id="116">
+        <label>src/runtime/binaryen/runtime_api/runtime_api.hpp</label>
+        <link refid="dd/d87/runtime__api_8hpp"/>
+        <childnode refid="107" relation="include">
+        </childnode>
+        <childnode refid="109" relation="include">
+        </childnode>
+        <childnode refid="112" relation="include">
+        </childnode>
+        <childnode refid="117" relation="include">
+        </childnode>
+        <childnode refid="119" relation="include">
+        </childnode>
+        <childnode refid="121" relation="include">
+        </childnode>
+        <childnode refid="114" relation="include">
+        </childnode>
+        <childnode refid="123" relation="include">
+        </childnode>
+      </node>
+      <node id="124">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.cpp</label>
+        <link refid="db/d63/tagged__transaction__queue__impl_8cpp"/>
+      </node>
+      <node id="123">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.hpp</label>
+        <link refid="d4/d66/tagged__transaction__queue__impl_8hpp"/>
+        <childnode refid="124" relation="include">
+        </childnode>
+      </node>
+      <node id="135">
+        <label>src/runtime/binaryen/runtime_environment.cpp</label>
+        <link refid="d1/d6f/runtime__environment_8cpp"/>
+      </node>
+      <node id="140">
+        <label>src/runtime/binaryen/runtime_external_interface.cpp</label>
+        <link refid="df/d4e/runtime__external__interface_8cpp"/>
+      </node>
+      <node id="125">
+        <label>src/runtime/binaryen/runtime_external_interface.hpp</label>
+        <link refid="d0/d78/runtime__external__interface_8hpp"/>
+        <childnode refid="126" relation="include">
+        </childnode>
+        <childnode refid="127" relation="include">
+        </childnode>
+        <childnode refid="138" relation="include">
+        </childnode>
+        <childnode refid="116" relation="include">
+        </childnode>
+        <childnode refid="140" relation="include">
+        </childnode>
+        <childnode refid="132" relation="include">
+        </childnode>
+        <childnode refid="130" relation="include">
+        </childnode>
+      </node>
+      <node id="132">
+        <label>src/runtime/binaryen/runtime_manager.cpp</label>
+        <link refid="da/dc5/runtime__manager_8cpp"/>
+      </node>
+      <node id="130">
+        <label>src/runtime/binaryen/runtime_manager.hpp</label>
+        <link refid="d3/d10/runtime__manager_8hpp"/>
+        <childnode refid="131" relation="include">
+        </childnode>
+        <childnode refid="116" relation="include">
+        </childnode>
+        <childnode refid="132" relation="include">
+        </childnode>
+      </node>
+      <node id="137">
+        <label>src/runtime/binaryen/wasm_executor.cpp</label>
+        <link refid="d9/db1/wasm__executor_8cpp"/>
+      </node>
+      <node id="136">
+        <label>src/runtime/binaryen/wasm_executor.hpp</label>
+        <link refid="d4/d2e/wasm__executor_8hpp"/>
+        <childnode refid="116" relation="include">
+        </childnode>
+        <childnode refid="137" relation="include">
+        </childnode>
+      </node>
+      <node id="142">
+        <label>src/storage/changes_trie/impl/changes_trie.cpp</label>
+        <link refid="d9/d77/changes__trie_8cpp"/>
+      </node>
+      <node id="141">
+        <label>src/storage/changes_trie/impl/changes_trie.hpp</label>
+        <link refid="d1/dfb/changes__trie_8hpp"/>
+        <childnode refid="142" relation="include">
+        </childnode>
+        <childnode refid="143" relation="include">
+        </childnode>
+      </node>
+      <node id="143">
+        <label>src/storage/changes_trie/impl/storage_changes_tracker_impl.cpp</label>
+        <link refid="d8/d2c/storage__changes__tracker__impl_8cpp"/>
+      </node>
+      <node id="147">
+        <label>src/storage/rocksdb/rocksdb.cpp</label>
+        <link refid="dc/d6d/rocksdb_8cpp"/>
+      </node>
+      <node id="144">
+        <label>src/storage/rocksdb/rocksdb.hpp</label>
+        <link refid="d1/d07/rocksdb_8hpp"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="54" relation="include">
+        </childnode>
+        <childnode refid="75" relation="include">
+        </childnode>
+        <childnode refid="145" relation="include">
+        </childnode>
+        <childnode refid="73" relation="include">
+        </childnode>
+        <childnode refid="147" relation="include">
+        </childnode>
+        <childnode refid="148" relation="include">
+        </childnode>
+        <childnode refid="150" relation="include">
+        </childnode>
+      </node>
+      <node id="149">
+        <label>src/storage/rocksdb/rocksdb_batch.cpp</label>
+        <link refid="d6/d9a/rocksdb__batch_8cpp"/>
+      </node>
+      <node id="148">
+        <label>src/storage/rocksdb/rocksdb_batch.hpp</label>
+        <link refid="dc/d5f/rocksdb__batch_8hpp"/>
+        <childnode refid="147" relation="include">
+        </childnode>
+        <childnode refid="149" relation="include">
+        </childnode>
+      </node>
+      <node id="151">
+        <label>src/storage/rocksdb/rocksdb_cursor.cpp</label>
+        <link refid="da/dd7/rocksdb__cursor_8cpp"/>
+      </node>
+      <node id="150">
+        <label>src/storage/rocksdb/rocksdb_cursor.hpp</label>
+        <link refid="db/d06/rocksdb__cursor_8hpp"/>
+        <childnode refid="147" relation="include">
+        </childnode>
+        <childnode refid="151" relation="include">
+        </childnode>
+      </node>
+      <node id="152">
+        <label>src/storage/rocksdb/rocksdb_util.hpp</label>
+        <link refid="d8/d00/rocksdb__util_8hpp"/>
+        <childnode refid="147" relation="include">
+        </childnode>
+        <childnode refid="149" relation="include">
+        </childnode>
+        <childnode refid="151" relation="include">
+        </childnode>
+      </node>
+      <node id="154">
+        <label>src/storage/trie/impl/trie_storage_impl.cpp</label>
+        <link refid="db/dc1/trie__storage__impl_8cpp"/>
+      </node>
+      <node id="153">
+        <label>src/storage/trie/impl/trie_storage_impl.hpp</label>
+        <link refid="d8/dd1/trie__storage__impl_8hpp"/>
+        <childnode refid="154" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d4/dcb/namespacesgns_1_1base">sgns::base</innernamespace>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" prot="public" static="no">
+        <type>std::shared_ptr&lt; spdlog::logger &gt;</type>
+        <definition>using sgns::base::Logger = std::shared_ptr&lt;spdlog::logger&gt;</definition>
+        <argsstring></argsstring>
+        <name>Logger</name>
+        <qualifiedname>sgns::base::Logger</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/logger.hpp" line="13" column="5" bodyfile="src/base/logger.hpp" bodystart="13" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>Logger</type>
+        <definition>Logger sgns::base::createLogger</definition>
+        <argsstring>(const std::string &amp;tag, const std::string &amp;basepath=&quot;&quot;)</argsstring>
+        <name>createLogger</name>
+        <qualifiedname>sgns::base::createLogger</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>tag</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>basepath</declname>
+          <defval>&quot;&quot;</defval>
+        </param>
+        <briefdescription>
+<para>Create a logger instance. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>tag</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Tagging name for identifying logger. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>basepath</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional base path for log output (platform dependent). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">Logger</ref> object. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/logger.cpp" line="55" column="12" bodyfile="src/base/logger.cpp" bodystart="55" bodyend="76" declfile="src/base/logger.hpp" declline="21" declcolumn="12"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_LOGGER_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_LOGGER_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;spdlog/fmt/ostr.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;spdlog/spdlog.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#if<sp/>defined(<sp/>ANDROID<sp/>)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;spdlog/sinks/android_sink.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d4/dcb/namespacesgns_1_1base" kindref="compound">sgns::base</ref></highlight></codeline>
+<codeline lineno="12"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="13" refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">Logger</ref><sp/>=<sp/>std::shared_ptr&lt;spdlog::logger&gt;;</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">Logger</ref><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">createLogger</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;tag,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;basepath<sp/>=<sp/></highlight><highlight class="stringliteral">&quot;&quot;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="22"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::base</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_LOGGER_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/base/logger.hpp"/>
+  </compounddef>
+</doxygen>

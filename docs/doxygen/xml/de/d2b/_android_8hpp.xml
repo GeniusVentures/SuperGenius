@@ -1,0 +1,117 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/d2b/_android_8hpp" kind="file" language="C++">
+    <compoundname>Android.hpp</compoundname>
+    <includes refid="d9/d5a/_j_s_o_n_backend_8hpp" local="yes">JSONBackend.hpp</includes>
+    <includes local="no">jni.h</includes>
+    <includedby refid="dc/dbd/_android_8cpp" local="yes">src/local_secure_storage/impl/Android.cpp</includedby>
+    <incdepgraph>
+      <node id="3">
+        <label>../ISecureStorage.hpp</label>
+        <link refid="dd/d1a/_i_secure_storage_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/local_secure_storage/impl/Android.hpp</label>
+        <link refid="de/d2b/_android_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>JSONBackend.hpp</label>
+        <link refid="d9/d5a/_j_s_o_n_backend_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>jni.h</label>
+      </node>
+      <node id="6">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="8">
+        <label>rapidjson/document.h</label>
+      </node>
+      <node id="4">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/local_secure_storage/impl/Android.cpp</label>
+        <link refid="dc/dbd/_android_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/local_secure_storage/impl/Android.hpp</label>
+        <link refid="de/d2b/_android_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d5/d83/classsgns_1_1_android_secure_storage" prot="public">sgns::AndroidSecureStorage</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#pragma<sp/>once</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d9/d5a/_j_s_o_n_backend_8hpp" kindref="compound">JSONBackend.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;jni.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="8"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="9" refid="d5/d83/classsgns_1_1_android_secure_storage" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d5/d83/classsgns_1_1_android_secure_storage_1a66d7a764a65b2e8697ed648d9ef8e417" kindref="member">AndroidSecureStorage</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a9e536564914936ba39ee7d67dfa1a316" kindref="member">JSONBackend</ref></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">explicit</highlight><highlight class="normal"><sp/><ref refid="d5/d83/classsgns_1_1_android_secure_storage_1a66d7a764a65b2e8697ed648d9ef8e417" kindref="member">AndroidSecureStorage</ref>(std::string<sp/>identifier,<sp/>JavaVM<sp/>*jvm<sp/>=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d5/d83/classsgns_1_1_android_secure_storage_1afdac784a393c600c9fc90016d8e932ce" kindref="member">~AndroidSecureStorage</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16" refid="d5/d83/classsgns_1_1_android_secure_storage_1a43ba4764dc2432caaa1ce52aa75ee19e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d5/d83/classsgns_1_1_android_secure_storage_1a43ba4764dc2432caaa1ce52aa75ee19e" kindref="member">GetName</ref>()</highlight><highlight class="keyword"><sp/>override</highlight></codeline>
+<codeline lineno="17"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;AndroidSecureStorage&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;rapidjson::Document&gt;<sp/><ref refid="d5/d83/classsgns_1_1_android_secure_storage_1a1a855c2314c40dbe447d53cf4f5f4140" kindref="member">LoadJSON</ref>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d5/d83/classsgns_1_1_android_secure_storage_1a48a47b909539147f6ddb36c45d906ff2" kindref="member">SaveJSON</ref>(<sp/>rapidjson::Document<sp/>document<sp/>)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>JNIEnv<sp/>*<ref refid="d5/d83/classsgns_1_1_android_secure_storage_1ab367b64d0bc6f10626c5e87283c9bfe3" kindref="member">GetJNIEnv</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28" refid="d5/d83/classsgns_1_1_android_secure_storage_1aa0aa6172e0b07b5c5d381b142904e9e6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>JavaVM<sp/>*<ref refid="d5/d83/classsgns_1_1_android_secure_storage_1aa0aa6172e0b07b5c5d381b142904e9e6" kindref="member">jvm_</ref>;</highlight></codeline>
+<codeline lineno="29" refid="d5/d83/classsgns_1_1_android_secure_storage_1ac34be7785ec5c795577de8b2c4fcefc5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>jclass<sp/><sp/><ref refid="d5/d83/classsgns_1_1_android_secure_storage_1ac34be7785ec5c795577de8b2c4fcefc5" kindref="member">key_store_helper_class_</ref>;</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31" refid="d5/d83/classsgns_1_1_android_secure_storage_1a408034922d9c6e73363f9063265184de" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>jmethodID<sp/><ref refid="d5/d83/classsgns_1_1_android_secure_storage_1a408034922d9c6e73363f9063265184de" kindref="member">load_method_</ref>;</highlight></codeline>
+<codeline lineno="32" refid="d5/d83/classsgns_1_1_android_secure_storage_1aba7773ebbed2be947bc4630126df08e0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>jmethodID<sp/><ref refid="d5/d83/classsgns_1_1_android_secure_storage_1aba7773ebbed2be947bc4630126df08e0" kindref="member">save_method_</ref>;</highlight></codeline>
+<codeline lineno="33" refid="d5/d83/classsgns_1_1_android_secure_storage_1a8b5e5a3a1c61bf22784cbed06f611223" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>jmethodID<sp/><ref refid="d5/d83/classsgns_1_1_android_secure_storage_1a8b5e5a3a1c61bf22784cbed06f611223" kindref="member">delete_method_</ref>;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="35"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="src/local_secure_storage/impl/Android.hpp"/>
+  </compounddef>
+</doxygen>

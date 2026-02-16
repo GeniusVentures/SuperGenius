@@ -1,0 +1,55 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/db4/structsgns_1_1lambda__visitor" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::lambda_visitor</compoundname>
+    <templateparamlist>
+      <param>
+        <type>typename...</type>
+        <declname>Lambdas</declname>
+        <defname>Lambdas</defname>
+      </param>
+    </templateparamlist>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="4">
+        <label>sgns::lambda_visitor&lt; Lambda &gt;</label>
+        <link refid="dc/d78/structsgns_1_1lambda__visitor_3_01_lambda_01_4"/>
+        <childnode refid="1" relation="template-instance">
+          <edgelabel>&lt; Lambda &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::lambda_visitor&lt; Lambda, Lambdas... &gt;</label>
+        <link refid="d2/d5d/structsgns_1_1lambda__visitor_3_01_lambda_00_01_lambdas_8_8_8_01_4"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="1" relation="template-instance">
+          <edgelabel>&lt; Lambda, Lambdas... &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::lambda_visitor&lt; Lambdas &gt;</label>
+        <link refid="d2/db4/structsgns_1_1lambda__visitor"/>
+      </node>
+      <node id="2">
+        <label>sgns::lambda_visitor&lt; Lambdas... &gt;</label>
+        <link refid="d2/db4/structsgns_1_1lambda__visitor"/>
+        <childnode refid="1" relation="template-instance">
+          <edgelabel>&lt; Lambdas... &gt;</edgelabel>
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::lambda_visitor&lt; Lambdas &gt;</label>
+        <link refid="d2/db4/structsgns_1_1lambda__visitor"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/base/visitor.hpp" line="11" column="16" bodyfile="src/base/visitor.hpp" bodystart="11" bodyend="-1"/>
+    <listofallmembers>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

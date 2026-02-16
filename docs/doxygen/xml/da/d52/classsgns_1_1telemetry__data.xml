@@ -1,0 +1,497 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/d52/classsgns_1_1telemetry__data" kind="class" language="C++" prot="public">
+    <compoundname>sgns::telemetry_data</compoundname>
+    <includes refid="da/d8d/node_2common_8hpp" local="no">common.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="da/d52/classsgns_1_1telemetry__data_1a170f94ce7037412b313ff9d2a0ab4867" prot="public" static="no" mutable="no">
+        <type>sgns::signature</type>
+        <definition>sgns::signature sgns::telemetry_data::signature</definition>
+        <argsstring></argsstring>
+        <name>signature</name>
+        <qualifiedname>sgns::telemetry_data::signature</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="348" column="17" bodyfile="node/common.hpp" bodystart="348" bodyend="348"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d52/classsgns_1_1telemetry__data_1a478b09c383963c14bd0895eb17246083" prot="public" static="no" mutable="no">
+        <type>sgns::account</type>
+        <definition>sgns::account sgns::telemetry_data::node_id</definition>
+        <argsstring></argsstring>
+        <name>node_id</name>
+        <qualifiedname>sgns::telemetry_data::node_id</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="349" column="15" bodyfile="node/common.hpp" bodystart="349" bodyend="349"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d52/classsgns_1_1telemetry__data_1a51bd0858da203b3023cf3ba60c8e969a" prot="public" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::telemetry_data::block_count</definition>
+        <argsstring></argsstring>
+        <name>block_count</name>
+        <qualifiedname>sgns::telemetry_data::block_count</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="350" column="10" bodyfile="node/common.hpp" bodystart="350" bodyend="350"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d52/classsgns_1_1telemetry__data_1aa1a33d0a4dca39f7ecc34ab3c92229b1" prot="public" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::telemetry_data::cemented_count</definition>
+        <argsstring></argsstring>
+        <name>cemented_count</name>
+        <qualifiedname>sgns::telemetry_data::cemented_count</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="351" column="10" bodyfile="node/common.hpp" bodystart="351" bodyend="351"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d52/classsgns_1_1telemetry__data_1aef0365420c5cc9374814c31df554eb42" prot="public" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::telemetry_data::unchecked_count</definition>
+        <argsstring></argsstring>
+        <name>unchecked_count</name>
+        <qualifiedname>sgns::telemetry_data::unchecked_count</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="352" column="10" bodyfile="node/common.hpp" bodystart="352" bodyend="352"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d52/classsgns_1_1telemetry__data_1a5561849f1d970e8e0218bd12f66bede2" prot="public" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::telemetry_data::account_count</definition>
+        <argsstring></argsstring>
+        <name>account_count</name>
+        <qualifiedname>sgns::telemetry_data::account_count</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="353" column="10" bodyfile="node/common.hpp" bodystart="353" bodyend="353"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d52/classsgns_1_1telemetry__data_1a675d87da2238659047b63b103085116f" prot="public" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::telemetry_data::bandwidth_cap</definition>
+        <argsstring></argsstring>
+        <name>bandwidth_cap</name>
+        <qualifiedname>sgns::telemetry_data::bandwidth_cap</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="354" column="10" bodyfile="node/common.hpp" bodystart="354" bodyend="354"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d52/classsgns_1_1telemetry__data_1a85a615305767cd4775971467a41e4da2" prot="public" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::telemetry_data::uptime</definition>
+        <argsstring></argsstring>
+        <name>uptime</name>
+        <qualifiedname>sgns::telemetry_data::uptime</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="355" column="10" bodyfile="node/common.hpp" bodystart="355" bodyend="355"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d52/classsgns_1_1telemetry__data_1a61a8552fe7c2eb0485f10acf8afb335d" prot="public" static="no" mutable="no">
+        <type>uint32_t</type>
+        <definition>uint32_t sgns::telemetry_data::peer_count</definition>
+        <argsstring></argsstring>
+        <name>peer_count</name>
+        <qualifiedname>sgns::telemetry_data::peer_count</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="356" column="10" bodyfile="node/common.hpp" bodystart="356" bodyend="356"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d52/classsgns_1_1telemetry__data_1a6d6c15b66126695751e29d2b06213011" prot="public" static="no" mutable="no">
+        <type>uint8_t</type>
+        <definition>uint8_t sgns::telemetry_data::protocol_version</definition>
+        <argsstring></argsstring>
+        <name>protocol_version</name>
+        <qualifiedname>sgns::telemetry_data::protocol_version</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="357" column="9" bodyfile="node/common.hpp" bodystart="357" bodyend="357"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d52/classsgns_1_1telemetry__data_1a9fc08cb79c6f8e82ac642c7c8de98aca" prot="public" static="no" mutable="no">
+        <type>sgns::block_hash</type>
+        <definition>sgns::block_hash sgns::telemetry_data::genesis_block</definition>
+        <argsstring></argsstring>
+        <name>genesis_block</name>
+        <qualifiedname>sgns::telemetry_data::genesis_block</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="358" column="18" bodyfile="node/common.hpp" bodystart="358" bodyend="358"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d52/classsgns_1_1telemetry__data_1a4d4a3258449d8a98ac7697e849b4ea26" prot="public" static="no" mutable="no">
+        <type>uint8_t</type>
+        <definition>uint8_t sgns::telemetry_data::major_version</definition>
+        <argsstring></argsstring>
+        <name>major_version</name>
+        <qualifiedname>sgns::telemetry_data::major_version</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="359" column="9" bodyfile="node/common.hpp" bodystart="359" bodyend="359"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d52/classsgns_1_1telemetry__data_1ae4b0cf1f49a956d35ae1abc14968255d" prot="public" static="no" mutable="no">
+        <type>uint8_t</type>
+        <definition>uint8_t sgns::telemetry_data::minor_version</definition>
+        <argsstring></argsstring>
+        <name>minor_version</name>
+        <qualifiedname>sgns::telemetry_data::minor_version</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="360" column="9" bodyfile="node/common.hpp" bodystart="360" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d52/classsgns_1_1telemetry__data_1a669c26df56aaa417167febb4d5ac21b8" prot="public" static="no" mutable="no">
+        <type>uint8_t</type>
+        <definition>uint8_t sgns::telemetry_data::patch_version</definition>
+        <argsstring></argsstring>
+        <name>patch_version</name>
+        <qualifiedname>sgns::telemetry_data::patch_version</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="361" column="9" bodyfile="node/common.hpp" bodystart="361" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d52/classsgns_1_1telemetry__data_1a2d7e23e4158ead62b42ecc2fe920cf03" prot="public" static="no" mutable="no">
+        <type>uint8_t</type>
+        <definition>uint8_t sgns::telemetry_data::pre_release_version</definition>
+        <argsstring></argsstring>
+        <name>pre_release_version</name>
+        <qualifiedname>sgns::telemetry_data::pre_release_version</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="362" column="9" bodyfile="node/common.hpp" bodystart="362" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d52/classsgns_1_1telemetry__data_1abb963e9b99a80d16d0010d8b3626de94" prot="public" static="no" mutable="no">
+        <type>uint8_t</type>
+        <definition>uint8_t sgns::telemetry_data::maker</definition>
+        <argsstring></argsstring>
+        <name>maker</name>
+        <qualifiedname>sgns::telemetry_data::maker</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="363" column="9" bodyfile="node/common.hpp" bodystart="363" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d52/classsgns_1_1telemetry__data_1aa7f315be472c2b5683f7d485ee0225c5" prot="public" static="no" mutable="no">
+        <type>std::chrono::system_clock::time_point</type>
+        <definition>std::chrono::system_clock::time_point sgns::telemetry_data::timestamp</definition>
+        <argsstring></argsstring>
+        <name>timestamp</name>
+        <qualifiedname>sgns::telemetry_data::timestamp</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="364" column="39" bodyfile="node/common.hpp" bodystart="364" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="da/d52/classsgns_1_1telemetry__data_1a49e35f1817f54248132cd4f956131b67" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>auto constexpr</type>
+        <definition>auto constexpr sgns::telemetry_data::size</definition>
+        <argsstring></argsstring>
+        <name>size</name>
+        <qualifiedname>sgns::telemetry_data::size</qualifiedname>
+        <initializer>= sizeof (<ref refid="da/d52/classsgns_1_1telemetry__data_1a170f94ce7037412b313ff9d2a0ab4867" kindref="member">signature</ref>) + sizeof (<ref refid="da/d52/classsgns_1_1telemetry__data_1a478b09c383963c14bd0895eb17246083" kindref="member">node_id</ref>) + sizeof (<ref refid="da/d52/classsgns_1_1telemetry__data_1a51bd0858da203b3023cf3ba60c8e969a" kindref="member">block_count</ref>) + sizeof (<ref refid="da/d52/classsgns_1_1telemetry__data_1aa1a33d0a4dca39f7ecc34ab3c92229b1" kindref="member">cemented_count</ref>) + sizeof (<ref refid="da/d52/classsgns_1_1telemetry__data_1aef0365420c5cc9374814c31df554eb42" kindref="member">unchecked_count</ref>) + sizeof (<ref refid="da/d52/classsgns_1_1telemetry__data_1a5561849f1d970e8e0218bd12f66bede2" kindref="member">account_count</ref>) + sizeof (<ref refid="da/d52/classsgns_1_1telemetry__data_1a675d87da2238659047b63b103085116f" kindref="member">bandwidth_cap</ref>) + sizeof (<ref refid="da/d52/classsgns_1_1telemetry__data_1a61a8552fe7c2eb0485f10acf8afb335d" kindref="member">peer_count</ref>) + sizeof (<ref refid="da/d52/classsgns_1_1telemetry__data_1a6d6c15b66126695751e29d2b06213011" kindref="member">protocol_version</ref>) + sizeof (<ref refid="da/d52/classsgns_1_1telemetry__data_1a85a615305767cd4775971467a41e4da2" kindref="member">uptime</ref>) + sizeof (<ref refid="da/d52/classsgns_1_1telemetry__data_1a9fc08cb79c6f8e82ac642c7c8de98aca" kindref="member">genesis_block</ref>) + sizeof (<ref refid="da/d52/classsgns_1_1telemetry__data_1a4d4a3258449d8a98ac7697e849b4ea26" kindref="member">major_version</ref>) + sizeof (<ref refid="da/d52/classsgns_1_1telemetry__data_1ae4b0cf1f49a956d35ae1abc14968255d" kindref="member">minor_version</ref>) + sizeof (<ref refid="da/d52/classsgns_1_1telemetry__data_1a669c26df56aaa417167febb4d5ac21b8" kindref="member">patch_version</ref>) + sizeof (<ref refid="da/d52/classsgns_1_1telemetry__data_1a2d7e23e4158ead62b42ecc2fe920cf03" kindref="member">pre_release_version</ref>) + sizeof (<ref refid="da/d52/classsgns_1_1telemetry__data_1abb963e9b99a80d16d0010d8b3626de94" kindref="member">maker</ref>) + sizeof (uint64_t)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="375" column="23" bodyfile="node/common.hpp" bodystart="375" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="da/d52/classsgns_1_1telemetry__data_1a8d4a1b7ad380beb55f14d40c762a6b72" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::telemetry_data::serialize</definition>
+        <argsstring>(sgns::stream &amp;) const</argsstring>
+        <name>serialize</name>
+        <qualifiedname>sgns::telemetry_data::serialize</qualifiedname>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="366" column="6" bodyfile="node/common.cpp" bodystart="1213" bodyend="1217"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d52/classsgns_1_1telemetry__data_1a3ad09fb2de8c44cfe3f5aed72461aab2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::telemetry_data::deserialize</definition>
+        <argsstring>(sgns::stream &amp;, uint16_t)</argsstring>
+        <name>deserialize</name>
+        <qualifiedname>sgns::telemetry_data::deserialize</qualifiedname>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type>uint16_t</type>
+          <defname>payload_length_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="367" column="6" bodyfile="node/common.cpp" bodystart="1169" bodyend="1191"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d52/classsgns_1_1telemetry__data_1ad5d07ed84754b82ce1b2fe8d55ccb062" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::error_</type>
+        <definition>sgns::error_ sgns::telemetry_data::serialize_json</definition>
+        <argsstring>(sgns::jsonconfig &amp;, bool) const</argsstring>
+        <name>serialize_json</name>
+        <qualifiedname>sgns::telemetry_data::serialize_json</qualifiedname>
+        <param>
+          <type>sgns::jsonconfig &amp;</type>
+          <defname>json</defname>
+        </param>
+        <param>
+          <type>bool</type>
+          <defname>ignore_identification_metrics_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="368" column="14" bodyfile="node/common.cpp" bodystart="1219" bodyend="1242"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d52/classsgns_1_1telemetry__data_1ae888d6d92ad10453e29a821a2702f0d1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::error_</type>
+        <definition>sgns::error_ sgns::telemetry_data::deserialize_json</definition>
+        <argsstring>(sgns::jsonconfig &amp;, bool)</argsstring>
+        <name>deserialize_json</name>
+        <qualifiedname>sgns::telemetry_data::deserialize_json</qualifiedname>
+        <param>
+          <type>sgns::jsonconfig &amp;</type>
+          <defname>json</defname>
+        </param>
+        <param>
+          <type>bool</type>
+          <defname>ignore_identification_metrics_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="369" column="14" bodyfile="node/common.cpp" bodystart="1244" bodyend="1294"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d52/classsgns_1_1telemetry__data_1a4e32daaa7e8e9b05ed841a9fd6f75984" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::telemetry_data::sign</definition>
+        <argsstring>(sgns::keypair const &amp;)</argsstring>
+        <name>sign</name>
+        <qualifiedname>sgns::telemetry_data::sign</qualifiedname>
+        <param>
+          <type>sgns::keypair const &amp;</type>
+          <defname>node_id_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="370" column="6" bodyfile="node/common.cpp" bodystart="1306" bodyend="1316"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d52/classsgns_1_1telemetry__data_1a5b8d2d9718ff47468c61ac4cfed394b9" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::telemetry_data::validate_signature</definition>
+        <argsstring>(uint16_t) const</argsstring>
+        <name>validate_signature</name>
+        <qualifiedname>sgns::telemetry_data::validate_signature</qualifiedname>
+        <param>
+          <type>uint16_t</type>
+          <defname>size_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="371" column="6" bodyfile="node/common.cpp" bodystart="1318" bodyend="1327"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d52/classsgns_1_1telemetry__data_1a3b72f6a12fc65d9fd7b498dfe080811b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::telemetry_data::operator==</definition>
+        <argsstring>(sgns::telemetry_data const &amp;) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::telemetry_data::operator==</qualifiedname>
+        <param>
+          <type><ref refid="da/d52/classsgns_1_1telemetry__data" kindref="compound">sgns::telemetry_data</ref> const &amp;</type>
+          <defname>data_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="372" column="6" bodyfile="node/common.cpp" bodystart="1296" bodyend="1299"/>
+      </memberdef>
+      <memberdef kind="function" id="da/d52/classsgns_1_1telemetry__data_1a81fe975062fc2e09bd7fc55ae853b8c0" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::telemetry_data::operator!=</definition>
+        <argsstring>(sgns::telemetry_data const &amp;) const</argsstring>
+        <name>operator!=</name>
+        <qualifiedname>sgns::telemetry_data::operator!=</qualifiedname>
+        <param>
+          <type><ref refid="da/d52/classsgns_1_1telemetry__data" kindref="compound">sgns::telemetry_data</ref> const &amp;</type>
+          <defname>data_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="373" column="6" bodyfile="node/common.cpp" bodystart="1301" bodyend="1304"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="da/d52/classsgns_1_1telemetry__data_1a701d1969d60aa96ef77736fdb814a834" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::telemetry_data::serialize_without_signature</definition>
+        <argsstring>(sgns::stream &amp;, uint16_t) const</argsstring>
+        <name>serialize_without_signature</name>
+        <qualifiedname>sgns::telemetry_data::serialize_without_signature</qualifiedname>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type>uint16_t</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="378" column="6" bodyfile="node/common.cpp" bodystart="1193" bodyend="1211"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::telemetry_data</label>
+        <link refid="da/d52/classsgns_1_1telemetry__data"/>
+      </node>
+    </collaborationgraph>
+    <location file="node/common.hpp" line="345" column="1" bodyfile="node/common.hpp" bodystart="346" bodyend="379"/>
+    <listofallmembers>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a5561849f1d970e8e0218bd12f66bede2" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>account_count</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a675d87da2238659047b63b103085116f" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>bandwidth_cap</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a51bd0858da203b3023cf3ba60c8e969a" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>block_count</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1aa1a33d0a4dca39f7ecc34ab3c92229b1" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>cemented_count</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a3ad09fb2de8c44cfe3f5aed72461aab2" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>deserialize</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1ae888d6d92ad10453e29a821a2702f0d1" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>deserialize_json</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a9fc08cb79c6f8e82ac642c7c8de98aca" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>genesis_block</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a4d4a3258449d8a98ac7697e849b4ea26" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>major_version</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1abb963e9b99a80d16d0010d8b3626de94" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>maker</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1ae4b0cf1f49a956d35ae1abc14968255d" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>minor_version</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a478b09c383963c14bd0895eb17246083" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>node_id</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a81fe975062fc2e09bd7fc55ae853b8c0" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>operator!=</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a3b72f6a12fc65d9fd7b498dfe080811b" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>operator==</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a669c26df56aaa417167febb4d5ac21b8" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>patch_version</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a61a8552fe7c2eb0485f10acf8afb335d" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>peer_count</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a2d7e23e4158ead62b42ecc2fe920cf03" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>pre_release_version</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a6d6c15b66126695751e29d2b06213011" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>protocol_version</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a8d4a1b7ad380beb55f14d40c762a6b72" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>serialize</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1ad5d07ed84754b82ce1b2fe8d55ccb062" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>serialize_json</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a701d1969d60aa96ef77736fdb814a834" prot="private" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>serialize_without_signature</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a4e32daaa7e8e9b05ed841a9fd6f75984" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>sign</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a170f94ce7037412b313ff9d2a0ab4867" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>signature</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a49e35f1817f54248132cd4f956131b67" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>size</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1aa7f315be472c2b5683f7d485ee0225c5" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>timestamp</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1aef0365420c5cc9374814c31df554eb42" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>unchecked_count</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a85a615305767cd4775971467a41e4da2" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>uptime</name></member>
+      <member refid="da/d52/classsgns_1_1telemetry__data_1a5b8d2d9718ff47468c61ac4cfed394b9" prot="public" virt="non-virtual"><scope>sgns::telemetry_data</scope><name>validate_signature</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

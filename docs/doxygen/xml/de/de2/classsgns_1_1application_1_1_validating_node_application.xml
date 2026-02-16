@@ -1,0 +1,437 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/de2/classsgns_1_1application_1_1_validating_node_application" kind="class" language="C++" prot="public">
+    <compoundname>sgns::application::ValidatingNodeApplication</compoundname>
+    <basecompoundref refid="da/d1d/classsgns_1_1application_1_1_sgns_application" prot="public" virt="non-virtual">sgns::application::SgnsApplication</basecompoundref>
+    <includes refid="d6/dce/validating__node__application_8hpp" local="no">validating_node_application.hpp</includes>
+    <sectiondef kind="private-type">
+      <memberdef kind="typedef" id="de/de2/classsgns_1_1application_1_1_validating_node_application_1a29a04337fa033834824df435ed9c7f21" prot="private" static="no">
+        <type>verification::Production</type>
+        <definition>using sgns::application::ValidatingNodeApplication::Production = verification::Production</definition>
+        <argsstring></argsstring>
+        <name>Production</name>
+        <qualifiedname>sgns::application::ValidatingNodeApplication::Production</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/validating_node_application.hpp" line="19" column="9" bodyfile="src/application/impl/validating_node_application.hpp" bodystart="19" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="de/de2/classsgns_1_1application_1_1_validating_node_application_1a0e0add155704825bbd0f402b04d3fd5b" prot="private" static="no">
+        <type>verification::finality::Finality</type>
+        <definition>using sgns::application::ValidatingNodeApplication::Finality = verification::finality::Finality</definition>
+        <argsstring></argsstring>
+        <name>Finality</name>
+        <qualifiedname>sgns::application::ValidatingNodeApplication::Finality</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/validating_node_application.hpp" line="20" column="9" bodyfile="src/application/impl/validating_node_application.hpp" bodystart="20" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="de/de2/classsgns_1_1application_1_1_validating_node_application_1a17a7fd6db7aaacf9ff2029bd122cdf90" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d2/d3c/class_app_state_manager" kindref="compound">AppStateManager</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;AppStateManager&gt; sgns::application::ValidatingNodeApplication::app_state_manager_</definition>
+        <argsstring></argsstring>
+        <name>app_state_manager_</name>
+        <qualifiedname>sgns::application::ValidatingNodeApplication::app_state_manager_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/validating_node_application.hpp" line="35" column="25" bodyfile="src/application/impl/validating_node_application.hpp" bodystart="35" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/de2/classsgns_1_1application_1_1_validating_node_application_1a7ce025f8ddf19f1925f1b4d29133ebc1" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; boost::asio::io_context &gt;</type>
+        <definition>std::shared_ptr&lt;boost::asio::io_context&gt; sgns::application::ValidatingNodeApplication::io_context_</definition>
+        <argsstring></argsstring>
+        <name>io_context_</name>
+        <qualifiedname>sgns::application::ValidatingNodeApplication::io_context_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/validating_node_application.hpp" line="37" column="25" bodyfile="src/application/impl/validating_node_application.hpp" bodystart="37" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/de2/classsgns_1_1application_1_1_validating_node_application_1a50bb9d78cc46fa380cb0beca2cc96581" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d7/de2/classsgns_1_1application_1_1_configuration_storage" kindref="compound">ConfigurationStorage</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;ConfigurationStorage&gt; sgns::application::ValidatingNodeApplication::config_storage_</definition>
+        <argsstring></argsstring>
+        <name>config_storage_</name>
+        <qualifiedname>sgns::application::ValidatingNodeApplication::config_storage_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/validating_node_application.hpp" line="39" column="25" bodyfile="src/application/impl/validating_node_application.hpp" bodystart="39" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/de2/classsgns_1_1application_1_1_validating_node_application_1a30a5a6b7020908837331a8549af6ab77" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d5/ddb/classsgns_1_1application_1_1_key_storage" kindref="compound">KeyStorage</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;KeyStorage&gt; sgns::application::ValidatingNodeApplication::key_storage_</definition>
+        <argsstring></argsstring>
+        <name>key_storage_</name>
+        <qualifiedname>sgns::application::ValidatingNodeApplication::key_storage_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/validating_node_application.hpp" line="40" column="35" bodyfile="src/application/impl/validating_node_application.hpp" bodystart="40" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/de2/classsgns_1_1application_1_1_validating_node_application_1aa7414fb2cc03617f99423031262f039f" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; clock::SystemClock &gt;</type>
+        <definition>std::shared_ptr&lt;clock::SystemClock&gt; sgns::application::ValidatingNodeApplication::clock_</definition>
+        <argsstring></argsstring>
+        <name>clock_</name>
+        <qualifiedname>sgns::application::ValidatingNodeApplication::clock_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/validating_node_application.hpp" line="41" column="27" bodyfile="src/application/impl/validating_node_application.hpp" bodystart="41" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/de2/classsgns_1_1application_1_1_validating_node_application_1ac1c0e9f58ce736d815cdfb0ebfbe7b8e" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a29a04337fa033834824df435ed9c7f21" kindref="member">Production</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Production&gt; sgns::application::ValidatingNodeApplication::production_</definition>
+        <argsstring></argsstring>
+        <name>production_</name>
+        <qualifiedname>sgns::application::ValidatingNodeApplication::production_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/validating_node_application.hpp" line="42" column="35" bodyfile="src/application/impl/validating_node_application.hpp" bodystart="42" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/de2/classsgns_1_1application_1_1_validating_node_application_1a6682b5c7976079354b49e62cc2569254" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a0e0add155704825bbd0f402b04d3fd5b" kindref="member">Finality</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Finality&gt; sgns::application::ValidatingNodeApplication::finality_</definition>
+        <argsstring></argsstring>
+        <name>finality_</name>
+        <qualifiedname>sgns::application::ValidatingNodeApplication::finality_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/validating_node_application.hpp" line="43" column="37" bodyfile="src/application/impl/validating_node_application.hpp" bodystart="43" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/de2/classsgns_1_1application_1_1_validating_node_application_1a2562928a2a55027fb03b534e95aca703" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; network::Router &gt;</type>
+        <definition>std::shared_ptr&lt;network::Router&gt; sgns::application::ValidatingNodeApplication::router_</definition>
+        <argsstring></argsstring>
+        <name>router_</name>
+        <qualifiedname>sgns::application::ValidatingNodeApplication::router_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/validating_node_application.hpp" line="44" column="30" bodyfile="src/application/impl/validating_node_application.hpp" bodystart="44" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/de2/classsgns_1_1application_1_1_validating_node_application_1af18eadc8063d7c32b076a7e870b02162" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; api::ApiService &gt;</type>
+        <definition>std::shared_ptr&lt;api::ApiService&gt; sgns::application::ValidatingNodeApplication::jrpc_api_service_</definition>
+        <argsstring></argsstring>
+        <name>jrpc_api_service_</name>
+        <qualifiedname>sgns::application::ValidatingNodeApplication::jrpc_api_service_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/validating_node_application.hpp" line="46" column="25" bodyfile="src/application/impl/validating_node_application.hpp" bodystart="46" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/de2/classsgns_1_1application_1_1_validating_node_application_1a39b0a97ec174980c882f44b641062508" prot="private" static="no" mutable="no">
+        <type>Production::ExecutionStrategy</type>
+        <definition>Production::ExecutionStrategy sgns::application::ValidatingNodeApplication::production_execution_strategy_</definition>
+        <argsstring></argsstring>
+        <name>production_execution_strategy_</name>
+        <qualifiedname>sgns::application::ValidatingNodeApplication::production_execution_strategy_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/validating_node_application.hpp" line="48" column="39" bodyfile="src/application/impl/validating_node_application.hpp" bodystart="48" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/de2/classsgns_1_1application_1_1_validating_node_application_1a554411b1506cecc77894f1f8c8ba1f95" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::application::ValidatingNodeApplication::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::application::ValidatingNodeApplication::logger_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/validating_node_application.hpp" line="50" column="22" bodyfile="src/application/impl/validating_node_application.hpp" bodystart="50" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="de/de2/classsgns_1_1application_1_1_validating_node_application_1a750ae8c88efc3a80c4226f1d6f23bfc6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::ValidatingNodeApplication::~ValidatingNodeApplication</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~ValidatingNodeApplication</name>
+        <qualifiedname>sgns::application::ValidatingNodeApplication::~ValidatingNodeApplication</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/validating_node_application.hpp" line="23" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="de/de2/classsgns_1_1application_1_1_validating_node_application_1a008fccfb7387d7b7e65fc3d941725fa7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::ValidatingNodeApplication::ValidatingNodeApplication</definition>
+        <argsstring>(const std::shared_ptr&lt; AppConfiguration &gt; &amp;config)</argsstring>
+        <name>ValidatingNodeApplication</name>
+        <qualifiedname>sgns::application::ValidatingNodeApplication::ValidatingNodeApplication</qualifiedname>
+        <param>
+          <type>const std::shared_ptr&lt; <ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration" kindref="compound">AppConfiguration</ref> &gt; &amp;</type>
+          <declname>config</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>config</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>application configuration </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/validating_node_application.hpp" line="28" column="9" bodyfile="src/application/impl/validating_node_application.cpp" bodystart="66" bodyend="201"/>
+      </memberdef>
+      <memberdef kind="function" id="de/de2/classsgns_1_1application_1_1_validating_node_application_1aff4325a699ba31ed368f697896f90cc8" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::application::ValidatingNodeApplication::run</definition>
+        <argsstring>() override</argsstring>
+        <name>run</name>
+        <qualifiedname>sgns::application::ValidatingNodeApplication::run</qualifiedname>
+        <reimplements refid="da/d1d/classsgns_1_1application_1_1_sgns_application_1a2314654dc1f566607845a8ab5f427329">run</reimplements>
+        <briefdescription>
+<para>runs application </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/validating_node_application.hpp" line="30" column="14" bodyfile="src/application/impl/validating_node_application.cpp" bodystart="203" bodyend="251"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::application::SgnsApplication</label>
+        <link refid="da/d1d/classsgns_1_1application_1_1_sgns_application"/>
+      </node>
+      <node id="1">
+        <label>sgns::application::ValidatingNodeApplication</label>
+        <link refid="de/de2/classsgns_1_1application_1_1_validating_node_application"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="6">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="8">
+        <label>T</label>
+      </node>
+      <node id="4">
+        <label>sgns::application::AppStateManager</label>
+        <link refid="d4/d75/classsgns_1_1application_1_1_app_state_manager"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::application::ConfigurationStorage</label>
+        <link refid="d7/de2/classsgns_1_1application_1_1_configuration_storage"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>sgns::application::KeyStorage</label>
+        <link refid="d5/ddb/classsgns_1_1application_1_1_key_storage"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::application::SgnsApplication</label>
+        <link refid="da/d1d/classsgns_1_1application_1_1_sgns_application"/>
+      </node>
+      <node id="1">
+        <label>sgns::application::ValidatingNodeApplication</label>
+        <link refid="de/de2/classsgns_1_1application_1_1_validating_node_application"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-app_state_manager_</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-io_context_</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>-config_storage_</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>-key_storage_</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="usage">
+          <edgelabel>-clock_</edgelabel>
+        </childnode>
+        <childnode refid="15" relation="usage">
+          <edgelabel>-production_</edgelabel>
+        </childnode>
+        <childnode refid="16" relation="usage">
+          <edgelabel>-finality_</edgelabel>
+        </childnode>
+        <childnode refid="17" relation="usage">
+          <edgelabel>-router_</edgelabel>
+        </childnode>
+        <childnode refid="18" relation="usage">
+          <edgelabel>-jrpc_api_service_</edgelabel>
+        </childnode>
+        <childnode refid="19" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::enable_shared_from_this&lt; AppStateManager &gt;</label>
+      </node>
+      <node id="7">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>std::shared_ptr&lt; Finality &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; Finality &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="15">
+        <label>std::shared_ptr&lt; Production &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; Production &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="18">
+        <label>std::shared_ptr&lt; api::ApiService &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; api::ApiService &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::shared_ptr&lt; boost::asio::io_context &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; boost::asio::io_context &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="14">
+        <label>std::shared_ptr&lt; clock::SystemClock &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; clock::SystemClock &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>std::shared_ptr&lt; network::Router &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; network::Router &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; sgns::application::AppStateManager &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; sgns::application::AppStateManager &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::shared_ptr&lt; sgns::application::ConfigurationStorage &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; sgns::application::ConfigurationStorage &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::shared_ptr&lt; sgns::application::KeyStorage &gt;</label>
+        <childnode refid="13" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; sgns::application::KeyStorage &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="19">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/application/impl/validating_node_application.hpp" line="17" column="5" bodyfile="src/application/impl/validating_node_application.hpp" bodystart="18" bodyend="51"/>
+    <listofallmembers>
+      <member refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a17a7fd6db7aaacf9ff2029bd122cdf90" prot="private" virt="non-virtual"><scope>sgns::application::ValidatingNodeApplication</scope><name>app_state_manager_</name></member>
+      <member refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1aa7414fb2cc03617f99423031262f039f" prot="private" virt="non-virtual"><scope>sgns::application::ValidatingNodeApplication</scope><name>clock_</name></member>
+      <member refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a50bb9d78cc46fa380cb0beca2cc96581" prot="private" virt="non-virtual"><scope>sgns::application::ValidatingNodeApplication</scope><name>config_storage_</name></member>
+      <member refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a0e0add155704825bbd0f402b04d3fd5b" prot="private" virt="non-virtual"><scope>sgns::application::ValidatingNodeApplication</scope><name>Finality</name></member>
+      <member refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a6682b5c7976079354b49e62cc2569254" prot="private" virt="non-virtual"><scope>sgns::application::ValidatingNodeApplication</scope><name>finality_</name></member>
+      <member refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a7ce025f8ddf19f1925f1b4d29133ebc1" prot="private" virt="non-virtual"><scope>sgns::application::ValidatingNodeApplication</scope><name>io_context_</name></member>
+      <member refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1af18eadc8063d7c32b076a7e870b02162" prot="private" virt="non-virtual"><scope>sgns::application::ValidatingNodeApplication</scope><name>jrpc_api_service_</name></member>
+      <member refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a30a5a6b7020908837331a8549af6ab77" prot="private" virt="non-virtual"><scope>sgns::application::ValidatingNodeApplication</scope><name>key_storage_</name></member>
+      <member refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a554411b1506cecc77894f1f8c8ba1f95" prot="private" virt="non-virtual"><scope>sgns::application::ValidatingNodeApplication</scope><name>logger_</name></member>
+      <member refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a29a04337fa033834824df435ed9c7f21" prot="private" virt="non-virtual"><scope>sgns::application::ValidatingNodeApplication</scope><name>Production</name></member>
+      <member refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1ac1c0e9f58ce736d815cdfb0ebfbe7b8e" prot="private" virt="non-virtual"><scope>sgns::application::ValidatingNodeApplication</scope><name>production_</name></member>
+      <member refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a39b0a97ec174980c882f44b641062508" prot="private" virt="non-virtual"><scope>sgns::application::ValidatingNodeApplication</scope><name>production_execution_strategy_</name></member>
+      <member refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a2562928a2a55027fb03b534e95aca703" prot="private" virt="non-virtual"><scope>sgns::application::ValidatingNodeApplication</scope><name>router_</name></member>
+      <member refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1aff4325a699ba31ed368f697896f90cc8" prot="public" virt="virtual"><scope>sgns::application::ValidatingNodeApplication</scope><name>run</name></member>
+      <member refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a008fccfb7387d7b7e65fc3d941725fa7" prot="public" virt="non-virtual"><scope>sgns::application::ValidatingNodeApplication</scope><name>ValidatingNodeApplication</name></member>
+      <member refid="da/d1d/classsgns_1_1application_1_1_sgns_application_1af6c814f3750d9dccbb78d2c653c3da36" prot="public" virt="virtual"><scope>sgns::application::ValidatingNodeApplication</scope><name>~SgnsApplication</name></member>
+      <member refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a750ae8c88efc3a80c4226f1d6f23bfc6" prot="public" virt="non-virtual"><scope>sgns::application::ValidatingNodeApplication</scope><name>~ValidatingNodeApplication</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

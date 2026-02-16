@@ -1,0 +1,66 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/d3d/namespacesgns_1_1blockchain_1_1prefix" kind="namespace" language="C++">
+    <compoundname>sgns::blockchain::prefix</compoundname>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="d0/d3d/namespacesgns_1_1blockchain_1_1prefix_1affebeb618ce26afa1fa4b7deb2d78f8a" prot="public" static="no" strong="no">
+        <type>uint8_t</type>
+        <name>Prefix</name>
+        <qualifiedname>sgns::blockchain::prefix::Prefix</qualifiedname>
+        <enumvalue id="d0/d3d/namespacesgns_1_1blockchain_1_1prefix_1affebeb618ce26afa1fa4b7deb2d78f8aad98b290371cfcb5982c2a2667c66593d" prot="public">
+          <name>ID_TO_LOOKUP_KEY</name>
+          <initializer>= 3</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/d3d/namespacesgns_1_1blockchain_1_1prefix_1affebeb618ce26afa1fa4b7deb2d78f8aae240f4e0c79a2251fc1e0752c3e01149" prot="public">
+          <name>HEADER</name>
+          <initializer>= 4</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/d3d/namespacesgns_1_1blockchain_1_1prefix_1affebeb618ce26afa1fa4b7deb2d78f8aa83fe80a75b72ad42f999b304960cb1bf" prot="public">
+          <name>BLOCK_DATA</name>
+          <initializer>= 5</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/d3d/namespacesgns_1_1blockchain_1_1prefix_1affebeb618ce26afa1fa4b7deb2d78f8aa66ab1c05f3413cf16b86ab91df5c6ffd" prot="public">
+          <name>JUSTIFICATION</name>
+          <initializer>= 6</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/d3d/namespacesgns_1_1blockchain_1_1prefix_1affebeb618ce26afa1fa4b7deb2d78f8aae8f32714d8da3cbd1b9467aec2a7cedf" prot="public">
+          <name>TRIE_NODE</name>
+          <initializer>= 7</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.hpp" line="20" column="5" bodyfile="src/blockchain/impl/storage_util.hpp" bodystart="20" bodyend="35"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Storage has only one key space, prefixes are used to divide it </para>
+    </detaileddescription>
+    <location file="src/blockchain/impl/storage_util.hpp" line="19" column="3"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,160 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/d66/ed25519__provider__impl_8hpp" kind="file" language="C++">
+    <compoundname>ed25519_provider_impl.hpp</compoundname>
+    <includes refid="d0/d2a/ed25519__provider_8hpp" local="yes">crypto/ed25519_provider.hpp</includes>
+    <includedby refid="d0/d42/ed25519__provider__impl_8cpp" local="yes">src/crypto/ed25519/ed25519_provider_impl.cpp</includedby>
+    <incdepgraph>
+      <node id="8">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crypto/ed25519/ed25519_provider_impl.hpp</label>
+        <link refid="df/d66/ed25519__provider__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>crypto/ed25519_provider.hpp</label>
+        <link refid="d0/d2a/ed25519__provider_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>crypto/ed25519_types.hpp</label>
+        <link refid="d4/d6e/ed25519__types_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>array</label>
+      </node>
+      <node id="11">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="9">
+        <label>cstddef</label>
+      </node>
+      <node id="7">
+        <label>ed25519/ed25519.h</label>
+      </node>
+      <node id="3">
+        <label>gsl/span</label>
+      </node>
+      <node id="15">
+        <label>iostream</label>
+      </node>
+      <node id="5">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="17">
+        <label>string</label>
+      </node>
+      <node id="13">
+        <label>string_view</label>
+      </node>
+      <node id="14">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/crypto/ed25519/ed25519_provider_impl.cpp</label>
+        <link refid="d0/d42/ed25519__provider__impl_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/crypto/ed25519/ed25519_provider_impl.hpp</label>
+        <link refid="df/d66/ed25519__provider__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl" prot="public">sgns::crypto::ED25519ProviderImpl</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6e/namespacesgns_1_1crypto">sgns::crypto</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_CRYPTO_ED25519_ED25519_PROVIDER_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_CRYPTO_ED25519_ED25519_PROVIDER_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d0/d2a/ed25519__provider_8hpp" kindref="compound">crypto/ed25519_provider.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d6e/namespacesgns_1_1crypto" kindref="compound">sgns::crypto</ref><sp/>{</highlight></codeline>
+<codeline lineno="7" refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl" kindref="compound">ED25519ProviderImpl</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="da/d5d/classsgns_1_1crypto_1_1_e_d25519_provider" kindref="compound">ED25519Provider</ref><sp/>{</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="9" refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl_1a388ea87220d87c666c852fa90c123550" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl_1a388ea87220d87c666c852fa90c123550" kindref="member">~ED25519ProviderImpl</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;ED25519Keypair&gt;<sp/><ref refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl_1a150086df749343bc334abbaf138f8188" kindref="member">generateKeypair</ref>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" kindref="compound">ED25519Keypair</ref><sp/><ref refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl_1a150086df749343bc334abbaf138f8188" kindref="member">generateKeypair</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a64ab301ce6ac44216464094d4020302b" kindref="member">ED25519Seed</ref><sp/>&amp;seed)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;sgns::crypto::ED25519Signature&gt;<sp/><ref refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl_1a6ca42b19b75d1bf7f41f38de58f33036" kindref="member">sign</ref>(</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" kindref="compound">ED25519Keypair</ref><sp/>&amp;keypair,</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>gsl::span&lt;uint8_t&gt;<sp/><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;bool&gt;<sp/><ref refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl_1ad7e17c486134e25c5bb558bf520ec454" kindref="member">verify</ref>(</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a82ea8f150548110e620c0d92549ffb32" kindref="member">ED25519Signature</ref><sp/>&amp;signature,</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>gsl::span&lt;uint8_t&gt;<sp/><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>,</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1aabd48e8fa382c75b453fce43c158f97d" kindref="member">ED25519PublicKey</ref><sp/>&amp;public_key)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="24" refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl_1a9bbf21777da5fab565356c8dd322a8b5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl_1a9bbf21777da5fab565356c8dd322a8b5" kindref="member">GetName</ref>()</highlight><highlight class="keyword"><sp/>override</highlight></codeline>
+<codeline lineno="25"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;ED25519ProviderImpl&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/crypto/ed25519/ed25519_provider_impl.hpp"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,175 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d8/dfe/pubsub__broadcaster_8hpp" kind="file" language="C++">
+    <compoundname>pubsub_broadcaster.hpp</compoundname>
+    <includes refid="d9/d25/broadcaster_8hpp" local="yes">crdt/broadcaster.hpp</includes>
+    <includes refid="d6/da3/logger_8hpp" local="yes">base/logger.hpp</includes>
+    <includes local="no">ipfs_pubsub/gossip_pubsub_topic.hpp</includes>
+    <includes local="no">queue</includes>
+    <includedby refid="d2/d86/pubsub__broadcaster_8cpp" local="yes">src/crdt/globaldb/pubsub_broadcaster.cpp</includedby>
+    <incdepgraph>
+      <node id="3">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>crdt/broadcaster.hpp</label>
+        <link refid="d9/d25/broadcaster_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crdt/globaldb/pubsub_broadcaster.hpp</label>
+        <link refid="d8/dfe/pubsub__broadcaster_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="7">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="12">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="8">
+        <label>gsl/span</label>
+      </node>
+      <node id="19">
+        <label>ipfs_pubsub/gossip_pubsub_topic.hpp</label>
+      </node>
+      <node id="10">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="11">
+        <label>libp2p/peer/peer_info.hpp</label>
+      </node>
+      <node id="15">
+        <label>optional</label>
+      </node>
+      <node id="20">
+        <label>queue</label>
+      </node>
+      <node id="17">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="18">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="14">
+        <label>string</label>
+      </node>
+      <node id="4">
+        <label>string_view</label>
+      </node>
+      <node id="13">
+        <label>tuple</label>
+      </node>
+      <node id="5">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/crdt/globaldb/pubsub_broadcaster.cpp</label>
+        <link refid="d2/d86/pubsub__broadcaster_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/crdt/globaldb/pubsub_broadcaster.hpp</label>
+        <link refid="d8/dfe/pubsub__broadcaster_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster" prot="public">sgns::crdt::PubSubBroadcaster</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d4/dd0/namespacesgns_1_1crdt">sgns::crdt</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_CRDT_PUBSUB_BROADCASTER_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_CRDT_PUBSUB_BROADCASTER_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d9/d25/broadcaster_8hpp" kindref="compound">crdt/broadcaster.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/da3/logger_8hpp" kindref="compound">base/logger.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;ipfs_pubsub/gossip_pubsub_topic.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;queue&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d4/dd0/namespacesgns_1_1crdt" kindref="compound">sgns::crdt</ref></highlight></codeline>
+<codeline lineno="10"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="11" refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a5e8aebe477cc8399f08e351babec2076" kindref="member">PubSubBroadcaster</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster" kindref="compound">Broadcaster</ref></highlight></codeline>
+<codeline lineno="12"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="14" refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a90f0a49e61a89bf7ba008bf68e5796cc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a90f0a49e61a89bf7ba008bf68e5796cc" kindref="member">GossipPubSub</ref><sp/>=<sp/>sgns::ipfs_pubsub::GossipPubSub;</highlight></codeline>
+<codeline lineno="15" refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1ae8b9eb02e3d8823319026d4166ca4e08" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1ae8b9eb02e3d8823319026d4166ca4e08" kindref="member">GossipPubSubTopic</ref><sp/>=<sp/>sgns::ipfs_pubsub::GossipPubSubTopic;</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a5e8aebe477cc8399f08e351babec2076" kindref="member">PubSubBroadcaster</ref>(<sp/>std::shared_ptr&lt;GossipPubSubTopic&gt;<sp/>pubSubTopic<sp/>);</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19" refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a9415fc2359518adf1b1663908cf4b2ae" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a9415fc2359518adf1b1663908cf4b2ae" kindref="member">SetLogger</ref>(<ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref><sp/>logger)</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a7847ab68c49eecbbffb4b2eba9b42af3" kindref="member">logger_</ref><sp/>=<sp/>std::move(logger);</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a697fb87d8c26f13c22e56f01b840ec78" kindref="member">Broadcast</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;buff,<sp/>std::string<sp/>topic,<sp/>boost::optional&lt;libp2p::peer::PeerInfo&gt;<sp/>peerInfo<sp/>=<sp/>boost::none)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;base::Buffer&gt;<sp/><ref refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a754b1380820223d8fdf3d0c7c1b454f5" kindref="member">Next</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight></codeline>
+<codeline lineno="38" refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a8e99f1ed779f432464caac5dc26cb641" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a8e99f1ed779f432464caac5dc26cb641" kindref="member">HasTopic</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;topic)</highlight><highlight class="keyword"><sp/>override<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;<sp/>}</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="40" refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1aed182b4750ee437ca83fac5b7167fae8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;GossipPubSubTopic&gt;<sp/><ref refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1aed182b4750ee437ca83fac5b7167fae8" kindref="member">gossipPubSubTopic_</ref>;</highlight></codeline>
+<codeline lineno="41" refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a670121a97616744dec6962c234dc9373" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::queue&lt;std::tuple&lt;libp2p::peer::PeerId,<sp/>std::string&gt;&gt;<sp/><ref refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a670121a97616744dec6962c234dc9373" kindref="member">listOfMessages_</ref>;</highlight></codeline>
+<codeline lineno="42" refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a7847ab68c49eecbbffb4b2eba9b42af3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref><sp/><ref refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a7847ab68c49eecbbffb4b2eba9b42af3" kindref="member">logger_</ref><sp/>=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="43" refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a651df6d2888aea6c429dafc78741e94f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::mutex<sp/><ref refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a651df6d2888aea6c429dafc78741e94f" kindref="member">mutex_</ref>;</highlight></codeline>
+<codeline lineno="44"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="45"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="48"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_CRDT_PUBSUB_BROADCASTER_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/crdt/globaldb/pubsub_broadcaster.hpp"/>
+  </compounddef>
+</doxygen>

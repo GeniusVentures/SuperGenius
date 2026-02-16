@@ -1,0 +1,149 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/d5a/structsgns_1_1base_1_1_wrapper" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::base::Wrapper</compoundname>
+    <includes refid="d8/d7c/wrapper_8hpp" local="no">wrapper.hpp</includes>
+    <templateparamlist>
+      <param>
+        <type>typename T</type>
+      </param>
+      <param>
+        <type>typename Tag</type>
+      </param>
+    </templateparamlist>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="df/d5a/structsgns_1_1base_1_1_wrapper_1a671e58ba8d9daca1de5d7bc59556c1d4" prot="private" static="no" mutable="no">
+        <type>T</type>
+        <definition>T sgns::base::Wrapper&lt; T, Tag &gt;::data_</definition>
+        <argsstring></argsstring>
+        <name>data_</name>
+        <qualifiedname>sgns::base::Wrapper::data_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/wrapper.hpp" line="38" column="7" bodyfile="src/base/wrapper.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="df/d5a/structsgns_1_1base_1_1_wrapper_1a69620903144eaf99d5c33f97e3e37977" prot="public" static="no" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::base::Wrapper&lt; T, Tag &gt;::Wrapper</definition>
+        <argsstring>(T &amp;&amp;t)</argsstring>
+        <name>Wrapper</name>
+        <qualifiedname>sgns::base::Wrapper::Wrapper</qualifiedname>
+        <param>
+          <type>T &amp;&amp;</type>
+          <declname>t</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/wrapper.hpp" line="19" column="14" bodyfile="src/base/wrapper.hpp" bodystart="19" bodyend="19"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d5a/structsgns_1_1base_1_1_wrapper_1a74486f8923a1f3394443afb73390d231" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>T</type>
+        <definition>T sgns::base::Wrapper&lt; T, Tag &gt;::unwrap</definition>
+        <argsstring>()</argsstring>
+        <name>unwrap</name>
+        <qualifiedname>sgns::base::Wrapper::unwrap</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/wrapper.hpp" line="21" column="7" bodyfile="src/base/wrapper.hpp" bodystart="21" bodyend="23"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d5a/structsgns_1_1base_1_1_wrapper_1a760c9d39c5c48eba2c0b2467b9ef56a6" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>const T &amp;</type>
+        <definition>const T &amp; sgns::base::Wrapper&lt; T, Tag &gt;::unwrap</definition>
+        <argsstring>() const</argsstring>
+        <name>unwrap</name>
+        <qualifiedname>sgns::base::Wrapper::unwrap</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/wrapper.hpp" line="25" column="13" bodyfile="src/base/wrapper.hpp" bodystart="25" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d5a/structsgns_1_1base_1_1_wrapper_1a47e1ed67e9b7882b5c8e51820ddccdd7" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>T &amp;</type>
+        <definition>T &amp; sgns::base::Wrapper&lt; T, Tag &gt;::unwrap_mutable</definition>
+        <argsstring>()</argsstring>
+        <name>unwrap_mutable</name>
+        <qualifiedname>sgns::base::Wrapper::unwrap_mutable</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/wrapper.hpp" line="29" column="7" bodyfile="src/base/wrapper.hpp" bodystart="29" bodyend="31"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d5a/structsgns_1_1base_1_1_wrapper_1ab82855e72762a8662bb1dbd248fdf6bb" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::base::Wrapper&lt; T, Tag &gt;::operator==</definition>
+        <argsstring>(const Wrapper&lt; T, Tag &gt; &amp;other) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::base::Wrapper::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="df/d5a/structsgns_1_1base_1_1_wrapper_1a69620903144eaf99d5c33f97e3e37977" kindref="member">Wrapper</ref>&lt; T, Tag &gt; &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/wrapper.hpp" line="33" column="10" bodyfile="src/base/wrapper.hpp" bodystart="33" bodyend="35"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Make strongly typed structures from different concepts of the equal types. E.g. block height and round number are both uint64_t, but better to be different types. Or, ID and Signature both vectors. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>wrapped type </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Tag</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>unique tag </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::base::Wrapper&lt; T, Tag &gt;</label>
+        <link refid="df/d5a/structsgns_1_1base_1_1_wrapper"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/base/wrapper.hpp" line="18" column="3" bodyfile="src/base/wrapper.hpp" bodystart="18" bodyend="39"/>
+    <listofallmembers>
+      <member refid="df/d5a/structsgns_1_1base_1_1_wrapper_1a671e58ba8d9daca1de5d7bc59556c1d4" prot="private" virt="non-virtual"><scope>sgns::base::Wrapper</scope><name>data_</name></member>
+      <member refid="df/d5a/structsgns_1_1base_1_1_wrapper_1ab82855e72762a8662bb1dbd248fdf6bb" prot="public" virt="non-virtual"><scope>sgns::base::Wrapper</scope><name>operator==</name></member>
+      <member refid="df/d5a/structsgns_1_1base_1_1_wrapper_1a74486f8923a1f3394443afb73390d231" prot="public" virt="non-virtual"><scope>sgns::base::Wrapper</scope><name>unwrap</name></member>
+      <member refid="df/d5a/structsgns_1_1base_1_1_wrapper_1a760c9d39c5c48eba2c0b2467b9ef56a6" prot="public" virt="non-virtual"><scope>sgns::base::Wrapper</scope><name>unwrap</name></member>
+      <member refid="df/d5a/structsgns_1_1base_1_1_wrapper_1a47e1ed67e9b7882b5c8e51820ddccdd7" prot="public" virt="non-virtual"><scope>sgns::base::Wrapper</scope><name>unwrap_mutable</name></member>
+      <member refid="df/d5a/structsgns_1_1base_1_1_wrapper_1a69620903144eaf99d5c33f97e3e37977" prot="public" virt="non-virtual"><scope>sgns::base::Wrapper</scope><name>Wrapper</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

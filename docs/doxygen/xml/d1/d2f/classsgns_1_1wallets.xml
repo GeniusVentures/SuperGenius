@@ -1,0 +1,707 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/d2f/classsgns_1_1wallets" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::wallets</compoundname>
+    <includes refid="d4/dc7/wallet_8hpp" local="no">wallet.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d1/d2f/classsgns_1_1wallets_1a555ba107162a6c47288d87c73873a01d" prot="public" static="no" mutable="no">
+        <type>sgns::network_params</type>
+        <definition>sgns::network_params sgns::wallets::network_params</definition>
+        <argsstring></argsstring>
+        <name>network_params</name>
+        <qualifiedname>sgns::wallets::network_params</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="42" column="22" bodyfile="node/wallet.hpp" bodystart="42" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d2f/classsgns_1_1wallets_1a824520fdd94df7f20fed5de6250a13ff" prot="public" static="no" mutable="no">
+        <type>std::function&lt; void(bool)&gt;</type>
+        <definition>std::function&lt;void(bool)&gt; sgns::wallets::observer</definition>
+        <argsstring></argsstring>
+        <name>observer</name>
+        <qualifiedname>sgns::wallets::observer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="43" column="15" bodyfile="node/wallet.hpp" bodystart="43" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d2f/classsgns_1_1wallets_1ae33090e18214c6548d825159cbd5e533" prot="public" static="no" mutable="no">
+        <type>std::unordered_map&lt; sgns::wallet_id, std::shared_ptr&lt; <ref refid="d2/d21/classsgns_1_1wallet" kindref="compound">sgns::wallet</ref> &gt; &gt;</type>
+        <definition>std::unordered_map&lt;sgns::wallet_id, std::shared_ptr&lt;sgns::wallet&gt; &gt; sgns::wallets::items</definition>
+        <argsstring></argsstring>
+        <name>items</name>
+        <qualifiedname>sgns::wallets::items</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="44" column="20" bodyfile="node/wallet.hpp" bodystart="44" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d2f/classsgns_1_1wallets_1a351d477d68263ff5dfb88073c9f4f767" prot="public" static="no" mutable="no">
+        <type>std::multimap&lt; sgns::uint128_t, std::pair&lt; std::shared_ptr&lt; <ref refid="d2/d21/classsgns_1_1wallet" kindref="compound">sgns::wallet</ref> &gt;, std::function&lt; void(<ref refid="d2/d21/classsgns_1_1wallet" kindref="compound">sgns::wallet</ref> &amp;)&gt; &gt;, std::greater&lt; sgns::uint128_t &gt; &gt;</type>
+        <definition>std::multimap&lt;sgns::uint128_t, std::pair&lt;std::shared_ptr&lt;sgns::wallet&gt;, std::function&lt;void(sgns::wallet &amp;)&gt; &gt;, std::greater&lt;sgns::uint128_t&gt; &gt; sgns::wallets::actions</definition>
+        <argsstring></argsstring>
+        <name>actions</name>
+        <qualifiedname>sgns::wallets::actions</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="45" column="15" bodyfile="node/wallet.hpp" bodystart="45" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d2f/classsgns_1_1wallets_1ad54802b7984f1f8025aedb1e9f75b822" prot="public" static="no" mutable="no">
+        <type>sgns::locked&lt; std::unordered_map&lt; sgns::account, sgns::root &gt; &gt;</type>
+        <definition>sgns::locked&lt;std::unordered_map&lt;sgns::account, sgns::root&gt; &gt; sgns::wallets::delayed_work</definition>
+        <argsstring></argsstring>
+        <name>delayed_work</name>
+        <qualifiedname>sgns::wallets::delayed_work</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="46" column="14" bodyfile="node/wallet.hpp" bodystart="46" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d2f/classsgns_1_1wallets_1a054129aa2271a2beba9761ccfe0b7380" prot="public" static="no" mutable="no">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::wallets::mutex</definition>
+        <argsstring></argsstring>
+        <name>mutex</name>
+        <qualifiedname>sgns::wallets::mutex</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="47" column="12" bodyfile="node/wallet.hpp" bodystart="47" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d2f/classsgns_1_1wallets_1ae98142ce8f7409d0e5a5036d2ac1e510" prot="public" static="no" mutable="no">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::wallets::action_mutex</definition>
+        <argsstring></argsstring>
+        <name>action_mutex</name>
+        <qualifiedname>sgns::wallets::action_mutex</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="48" column="12" bodyfile="node/wallet.hpp" bodystart="48" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d2f/classsgns_1_1wallets_1a815f51f1e59e8ebf0c1207a95d209204" prot="public" static="no" mutable="no">
+        <type>sgns::condition_variable</type>
+        <definition>sgns::condition_variable sgns::wallets::condition</definition>
+        <argsstring></argsstring>
+        <name>condition</name>
+        <qualifiedname>sgns::wallets::condition</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="49" column="26" bodyfile="node/wallet.hpp" bodystart="49" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d2f/classsgns_1_1wallets_1ad10a24e62d76fe6fd561e6800a2afa7c" prot="public" static="no" mutable="no">
+        <type>std::atomic&lt; bool &gt;</type>
+        <definition>std::atomic&lt;bool&gt; sgns::wallets::stopped</definition>
+        <argsstring></argsstring>
+        <name>stopped</name>
+        <qualifiedname>sgns::wallets::stopped</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="55" column="13" bodyfile="node/wallet.hpp" bodystart="55" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d2f/classsgns_1_1wallets_1a3e66ebb54d8ce1db213e90e93bb94641" prot="public" static="no" mutable="no">
+        <type>std::thread</type>
+        <definition>std::thread sgns::wallets::thread</definition>
+        <argsstring></argsstring>
+        <name>thread</name>
+        <qualifiedname>sgns::wallets::thread</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="57" column="13" bodyfile="node/wallet.hpp" bodystart="57" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="d1/d2f/classsgns_1_1wallets_1aa468e36974f85a11564f13edff99597b" prot="public" static="yes" mutable="no">
+        <type>sgns::uint128_t const</type>
+        <definition>sgns::uint128_t const sgns::wallets::generate_priority</definition>
+        <argsstring></argsstring>
+        <name>generate_priority</name>
+        <qualifiedname>sgns::wallets::generate_priority</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="58" column="30" bodyfile="node/wallet.hpp" bodystart="58" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d2f/classsgns_1_1wallets_1af19726773ce1267d0a4d8a93bd54a634" prot="public" static="yes" mutable="no">
+        <type>sgns::uint128_t const</type>
+        <definition>sgns::uint128_t const sgns::wallets::high_priority</definition>
+        <argsstring></argsstring>
+        <name>high_priority</name>
+        <qualifiedname>sgns::wallets::high_priority</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="59" column="30" bodyfile="node/wallet.hpp" bodystart="59" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d1/d2f/classsgns_1_1wallets_1a5e435bb2f23e9742ebaaac70eb287aaa" prot="private" static="no" mutable="no">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::wallets::counts_mutex</definition>
+        <argsstring></argsstring>
+        <name>counts_mutex</name>
+        <qualifiedname>sgns::wallets::counts_mutex</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="67" column="12" bodyfile="node/wallet.hpp" bodystart="67" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1a52635db3481fb85720aa811f98fe7fc0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::wallets::wallets</definition>
+        <argsstring>(bool, sgns::node &amp;)</argsstring>
+        <name>wallets</name>
+        <qualifiedname>sgns::wallets::wallets</qualifiedname>
+        <param>
+          <type>bool</type>
+          <defname>error_a</defname>
+        </param>
+        <param>
+          <type><ref refid="de/ddf/classsgns_1_1node" kindref="compound">sgns::node</ref> &amp;</type>
+          <defname>node_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="22" column="1" bodyfile="node/wallet.cpp" bodystart="3" bodyend="74"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1a5b484dd76baef3c1c871fe28fbc9c790" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::wallets::~wallets</definition>
+        <argsstring>()</argsstring>
+        <name>~wallets</name>
+        <qualifiedname>sgns::wallets::~wallets</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="23" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1aca0b2117dec9b5eeaf6d534b552daeee" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="d2/d21/classsgns_1_1wallet" kindref="compound">sgns::wallet</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; sgns::wallet &gt; sgns::wallets::open</definition>
+        <argsstring>(sgns::wallet_id const &amp;)</argsstring>
+        <name>open</name>
+        <qualifiedname>sgns::wallets::open</qualifiedname>
+        <param>
+          <type>sgns::wallet_id const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="24" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1a40ad702d6a772d438799d1f91f09cf25" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="d2/d21/classsgns_1_1wallet" kindref="compound">sgns::wallet</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; sgns::wallet &gt; sgns::wallets::create</definition>
+        <argsstring>(sgns::wallet_id const &amp;)</argsstring>
+        <name>create</name>
+        <qualifiedname>sgns::wallets::create</qualifiedname>
+        <param>
+          <type>sgns::wallet_id const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="25" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1ae7bb76c6438d46ae2bd746a97b81de0b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::wallets::search_pending</definition>
+        <argsstring>(sgns::wallet_id const &amp;)</argsstring>
+        <name>search_pending</name>
+        <qualifiedname>sgns::wallets::search_pending</qualifiedname>
+        <param>
+          <type>sgns::wallet_id const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="26" column="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1a6e19b998446b4cdbda978f5b5fdd24ec" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::wallets::search_pending_all</definition>
+        <argsstring>()</argsstring>
+        <name>search_pending_all</name>
+        <qualifiedname>sgns::wallets::search_pending_all</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="27" column="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1a32afdfc0079e957e16e5e489b4d5d126" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::wallets::destroy</definition>
+        <argsstring>(sgns::wallet_id const &amp;)</argsstring>
+        <name>destroy</name>
+        <qualifiedname>sgns::wallets::destroy</qualifiedname>
+        <param>
+          <type>sgns::wallet_id const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="28" column="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1a81d07f2bb6819adda467645b47c8ea29" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::wallets::reload</definition>
+        <argsstring>()</argsstring>
+        <name>reload</name>
+        <qualifiedname>sgns::wallets::reload</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="29" column="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1a92b247c3ad3f81353a8239e7007bdd80" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::wallets::do_wallet_actions</definition>
+        <argsstring>()</argsstring>
+        <name>do_wallet_actions</name>
+        <qualifiedname>sgns::wallets::do_wallet_actions</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="30" column="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1ac048106526c4e6654e098c3422a7e47f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::wallets::queue_wallet_action</definition>
+        <argsstring>(sgns::uint128_t const &amp;, std::shared_ptr&lt; sgns::wallet &gt;, std::function&lt; void(sgns::wallet &amp;)&gt; const &amp;)</argsstring>
+        <name>queue_wallet_action</name>
+        <qualifiedname>sgns::wallets::queue_wallet_action</qualifiedname>
+        <param>
+          <type>sgns::uint128_t const &amp;</type>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d2/d21/classsgns_1_1wallet" kindref="compound">sgns::wallet</ref> &gt;</type>
+        </param>
+        <param>
+          <type>std::function&lt; void(<ref refid="d2/d21/classsgns_1_1wallet" kindref="compound">sgns::wallet</ref> &amp;)&gt; const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="31" column="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1adc78ad4a70cb4460494fc605f9d776a9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::wallets::foreach_representative</definition>
+        <argsstring>(std::function&lt; void(sgns::public_key const &amp;, sgns::raw_key const &amp;)&gt; const &amp;)</argsstring>
+        <name>foreach_representative</name>
+        <qualifiedname>sgns::wallets::foreach_representative</qualifiedname>
+        <param>
+          <type>std::function&lt; void(sgns::public_key const &amp;, sgns::raw_key const &amp;)&gt; const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="32" column="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1add1dba132a33a9ce332bfdd198a2a8ac" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::wallets::exists</definition>
+        <argsstring>(sgns::transaction const &amp;, sgns::public_key const &amp;)</argsstring>
+        <name>exists</name>
+        <qualifiedname>sgns::wallets::exists</qualifiedname>
+        <param>
+          <type>sgns::transaction const &amp;</type>
+        </param>
+        <param>
+          <type>sgns::public_key const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="33" column="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1aa5d30c0dddec3e25cbd7a8b9c093538d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::wallets::stop</definition>
+        <argsstring>()</argsstring>
+        <name>stop</name>
+        <qualifiedname>sgns::wallets::stop</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="34" column="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1ad23da076c5e0f23a0a6bcb5be7562802" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::wallets::clear_send_ids</definition>
+        <argsstring>(sgns::transaction const &amp;)</argsstring>
+        <name>clear_send_ids</name>
+        <qualifiedname>sgns::wallets::clear_send_ids</qualifiedname>
+        <param>
+          <type>sgns::transaction const &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="35" column="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1a26b6071ed786039c6e92afb5f9745a84" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::wallets::check_rep</definition>
+        <argsstring>(sgns::account const &amp;, sgns::uint128_t const &amp;, const bool=true)</argsstring>
+        <name>check_rep</name>
+        <qualifiedname>sgns::wallets::check_rep</qualifiedname>
+        <param>
+          <type>sgns::account const &amp;</type>
+        </param>
+        <param>
+          <type>sgns::uint128_t const &amp;</type>
+        </param>
+        <param>
+          <type>const bool</type>
+          <defval>true</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="37" column="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1a872ca5cc2a12bf90915e2d1c68336aac" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::wallets::compute_reps</definition>
+        <argsstring>()</argsstring>
+        <name>compute_reps</name>
+        <qualifiedname>sgns::wallets::compute_reps</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="38" column="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1af7c1be3dd19e0dae6257850f31048709" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::wallets::ongoing_compute_reps</definition>
+        <argsstring>()</argsstring>
+        <name>ongoing_compute_reps</name>
+        <qualifiedname>sgns::wallets::ongoing_compute_reps</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="39" column="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1a83eafabc3472d7134df3fcb9131b4dbf" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::wallets::split_if_needed</definition>
+        <argsstring>(sgns::transaction &amp;, sgns::block_store &amp;)</argsstring>
+        <name>split_if_needed</name>
+        <qualifiedname>sgns::wallets::split_if_needed</qualifiedname>
+        <param>
+          <type>sgns::transaction &amp;</type>
+        </param>
+        <param>
+          <type>sgns::block_store &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="40" column="6"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1ae8fc96776acd15098fc3c3dd389486b4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::write_transaction</type>
+        <definition>sgns::write_transaction sgns::wallets::tx_begin_write</definition>
+        <argsstring>()</argsstring>
+        <name>tx_begin_write</name>
+        <qualifiedname>sgns::wallets::tx_begin_write</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Start read-write transaction </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="61" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d2f/classsgns_1_1wallets_1a32c1157eb86ccd6a9b442949b4b92c5c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::read_transaction</type>
+        <definition>sgns::read_transaction sgns::wallets::tx_begin_read</definition>
+        <argsstring>()</argsstring>
+        <name>tx_begin_read</name>
+        <qualifiedname>sgns::wallets::tx_begin_read</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Start read-only transaction </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="64" column="24"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="9">
+        <label>K</label>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="13">
+        <label>T1</label>
+      </node>
+      <node id="14">
+        <label>T2</label>
+      </node>
+      <node id="4">
+        <label>sgns::wallet</label>
+        <link refid="d2/d21/classsgns_1_1wallet"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::wallets</label>
+        <link refid="d1/d2f/classsgns_1_1wallets"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+items</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>+actions</edgelabel>
+        </childnode>
+        <childnode refid="16" relation="usage">
+          <edgelabel>+action_mutex</edgelabel>
+          <edgelabel>+mutex</edgelabel>
+          <edgelabel>-counts_mutex</edgelabel>
+        </childnode>
+        <childnode refid="17" relation="usage">
+          <edgelabel>+stopped</edgelabel>
+        </childnode>
+        <childnode refid="19" relation="usage">
+          <edgelabel>+thread</edgelabel>
+        </childnode>
+      </node>
+      <node id="18">
+        <label>std::atomic&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>std::atomic&lt; bool &gt;</label>
+        <childnode refid="18" relation="template-instance">
+          <edgelabel>&lt; bool &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::enable_shared_from_this&lt; sgns::wallet &gt;</label>
+      </node>
+      <node id="15">
+        <label>std::multimap&lt; K, T &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::multimap&lt; sgns::uint128_t, std::pair&lt; std::shared_ptr&lt; sgns::wallet &gt;, std::function&lt; void(sgns::wallet &amp;)&gt; &gt;, std::greater&lt; sgns::uint128_t &gt; &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="15" relation="template-instance">
+          <edgelabel>&lt; sgns::uint128_t, std::pair&lt; std::shared_ptr&lt; sgns::wallet &gt;, std::function&lt; void(sgns::wallet &amp;)&gt; &gt;, std::greater&lt; sgns::uint128_t &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>std::mutex</label>
+      </node>
+      <node id="12">
+        <label>std::pair&lt; T1, T2 &gt;</label>
+        <childnode refid="13" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="usage">
+          <edgelabel>+second_type</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::pair&lt; std::shared_ptr&lt; sgns::wallet &gt;, std::function&lt; void(sgns::wallet &amp;)&gt; &gt;</label>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="template-instance">
+          <edgelabel>&lt; std::shared_ptr&lt; sgns::wallet &gt;, std::function&lt; void(sgns::wallet &amp;)&gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; sgns::wallet &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::wallet &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="19">
+        <label>std::thread</label>
+      </node>
+      <node id="8">
+        <label>std::unordered_map&lt; K, T &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::unordered_map&lt; sgns::wallet_id, std::shared_ptr&lt; sgns::wallet &gt; &gt;</label>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; sgns::wallet_id, std::shared_ptr&lt; sgns::wallet &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="node/wallet.hpp" line="19" column="1" bodyfile="node/wallet.hpp" bodystart="20" bodyend="69"/>
+    <listofallmembers>
+      <member refid="d1/d2f/classsgns_1_1wallets_1ae98142ce8f7409d0e5a5036d2ac1e510" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>action_mutex</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1a351d477d68263ff5dfb88073c9f4f767" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>actions</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1a26b6071ed786039c6e92afb5f9745a84" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>check_rep</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1ad23da076c5e0f23a0a6bcb5be7562802" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>clear_send_ids</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1a872ca5cc2a12bf90915e2d1c68336aac" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>compute_reps</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1a815f51f1e59e8ebf0c1207a95d209204" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>condition</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1a5e435bb2f23e9742ebaaac70eb287aaa" prot="private" virt="non-virtual"><scope>sgns::wallets</scope><name>counts_mutex</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1a40ad702d6a772d438799d1f91f09cf25" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>create</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1ad54802b7984f1f8025aedb1e9f75b822" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>delayed_work</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1a32afdfc0079e957e16e5e489b4d5d126" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>destroy</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1a92b247c3ad3f81353a8239e7007bdd80" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>do_wallet_actions</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1add1dba132a33a9ce332bfdd198a2a8ac" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>exists</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1adc78ad4a70cb4460494fc605f9d776a9" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>foreach_representative</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1aa468e36974f85a11564f13edff99597b" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>generate_priority</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1af19726773ce1267d0a4d8a93bd54a634" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>high_priority</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1ae33090e18214c6548d825159cbd5e533" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>items</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1a054129aa2271a2beba9761ccfe0b7380" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>mutex</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1a555ba107162a6c47288d87c73873a01d" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>network_params</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1a824520fdd94df7f20fed5de6250a13ff" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>observer</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1af7c1be3dd19e0dae6257850f31048709" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>ongoing_compute_reps</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1aca0b2117dec9b5eeaf6d534b552daeee" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>open</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1ac048106526c4e6654e098c3422a7e47f" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>queue_wallet_action</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1a81d07f2bb6819adda467645b47c8ea29" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>reload</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1ae7bb76c6438d46ae2bd746a97b81de0b" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>search_pending</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1a6e19b998446b4cdbda978f5b5fdd24ec" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>search_pending_all</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1a83eafabc3472d7134df3fcb9131b4dbf" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>split_if_needed</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1aa5d30c0dddec3e25cbd7a8b9c093538d" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>stop</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1ad10a24e62d76fe6fd561e6800a2afa7c" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>stopped</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1a3e66ebb54d8ce1db213e90e93bb94641" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>thread</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1a32c1157eb86ccd6a9b442949b4b92c5c" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>tx_begin_read</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1ae8fc96776acd15098fc3c3dd389486b4" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>tx_begin_write</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1a52635db3481fb85720aa811f98fe7fc0" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>wallets</name></member>
+      <member refid="d1/d2f/classsgns_1_1wallets_1a5b484dd76baef3c1c871fe28fbc9c790" prot="public" virt="non-virtual"><scope>sgns::wallets</scope><name>~wallets</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

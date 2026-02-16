@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_8a0290e33b4fedf5267a246ac0f48aa8" kind="dir">
+    <compoundname>src/storage/in_memory</compoundname>
+    <innerfile refid="d7/dae/in__memory__batch_8hpp">in_memory_batch.hpp</innerfile>
+    <innerfile refid="d2/dba/in__memory__storage_8cpp">in_memory_storage.cpp</innerfile>
+    <innerfile refid="d0/d03/in__memory__storage_8hpp">in_memory_storage.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/storage/in_memory/"/>
+  </compounddef>
+</doxygen>

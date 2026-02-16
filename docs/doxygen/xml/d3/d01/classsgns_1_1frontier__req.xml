@@ -1,0 +1,257 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d3/d01/classsgns_1_1frontier__req" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::frontier_req</compoundname>
+    <basecompoundref refid="db/da6/classsgns_1_1message" prot="public" virt="non-virtual">sgns::message</basecompoundref>
+    <includes refid="da/d8d/node_2common_8hpp" local="no">common.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d3/d01/classsgns_1_1frontier__req_1a418297a31bea06c429d19f8099718bf0" prot="public" static="no" mutable="no">
+        <type>sgns::account</type>
+        <definition>sgns::account sgns::frontier_req::start</definition>
+        <argsstring></argsstring>
+        <name>start</name>
+        <qualifiedname>sgns::frontier_req::start</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="339" column="15" bodyfile="node/common.hpp" bodystart="339" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/d01/classsgns_1_1frontier__req_1a5e05efb88d48b996bc71f798c3ca893f" prot="public" static="no" mutable="no">
+        <type>uint32_t</type>
+        <definition>uint32_t sgns::frontier_req::age</definition>
+        <argsstring></argsstring>
+        <name>age</name>
+        <qualifiedname>sgns::frontier_req::age</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="340" column="10" bodyfile="node/common.hpp" bodystart="340" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/d01/classsgns_1_1frontier__req_1a6891c11ca5c9e898e6130308a50ae035" prot="public" static="no" mutable="no">
+        <type>uint32_t</type>
+        <definition>uint32_t sgns::frontier_req::count</definition>
+        <argsstring></argsstring>
+        <name>count</name>
+        <qualifiedname>sgns::frontier_req::count</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="341" column="10" bodyfile="node/common.hpp" bodystart="341" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="d3/d01/classsgns_1_1frontier__req_1ac538f1e946d211221c016499da0566f8" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>size_t constexpr</type>
+        <definition>size_t constexpr sgns::frontier_req::size</definition>
+        <argsstring></argsstring>
+        <name>size</name>
+        <qualifiedname>sgns::frontier_req::size</qualifiedname>
+        <initializer>= sizeof (<ref refid="d3/d01/classsgns_1_1frontier__req_1a418297a31bea06c429d19f8099718bf0" kindref="member">start</ref>) + sizeof (<ref refid="d3/d01/classsgns_1_1frontier__req_1a5e05efb88d48b996bc71f798c3ca893f" kindref="member">age</ref>) + sizeof (<ref refid="d3/d01/classsgns_1_1frontier__req_1a6891c11ca5c9e898e6130308a50ae035" kindref="member">count</ref>)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="342" column="25" bodyfile="node/common.hpp" bodystart="342" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d3/d01/classsgns_1_1frontier__req_1a18ee91c81c76595f40ce5f33fc7c8686" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::frontier_req::frontier_req</definition>
+        <argsstring>()</argsstring>
+        <name>frontier_req</name>
+        <qualifiedname>sgns::frontier_req::frontier_req</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="333" column="1" bodyfile="node/common.cpp" bodystart="857" bodyend="860"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d01/classsgns_1_1frontier__req_1abd770c8fec4643a434acabe4c4a8a330" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::frontier_req::frontier_req</definition>
+        <argsstring>(bool &amp;, sgns::stream &amp;, sgns::message_header const &amp;)</argsstring>
+        <name>frontier_req</name>
+        <qualifiedname>sgns::frontier_req::frontier_req</qualifiedname>
+        <param>
+          <type>bool &amp;</type>
+          <defname>error_a</defname>
+        </param>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type><ref refid="de/d6d/classsgns_1_1message__header" kindref="compound">sgns::message_header</ref> const &amp;</type>
+          <defname>header_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="334" column="1" bodyfile="node/common.cpp" bodystart="862" bodyend="869"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d01/classsgns_1_1frontier__req_1a46ae0bbbe86ca35c914cdeb0aa23c65b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::frontier_req::serialize</definition>
+        <argsstring>(sgns::stream &amp;, bool) const override</argsstring>
+        <name>serialize</name>
+        <qualifiedname>sgns::frontier_req::serialize</qualifiedname>
+        <reimplements refid="db/da6/classsgns_1_1message_1a7caa91e43882d5ce6b2f84e7a180bfd8">serialize</reimplements>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type>bool</type>
+          <defname>use_epoch_2_min_version_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="335" column="6" bodyfile="node/common.cpp" bodystart="871" bodyend="877"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d01/classsgns_1_1frontier__req_1a5d7cd61360fbb2f45299968b3c9ce699" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::frontier_req::deserialize</definition>
+        <argsstring>(sgns::stream &amp;)</argsstring>
+        <name>deserialize</name>
+        <qualifiedname>sgns::frontier_req::deserialize</qualifiedname>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="336" column="6" bodyfile="node/common.cpp" bodystart="879" bodyend="895"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d01/classsgns_1_1frontier__req_1a21cd958ec05f0335bf8afdc0994f9f3b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::frontier_req::visit</definition>
+        <argsstring>(sgns::message_visitor &amp;) const override</argsstring>
+        <name>visit</name>
+        <qualifiedname>sgns::frontier_req::visit</qualifiedname>
+        <reimplements refid="db/da6/classsgns_1_1message_1a85e15104bd6bb3f97732067f4a31b418">visit</reimplements>
+        <param>
+          <type><ref refid="dd/d84/classsgns_1_1message__visitor" kindref="compound">sgns::message_visitor</ref> &amp;</type>
+          <defname>visitor_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="337" column="6" bodyfile="node/common.cpp" bodystart="897" bodyend="900"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d01/classsgns_1_1frontier__req_1aae0dcde219e25f60bc907b0c65da19c9" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::frontier_req::operator==</definition>
+        <argsstring>(sgns::frontier_req const &amp;) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::frontier_req::operator==</qualifiedname>
+        <param>
+          <type><ref refid="d3/d01/classsgns_1_1frontier__req" kindref="compound">sgns::frontier_req</ref> const &amp;</type>
+          <defname>other_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="338" column="6" bodyfile="node/common.cpp" bodystart="902" bodyend="905"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::frontier_req</label>
+        <link refid="d3/d01/classsgns_1_1frontier__req"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::message</label>
+        <link refid="db/da6/classsgns_1_1message"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::frontier_req</label>
+        <link refid="d3/d01/classsgns_1_1frontier__req"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::message</label>
+        <link refid="db/da6/classsgns_1_1message"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+header</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::message_header</label>
+        <link refid="de/d6d/classsgns_1_1message__header"/>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+block_type_mask</edgelabel>
+          <edgelabel>+count_mask</edgelabel>
+          <edgelabel>+extensions</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::bitset&lt; Bits &gt;</label>
+      </node>
+      <node id="4">
+        <label>std::bitset&lt; 16 &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; 16 &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="node/common.hpp" line="330" column="1" bodyfile="node/common.hpp" bodystart="331" bodyend="343"/>
+    <listofallmembers>
+      <member refid="d3/d01/classsgns_1_1frontier__req_1a5e05efb88d48b996bc71f798c3ca893f" prot="public" virt="non-virtual"><scope>sgns::frontier_req</scope><name>age</name></member>
+      <member refid="d3/d01/classsgns_1_1frontier__req_1a6891c11ca5c9e898e6130308a50ae035" prot="public" virt="non-virtual"><scope>sgns::frontier_req</scope><name>count</name></member>
+      <member refid="d3/d01/classsgns_1_1frontier__req_1a5d7cd61360fbb2f45299968b3c9ce699" prot="public" virt="non-virtual"><scope>sgns::frontier_req</scope><name>deserialize</name></member>
+      <member refid="d3/d01/classsgns_1_1frontier__req_1a18ee91c81c76595f40ce5f33fc7c8686" prot="public" virt="non-virtual"><scope>sgns::frontier_req</scope><name>frontier_req</name></member>
+      <member refid="d3/d01/classsgns_1_1frontier__req_1abd770c8fec4643a434acabe4c4a8a330" prot="public" virt="non-virtual"><scope>sgns::frontier_req</scope><name>frontier_req</name></member>
+      <member refid="db/da6/classsgns_1_1message_1abc0de834dc846d1d86110caec8a4b7db" prot="public" virt="non-virtual"><scope>sgns::frontier_req</scope><name>header</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a1c0d801d4625dbcc8a9f40a5c6631b2c" prot="public" virt="non-virtual"><scope>sgns::frontier_req</scope><name>message</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a2fbf35d959e3532e2ce4675c9c26761e" prot="public" virt="non-virtual"><scope>sgns::frontier_req</scope><name>message</name></member>
+      <member refid="d3/d01/classsgns_1_1frontier__req_1aae0dcde219e25f60bc907b0c65da19c9" prot="public" virt="non-virtual"><scope>sgns::frontier_req</scope><name>operator==</name></member>
+      <member refid="d3/d01/classsgns_1_1frontier__req_1a46ae0bbbe86ca35c914cdeb0aa23c65b" prot="public" virt="virtual"><scope>sgns::frontier_req</scope><name>serialize</name></member>
+      <member refid="d3/d01/classsgns_1_1frontier__req_1ac538f1e946d211221c016499da0566f8" prot="public" virt="non-virtual"><scope>sgns::frontier_req</scope><name>size</name></member>
+      <member refid="d3/d01/classsgns_1_1frontier__req_1a418297a31bea06c429d19f8099718bf0" prot="public" virt="non-virtual"><scope>sgns::frontier_req</scope><name>start</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a2ad934099e11461e98605fcb5b001c0b" prot="public" virt="non-virtual"><scope>sgns::frontier_req</scope><name>to_bytes</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a5ae4e86a1763a52b65e042caed25ee54" prot="public" virt="non-virtual"><scope>sgns::frontier_req</scope><name>to_shared_const_buffer</name></member>
+      <member refid="d3/d01/classsgns_1_1frontier__req_1a21cd958ec05f0335bf8afdc0994f9f3b" prot="public" virt="virtual"><scope>sgns::frontier_req</scope><name>visit</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a144f9f336461eb5a17eac7825ba23b41" prot="public" virt="virtual"><scope>sgns::frontier_req</scope><name>~message</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

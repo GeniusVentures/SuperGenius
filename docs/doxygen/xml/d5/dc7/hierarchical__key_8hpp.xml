@@ -1,0 +1,514 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/dc7/hierarchical__key_8hpp" kind="file" language="C++">
+    <compoundname>hierarchical_key.hpp</compoundname>
+    <includes local="no">string</includes>
+    <includes local="no">vector</includes>
+    <includedby refid="dd/d8f/atomic__transaction_8hpp" local="yes">src/crdt/atomic_transaction.hpp</includedby>
+    <includedby refid="dc/d76/crdt__heads_8hpp" local="yes">src/crdt/crdt_heads.hpp</includedby>
+    <includedby refid="d0/d2d/crdt__options_8hpp" local="yes">src/crdt/crdt_options.hpp</includedby>
+    <includedby refid="d4/d2e/crdt__set_8hpp" local="yes">src/crdt/crdt_set.hpp</includedby>
+    <includedby refid="dd/def/hierarchical__key_8cpp" local="yes">src/crdt/impl/hierarchical_key.cpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/crdt/hierarchical_key.hpp</label>
+        <link refid="d5/dc7/hierarchical__key_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>string</label>
+      </node>
+      <node id="3">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="13">
+        <label>src/account/GeniusAccount.cpp</label>
+        <link refid="dd/dd9/_genius_account_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/account/GeniusNode.cpp</label>
+        <link refid="df/de0/_genius_node_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/account/GeniusNode.hpp</label>
+        <link refid="d3/d63/_genius_node_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>src/account/Migration0_2_0To1_0_0.cpp</label>
+        <link refid="dc/dfe/_migration0__2__0_to1__0__0_8cpp"/>
+      </node>
+      <node id="14">
+        <label>src/account/Migration0_2_0To1_0_0.hpp</label>
+        <link refid="d1/d31/_migration0__2__0_to1__0__0_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>src/account/Migration1_0_0To3_4_0.cpp</label>
+        <link refid="d8/d30/_migration1__0__0_to3__4__0_8cpp"/>
+      </node>
+      <node id="16">
+        <label>src/account/Migration1_0_0To3_4_0.hpp</label>
+        <link refid="dc/db1/_migration1__0__0_to3__4__0_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>src/account/Migration3_4_0To3_5_0.cpp</label>
+        <link refid="d6/d71/_migration3__4__0_to3__5__0_8cpp"/>
+      </node>
+      <node id="18">
+        <label>src/account/Migration3_4_0To3_5_0.hpp</label>
+        <link refid="de/d71/_migration3__4__0_to3__5__0_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>src/account/Migration3_5_0To3_5_1.cpp</label>
+        <link refid="da/d32/_migration3__5__0_to3__5__1_8cpp"/>
+      </node>
+      <node id="19">
+        <label>src/account/Migration3_5_0To3_5_1.hpp</label>
+        <link refid="d6/d6e/_migration3__5__0_to3__5__1_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>src/account/Migration3_5_1To3_6_0.cpp</label>
+        <link refid="db/da7/_migration3__5__1_to3__6__0_8cpp"/>
+      </node>
+      <node id="20">
+        <label>src/account/Migration3_5_1To3_6_0.hpp</label>
+        <link refid="df/dd5/_migration3__5__1_to3__6__0_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>src/account/MigrationManager.cpp</label>
+        <link refid="d2/d4b/_migration_manager_8cpp"/>
+      </node>
+      <node id="21">
+        <label>src/account/MigrationManager.hpp</label>
+        <link refid="dc/d31/_migration_manager_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>src/account/TransactionManager.cpp</label>
+        <link refid="d0/dcc/_transaction_manager_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/account/TransactionManager.hpp</label>
+        <link refid="de/d54/_transaction_manager_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>src/account/UTXOManager.cpp</label>
+        <link refid="dc/d76/_u_t_x_o_manager_8cpp"/>
+      </node>
+      <node id="22">
+        <label>src/account/UTXOManager.hpp</label>
+        <link refid="d1/dac/_u_t_x_o_manager_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>src/blockchain/Blockchain.hpp</label>
+        <link refid="dc/d59/_blockchain_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>src/blockchain/ValidatorRegistry.cpp</label>
+        <link refid="df/d00/_validator_registry_8cpp"/>
+      </node>
+      <node id="26">
+        <label>src/blockchain/ValidatorRegistry.hpp</label>
+        <link refid="df/df1/_validator_registry_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>src/blockchain/impl/Blockchain.cpp</label>
+        <link refid="da/d8c/_blockchain_8cpp"/>
+      </node>
+      <node id="36">
+        <label>src/blockchain/impl/block_tree_impl.cpp</label>
+        <link refid="d5/df4/block__tree__impl_8cpp"/>
+      </node>
+      <node id="28">
+        <label>src/blockchain/impl/common.hpp</label>
+        <link refid="db/d1e/src_2blockchain_2impl_2common_8hpp"/>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>src/blockchain/impl/key_value_block_header_repository.cpp</label>
+        <link refid="de/d1b/key__value__block__header__repository_8cpp"/>
+      </node>
+      <node id="33">
+        <label>src/blockchain/impl/key_value_block_header_repository.hpp</label>
+        <link refid="dd/dc6/key__value__block__header__repository_8hpp"/>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>src/blockchain/impl/key_value_block_storage.cpp</label>
+        <link refid="de/de9/key__value__block__storage_8cpp"/>
+      </node>
+      <node id="34">
+        <label>src/blockchain/impl/key_value_block_storage.hpp</label>
+        <link refid="d4/d6b/key__value__block__storage_8hpp"/>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>src/blockchain/impl/storage_util.cpp</label>
+        <link refid="d3/d2f/storage__util_8cpp"/>
+      </node>
+      <node id="35">
+        <label>src/blockchain/impl/storage_util.hpp</label>
+        <link refid="dd/d87/storage__util_8hpp"/>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>src/blockchain/impl/types.cpp</label>
+        <link refid="da/ddf/types_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/crdt/atomic_transaction.hpp</label>
+        <link refid="dd/d8f/atomic__transaction_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="44" relation="include">
+        </childnode>
+      </node>
+      <node id="48">
+        <label>src/crdt/crdt_datastore.hpp</label>
+        <link refid="d5/d29/crdt__datastore_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="49" relation="include">
+        </childnode>
+        <childnode refid="50" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="51" relation="include">
+        </childnode>
+      </node>
+      <node id="47">
+        <label>src/crdt/crdt_heads.hpp</label>
+        <link refid="dc/d76/crdt__heads_8hpp"/>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="52" relation="include">
+        </childnode>
+      </node>
+      <node id="53">
+        <label>src/crdt/crdt_options.hpp</label>
+        <link refid="d0/d2d/crdt__options_8hpp"/>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="54">
+        <label>src/crdt/crdt_set.hpp</label>
+        <link refid="d4/d2e/crdt__set_8hpp"/>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="55" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>src/crdt/globaldb/globaldb.cpp</label>
+        <link refid="d6/de2/globaldb_8cpp"/>
+      </node>
+      <node id="12">
+        <label>src/crdt/globaldb/globaldb.hpp</label>
+        <link refid="d0/d0e/globaldb_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+      </node>
+      <node id="49">
+        <label>src/crdt/globaldb/pubsub_broadcaster_ext.cpp</label>
+        <link refid="d1/dc9/pubsub__broadcaster__ext_8cpp"/>
+      </node>
+      <node id="50">
+        <label>src/crdt/globaldb/pubsub_broadcaster_ext.hpp</label>
+        <link refid="d7/db9/pubsub__broadcaster__ext_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="49" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crdt/hierarchical_key.hpp</label>
+        <link refid="d5/dc7/hierarchical__key_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="47" relation="include">
+        </childnode>
+        <childnode refid="53" relation="include">
+        </childnode>
+        <childnode refid="54" relation="include">
+        </childnode>
+        <childnode refid="56" relation="include">
+        </childnode>
+      </node>
+      <node id="43">
+        <label>src/crdt/impl/atomic_transaction.cpp</label>
+        <link refid="d3/db3/atomic__transaction_8cpp"/>
+      </node>
+      <node id="51">
+        <label>src/crdt/impl/crdt_datastore.cpp</label>
+        <link refid="d9/d51/crdt__datastore_8cpp"/>
+      </node>
+      <node id="52">
+        <label>src/crdt/impl/crdt_heads.cpp</label>
+        <link refid="d1/de6/crdt__heads_8cpp"/>
+      </node>
+      <node id="55">
+        <label>src/crdt/impl/crdt_set.cpp</label>
+        <link refid="d4/d84/crdt__set_8cpp"/>
+      </node>
+      <node id="56">
+        <label>src/crdt/impl/hierarchical_key.cpp</label>
+        <link refid="dd/def/hierarchical__key_8cpp"/>
+      </node>
+      <node id="38">
+        <label>src/processing/impl/processing_core_impl.cpp</label>
+        <link refid="db/d83/processing__core__impl_8cpp"/>
+      </node>
+      <node id="37">
+        <label>src/processing/impl/processing_core_impl.hpp</label>
+        <link refid="dd/da6/processing__core__impl_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+      </node>
+      <node id="40">
+        <label>src/processing/impl/processing_subtask_result_storage_impl.cpp</label>
+        <link refid="d5/d95/processing__subtask__result__storage__impl_8cpp"/>
+      </node>
+      <node id="39">
+        <label>src/processing/impl/processing_subtask_result_storage_impl.hpp</label>
+        <link refid="d6/dd6/processing__subtask__result__storage__impl_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+      </node>
+      <node id="42">
+        <label>src/processing/impl/processing_task_queue_impl.cpp</label>
+        <link refid="d1/dff/processing__task__queue__impl_8cpp"/>
+      </node>
+      <node id="41">
+        <label>src/processing/impl/processing_task_queue_impl.hpp</label>
+        <link refid="d2/d76/processing__task__queue__impl_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+      </node>
+      <node id="46">
+        <label>src/processing/processing_subtask_enqueuer_impl.cpp</label>
+        <link refid="dd/d16/processing__subtask__enqueuer__impl_8cpp"/>
+      </node>
+      <node id="45">
+        <label>src/processing/processing_subtask_enqueuer_impl.hpp</label>
+        <link refid="df/d39/processing__subtask__enqueuer__impl_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="46" relation="include">
+        </childnode>
+      </node>
+      <node id="44">
+        <label>src/processing/processing_task_queue.hpp</label>
+        <link refid="d1/d7c/processing__task__queue_8hpp"/>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" prot="public">sgns::crdt::HierarchicalKey</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d4/dd0/namespacesgns_1_1crdt">sgns::crdt</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_HIERARCHICAL_KEY_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_HIERARCHICAL_KEY_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;vector&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d4/dd0/namespacesgns_1_1crdt" kindref="compound">sgns::crdt</ref></highlight></codeline>
+<codeline lineno="8"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="23" refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a33dc727abecb8b7f6e27efabc43fad5f" kindref="member">HierarchicalKey</ref></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/>{</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27" refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a33dc727abecb8b7f6e27efabc43fad5f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a33dc727abecb8b7f6e27efabc43fad5f" kindref="member">HierarchicalKey</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a33dc727abecb8b7f6e27efabc43fad5f" kindref="member">HierarchicalKey</ref>(<sp/>std::string<sp/>key<sp/>);</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36" refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a2855e5cce2e9dd52dd50af38ba4a8d72" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a2855e5cce2e9dd52dd50af38ba4a8d72" kindref="member">HierarchicalKey</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a33dc727abecb8b7f6e27efabc43fad5f" kindref="member">HierarchicalKey</ref><sp/>&amp;<sp/>)<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight></codeline>
+<codeline lineno="38" refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1aacff34baddb610249492efd04ca30995" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1aacff34baddb610249492efd04ca30995" kindref="member">~HierarchicalKey</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40" refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a073884668636ab0dd689dee1051995f9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a33dc727abecb8b7f6e27efabc43fad5f" kindref="member">HierarchicalKey</ref>&amp;<sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a073884668636ab0dd689dee1051995f9" kindref="member">operator=</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a33dc727abecb8b7f6e27efabc43fad5f" kindref="member">HierarchicalKey</ref>&amp;)<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="42" refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1ac6b06167e1b4a0cc9f5d76725978df34" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1ac6b06167e1b4a0cc9f5d76725978df34" kindref="member">SetKey</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string&amp;<sp/>aKey<sp/>)<sp/>{<sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1aef5da22827bf10e5e742fcc8b99942da" kindref="member">key_</ref><sp/>=<sp/>aKey;<sp/>};</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44" refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a7b34a5116700317eaabbc6e4d0073c70" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a7b34a5116700317eaabbc6e4d0073c70" kindref="member">GetKey</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1aef5da22827bf10e5e742fcc8b99942da" kindref="member">key_</ref>;<sp/>};</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a3f427eb7aa6a38f320110f118dc3837a" kindref="member">ChildString</ref>(<sp/>std::string_view<sp/>s<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"></highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/>std::vector&lt;std::string&gt;<sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a5fc7298fa4908cdfcae667db41dc8a1e" kindref="member">GetList</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a7815faac9fdd99bf20dae43bccd664b7" kindref="member">IsTopLevel</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"></highlight></codeline>
+<codeline lineno="62" refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a78bc6d31fc79bfae056e472bff7a0bd9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a78bc6d31fc79bfae056e472bff7a0bd9" kindref="member">operator==</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a33dc727abecb8b7f6e27efabc43fad5f" kindref="member">HierarchicalKey</ref><sp/>&amp;rhs<sp/>)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="63"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1aef5da22827bf10e5e742fcc8b99942da" kindref="member">key_</ref><sp/>==<sp/>rhs.<ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1aef5da22827bf10e5e742fcc8b99942da" kindref="member">key_</ref>;</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"></highlight></codeline>
+<codeline lineno="67" refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a32e49e85f4272acddb306b172bcab194" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a32e49e85f4272acddb306b172bcab194" kindref="member">operator!=</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a33dc727abecb8b7f6e27efabc43fad5f" kindref="member">HierarchicalKey</ref><sp/>&amp;rhs<sp/>)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="68"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>!<ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1a78bc6d31fc79bfae056e472bff7a0bd9" kindref="member">operator==</ref>(rhs);</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"></highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"></highlight></codeline>
+<codeline lineno="74" refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1aef5da22827bf10e5e742fcc8b99942da" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key_1aef5da22827bf10e5e742fcc8b99942da" kindref="member">key_</ref>;</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="76"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::crdt</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="77"><highlight class="normal"></highlight></codeline>
+<codeline lineno="78"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">//SUPERGENIUS_HIERARCHICAL_KEY_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/crdt/hierarchical_key.hpp"/>
+  </compounddef>
+</doxygen>

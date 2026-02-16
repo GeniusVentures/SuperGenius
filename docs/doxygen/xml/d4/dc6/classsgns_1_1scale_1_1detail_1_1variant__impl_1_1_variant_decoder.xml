@@ -1,0 +1,130 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/dc6/classsgns_1_1scale_1_1detail_1_1variant__impl_1_1_variant_decoder" kind="class" language="C++" prot="public">
+    <compoundname>sgns::scale::detail::variant_impl::VariantDecoder</compoundname>
+    <includes refid="d9/d7a/variant_8hpp" local="no">variant.hpp</includes>
+    <templateparamlist>
+      <param>
+        <type>class Stream</type>
+      </param>
+      <param>
+        <type>class...</type>
+        <declname>T</declname>
+        <defname>T</defname>
+      </param>
+    </templateparamlist>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d4/dc6/classsgns_1_1scale_1_1detail_1_1variant__impl_1_1_variant_decoder_1a50b7c4b25c54cc4967d5f17d01e1f597" prot="private" static="no" mutable="no">
+        <type>uint8_t</type>
+        <definition>uint8_t sgns::scale::detail::variant_impl::VariantDecoder&lt; Stream, T &gt;::type_index_</definition>
+        <argsstring></argsstring>
+        <name>type_index_</name>
+        <qualifiedname>sgns::scale::detail::variant_impl::VariantDecoder::type_index_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/variant.hpp" line="66" column="15" bodyfile="src/scale/detail/variant.hpp" bodystart="66" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/dc6/classsgns_1_1scale_1_1detail_1_1variant__impl_1_1_variant_decoder_1ad3c732cb77eb09837c32e2945473fb77" prot="private" static="no" mutable="no">
+        <type>boost::variant&lt; T... &gt; &amp;</type>
+        <definition>boost::variant&lt;T...&gt;&amp; sgns::scale::detail::variant_impl::VariantDecoder&lt; Stream, T &gt;::r_</definition>
+        <argsstring></argsstring>
+        <name>r_</name>
+        <qualifiedname>sgns::scale::detail::variant_impl::VariantDecoder::r_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/variant.hpp" line="67" column="22" bodyfile="src/scale/detail/variant.hpp" bodystart="67" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/dc6/classsgns_1_1scale_1_1detail_1_1variant__impl_1_1_variant_decoder_1afd6382cfb69172aa6eb4000a741b4c94" prot="private" static="no" mutable="no">
+        <type>Stream &amp;</type>
+        <definition>Stream&amp; sgns::scale::detail::variant_impl::VariantDecoder&lt; Stream, T &gt;::s_</definition>
+        <argsstring></argsstring>
+        <name>s_</name>
+        <qualifiedname>sgns::scale::detail::variant_impl::VariantDecoder::s_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/variant.hpp" line="68" column="14" bodyfile="src/scale/detail/variant.hpp" bodystart="68" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d4/dc6/classsgns_1_1scale_1_1detail_1_1variant__impl_1_1_variant_decoder_1ab7546a0c099673cbfd06d73e7d39b828" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::scale::detail::variant_impl::VariantDecoder&lt; Stream, T &gt;::VariantDecoder</definition>
+        <argsstring>(uint8_t type_index, boost::variant&lt; T... &gt; &amp;r, Stream &amp;s)</argsstring>
+        <name>VariantDecoder</name>
+        <qualifiedname>sgns::scale::detail::variant_impl::VariantDecoder::VariantDecoder</qualifiedname>
+        <param>
+          <type>uint8_t</type>
+          <declname>type_index</declname>
+        </param>
+        <param>
+          <type>boost::variant&lt; T... &gt; &amp;</type>
+          <declname>r</declname>
+        </param>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/variant.hpp" line="53" column="7" bodyfile="src/scale/detail/variant.hpp" bodystart="53" bodyend="54"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dc6/classsgns_1_1scale_1_1detail_1_1variant__impl_1_1_variant_decoder_1a73145edd75c1969402cbbc253c8e9756" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class H</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::scale::detail::variant_impl::VariantDecoder&lt; Stream, T &gt;::apply</definition>
+        <argsstring>(uint8_t index)</argsstring>
+        <name>apply</name>
+        <qualifiedname>sgns::scale::detail::variant_impl::VariantDecoder::apply</qualifiedname>
+        <param>
+          <type>uint8_t</type>
+          <declname>index</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/variant.hpp" line="57" column="12" bodyfile="src/scale/detail/variant.hpp" bodystart="57" bodyend="63"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::scale::detail::variant_impl::VariantDecoder&lt; Stream, T &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1scale_1_1detail_1_1variant__impl_1_1_variant_decoder"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/scale/detail/variant.hpp" line="51" column="5" bodyfile="src/scale/detail/variant.hpp" bodystart="51" bodyend="69"/>
+    <listofallmembers>
+      <member refid="d4/dc6/classsgns_1_1scale_1_1detail_1_1variant__impl_1_1_variant_decoder_1a73145edd75c1969402cbbc253c8e9756" prot="public" virt="non-virtual"><scope>sgns::scale::detail::variant_impl::VariantDecoder</scope><name>apply</name></member>
+      <member refid="d4/dc6/classsgns_1_1scale_1_1detail_1_1variant__impl_1_1_variant_decoder_1ad3c732cb77eb09837c32e2945473fb77" prot="private" virt="non-virtual"><scope>sgns::scale::detail::variant_impl::VariantDecoder</scope><name>r_</name></member>
+      <member refid="d4/dc6/classsgns_1_1scale_1_1detail_1_1variant__impl_1_1_variant_decoder_1afd6382cfb69172aa6eb4000a741b4c94" prot="private" virt="non-virtual"><scope>sgns::scale::detail::variant_impl::VariantDecoder</scope><name>s_</name></member>
+      <member refid="d4/dc6/classsgns_1_1scale_1_1detail_1_1variant__impl_1_1_variant_decoder_1a50b7c4b25c54cc4967d5f17d01e1f597" prot="private" virt="non-virtual"><scope>sgns::scale::detail::variant_impl::VariantDecoder</scope><name>type_index_</name></member>
+      <member refid="d4/dc6/classsgns_1_1scale_1_1detail_1_1variant__impl_1_1_variant_decoder_1ab7546a0c099673cbfd06d73e7d39b828" prot="public" virt="non-virtual"><scope>sgns::scale::detail::variant_impl::VariantDecoder</scope><name>VariantDecoder</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

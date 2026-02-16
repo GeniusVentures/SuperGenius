@@ -1,0 +1,194 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/d08/wasm__result_8hpp" kind="file" language="C++">
+    <compoundname>wasm_result.hpp</compoundname>
+    <includes refid="d1/d64/runtime_2types_8hpp" local="yes">runtime/types.hpp</includes>
+    <includedby refid="dd/d87/runtime__api_8hpp" local="yes">src/runtime/binaryen/runtime_api/runtime_api.hpp</includedby>
+    <includedby refid="d8/d89/wasm__memory__impl_8cpp" local="no">src/runtime/binaryen/wasm_memory_impl.cpp</includedby>
+    <incdepgraph>
+      <node id="2">
+        <label>runtime/types.hpp</label>
+        <link refid="d1/d64/runtime_2types_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/runtime/wasm_result.hpp</label>
+        <link refid="d4/d08/wasm__result_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>cstdint</label>
+      </node>
+      <node id="4">
+        <label>utility</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="4">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.cpp</label>
+        <link refid="d7/d6b/block__builder__impl_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.hpp</label>
+        <link refid="d3/d95/block__builder__impl_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.cpp</label>
+        <link refid="de/d5e/core__factory__impl_8cpp"/>
+      </node>
+      <node id="7">
+        <label>src/runtime/binaryen/runtime_api/core_impl.cpp</label>
+        <link refid="dc/d7c/core__impl_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/runtime/binaryen/runtime_api/core_impl.hpp</label>
+        <link refid="d7/dbc/core__impl_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.cpp</label>
+        <link refid="dc/def/finality__api__impl_8cpp"/>
+      </node>
+      <node id="8">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.hpp</label>
+        <link refid="db/dad/finality__api__impl_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>src/runtime/binaryen/runtime_api/metadata_impl.cpp</label>
+        <link refid="d0/dfc/metadata__impl_8cpp"/>
+      </node>
+      <node id="10">
+        <label>src/runtime/binaryen/runtime_api/metadata_impl.hpp</label>
+        <link refid="dc/dcf/metadata__impl_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>src/runtime/binaryen/runtime_api/offchain_worker_impl.cpp</label>
+        <link refid="d3/d58/offchain__worker__impl_8cpp"/>
+      </node>
+      <node id="12">
+        <label>src/runtime/binaryen/runtime_api/offchain_worker_impl.hpp</label>
+        <link refid="dd/d03/offchain__worker__impl_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.cpp</label>
+        <link refid="db/dae/parachain__host__impl_8cpp"/>
+      </node>
+      <node id="14">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.hpp</label>
+        <link refid="d6/d15/parachain__host__impl_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.cpp</label>
+        <link refid="d3/d02/production__api__impl_8cpp"/>
+      </node>
+      <node id="16">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.hpp</label>
+        <link refid="d1/d6a/production__api__impl_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>src/runtime/binaryen/runtime_api/runtime_api.hpp</label>
+        <link refid="dd/d87/runtime__api_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.cpp</label>
+        <link refid="db/d63/tagged__transaction__queue__impl_8cpp"/>
+      </node>
+      <node id="18">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.hpp</label>
+        <link refid="d4/d66/tagged__transaction__queue__impl_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>src/runtime/binaryen/wasm_memory_impl.cpp</label>
+        <link refid="d8/d89/wasm__memory__impl_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/runtime/wasm_result.hpp</label>
+        <link refid="d4/d08/wasm__result_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="db/d26/structsgns_1_1runtime_1_1_wasm_result" prot="public">sgns::runtime::WasmResult</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="dd/da6/namespacesgns_1_1runtime">sgns::runtime</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_RUNTIME_WASM_RESULT_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_RUNTIME_WASM_RESULT_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d1/d64/runtime_2types_8hpp" kindref="compound">runtime/types.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="dd/da6/namespacesgns_1_1runtime" kindref="compound">sgns::runtime</ref><sp/>{</highlight></codeline>
+<codeline lineno="12" refid="db/d26/structsgns_1_1runtime_1_1_wasm_result" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1aea4d35edcf0c757b748a90cff6a4e8fe" kindref="member">WasmResult</ref><sp/>{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14" refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1aea4d35edcf0c757b748a90cff6a4e8fe" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">explicit</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/><ref refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1aea4d35edcf0c757b748a90cff6a4e8fe" kindref="member">WasmResult</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1adc9fc98228747f341ff4f49e2f8d9002" kindref="member">WasmSpan</ref><sp/>v)<sp/>{</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>[ptr,<sp/>len]<sp/>=<sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1a4fe3375f85083a25353e338f4db4ce74" kindref="member">splitSpan</ref>(v);</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a2db3056be60b475a34c3fafa4b613e2a" kindref="member">address</ref><sp/>=<sp/>ptr;</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a37fafc34e5775a534cb48e7eadb7dc07" kindref="member">length</ref><sp/>=<sp/>len;</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20" refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a35a9a514ea46c55946007665ea9bd7cb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/><ref refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a35a9a514ea46c55946007665ea9bd7cb" kindref="member">WasmResult</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/>ptr,<sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref><sp/>size)</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/><ref refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a2db3056be60b475a34c3fafa4b613e2a" kindref="member">address</ref>{ptr},<sp/><ref refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a37fafc34e5775a534cb48e7eadb7dc07" kindref="member">length</ref>{size}<sp/>{}</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27" refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a36342ab3631b0a36092eae84d333e4a2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1adc9fc98228747f341ff4f49e2f8d9002" kindref="member">WasmSpan</ref><sp/><ref refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a36342ab3631b0a36092eae84d333e4a2" kindref="member">combine</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal"><ref refid="dd/da6/namespacesgns_1_1runtime_1adc9fc98228747f341ff4f49e2f8d9002" kindref="member">WasmSpan</ref></highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<ref refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a2db3056be60b475a34c3fafa4b613e2a" kindref="member">address</ref>)</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>|<sp/>(</highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal"><ref refid="dd/da6/namespacesgns_1_1runtime_1adc9fc98228747f341ff4f49e2f8d9002" kindref="member">WasmSpan</ref></highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<ref refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a37fafc34e5775a534cb48e7eadb7dc07" kindref="member">length</ref>)<sp/>&lt;&lt;<sp/>32ull);</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32" refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1ae528f1929eb864a3580eafdc154e538e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1ae528f1929eb864a3580eafdc154e538e" kindref="member">operator==</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1aea4d35edcf0c757b748a90cff6a4e8fe" kindref="member">WasmResult</ref><sp/>&amp;rhs)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a2db3056be60b475a34c3fafa4b613e2a" kindref="member">address</ref><sp/>==<sp/>rhs.<ref refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a2db3056be60b475a34c3fafa4b613e2a" kindref="member">address</ref><sp/>&amp;&amp;<sp/><ref refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a37fafc34e5775a534cb48e7eadb7dc07" kindref="member">length</ref><sp/>==<sp/>rhs.<ref refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a37fafc34e5775a534cb48e7eadb7dc07" kindref="member">length</ref>;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36" refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a2db3056be60b475a34c3fafa4b613e2a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/><ref refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a2db3056be60b475a34c3fafa4b613e2a" kindref="member">address</ref><sp/>=<sp/>0u;<sp/><sp/></highlight></codeline>
+<codeline lineno="37" refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a37fafc34e5775a534cb48e7eadb7dc07" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref><sp/><ref refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a37fafc34e5775a534cb48e7eadb7dc07" kindref="member">length</ref><sp/>=<sp/>0u;<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="39"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::runtime</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_SRC_RUNTIME_WASM_RESULT_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/runtime/wasm_result.hpp"/>
+  </compounddef>
+</doxygen>

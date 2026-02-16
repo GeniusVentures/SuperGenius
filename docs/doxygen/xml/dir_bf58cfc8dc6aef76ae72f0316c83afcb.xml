@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_bf58cfc8dc6aef76ae72f0316c83afcb" kind="dir">
+    <compoundname>src/crdt</compoundname>
+    <innerdir refid="dir_41866827cbe4fc1fa31e11cc42d77a61">src/crdt/globaldb</innerdir>
+    <innerdir refid="dir_3732e728a021c163ebf541d6bbf896a7">src/crdt/impl</innerdir>
+    <innerfile refid="dd/d8f/atomic__transaction_8hpp">atomic_transaction.hpp</innerfile>
+    <innerfile refid="d9/d25/broadcaster_8hpp">broadcaster.hpp</innerfile>
+    <innerfile refid="dc/d0f/crdt__callback__manager_8hpp">crdt_callback_manager.hpp</innerfile>
+    <innerfile refid="d9/dc5/crdt__data__filter_8hpp">crdt_data_filter.hpp</innerfile>
+    <innerfile refid="d5/d29/crdt__datastore_8hpp">crdt_datastore.hpp</innerfile>
+    <innerfile refid="dc/d76/crdt__heads_8hpp">crdt_heads.hpp</innerfile>
+    <innerfile refid="d0/d2d/crdt__options_8hpp">crdt_options.hpp</innerfile>
+    <innerfile refid="d4/d2e/crdt__set_8hpp">crdt_set.hpp</innerfile>
+    <innerfile refid="d5/db5/dagsyncer_8hpp">dagsyncer.hpp</innerfile>
+    <innerfile refid="d6/dea/graphsync__dagsyncer_8hpp">graphsync_dagsyncer.hpp</innerfile>
+    <innerfile refid="d5/dc7/hierarchical__key_8hpp">hierarchical_key.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crdt/"/>
+  </compounddef>
+</doxygen>

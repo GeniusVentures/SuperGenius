@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/df5/namespacesgns_1_1crdt_1_1_0d013060274365247316256375362102133273117301236376" kind="namespace" language="C++">
+    <compoundname>sgns::crdt::@013060274365247316256375362102133273117301236376</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crdt/globaldb/pubsub_broadcaster_ext.cpp" line="15" column="5"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,162 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::storage::trie::TrieStorage</compoundname>
+    <basecompoundref refid="d1/dbf/class_i_component" prot="public" virt="non-virtual">IComponent</basecompoundref>
+    <derivedcompoundref refid="d5/ddf/classsgns_1_1storage_1_1trie_1_1_trie_storage_impl" prot="public" virt="non-virtual">sgns::storage::trie::TrieStorageImpl</derivedcompoundref>
+    <includes refid="dd/df1/trie__storage_8hpp" local="no">trie_storage.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1af5b35122af906199c3d45f42ba0cd2e1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::TrieStorage::~TrieStorage</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~TrieStorage</name>
+        <qualifiedname>sgns::storage::trie::TrieStorage::~TrieStorage</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/trie_storage.hpp" line="21" column="8"/>
+      </memberdef>
+      <memberdef kind="function" id="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1a1b800c32ddc9ee474118395bcca9b88b" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; std::unique_ptr&lt; <ref refid="db/d71/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch" kindref="compound">PersistentTrieBatch</ref> &gt; &gt;</type>
+        <definition>virtual outcome::result&lt; std::unique_ptr&lt; PersistentTrieBatch &gt; &gt; sgns::storage::trie::TrieStorage::getPersistentBatch</definition>
+        <argsstring>()=0</argsstring>
+        <name>getPersistentBatch</name>
+        <qualifiedname>sgns::storage::trie::TrieStorage::getPersistentBatch</qualifiedname>
+        <reimplementedby refid="d5/ddf/classsgns_1_1storage_1_1trie_1_1_trie_storage_impl_1a608bf5c6b9bb4e331447de51abd88af3">getPersistentBatch</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/trie_storage.hpp" line="24" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1ad91e39b485bd23229b99f2b5e688a2f5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; std::unique_ptr&lt; <ref refid="de/d05/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch" kindref="compound">EphemeralTrieBatch</ref> &gt; &gt;</type>
+        <definition>virtual outcome::result&lt; std::unique_ptr&lt; EphemeralTrieBatch &gt; &gt; sgns::storage::trie::TrieStorage::getEphemeralBatch</definition>
+        <argsstring>() const =0</argsstring>
+        <name>getEphemeralBatch</name>
+        <qualifiedname>sgns::storage::trie::TrieStorage::getEphemeralBatch</qualifiedname>
+        <reimplementedby refid="d5/ddf/classsgns_1_1storage_1_1trie_1_1_trie_storage_impl_1a5c95500680a569a475f6aaa81fe3c0ef">getEphemeralBatch</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/trie_storage.hpp" line="26" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1a9ddf33f9f25481ddc6e61c5d1390b714" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; std::unique_ptr&lt; <ref refid="db/d71/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch" kindref="compound">PersistentTrieBatch</ref> &gt; &gt;</type>
+        <definition>virtual outcome::result&lt; std::unique_ptr&lt; PersistentTrieBatch &gt; &gt; sgns::storage::trie::TrieStorage::getPersistentBatchAt</definition>
+        <argsstring>(const base::Hash256 &amp;root)=0</argsstring>
+        <name>getPersistentBatchAt</name>
+        <qualifiedname>sgns::storage::trie::TrieStorage::getPersistentBatchAt</qualifiedname>
+        <reimplementedby refid="d5/ddf/classsgns_1_1storage_1_1trie_1_1_trie_storage_impl_1a8bd0ad953870aab0fee6819301212a81">getPersistentBatchAt</reimplementedby>
+        <param>
+          <type>const <ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref> &amp;</type>
+          <declname>root</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Initializes a batch at the provided state <simplesect kind="warning"><para>if the batch is committed, the trie will still switch to its state, creating a &apos;fork&apos; </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/trie_storage.hpp" line="34" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1afe63730a6e25696fc79fc3f74529f26c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; std::unique_ptr&lt; <ref refid="de/d05/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch" kindref="compound">EphemeralTrieBatch</ref> &gt; &gt;</type>
+        <definition>virtual outcome::result&lt; std::unique_ptr&lt; EphemeralTrieBatch &gt; &gt; sgns::storage::trie::TrieStorage::getEphemeralBatchAt</definition>
+        <argsstring>(const base::Hash256 &amp;root) const =0</argsstring>
+        <name>getEphemeralBatchAt</name>
+        <qualifiedname>sgns::storage::trie::TrieStorage::getEphemeralBatchAt</qualifiedname>
+        <reimplementedby refid="d5/ddf/classsgns_1_1storage_1_1trie_1_1_trie_storage_impl_1a5944371c82d24ec8868467fabde9f45f">getEphemeralBatchAt</reimplementedby>
+        <param>
+          <type>const <ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref> &amp;</type>
+          <declname>root</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/trie_storage.hpp" line="36" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1a531514796a89812dd7682db8df014226" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>virtual base::Buffer sgns::storage::trie::TrieStorage::getRootHash</definition>
+        <argsstring>() const =0</argsstring>
+        <name>getRootHash</name>
+        <qualifiedname>sgns::storage::trie::TrieStorage::getRootHash</qualifiedname>
+        <reimplementedby refid="d5/ddf/classsgns_1_1storage_1_1trie_1_1_trie_storage_impl_1a240db89dffe0fd710bba5c0549ef892c">getRootHash</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Root hash of the latest committed trie </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/trie_storage.hpp" line="41" column="26"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Grants access to the storage in two ways:<itemizedlist>
+<listitem><para>persistent batch that will written back to the storage after commit() call</para>
+</listitem><listitem><para>ephemeral batch, all changes to which are left in memory and thus the main storage is never changed by it </para>
+</listitem></itemizedlist>
+</para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::TrieStorage</label>
+        <link refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::trie::TrieStorageImpl</label>
+        <link refid="d5/ddf/classsgns_1_1storage_1_1trie_1_1_trie_storage_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::TrieStorage</label>
+        <link refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/trie/trie_storage.hpp" line="19" column="3" bodyfile="src/storage/trie/trie_storage.hpp" bodystart="19" bodyend="42"/>
+    <listofallmembers>
+      <member refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1ad91e39b485bd23229b99f2b5e688a2f5" prot="public" virt="pure-virtual"><scope>sgns::storage::trie::TrieStorage</scope><name>getEphemeralBatch</name></member>
+      <member refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1afe63730a6e25696fc79fc3f74529f26c" prot="public" virt="pure-virtual"><scope>sgns::storage::trie::TrieStorage</scope><name>getEphemeralBatchAt</name></member>
+      <member refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7" prot="public" virt="pure-virtual"><scope>sgns::storage::trie::TrieStorage</scope><name>GetName</name></member>
+      <member refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1a1b800c32ddc9ee474118395bcca9b88b" prot="public" virt="pure-virtual"><scope>sgns::storage::trie::TrieStorage</scope><name>getPersistentBatch</name></member>
+      <member refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1a9ddf33f9f25481ddc6e61c5d1390b714" prot="public" virt="pure-virtual"><scope>sgns::storage::trie::TrieStorage</scope><name>getPersistentBatchAt</name></member>
+      <member refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1a531514796a89812dd7682db8df014226" prot="public" virt="pure-virtual"><scope>sgns::storage::trie::TrieStorage</scope><name>getRootHash</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieStorage</scope><name>~IComponent</name></member>
+      <member refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage_1af5b35122af906199c3d45f42ba0cd2e1" prot="public" virt="non-virtual"><scope>sgns::storage::trie::TrieStorage</scope><name>~TrieStorage</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

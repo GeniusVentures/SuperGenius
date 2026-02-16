@@ -1,0 +1,157 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/d28/structsgns_1_1_account_messenger_1_1_request_task" kind="struct" language="C++" prot="private">
+    <compoundname>sgns::AccountMessenger::RequestTask</compoundname>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="dc/d28/structsgns_1_1_account_messenger_1_1_request_task_1a335b7448242feba2dfc1772ed07f2219" prot="public" static="no" mutable="no">
+        <type><ref refid="d5/d74/classsgns_1_1_account_messenger_1adf1c174849e30cdb996e1299d590b396" kindref="member">RequestType</ref></type>
+        <definition>RequestType sgns::AccountMessenger::RequestTask::type</definition>
+        <argsstring></argsstring>
+        <name>type</name>
+        <qualifiedname>sgns::AccountMessenger::RequestTask::type</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="214" column="65" bodyfile="src/account/AccountMessenger.hpp" bodystart="214" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d28/structsgns_1_1_account_messenger_1_1_request_task_1ae012d8e5d3a223ae5998baefd6d04c73" prot="public" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::AccountMessenger::RequestTask::timeout_ms</definition>
+        <argsstring></argsstring>
+        <name>timeout_ms</name>
+        <qualifiedname>sgns::AccountMessenger::RequestTask::timeout_ms</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="215" column="65" bodyfile="src/account/AccountMessenger.hpp" bodystart="215" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d28/structsgns_1_1_account_messenger_1_1_request_task_1a770980f71a19d80d20fe4dcee4d785e4" prot="public" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::AccountMessenger::RequestTask::silent_time_ms</definition>
+        <argsstring></argsstring>
+        <name>silent_time_ms</name>
+        <qualifiedname>sgns::AccountMessenger::RequestTask::silent_time_ms</qualifiedname>
+        <initializer>{ 150 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="216" column="65" bodyfile="src/account/AccountMessenger.hpp" bodystart="216" bodyend="216"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d28/structsgns_1_1_account_messenger_1_1_request_task_1a9e4c173d706a388dd1555030705d5ac1" prot="public" static="no" mutable="no">
+        <type>uint8_t</type>
+        <definition>uint8_t sgns::AccountMessenger::RequestTask::block_index</definition>
+        <argsstring></argsstring>
+        <name>block_index</name>
+        <qualifiedname>sgns::AccountMessenger::RequestTask::block_index</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="217" column="65" bodyfile="src/account/AccountMessenger.hpp" bodystart="217" bodyend="217"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d28/structsgns_1_1_account_messenger_1_1_request_task_1ab6a572e5b47db868b48fb033259a4ea8" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::AccountMessenger::RequestTask::cid</definition>
+        <argsstring></argsstring>
+        <name>cid</name>
+        <qualifiedname>sgns::AccountMessenger::RequestTask::cid</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="218" column="65" bodyfile="src/account/AccountMessenger.hpp" bodystart="218" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d28/structsgns_1_1_account_messenger_1_1_request_task_1a346a9ba052b0e713364fbb0421701b68" prot="public" static="no" mutable="no">
+        <type>std::function&lt; void(outcome::result&lt; std::string &gt;)&gt;</type>
+        <definition>std::function&lt;void( outcome::result&lt;std::string&gt; )&gt; sgns::AccountMessenger::RequestTask::callback</definition>
+        <argsstring></argsstring>
+        <name>callback</name>
+        <qualifiedname>sgns::AccountMessenger::RequestTask::callback</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="219" column="27" bodyfile="src/account/AccountMessenger.hpp" bodystart="219" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d28/structsgns_1_1_account_messenger_1_1_request_task_1a8d58681dded0ae650080346b3fca863d" prot="public" static="no" mutable="no">
+        <type>std::shared_ptr&lt; std::promise&lt; outcome::result&lt; uint64_t &gt; &gt; &gt;</type>
+        <definition>std::shared_ptr&lt;std::promise&lt;outcome::result&lt;uint64_t&gt; &gt; &gt; sgns::AccountMessenger::RequestTask::nonce_promise</definition>
+        <argsstring></argsstring>
+        <name>nonce_promise</name>
+        <qualifiedname>sgns::AccountMessenger::RequestTask::nonce_promise</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="220" column="29" bodyfile="src/account/AccountMessenger.hpp" bodystart="220" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="6">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::AccountMessenger::RequestTask</label>
+        <link refid="dc/d28/structsgns_1_1_account_messenger_1_1_request_task"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+cid</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+nonce_promise</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="5">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::shared_ptr&lt; std::promise&lt; outcome::result&lt; uint64_t &gt; &gt; &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; std::promise&lt; outcome::result&lt; uint64_t &gt; &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::string</label>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/account/AccountMessenger.hpp" line="212" column="9" bodyfile="src/account/AccountMessenger.hpp" bodystart="213" bodyend="221"/>
+    <listofallmembers>
+      <member refid="dc/d28/structsgns_1_1_account_messenger_1_1_request_task_1a9e4c173d706a388dd1555030705d5ac1" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger::RequestTask</scope><name>block_index</name></member>
+      <member refid="dc/d28/structsgns_1_1_account_messenger_1_1_request_task_1a346a9ba052b0e713364fbb0421701b68" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger::RequestTask</scope><name>callback</name></member>
+      <member refid="dc/d28/structsgns_1_1_account_messenger_1_1_request_task_1ab6a572e5b47db868b48fb033259a4ea8" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger::RequestTask</scope><name>cid</name></member>
+      <member refid="dc/d28/structsgns_1_1_account_messenger_1_1_request_task_1a8d58681dded0ae650080346b3fca863d" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger::RequestTask</scope><name>nonce_promise</name></member>
+      <member refid="dc/d28/structsgns_1_1_account_messenger_1_1_request_task_1a770980f71a19d80d20fe4dcee4d785e4" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger::RequestTask</scope><name>silent_time_ms</name></member>
+      <member refid="dc/d28/structsgns_1_1_account_messenger_1_1_request_task_1ae012d8e5d3a223ae5998baefd6d04c73" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger::RequestTask</scope><name>timeout_ms</name></member>
+      <member refid="dc/d28/structsgns_1_1_account_messenger_1_1_request_task_1a335b7448242feba2dfc1772ed07f2219" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger::RequestTask</scope><name>type</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

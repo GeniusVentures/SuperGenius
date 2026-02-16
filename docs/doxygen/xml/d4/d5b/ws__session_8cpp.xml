@@ -1,0 +1,294 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/d5b/ws__session_8cpp" kind="file" language="C++">
+    <compoundname>ws_session.cpp</compoundname>
+    <includes refid="d4/d57/ws__session_8hpp" local="yes">api/transport/impl/ws/ws_session.hpp</includes>
+    <includes local="no">boost/asio/dispatch.hpp</includes>
+    <includes local="no">boost/config.hpp</includes>
+    <includes local="no">cstring</includes>
+    <includes refid="d5/dda/outcome_8hpp" local="yes">outcome/outcome.hpp</includes>
+    <incdepgraph>
+      <node id="1">
+        <label>src/api/transport/impl/ws/ws_session.cpp</label>
+        <link refid="d4/d5b/ws__session_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>api/transport/impl/ws/ws_session.hpp</label>
+        <link refid="d4/d57/ws__session_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>api/transport/rpc_io_context.hpp</label>
+        <link refid="d7/db2/rpc__io__context_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>api/transport/session.hpp</label>
+        <link refid="d4/d5e/session_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>boost/asio/buffer.hpp</label>
+      </node>
+      <node id="23">
+        <label>boost/asio/dispatch.hpp</label>
+      </node>
+      <node id="17">
+        <label>boost/asio/io_context.hpp</label>
+      </node>
+      <node id="11">
+        <label>boost/asio/ip/tcp.hpp</label>
+      </node>
+      <node id="12">
+        <label>boost/asio/read_until.hpp</label>
+      </node>
+      <node id="3">
+        <label>boost/asio/strand.hpp</label>
+      </node>
+      <node id="13">
+        <label>boost/asio/streambuf.hpp</label>
+      </node>
+      <node id="14">
+        <label>boost/asio/write.hpp</label>
+      </node>
+      <node id="4">
+        <label>boost/beast/core/tcp_stream.hpp</label>
+      </node>
+      <node id="5">
+        <label>boost/beast/websocket.hpp</label>
+      </node>
+      <node id="24">
+        <label>boost/config.hpp</label>
+      </node>
+      <node id="15">
+        <label>boost/signals2/signal.hpp</label>
+      </node>
+      <node id="6">
+        <label>chrono</label>
+      </node>
+      <node id="7">
+        <label>cstdlib</label>
+      </node>
+      <node id="25">
+        <label>cstring</label>
+      </node>
+      <node id="27">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="8">
+        <label>memory</label>
+      </node>
+      <node id="21">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="22">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="19">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d66/namespacesgns_1_1api">sgns::api</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d4/d57/ws__session_8hpp" kindref="compound">api/transport/impl/ws/ws_session.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/asio/dispatch.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/config.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstring&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/dda/outcome_8hpp" kindref="compound">outcome/outcome.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d66/namespacesgns_1_1api" kindref="compound">sgns::api</ref><sp/>{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12" refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a0a2c6833d17b698f32b636b11877c7f9" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a0a2c6833d17b698f32b636b11877c7f9" kindref="member">WsSession::WsSession</ref>(<ref refid="db/d02/classsgns_1_1api_1_1_session_1a4764a67d047daedafadc808a341dbae5" kindref="member">Context</ref><sp/>&amp;context,<sp/><ref refid="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration" kindref="compound">Configuration</ref><sp/>config,<sp/><ref refid="db/d02/classsgns_1_1api_1_1_session_1aa68e294d772e90f0c69e8b8cd1d79d64" kindref="member">SessionId</ref><sp/></highlight><highlight class="keywordtype">id</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1aeccdd0c4afd5ffc0ce1bfac133b1fa35" kindref="member">strand_</ref>(<ref refid="d4/da9/namespaceboost" kindref="compound">boost</ref>::asio::make_strand(context)),</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1aafd28076b3342a82e06b0750d7c9b6a5" kindref="member">socket_</ref>(<ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1aeccdd0c4afd5ffc0ce1bfac133b1fa35" kindref="member">strand_</ref>),</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a3036aa8deb88b04554e38a3b9b3ac6c2" kindref="member">config_</ref>{config},</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1d2fa4d4005d9d3ef3567198ab4f61d0" kindref="member">stream_</ref>(<ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1aafd28076b3342a82e06b0750d7c9b6a5" kindref="member">socket_</ref>),</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a4736ad3cd3b43cf32736934ffe200fa6" kindref="member">id_</ref>(<ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ab921c7454a11ab36d66bdc6ff43836d5" kindref="member">id</ref>)<sp/>{}</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19" refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ac11c2533147955069fa34c71b731bd40" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ac11c2533147955069fa34c71b731bd40" kindref="member">WsSession::start</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>boost::asio::dispatch(<ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1d2fa4d4005d9d3ef3567198ab4f61d0" kindref="member">stream_</ref>.get_executor(),</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boost::asio::bind_executor(<ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1d2fa4d4005d9d3ef3567198ab4f61d0" kindref="member">stream_</ref>.get_executor(),</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::bind(&amp;<ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a4c497e8a483fb4e3115dc3fb3cd2c1fd" kindref="member">WsSession::onRun</ref>,</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>shared_from_this())));</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26" refid="da/dc7/classsgns_1_1api_1_1_ws_session_1aa598ef62f244c1ee033c3bd352ca04bb" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1aa598ef62f244c1ee033c3bd352ca04bb" kindref="member">WsSession::stop</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/>boost::system::error_code<sp/>ec;</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1d2fa4d4005d9d3ef3567198ab4f61d0" kindref="member">stream_</ref>.close(boost::beast::websocket::close_reason(),<sp/>ec);</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/>boost::ignore_unused(ec);</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="db/d02/classsgns_1_1api_1_1_session_1ab3dad321654c3ba64a361844f2ea9499" kindref="member">notifyOnClose</ref>(<ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a4736ad3cd3b43cf32736934ffe200fa6" kindref="member">id_</ref>,<sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a8ad23d4815bbbeb49a5c87e977f56b77" kindref="member">type</ref>());</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33" refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a15781b6b351b33e8a11db51334dd58f5" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a15781b6b351b33e8a11db51334dd58f5" kindref="member">WsSession::handleRequest</ref>(std::string_view<sp/>data)<sp/>{</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="db/d02/classsgns_1_1api_1_1_session_1abd0a3726505e365e7aa987c5b2b21320" kindref="member">processRequest</ref>(data,<sp/>shared_from_this());</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37" refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a75190fc7e0bc77d2718750c052c53971" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a75190fc7e0bc77d2718750c052c53971" kindref="member">WsSession::asyncRead</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1d2fa4d4005d9d3ef3567198ab4f61d0" kindref="member">stream_</ref>.async_read(<ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ab5a7bb1c0ef52b071b60da8f1b3cfeac" kindref="member">rbuffer_</ref>,</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boost::asio::bind_executor(<ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1d2fa4d4005d9d3ef3567198ab4f61d0" kindref="member">stream_</ref>.get_executor(),</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::bind(&amp;<ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ad4a313b52171806a0742a29852aed141" kindref="member">WsSession::onRead</ref>,</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>shared_from_this(),</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::placeholders::_1,</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::placeholders::_2)));</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46" refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1f94e6a66dd32e4192d6bfb3f4a1ee33" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1f94e6a66dd32e4192d6bfb3f4a1ee33" kindref="member">WsSession::asyncWrite</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1d2fa4d4005d9d3ef3567198ab4f61d0" kindref="member">stream_</ref>.async_write(<ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a98c191c2f35723057d8e4ef708575524" kindref="member">wbuffer_</ref>.data(),</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boost::asio::bind_executor(<ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1d2fa4d4005d9d3ef3567198ab4f61d0" kindref="member">stream_</ref>.get_executor(),</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::bind(&amp;<ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a2aab95d779fbc66239a759c0ebd00f12" kindref="member">WsSession::onWrite</ref>,</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>shared_from_this(),</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::placeholders::_1,</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::placeholders::_2)));</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight></codeline>
+<codeline lineno="55" refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ab921c7454a11ab36d66bdc6ff43836d5" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="db/d02/classsgns_1_1api_1_1_session_1aa68e294d772e90f0c69e8b8cd1d79d64" kindref="member">sgns::api::Session::SessionId</ref><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ab921c7454a11ab36d66bdc6ff43836d5" kindref="member">WsSession::id</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a4736ad3cd3b43cf32736934ffe200fa6" kindref="member">id_</ref>;</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"></highlight></codeline>
+<codeline lineno="59" refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a30a7b6b53690b096385da18ac23413d2" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a30a7b6b53690b096385da18ac23413d2" kindref="member">WsSession::respond</ref>(std::string_view<sp/>response)<sp/>{</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/>boost::asio::buffer_copy(</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a98c191c2f35723057d8e4ef708575524" kindref="member">wbuffer_</ref>.prepare(response.size()),</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boost::asio::const_buffer(response.data(),<sp/>response.size()));</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a98c191c2f35723057d8e4ef708575524" kindref="member">wbuffer_</ref>.commit(response.size());</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1d2fa4d4005d9d3ef3567198ab4f61d0" kindref="member">stream_</ref>.text(</highlight><highlight class="keyword">true</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1f94e6a66dd32e4192d6bfb3f4a1ee33" kindref="member">asyncWrite</ref>();</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"></highlight></codeline>
+<codeline lineno="68" refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a4c497e8a483fb4e3115dc3fb3cd2c1fd" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a4c497e8a483fb4e3115dc3fb3cd2c1fd" kindref="member">WsSession::onRun</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Set<sp/>suggested<sp/>timeout<sp/>settings<sp/>for<sp/>the<sp/>websocket</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1d2fa4d4005d9d3ef3567198ab4f61d0" kindref="member">stream_</ref>.set_option(boost::beast::websocket::stream_base::timeout::suggested(</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boost::beast::role_type::server));</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"></highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Set<sp/>a<sp/>decorator<sp/>to<sp/>change<sp/>the<sp/>Server<sp/>of<sp/>the<sp/>handshake</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1d2fa4d4005d9d3ef3567198ab4f61d0" kindref="member">stream_</ref>.set_option(boost::beast::websocket::stream_base::decorator(</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[](boost::beast::websocket::response_type&amp;<sp/>res)<sp/>{</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>res.set(boost::beast::http::field::server,</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string(BOOST_BEAST_VERSION_STRING)</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>+<sp/></highlight><highlight class="stringliteral">&quot;<sp/>websocket-server-async&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}));</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Accept<sp/>the<sp/>websocket<sp/>handshake</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1d2fa4d4005d9d3ef3567198ab4f61d0" kindref="member">stream_</ref>.async_accept(boost::asio::bind_executor(<ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1d2fa4d4005d9d3ef3567198ab4f61d0" kindref="member">stream_</ref>.get_executor(),</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::bind(&amp;<ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ac839e7afca879e75fe1712d84682e2cd" kindref="member">WsSession::onAccept</ref>,</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>shared_from_this(),</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::placeholders::_1)));</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"></highlight></codeline>
+<codeline lineno="87" refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ac839e7afca879e75fe1712d84682e2cd" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ac839e7afca879e75fe1712d84682e2cd" kindref="member">WsSession::onAccept</ref>(boost::system::error_code<sp/>ec)<sp/>{</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(ec)<sp/>{</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>error_message<sp/>=<sp/>(ec<sp/>==<sp/>WsError::closed)<sp/>?<sp/></highlight><highlight class="stringliteral">&quot;connection<sp/>was<sp/>closed&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/></highlight><highlight class="stringliteral">&quot;unknown<sp/>error<sp/>occurred&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1a91acf08b9caaa7eba0895677bb8c52" kindref="member">reportError</ref>(ec,<sp/>error_message);</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1aa598ef62f244c1ee033c3bd352ca04bb" kindref="member">stop</ref>();</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"></highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a75190fc7e0bc77d2718750c052c53971" kindref="member">asyncRead</ref>();</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"></highlight></codeline>
+<codeline lineno="99" refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ad4a313b52171806a0742a29852aed141" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ad4a313b52171806a0742a29852aed141" kindref="member">WsSession::onRead</ref>(boost::system::error_code<sp/>ec,</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::size_t<sp/>bytes_transferred)<sp/>{</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(ec)<sp/>{</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>error_message<sp/>=<sp/>(ec<sp/>==<sp/>WsError::closed)<sp/>?<sp/></highlight><highlight class="stringliteral">&quot;connection<sp/>was<sp/>closed&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/></highlight><highlight class="stringliteral">&quot;unknown<sp/>error<sp/>occurred&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1a91acf08b9caaa7eba0895677bb8c52" kindref="member">reportError</ref>(ec,<sp/>error_message);</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1aa598ef62f244c1ee033c3bd352ca04bb" kindref="member">stop</ref>();</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"></highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a15781b6b351b33e8a11db51334dd58f5" kindref="member">handleRequest</ref>(</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ab5a7bb1c0ef52b071b60da8f1b3cfeac" kindref="member">rbuffer_</ref>.data().data()),<sp/>bytes_transferred});</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"></highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ab5a7bb1c0ef52b071b60da8f1b3cfeac" kindref="member">rbuffer_</ref>.consume(bytes_transferred);</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"></highlight></codeline>
+<codeline lineno="115" refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a2aab95d779fbc66239a759c0ebd00f12" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a2aab95d779fbc66239a759c0ebd00f12" kindref="member">WsSession::onWrite</ref>(boost::system::error_code<sp/>ec,</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::size_t<sp/>bytes_transferred)<sp/>{</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(ec)<sp/>{</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1a91acf08b9caaa7eba0895677bb8c52" kindref="member">reportError</ref>(ec,<sp/></highlight><highlight class="stringliteral">&quot;failed<sp/>to<sp/>write<sp/>message&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1aa598ef62f244c1ee033c3bd352ca04bb" kindref="member">stop</ref>();</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"></highlight></codeline>
+<codeline lineno="122"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a98c191c2f35723057d8e4ef708575524" kindref="member">wbuffer_</ref>.consume(bytes_transferred);</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"></highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a75190fc7e0bc77d2718750c052c53971" kindref="member">asyncRead</ref>();</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"></highlight></codeline>
+<codeline lineno="127" refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1a91acf08b9caaa7eba0895677bb8c52" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1a91acf08b9caaa7eba0895677bb8c52" kindref="member">WsSession::reportError</ref>(boost::system::error_code<sp/>ec,</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string_view<sp/><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ac69b9011fe0a65ddf8682c837ee5445c" kindref="member">logger_</ref>-&gt;error(</highlight><highlight class="stringliteral">&quot;error<sp/>occured:<sp/>{},<sp/>code:<sp/>{}&quot;</highlight><highlight class="normal">,<sp/><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>,<sp/>ec.<ref refid="db/da6/classsgns_1_1message_1a1c0d801d4625dbcc8a9f40a5c6631b2c" kindref="member">message</ref>());</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"></highlight></codeline>
+<codeline lineno="132"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::api</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/api/transport/impl/ws/ws_session.cpp"/>
+  </compounddef>
+</doxygen>

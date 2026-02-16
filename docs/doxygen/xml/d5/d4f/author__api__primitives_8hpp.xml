@@ -1,0 +1,132 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/d4f/author__api__primitives_8hpp" kind="file" language="C++">
+    <compoundname>author_api_primitives.hpp</compoundname>
+    <includes local="no">memory</includes>
+    <includes local="no">boost/optional.hpp</includes>
+    <includes local="no">boost/variant.hpp</includes>
+    <includedby refid="d8/dd1/author__api_8hpp" local="yes">src/api/service/author/author_api.hpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/primitives/author_api_primitives.hpp</label>
+        <link refid="d5/d4f/author__api__primitives_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="4">
+        <label>boost/variant.hpp</label>
+      </node>
+      <node id="2">
+        <label>memory</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/api/service/author/author_api.hpp</label>
+        <link refid="d8/dd1/author__api_8hpp"/>
+      </node>
+      <node id="1">
+        <label>src/primitives/author_api_primitives.hpp</label>
+        <link refid="d5/d4f/author__api__primitives_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="de/d40/structsgns_1_1primitives_1_1_session" prot="public">sgns::primitives::Session</innerclass>
+    <innerclass refid="d6/d9c/structsgns_1_1primitives_1_1_subscriber" prot="public">sgns::primitives::Subscriber</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="dd/dc5/namespacesgns_1_1primitives">sgns::primitives</innernamespace>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a0cc2548d85f1c749341c8ea228d1168e" prot="public" static="no">
+        <type>uint64_t</type>
+        <definition>using sgns::primitives::SubscriptionId = uint64_t</definition>
+        <argsstring></argsstring>
+        <name>SubscriptionId</name>
+        <qualifiedname>sgns::primitives::SubscriptionId</qualifiedname>
+        <briefdescription>
+<para><ref refid="dd/dc5/namespacesgns_1_1primitives_1a0cc2548d85f1c749341c8ea228d1168e" kindref="member">SubscriptionId</ref> primitive. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/author_api_primitives.hpp" line="19" column="3" bodyfile="src/primitives/author_api_primitives.hpp" bodystart="19" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a6810bd3ee844fca6a87654eef0c0c364" prot="public" static="no">
+        <type>boost::optional&lt; std::shared_ptr&lt; Session &gt; &gt;</type>
+        <definition>using sgns::primitives::Metadata = boost::optional&lt;std::shared_ptr&lt;Session&gt;&gt;</definition>
+        <argsstring></argsstring>
+        <name>Metadata</name>
+        <qualifiedname>sgns::primitives::Metadata</qualifiedname>
+        <briefdescription>
+<para><ref refid="dd/dc5/namespacesgns_1_1primitives_1a6810bd3ee844fca6a87654eef0c0c364" kindref="member">Metadata</ref> primitive. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/author_api_primitives.hpp" line="32" column="3" bodyfile="src/primitives/author_api_primitives.hpp" bodystart="32" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1aab37b377ae4dffc3684935d305830ea4" prot="public" static="no">
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>using sgns::primitives::ExtrinsicKey = std::vector&lt;uint8_t&gt;</definition>
+        <argsstring></argsstring>
+        <name>ExtrinsicKey</name>
+        <qualifiedname>sgns::primitives::ExtrinsicKey</qualifiedname>
+        <briefdescription>
+<para><ref refid="dd/dc5/namespacesgns_1_1primitives_1aab37b377ae4dffc3684935d305830ea4" kindref="member">ExtrinsicKey</ref> is used as a key to search extrinsic. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/author_api_primitives.hpp" line="44" column="3" bodyfile="src/primitives/author_api_primitives.hpp" bodystart="44" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_PRIMITIVES_EXTRINSIC_API_PRIMITIVES_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_PRIMITIVES_EXTRINSIC_API_PRIMITIVES_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;memory&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/optional.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/variant.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="dd/dc5/namespacesgns_1_1primitives" kindref="compound">sgns::primitives</ref><sp/>{</highlight></codeline>
+<codeline lineno="19" refid="dd/dc5/namespacesgns_1_1primitives_1a0cc2548d85f1c749341c8ea228d1168e" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/dc5/namespacesgns_1_1primitives_1a0cc2548d85f1c749341c8ea228d1168e" kindref="member">SubscriptionId</ref><sp/>=<sp/>uint64_t;</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24" refid="de/d40/structsgns_1_1primitives_1_1_session" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="de/d40/structsgns_1_1primitives_1_1_session" kindref="compound">Session</ref><sp/>{</highlight></codeline>
+<codeline lineno="25" refid="de/d40/structsgns_1_1primitives_1_1_session_1a86d9f5064a5a449667992e2f71881825" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>uint32_t<sp/></highlight><highlight class="keywordtype">id</highlight><highlight class="normal">{};</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>TODO(yuraz):<sp/>PRE-221<sp/>investigate<sp/>and<sp/>implement<sp/>Session<sp/>primitive</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32" refid="dd/dc5/namespacesgns_1_1primitives_1a6810bd3ee844fca6a87654eef0c0c364" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/dc5/namespacesgns_1_1primitives_1a6810bd3ee844fca6a87654eef0c0c364" kindref="member">Metadata</ref><sp/>=<sp/>boost::optional&lt;std::shared_ptr&lt;Session&gt;&gt;;</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37" refid="d6/d9c/structsgns_1_1primitives_1_1_subscriber" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="d6/d9c/structsgns_1_1primitives_1_1_subscriber" kindref="compound">Subscriber</ref><sp/>{</highlight></codeline>
+<codeline lineno="38" refid="d6/d9c/structsgns_1_1primitives_1_1_subscriber_1a1b6ed1da5173b02f46e07ef168bbac60" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>uint32_t<sp/></highlight><highlight class="keywordtype">id</highlight><highlight class="normal">{};</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44" refid="dd/dc5/namespacesgns_1_1primitives_1aab37b377ae4dffc3684935d305830ea4" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/dc5/namespacesgns_1_1primitives_1aab37b377ae4dffc3684935d305830ea4" kindref="member">ExtrinsicKey</ref><sp/>=<sp/>std::vector&lt;uint8_t&gt;;</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>TODO:<sp/>PRE-221<sp/>investigate<sp/>and<sp/>implement<sp/>Subscriber<sp/>primitive</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight></codeline>
+<codeline lineno="47"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::primitives</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="48"><highlight class="normal"></highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//SUPERGENIUS_SRC_PRIMITIVES_EXTRINSIC_API_PRIMITIVES_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/primitives/author_api_primitives.hpp"/>
+  </compounddef>
+</doxygen>

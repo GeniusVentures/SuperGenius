@@ -1,0 +1,262 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/db9/classsgns_1_1publish" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::publish</compoundname>
+    <basecompoundref refid="db/da6/classsgns_1_1message" prot="public" virt="non-virtual">sgns::message</basecompoundref>
+    <includes refid="da/d8d/node_2common_8hpp" local="no">common.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d6/db9/classsgns_1_1publish_1a1a50003228d068a06251939274cc3d85" prot="public" static="no" mutable="no">
+        <type>std::shared_ptr&lt; sgns::block &gt;</type>
+        <definition>std::shared_ptr&lt;sgns::block&gt; sgns::publish::block</definition>
+        <argsstring></argsstring>
+        <name>block</name>
+        <qualifiedname>sgns::publish::block</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="300" column="17" bodyfile="node/common.hpp" bodystart="300" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/db9/classsgns_1_1publish_1a8cf39e2c803496dcbe1a400328e354ed" prot="public" static="no" mutable="no">
+        <type>sgns::uint128_t</type>
+        <definition>sgns::uint128_t sgns::publish::digest</definition>
+        <argsstring></argsstring>
+        <name>digest</name>
+        <qualifiedname>sgns::publish::digest</qualifiedname>
+        <initializer>{ 0 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="301" column="17" bodyfile="node/common.hpp" bodystart="301" bodyend="301"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d6/db9/classsgns_1_1publish_1aef90550159f38ae73768dee7c1836367" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::publish::publish</definition>
+        <argsstring>(bool &amp;, sgns::stream &amp;, sgns::message_header const &amp;, sgns::uint128_t const &amp;=0, sgns::block_uniquer *=nullptr)</argsstring>
+        <name>publish</name>
+        <qualifiedname>sgns::publish::publish</qualifiedname>
+        <param>
+          <type>bool &amp;</type>
+          <defname>error_a</defname>
+        </param>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type><ref refid="de/d6d/classsgns_1_1message__header" kindref="compound">sgns::message_header</ref> const &amp;</type>
+          <defname>header_a</defname>
+        </param>
+        <param>
+          <type>sgns::uint128_t const &amp;</type>
+          <defname>digest_a</defname>
+          <defval>0</defval>
+        </param>
+        <param>
+          <type>sgns::block_uniquer *</type>
+          <defname>uniquer_a</defname>
+          <defval>nullptr</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="294" column="1" bodyfile="node/common.cpp" bodystart="615" bodyend="623"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/db9/classsgns_1_1publish_1a0dcfdf158511fa000dcdb461a1c26191" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::publish::publish</definition>
+        <argsstring>(std::shared_ptr&lt; sgns::block &gt;)</argsstring>
+        <name>publish</name>
+        <qualifiedname>sgns::publish::publish</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; sgns::block &gt;</type>
+          <defname>block_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="295" column="10" bodyfile="node/common.cpp" bodystart="625" bodyend="630"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/db9/classsgns_1_1publish_1acd98fc9362b02d2b80dd90c91b830295" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::publish::visit</definition>
+        <argsstring>(sgns::message_visitor &amp;) const override</argsstring>
+        <name>visit</name>
+        <qualifiedname>sgns::publish::visit</qualifiedname>
+        <reimplements refid="db/da6/classsgns_1_1message_1a85e15104bd6bb3f97732067f4a31b418">visit</reimplements>
+        <param>
+          <type><ref refid="dd/d84/classsgns_1_1message__visitor" kindref="compound">sgns::message_visitor</ref> &amp;</type>
+          <defname>visitor_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="296" column="6" bodyfile="node/common.cpp" bodystart="647" bodyend="650"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/db9/classsgns_1_1publish_1a3da09685ca4d94e698fad89d05d3feb7" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::publish::serialize</definition>
+        <argsstring>(sgns::stream &amp;, bool) const override</argsstring>
+        <name>serialize</name>
+        <qualifiedname>sgns::publish::serialize</qualifiedname>
+        <reimplements refid="db/da6/classsgns_1_1message_1a7caa91e43882d5ce6b2f84e7a180bfd8">serialize</reimplements>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type>bool</type>
+          <defname>use_epoch_2_min_version_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="297" column="6" bodyfile="node/common.cpp" bodystart="632" bodyend="637"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/db9/classsgns_1_1publish_1a15a39802f5d0ff029b34812e46b8a72d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::publish::deserialize</definition>
+        <argsstring>(sgns::stream &amp;, sgns::block_uniquer *=nullptr)</argsstring>
+        <name>deserialize</name>
+        <qualifiedname>sgns::publish::deserialize</qualifiedname>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type>sgns::block_uniquer *</type>
+          <defname>uniquer_a</defname>
+          <defval>nullptr</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="298" column="6" bodyfile="node/common.cpp" bodystart="639" bodyend="645"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/db9/classsgns_1_1publish_1a5f36a6d635be170f2746dd9c0023861b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::publish::operator==</definition>
+        <argsstring>(sgns::publish const &amp;) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::publish::operator==</qualifiedname>
+        <param>
+          <type><ref refid="d6/db9/classsgns_1_1publish" kindref="compound">sgns::publish</ref> const &amp;</type>
+          <defname>other_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="299" column="6" bodyfile="node/common.cpp" bodystart="652" bodyend="655"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::message</label>
+        <link refid="db/da6/classsgns_1_1message"/>
+      </node>
+      <node id="1">
+        <label>sgns::publish</label>
+        <link refid="d6/db9/classsgns_1_1publish"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="8">
+        <label>T</label>
+      </node>
+      <node id="2">
+        <label>sgns::message</label>
+        <link refid="db/da6/classsgns_1_1message"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+header</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::message_header</label>
+        <link refid="de/d6d/classsgns_1_1message__header"/>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+block_type_mask</edgelabel>
+          <edgelabel>+count_mask</edgelabel>
+          <edgelabel>+extensions</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::publish</label>
+        <link refid="d6/db9/classsgns_1_1publish"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+block</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::bitset&lt; Bits &gt;</label>
+      </node>
+      <node id="4">
+        <label>std::bitset&lt; 16 &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; 16 &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; sgns::block &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; sgns::block &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="node/common.hpp" line="291" column="1" bodyfile="node/common.hpp" bodystart="292" bodyend="302"/>
+    <listofallmembers>
+      <member refid="d6/db9/classsgns_1_1publish_1a1a50003228d068a06251939274cc3d85" prot="public" virt="non-virtual"><scope>sgns::publish</scope><name>block</name></member>
+      <member refid="d6/db9/classsgns_1_1publish_1a15a39802f5d0ff029b34812e46b8a72d" prot="public" virt="non-virtual"><scope>sgns::publish</scope><name>deserialize</name></member>
+      <member refid="d6/db9/classsgns_1_1publish_1a8cf39e2c803496dcbe1a400328e354ed" prot="public" virt="non-virtual"><scope>sgns::publish</scope><name>digest</name></member>
+      <member refid="db/da6/classsgns_1_1message_1abc0de834dc846d1d86110caec8a4b7db" prot="public" virt="non-virtual"><scope>sgns::publish</scope><name>header</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a1c0d801d4625dbcc8a9f40a5c6631b2c" prot="public" virt="non-virtual"><scope>sgns::publish</scope><name>message</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a2fbf35d959e3532e2ce4675c9c26761e" prot="public" virt="non-virtual"><scope>sgns::publish</scope><name>message</name></member>
+      <member refid="d6/db9/classsgns_1_1publish_1a5f36a6d635be170f2746dd9c0023861b" prot="public" virt="non-virtual"><scope>sgns::publish</scope><name>operator==</name></member>
+      <member refid="d6/db9/classsgns_1_1publish_1aef90550159f38ae73768dee7c1836367" prot="public" virt="non-virtual"><scope>sgns::publish</scope><name>publish</name></member>
+      <member refid="d6/db9/classsgns_1_1publish_1a0dcfdf158511fa000dcdb461a1c26191" prot="public" virt="non-virtual"><scope>sgns::publish</scope><name>publish</name></member>
+      <member refid="d6/db9/classsgns_1_1publish_1a3da09685ca4d94e698fad89d05d3feb7" prot="public" virt="virtual"><scope>sgns::publish</scope><name>serialize</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a2ad934099e11461e98605fcb5b001c0b" prot="public" virt="non-virtual"><scope>sgns::publish</scope><name>to_bytes</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a5ae4e86a1763a52b65e042caed25ee54" prot="public" virt="non-virtual"><scope>sgns::publish</scope><name>to_shared_const_buffer</name></member>
+      <member refid="d6/db9/classsgns_1_1publish_1acd98fc9362b02d2b80dd90c91b830295" prot="public" virt="virtual"><scope>sgns::publish</scope><name>visit</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a144f9f336461eb5a17eac7825ba23b41" prot="public" virt="virtual"><scope>sgns::publish</scope><name>~message</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

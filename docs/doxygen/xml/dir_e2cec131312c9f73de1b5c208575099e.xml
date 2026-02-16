@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_e2cec131312c9f73de1b5c208575099e" kind="dir">
+    <compoundname>src/storage/trie/serialization</compoundname>
+    <innerfile refid="dc/d0b/buffer__stream_8hpp">buffer_stream.hpp</innerfile>
+    <innerfile refid="d9/dcb/ordered__trie__hash_8hpp">ordered_trie_hash.hpp</innerfile>
+    <innerfile refid="d1/dc3/supergenius__codec_8cpp">supergenius_codec.cpp</innerfile>
+    <innerfile refid="d7/db4/supergenius__codec_8hpp">supergenius_codec.hpp</innerfile>
+    <innerfile refid="d9/d67/trie__serializer_8hpp">trie_serializer.hpp</innerfile>
+    <innerfile refid="dd/d1c/trie__serializer__impl_8cpp">trie_serializer_impl.cpp</innerfile>
+    <innerfile refid="d4/d17/trie__serializer__impl_8hpp">trie_serializer_impl.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/storage/trie/serialization/"/>
+  </compounddef>
+</doxygen>

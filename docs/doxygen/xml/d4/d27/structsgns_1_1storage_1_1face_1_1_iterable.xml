@@ -1,0 +1,252 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable" kind="struct" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::storage::face::Iterable</compoundname>
+    <derivedcompoundref refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map" prot="public" virt="non-virtual">sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</derivedcompoundref>
+    <includes refid="db/d3e/iterable_8hpp" local="no">iterable.hpp</includes>
+    <templateparamlist>
+      <param>
+        <type>typename K</type>
+      </param>
+      <param>
+        <type>typename V</type>
+      </param>
+    </templateparamlist>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable_1ad46259be5d5a46afb966c0ddfb78fa45" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::storage::face::Iterable&lt; K, V &gt;::~Iterable</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Iterable</name>
+        <qualifiedname>sgns::storage::face::Iterable::~Iterable</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/iterable.hpp" line="19" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable_1a44ca82af98f642669b5237f535b58001" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::unique_ptr&lt; <ref refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor" kindref="compound">MapCursor</ref>&lt; K, V &gt; &gt;</type>
+        <definition>virtual std::unique_ptr&lt; MapCursor&lt; K, V &gt; &gt; sgns::storage::face::Iterable&lt; K, V &gt;::cursor</definition>
+        <argsstring>()=0</argsstring>
+        <name>cursor</name>
+        <qualifiedname>sgns::storage::face::Iterable::cursor</qualifiedname>
+        <reimplementedby refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1ad4c49bd1e281b9028551f9efa3f21d3c">cursor</reimplementedby>
+        <reimplementedby refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a8c990ea95ebeee5fd0abf5b1ecd65456">cursor</reimplementedby>
+        <reimplementedby refid="d7/d40/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch_impl_1ac3df1162940ae153a4a04567750e18d6">cursor</reimplementedby>
+        <reimplementedby refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a67e8d0cf66f03dcc9c4f2815d57d5ebc">cursor</reimplementedby>
+        <reimplementedby refid="df/dfd/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_impl_1a2e28a4d5dce11445c392ecf9bd06602b">cursor</reimplementedby>
+        <reimplementedby refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1ae5cebd05a2d8cb19279a76744b531407">cursor</reimplementedby>
+        <reimplementedby refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1ace5586a67e2226a078d2df1df4787b7d">cursor</reimplementedby>
+        <briefdescription>
+<para>Returns new key-value iterator. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>kv iterator </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/iterable.hpp" line="25" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A mixin for an iterable map. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>K</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key type </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>V</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="10">
+        <label>sgns::storage::InMemoryStorage</label>
+        <link refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::storage::face::GenericMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d01/structsgns_1_1storage_1_1face_1_1_generic_map"/>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::face::GenericMap&lt; K, V &gt;</label>
+        <link refid="d4/d01/structsgns_1_1storage_1_1face_1_1_generic_map"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::face::GenericMap&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d4/d01/structsgns_1_1storage_1_1face_1_1_generic_map"/>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+        <childnode refid="15" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::storage::face::GenericStorage&lt; Buffer, Buffer &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>sgns::storage::face::GenericStorage&lt; K, V &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>sgns::storage::face::Iterable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="1" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="16">
+        <label>sgns::storage::face::Iterable&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="1" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="14">
+        <label>sgns::storage::face::ReadOnlyMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="2" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>sgns::storage::face::ReadOnlyMap&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="2" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::storage::rocksdb</label>
+        <link refid="d5/dbf/classsgns_1_1storage_1_1rocksdb"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>sgns::storage::trie::EphemeralTrieBatch</label>
+        <link refid="de/d05/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch"/>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>sgns::storage::trie::EphemeralTrieBatchImpl</label>
+        <link refid="d7/d40/classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch_impl"/>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>sgns::storage::trie::PersistentTrieBatch</label>
+        <link refid="db/d71/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch"/>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>sgns::storage::trie::PersistentTrieBatchImpl</label>
+        <link refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl"/>
+        <childnode refid="21" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>sgns::storage::trie::SuperGeniusTrie</label>
+        <link refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::storage::trie::SuperGeniusTrieImpl</label>
+        <link refid="df/dfd/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_impl"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>sgns::storage::trie::TopperTrieBatch</label>
+        <link refid="d2/d7a/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch"/>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>sgns::storage::trie::TopperTrieBatchImpl</label>
+        <link refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl"/>
+        <childnode refid="23" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>sgns::storage::trie::TrieBatch</label>
+        <link refid="dc/d88/classsgns_1_1storage_1_1trie_1_1_trie_batch"/>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>sgns::storage::trie::TrieStorageBackend</label>
+        <link refid="dd/d95/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>sgns::storage::trie::TrieStorageBackendImpl</label>
+        <link refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl"/>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/face/iterable.hpp" line="18" column="3" bodyfile="src/storage/face/iterable.hpp" bodystart="18" bodyend="26"/>
+    <listofallmembers>
+      <member refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable_1a44ca82af98f642669b5237f535b58001" prot="public" virt="pure-virtual"><scope>sgns::storage::face::Iterable</scope><name>cursor</name></member>
+      <member refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable_1ad46259be5d5a46afb966c0ddfb78fa45" prot="public" virt="virtual"><scope>sgns::storage::face::Iterable</scope><name>~Iterable</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

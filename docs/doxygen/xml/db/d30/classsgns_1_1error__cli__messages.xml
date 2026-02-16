@@ -1,0 +1,55 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="db/d30/classsgns_1_1error__cli__messages" kind="class" language="C++" prot="public">
+    <compoundname>sgns::error_cli_messages</compoundname>
+    <includes refid="d3/db5/cli_8hpp" local="no">cli.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="db/d30/classsgns_1_1error__cli__messages_1a6ef199c65a3893287b4b7c4627de1552" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::error_cli_messages::message</definition>
+        <argsstring>(int ev) const</argsstring>
+        <name>message</name>
+        <qualifiedname>sgns::error_cli_messages::message</qualifiedname>
+        <param>
+          <type>int</type>
+          <declname>ev</declname>
+        </param>
+        <briefdescription>
+<para>Convert an error code to a message string. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>ev</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Error code value. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Error message string. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/cli.hpp" line="22" column="15" bodyfile="node/cli.cpp" bodystart="15" bodyend="38"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Error message formatter for CLI errors. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::error_cli_messages</label>
+        <link refid="db/d30/classsgns_1_1error__cli__messages"/>
+      </node>
+    </collaborationgraph>
+    <location file="node/cli.hpp" line="15" column="1" bodyfile="node/cli.hpp" bodystart="15" bodyend="23"/>
+    <listofallmembers>
+      <member refid="db/d30/classsgns_1_1error__cli__messages_1a6ef199c65a3893287b4b7c4627de1552" prot="public" virt="non-virtual"><scope>sgns::error_cli_messages</scope><name>message</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

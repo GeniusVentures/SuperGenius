@@ -1,0 +1,135 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/d36/namespacesgns_1_1scale_1_1detail_1_1tuple__impl" kind="namespace" language="C++">
+    <compoundname>sgns::scale::detail::tuple_impl</compoundname>
+    <innerclass refid="d7/d9c/classsgns_1_1scale_1_1detail_1_1tuple__impl_1_1_tuple_encoder" prot="public">sgns::scale::detail::tuple_impl::TupleEncoder</innerclass>
+    <innerclass refid="d7/d85/classsgns_1_1scale_1_1detail_1_1tuple__impl_1_1_tuple_decoder" prot="public">sgns::scale::detail::tuple_impl::TupleDecoder</innerclass>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d5/d36/namespacesgns_1_1scale_1_1detail_1_1tuple__impl_1aae166a8785e904c5e7c2a409e9b1c3b9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class F</type>
+          </param>
+          <param>
+            <type>uint8_t</type>
+            <declname>index</declname>
+            <defname>index</defname>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::scale::detail::tuple_impl::apply_once</definition>
+        <argsstring>(F &amp;f)</argsstring>
+        <name>apply_once</name>
+        <qualifiedname>sgns::scale::detail::tuple_impl::apply_once</qualifiedname>
+        <param>
+          <type>F &amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/tuple.hpp" line="12" column="10" bodyfile="src/scale/detail/tuple.hpp" bodystart="12" bodyend="14"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d36/namespacesgns_1_1scale_1_1detail_1_1tuple__impl_1a479aceb6ff4d711d1b9717dac69b6152" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>uint8_t</type>
+            <declname>i</declname>
+            <defname>i</defname>
+          </param>
+          <param>
+            <type>class F</type>
+          </param>
+          <param>
+            <type>class Head</type>
+          </param>
+          <param>
+            <type>class...</type>
+            <declname>T</declname>
+            <defname>T</defname>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::scale::detail::tuple_impl::for_each_apply_impl</definition>
+        <argsstring>(F &amp;f)</argsstring>
+        <name>for_each_apply_impl</name>
+        <qualifiedname>sgns::scale::detail::tuple_impl::for_each_apply_impl</qualifiedname>
+        <param>
+          <type>F &amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/tuple.hpp" line="17" column="10" bodyfile="src/scale/detail/tuple.hpp" bodystart="17" bodyend="20"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d36/namespacesgns_1_1scale_1_1detail_1_1tuple__impl_1ad430eaa1dec8daf82b53e5d4a8a55a56" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>uint8_t</type>
+            <declname>i</declname>
+            <defname>i</defname>
+          </param>
+          <param>
+            <type>class F</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::scale::detail::tuple_impl::for_each_apply_impl</definition>
+        <argsstring>(F &amp;f)</argsstring>
+        <name>for_each_apply_impl</name>
+        <qualifiedname>sgns::scale::detail::tuple_impl::for_each_apply_impl</qualifiedname>
+        <param>
+          <type>F &amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/tuple.hpp" line="23" column="10" bodyfile="src/scale/detail/tuple.hpp" bodystart="23" bodyend="25"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d36/namespacesgns_1_1scale_1_1detail_1_1tuple__impl_1aaa65796fc388c03d5f6e2268e54959d2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class F</type>
+          </param>
+          <param>
+            <type>class...</type>
+            <declname>T</declname>
+            <defname>T</defname>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::scale::detail::tuple_impl::for_each_apply</definition>
+        <argsstring>(F &amp;f)</argsstring>
+        <name>for_each_apply</name>
+        <qualifiedname>sgns::scale::detail::tuple_impl::for_each_apply</qualifiedname>
+        <param>
+          <type>F &amp;</type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/tuple.hpp" line="60" column="10" bodyfile="src/scale/detail/tuple.hpp" bodystart="60" bodyend="62"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/scale/detail/tuple.hpp" line="10" column="3"/>
+  </compounddef>
+</doxygen>

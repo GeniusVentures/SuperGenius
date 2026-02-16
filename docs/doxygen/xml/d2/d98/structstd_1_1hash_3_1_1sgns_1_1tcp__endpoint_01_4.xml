@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/d98/structstd_1_1hash_3_1_1sgns_1_1tcp__endpoint_01_4" kind="struct" language="C++" prot="public">
+    <compoundname>std::hash&lt;::sgns::tcp_endpoint &gt;</compoundname>
+    <includes refid="da/d8d/node_2common_8hpp" local="no">common.hpp</includes>
+    <templateparamlist>
+    </templateparamlist>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d2/d98/structstd_1_1hash_3_1_1sgns_1_1tcp__endpoint_01_4_1a4c50ccc4a2a9bc481a58dae36c3a1a8d" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t std::hash&lt;::sgns::tcp_endpoint &gt;::operator()</definition>
+        <argsstring>(::sgns::tcp_endpoint const &amp;endpoint_a) const</argsstring>
+        <name>operator()</name>
+        <qualifiedname>std::hash&lt;::sgns::tcp_endpoint &gt;::operator()</qualifiedname>
+        <param>
+          <type><ref refid="d2/d2b/namespacesgns_1a1393d49beee235b599e89a325e914803" kindref="member">::sgns::tcp_endpoint</ref> const &amp;</type>
+          <declname>endpoint_a</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="109" column="8" bodyfile="node/common.hpp" bodystart="109" bodyend="113"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>std::hash&lt;::sgns::tcp_endpoint &gt;</label>
+        <link refid="d2/d98/structstd_1_1hash_3_1_1sgns_1_1tcp__endpoint_01_4"/>
+      </node>
+    </collaborationgraph>
+    <location file="node/common.hpp" line="107" column="1" bodyfile="node/common.hpp" bodystart="108" bodyend="114"/>
+    <listofallmembers>
+      <member refid="d2/d98/structstd_1_1hash_3_1_1sgns_1_1tcp__endpoint_01_4_1a4c50ccc4a2a9bc481a58dae36c3a1a8d" prot="public" virt="non-virtual"><scope>std::hash&lt;::sgns::tcp_endpoint &gt;</scope><name>operator()</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

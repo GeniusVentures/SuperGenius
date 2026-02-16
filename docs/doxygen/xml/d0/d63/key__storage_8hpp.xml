@@ -1,0 +1,210 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/d63/key__storage_8hpp" kind="file" language="C++">
+    <compoundname>key_storage.hpp</compoundname>
+    <includes local="no">libp2p/crypto/key.hpp</includes>
+    <includes refid="d4/d6e/ed25519__types_8hpp" local="yes">crypto/ed25519_types.hpp</includes>
+    <includes refid="d2/d9c/sr25519__types_8hpp" local="yes">crypto/sr25519_types.hpp</includes>
+    <includes refid="df/dec/_i_component_8hpp" local="yes">singleton/IComponent.hpp</includes>
+    <includedby refid="d8/d59/local__key__storage_8hpp" local="yes">src/application/impl/local_key_storage.hpp</includedby>
+    <includedby refid="d5/d14/finality__api__dummy_8hpp" local="yes">src/runtime/dummy/finality_api_dummy.hpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/application/key_storage.hpp</label>
+        <link refid="d0/d63/key__storage_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>crypto/ed25519_types.hpp</label>
+        <link refid="d4/d6e/ed25519__types_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>crypto/sr25519_types.hpp</label>
+        <link refid="d2/d9c/sr25519__types_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>array</label>
+      </node>
+      <node id="8">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="20">
+        <label>boost/multiprecision/cpp_int.hpp</label>
+      </node>
+      <node id="6">
+        <label>cstddef</label>
+      </node>
+      <node id="4">
+        <label>ed25519/ed25519.h</label>
+      </node>
+      <node id="12">
+        <label>gsl/span</label>
+      </node>
+      <node id="15">
+        <label>iostream</label>
+      </node>
+      <node id="2">
+        <label>libp2p/crypto/key.hpp</label>
+      </node>
+      <node id="14">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="19">
+        <label>sr25519.h</label>
+      </node>
+      <node id="17">
+        <label>string</label>
+      </node>
+      <node id="10">
+        <label>string_view</label>
+      </node>
+      <node id="11">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="5">
+        <label>node/app_delegate.cpp</label>
+        <link refid="d5/df0/app__delegate_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/application/impl/local_key_storage.cpp</label>
+        <link refid="df/d89/local__key__storage_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/application/impl/local_key_storage.hpp</label>
+        <link refid="d8/d59/local__key__storage_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>src/application/impl/validating_node_application.cpp</label>
+        <link refid="d3/d34/validating__node__application_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/application/impl/validating_node_application.hpp</label>
+        <link refid="d6/dce/validating__node__application_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/application/key_storage.hpp</label>
+        <link refid="d0/d63/key__storage_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>src/runtime/dummy/finality_api_dummy.cpp</label>
+        <link refid="d0/d07/finality__api__dummy_8cpp"/>
+      </node>
+      <node id="7">
+        <label>src/runtime/dummy/finality_api_dummy.hpp</label>
+        <link refid="d5/d14/finality__api__dummy_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d5/ddb/classsgns_1_1application_1_1_key_storage" prot="public">sgns::application::KeyStorage</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="db/d40/namespacesgns_1_1application">sgns::application</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_APPLICATION_KEY_STORAGE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_APPLICATION_KEY_STORAGE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libp2p/crypto/key.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d4/d6e/ed25519__types_8hpp" kindref="compound">crypto/ed25519_types.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d2/d9c/sr25519__types_8hpp" kindref="compound">crypto/sr25519_types.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="df/dec/_i_component_8hpp" kindref="compound">singleton/IComponent.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="db/d40/namespacesgns_1_1application" kindref="compound">sgns::application</ref><sp/>{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="15" refid="d5/ddb/classsgns_1_1application_1_1_key_storage" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d5/ddb/classsgns_1_1application_1_1_key_storage" kindref="compound">KeyStorage</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d1/dbf/class_i_component" kindref="compound">IComponent</ref><sp/>{</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="17" refid="d5/ddb/classsgns_1_1application_1_1_key_storage_1a825750017da32b5816bbf4f3a6d57ae2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d5/ddb/classsgns_1_1application_1_1_key_storage_1a825750017da32b5816bbf4f3a6d57ae2" kindref="member">~KeyStorage</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22" refid="d5/ddb/classsgns_1_1application_1_1_key_storage_1a7f4b6ea447bbd972bfb3f163db7e4233" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair" kindref="compound">crypto::SR25519Keypair</ref><sp/><ref refid="d5/ddb/classsgns_1_1application_1_1_key_storage_1a7f4b6ea447bbd972bfb3f163db7e4233" kindref="member">getLocalSr25519Keypair</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27" refid="d5/ddb/classsgns_1_1application_1_1_key_storage_1aa15d8a5e01876b744db7cddf4ffd12e3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" kindref="compound">crypto::ED25519Keypair</ref><sp/><ref refid="d5/ddb/classsgns_1_1application_1_1_key_storage_1aa15d8a5e01876b744db7cddf4ffd12e3" kindref="member">getLocalEd25519Keypair</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32" refid="d5/ddb/classsgns_1_1application_1_1_key_storage_1a4d5b1374b58d285d709fe2388d1661b0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>libp2p::crypto::KeyPair<sp/><ref refid="d5/ddb/classsgns_1_1application_1_1_key_storage_1a4d5b1374b58d285d709fe2388d1661b0" kindref="member">getP2PKeypair</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="35"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_APPLICATION_KEY_STORAGE_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/application/key_storage.hpp"/>
+  </compounddef>
+</doxygen>

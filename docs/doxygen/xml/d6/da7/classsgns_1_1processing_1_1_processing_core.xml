@@ -1,0 +1,113 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/da7/classsgns_1_1processing_1_1_processing_core" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::processing::ProcessingCore</compoundname>
+    <derivedcompoundref refid="d0/d7f/classsgns_1_1processing_1_1_processing_core_impl" prot="public" virt="non-virtual">sgns::processing::ProcessingCoreImpl</derivedcompoundref>
+    <includes refid="df/d22/processing__core_8hpp" local="no">processing_core.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d6/da7/classsgns_1_1processing_1_1_processing_core_1a1f9cb94ed895e58267661e07f69f80e8" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::processing::ProcessingCore::~ProcessingCore</definition>
+        <argsstring>()=default</argsstring>
+        <name>~ProcessingCore</name>
+        <qualifiedname>sgns::processing::ProcessingCore::~ProcessingCore</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_core.hpp" line="22" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/da7/classsgns_1_1processing_1_1_processing_core_1addcc244cb6978cc610c95b1a23edbf2f" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; SGProcessing::SubTaskResult &gt;</type>
+        <definition>virtual outcome::result&lt; SGProcessing::SubTaskResult &gt; sgns::processing::ProcessingCore::ProcessSubTask</definition>
+        <argsstring>(const SGProcessing::SubTask &amp;subTask, uint32_t initialHashCode)=0</argsstring>
+        <name>ProcessSubTask</name>
+        <qualifiedname>sgns::processing::ProcessingCore::ProcessSubTask</qualifiedname>
+        <reimplementedby refid="d0/d7f/classsgns_1_1processing_1_1_processing_core_impl_1a293e19831d83a48f7a0e925dbd314b7e">ProcessSubTask</reimplementedby>
+        <param>
+          <type>const SGProcessing::SubTask &amp;</type>
+          <declname>subTask</declname>
+        </param>
+        <param>
+          <type>uint32_t</type>
+          <declname>initialHashCode</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Process a single subtask. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>subTask</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- Subtask that needs to be processed. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>initialHashCode</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- Initial hash code used to calculate result hash. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_core.hpp" line="28" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/da7/classsgns_1_1processing_1_1_processing_core_1a6a66780b5457764ece59bd3c3c8e9abc" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="virtual">
+        <type>float</type>
+        <definition>virtual float sgns::processing::ProcessingCore::GetProgress</definition>
+        <argsstring>() const</argsstring>
+        <name>GetProgress</name>
+        <qualifiedname>sgns::processing::ProcessingCore::GetProgress</qualifiedname>
+        <reimplementedby refid="d0/d7f/classsgns_1_1processing_1_1_processing_core_impl_1a27671957875c16121a8d96201b446c45">GetProgress</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get current processing progress <simplesect kind="return"><para>Progress percentage (0.0 to 100.0) </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_core.hpp" line="34" column="19" bodyfile="src/processing/processing_core.hpp" bodystart="34" bodyend="34"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Processing core interface. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Implementations encapsulate specific processing algorithms for subtasks. </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::processing::ProcessingCore</label>
+        <link refid="d6/da7/classsgns_1_1processing_1_1_processing_core"/>
+      </node>
+      <node id="2">
+        <label>sgns::processing::ProcessingCoreImpl</label>
+        <link refid="d0/d7f/classsgns_1_1processing_1_1_processing_core_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::processing::ProcessingCore</label>
+        <link refid="d6/da7/classsgns_1_1processing_1_1_processing_core"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/processing/processing_core.hpp" line="19" column="1" bodyfile="src/processing/processing_core.hpp" bodystart="20" bodyend="35"/>
+    <listofallmembers>
+      <member refid="d6/da7/classsgns_1_1processing_1_1_processing_core_1a6a66780b5457764ece59bd3c3c8e9abc" prot="public" virt="virtual"><scope>sgns::processing::ProcessingCore</scope><name>GetProgress</name></member>
+      <member refid="d6/da7/classsgns_1_1processing_1_1_processing_core_1addcc244cb6978cc610c95b1a23edbf2f" prot="public" virt="pure-virtual"><scope>sgns::processing::ProcessingCore</scope><name>ProcessSubTask</name></member>
+      <member refid="d6/da7/classsgns_1_1processing_1_1_processing_core_1a1f9cb94ed895e58267661e07f69f80e8" prot="public" virt="virtual"><scope>sgns::processing::ProcessingCore</scope><name>~ProcessingCore</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

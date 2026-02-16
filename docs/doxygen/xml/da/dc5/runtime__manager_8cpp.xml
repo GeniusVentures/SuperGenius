@@ -1,0 +1,525 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/dc5/runtime__manager_8cpp" kind="file" language="C++">
+    <compoundname>runtime_manager.cpp</compoundname>
+    <includes refid="d3/d10/runtime__manager_8hpp" local="yes">runtime/binaryen/runtime_manager.hpp</includes>
+    <includes local="no">gsl/gsl</includes>
+    <includes refid="d0/d62/hasher__impl_8hpp" local="yes">crypto/hasher/hasher_impl.hpp</includes>
+    <includes refid="d0/d78/runtime__external__interface_8hpp" local="yes">runtime/binaryen/runtime_external_interface.hpp</includes>
+    <incdepgraph>
+      <node id="3">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>crypto/hasher.hpp</label>
+        <link refid="da/d6b/hasher_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="52">
+        <label>crypto/hasher/hasher_impl.hpp</label>
+        <link refid="d0/d62/hasher__impl_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>runtime/binaryen/module/wasm_module.hpp</label>
+        <link refid="dd/dbc/wasm__module_8hpp"/>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>runtime/binaryen/module/wasm_module_factory.hpp</label>
+        <link refid="d4/dc9/wasm__module__factory_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>runtime/binaryen/module/wasm_module_instance.hpp</label>
+        <link refid="d9/da6/wasm__module__instance_8hpp"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="48">
+        <label>runtime/binaryen/runtime_environment.hpp</label>
+        <link refid="d7/dac/runtime__environment_8hpp"/>
+        <childnode refid="42" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>runtime/binaryen/runtime_external_interface.hpp</label>
+        <link refid="d0/d78/runtime__external__interface_8hpp"/>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/runtime/binaryen/runtime_manager.cpp</label>
+        <link refid="da/dc5/runtime__manager_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="51" relation="include">
+        </childnode>
+        <childnode refid="52" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>runtime/binaryen/runtime_manager.hpp</label>
+        <link refid="d3/d10/runtime__manager_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="49" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="50" relation="include">
+        </childnode>
+      </node>
+      <node id="36">
+        <label>runtime/trie_storage_provider.hpp</label>
+        <link refid="df/dcd/trie__storage__provider_8hpp"/>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>runtime/types.hpp</label>
+        <link refid="d1/d64/runtime_2types_8hpp"/>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>runtime/wasm_memory.hpp</label>
+        <link refid="d4/dc2/wasm__memory_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+      </node>
+      <node id="49">
+        <label>runtime/wasm_provider.hpp</label>
+        <link refid="d5/d32/wasm__provider_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="38">
+        <label>storage/buffer_map_types.hpp</label>
+        <link refid="d8/dcc/buffer__map__types_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+      </node>
+      <node id="41">
+        <label>storage/face/batchable.hpp</label>
+        <link refid="de/d87/batchable_8hpp"/>
+        <childnode refid="42" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+      </node>
+      <node id="40">
+        <label>storage/face/generic_maps.hpp</label>
+        <link refid="d9/daa/generic__maps_8hpp"/>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+        <childnode refid="47" relation="include">
+        </childnode>
+        <childnode refid="44" relation="include">
+        </childnode>
+      </node>
+      <node id="39">
+        <label>storage/face/generic_storage.hpp</label>
+        <link refid="d6/d4e/generic__storage_8hpp"/>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="45">
+        <label>storage/face/iterable.hpp</label>
+        <link refid="db/d3e/iterable_8hpp"/>
+        <childnode refid="42" relation="include">
+        </childnode>
+        <childnode refid="46" relation="include">
+        </childnode>
+      </node>
+      <node id="46">
+        <label>storage/face/map_cursor.hpp</label>
+        <link refid="d9/d4b/map__cursor_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="47">
+        <label>storage/face/readable.hpp</label>
+        <link refid="d5/dd2/readable_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="43">
+        <label>storage/face/write_batch.hpp</label>
+        <link refid="d2/d76/write__batch_8hpp"/>
+        <childnode refid="44" relation="include">
+        </childnode>
+      </node>
+      <node id="44">
+        <label>storage/face/writeable.hpp</label>
+        <link refid="dc/da4/writeable_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="37">
+        <label>storage/trie/trie_batches.hpp</label>
+        <link refid="dc/d8a/trie__batches_8hpp"/>
+        <childnode refid="38" relation="include">
+        </childnode>
+      </node>
+      <node id="50">
+        <label>storage/trie/trie_storage.hpp</label>
+        <link refid="dd/df1/trie__storage_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>array</label>
+      </node>
+      <node id="27">
+        <label>binaryen/literal.h</label>
+      </node>
+      <node id="30">
+        <label>binaryen/shell-interface.h</label>
+      </node>
+      <node id="28">
+        <label>binaryen/support/name.h</label>
+      </node>
+      <node id="23">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="6">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="24">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="32">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="4">
+        <label>cstddef</label>
+      </node>
+      <node id="34">
+        <label>cstdint</label>
+      </node>
+      <node id="20">
+        <label>extensions/extension_factory.hpp</label>
+      </node>
+      <node id="51">
+        <label>gsl/gsl</label>
+      </node>
+      <node id="10">
+        <label>gsl/span</label>
+      </node>
+      <node id="13">
+        <label>iostream</label>
+      </node>
+      <node id="12">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="42">
+        <label>memory</label>
+      </node>
+      <node id="15">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="16">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="19">
+        <label>string</label>
+      </node>
+      <node id="8">
+        <label>string_view</label>
+      </node>
+      <node id="35">
+        <label>utility</label>
+      </node>
+      <node id="9">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="dd/da6/namespacesgns_1_1runtime">sgns::runtime</innernamespace>
+    <innernamespace refid="d5/d54/namespacesgns_1_1runtime_1_1binaryen">sgns::runtime::binaryen</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="da/dc5/runtime__manager_8cpp_1a2ba16e3b1f1eabcd2cd59a8fdc3fad2c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>OUTCOME_CPP_DEFINE_CATEGORY_3</definition>
+        <argsstring>(sgns::runtime::binaryen, RuntimeManager::Error, e)</argsstring>
+        <name>OUTCOME_CPP_DEFINE_CATEGORY_3</name>
+        <param>
+          <type><ref refid="d5/d54/namespacesgns_1_1runtime_1_1binaryen" kindref="compound">sgns::runtime::binaryen</ref></type>
+        </param>
+        <param>
+          <type>RuntimeManager::Error</type>
+        </param>
+        <param>
+          <type>e</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_manager.cpp" line="8" column="1" bodyfile="src/runtime/binaryen/runtime_manager.cpp" bodystart="8" bodyend="17"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d3/d10/runtime__manager_8hpp" kindref="compound">runtime/binaryen/runtime_manager.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;gsl/gsl&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d0/d62/hasher__impl_8hpp" kindref="compound">crypto/hasher/hasher_impl.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d0/d78/runtime__external__interface_8hpp" kindref="compound">runtime/binaryen/runtime_external_interface.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8" refid="da/dc5/runtime__manager_8cpp_1a2ba16e3b1f1eabcd2cd59a8fdc3fad2c" refkind="member"><highlight class="normal"><ref refid="da/dc5/runtime__manager_8cpp_1a2ba16e3b1f1eabcd2cd59a8fdc3fad2c" kindref="member">OUTCOME_CPP_DEFINE_CATEGORY_3</ref>(<ref refid="d5/d54/namespacesgns_1_1runtime_1_1binaryen" kindref="compound">sgns::runtime::binaryen</ref>,</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>RuntimeManager::Error,</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>e)<sp/>{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">Error<sp/>=<sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a061e444fa2f4a30e84d87d9fe0d8b53d" kindref="member">sgns::runtime::binaryen::RuntimeManager::Error</ref>;</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">switch</highlight><highlight class="normal"><sp/>(e)<sp/>{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/>Error::EMPTY_STATE_CODE:</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;Provided<sp/>state<sp/>code<sp/>is<sp/>empty,<sp/>calling<sp/>a<sp/>function<sp/>is<sp/>impossible&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;Unknown<sp/>RuntimeManager<sp/>error&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="17"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d5/d54/namespacesgns_1_1runtime_1_1binaryen" kindref="compound">sgns::runtime::binaryen</ref><sp/>{</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">thread_local</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;RuntimeExternalInterface&gt;</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a9eb1d9fcecbf5b3e679f1bdc76b34165" kindref="member">RuntimeManager::external_interface_</ref>{};</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24" refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a2818b6896ca32921b1c4fab1fd4d2044" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a2818b6896ca32921b1c4fab1fd4d2044" kindref="member">RuntimeManager::RuntimeManager</ref>(</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;extensions::ExtensionFactory&gt;<sp/>extension_factory,</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;WasmModuleFactory&gt;<sp/>module_factory,</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;TrieStorageProvider&gt;<sp/>storage_provider,</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;crypto::Hasher&gt;<sp/>hasher)</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1aaedb0eea4b5917e7e4ba0fb87d627138" kindref="member">storage_provider_</ref>{<ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(storage_provider)},</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a6251a3f16e16e331b8fb2565b799155c" kindref="member">extension_factory_</ref>{<ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(extension_factory)},</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a72877470e190888dc31ac6265d85377b" kindref="member">module_factory_</ref>{<ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(module_factory)},</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a231fc7f4ca23a35f5d6dbfe998d25719" kindref="member">hasher_</ref>{<ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(hasher)}<sp/>{</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_ASSERT(<ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1aaedb0eea4b5917e7e4ba0fb87d627138" kindref="member">storage_provider_</ref>);</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_ASSERT(<ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a6251a3f16e16e331b8fb2565b799155c" kindref="member">extension_factory_</ref>);</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_ASSERT(<ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a72877470e190888dc31ac6265d85377b" kindref="member">module_factory_</ref>);</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_ASSERT(<ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a231fc7f4ca23a35f5d6dbfe998d25719" kindref="member">hasher_</ref>);</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/>outcome::result&lt;RuntimeEnvironment&gt;</highlight></codeline>
+<codeline lineno="40" refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a85c14f2fb2f36e31f993caa4020dd7b5" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a85c14f2fb2f36e31f993caa4020dd7b5" kindref="member">RuntimeManager::createPersistentRuntimeEnvironmentAt</ref>(</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;state_code,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref><sp/>&amp;state_root)<sp/>{</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_OUTCOME_TRYV2(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1aaedb0eea4b5917e7e4ba0fb87d627138" kindref="member">storage_provider_</ref>-&gt;setToPersistentAt(state_root));</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/><ref refid="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a2caff31df60c79dbd115a9d39ac0d334" kindref="member">env</ref><sp/>=<sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1ae3205b05f559fc6287a1b10724110429" kindref="member">createRuntimeEnvironment</ref>(state_code);</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a2caff31df60c79dbd115a9d39ac0d334" kindref="member">env</ref>.has_value())<sp/>{</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a2caff31df60c79dbd115a9d39ac0d334" kindref="member">env</ref>.value().batch<sp/>=</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1aaedb0eea4b5917e7e4ba0fb87d627138" kindref="member">storage_provider_</ref>-&gt;tryGetPersistentBatch().value()-&gt;batchOnTop();</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a2caff31df60c79dbd115a9d39ac0d334" kindref="member">env</ref>;</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"></highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/>outcome::result&lt;RuntimeEnvironment&gt;</highlight></codeline>
+<codeline lineno="52" refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1abf97b9514237c8192d1d6cfb4237ac4e" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1abf97b9514237c8192d1d6cfb4237ac4e" kindref="member">RuntimeManager::createEphemeralRuntimeEnvironmentAt</ref>(</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;state_code,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref><sp/>&amp;state_root)<sp/>{</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_OUTCOME_TRYV2(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1aaedb0eea4b5917e7e4ba0fb87d627138" kindref="member">storage_provider_</ref>-&gt;setToEphemeralAt(state_root));</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1ae3205b05f559fc6287a1b10724110429" kindref="member">createRuntimeEnvironment</ref>(state_code);</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/>outcome::result&lt;RuntimeEnvironment&gt;</highlight></codeline>
+<codeline lineno="59" refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a42c8f7eea65825debc62f7f1b336ca3c" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a42c8f7eea65825debc62f7f1b336ca3c" kindref="member">RuntimeManager::createPersistentRuntimeEnvironment</ref>(</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;state_code)<sp/>{</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_OUTCOME_TRYV2(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1aaedb0eea4b5917e7e4ba0fb87d627138" kindref="member">storage_provider_</ref>-&gt;setToPersistent());</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/><ref refid="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a2caff31df60c79dbd115a9d39ac0d334" kindref="member">env</ref><sp/>=<sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1ae3205b05f559fc6287a1b10724110429" kindref="member">createRuntimeEnvironment</ref>(state_code);</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a2caff31df60c79dbd115a9d39ac0d334" kindref="member">env</ref>.has_value())<sp/>{</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a2caff31df60c79dbd115a9d39ac0d334" kindref="member">env</ref>.value().batch<sp/>=</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1aaedb0eea4b5917e7e4ba0fb87d627138" kindref="member">storage_provider_</ref>-&gt;tryGetPersistentBatch().value()-&gt;batchOnTop();</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d5/d54/namespacesgns_1_1runtime_1_1binaryen_1a2caff31df60c79dbd115a9d39ac0d334" kindref="member">env</ref>;</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"></highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/>outcome::result&lt;RuntimeEnvironment&gt;</highlight></codeline>
+<codeline lineno="71" refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a64121cd401f6eb358b0fa0ba10dc994e" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a64121cd401f6eb358b0fa0ba10dc994e" kindref="member">RuntimeManager::createEphemeralRuntimeEnvironment</ref>(</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;state_code)<sp/>{</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_OUTCOME_TRYV2(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1aaedb0eea4b5917e7e4ba0fb87d627138" kindref="member">storage_provider_</ref>-&gt;setToEphemeral());</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1ae3205b05f559fc6287a1b10724110429" kindref="member">createRuntimeEnvironment</ref>(state_code);</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"></highlight></codeline>
+<codeline lineno="77" refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1ae3205b05f559fc6287a1b10724110429" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;RuntimeEnvironment&gt;<sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1ae3205b05f559fc6287a1b10724110429" kindref="member">RuntimeManager::createRuntimeEnvironment</ref>(</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;state_code)<sp/>{</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(state_code.<ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1a96181fe5cdc82b680a02eac9a8267673" kindref="member">empty</ref>())<sp/>{</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a061e444fa2f4a30e84d87d9fe0d8b53dafa182723eb13bf3ca84ecc09b93ab7de" kindref="member">Error::EMPTY_STATE_CODE</ref>;</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"></highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>hash<sp/>=<sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a231fc7f4ca23a35f5d6dbfe998d25719" kindref="member">hasher_</ref>-&gt;twox_256(state_code);</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"></highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;WasmModule&gt;<sp/>module;</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"></highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Trying<sp/>retrieve<sp/>pre-prepared<sp/>module</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::lock_guard<sp/>lockGuard(<ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a8e5808f9b62d8fce24517ce9bc44c623" kindref="member">modules_mutex_</ref>);</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>it<sp/>=<sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1af2f14e110068848f6ea99711201a4aed" kindref="member">modules_</ref>.find(hash);</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(it<sp/>!=<sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1af2f14e110068848f6ea99711201a4aed" kindref="member">modules_</ref>.end())<sp/>{</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">module</highlight><highlight class="normal"><sp/>=<sp/>it-&gt;second;</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"></highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a9eb1d9fcecbf5b3e679f1bdc76b34165" kindref="member">external_interface_</ref><sp/>==<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">)<sp/>{</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a9eb1d9fcecbf5b3e679f1bdc76b34165" kindref="member">external_interface_</ref><sp/>=<sp/>std::make_shared&lt;RuntimeExternalInterface&gt;(</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a6251a3f16e16e331b8fb2565b799155c" kindref="member">extension_factory_</ref>,<sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1aaedb0eea4b5917e7e4ba0fb87d627138" kindref="member">storage_provider_</ref>);</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"></highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!module)<sp/>{</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Prepare<sp/>new<sp/>module</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>OUTCOME_TRY((</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>new_module),</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a72877470e190888dc31ac6265d85377b" kindref="member">module_factory_</ref>-&gt;createModule(state_code,<sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a9eb1d9fcecbf5b3e679f1bdc76b34165" kindref="member">external_interface_</ref>));</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"></highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Trying<sp/>to<sp/>safe<sp/>emplace<sp/>new<sp/>module,<sp/>and<sp/>use<sp/>existed<sp/>one</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/><sp/>if<sp/>it<sp/>already<sp/>emplaced<sp/>in<sp/>another<sp/>thread</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::lock_guard<sp/>lockGuard(<ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a8e5808f9b62d8fce24517ce9bc44c623" kindref="member">modules_mutex_</ref>);</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">module</highlight><highlight class="normal"><sp/>=<sp/>modules_.emplace(hash,<sp/>std::move(new_module)).first-&gt;second;</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"></highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a7bf3a01fa7dd9cedbdb6a8572d966368" kindref="member">RuntimeEnvironment::create</ref>(</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a9eb1d9fcecbf5b3e679f1bdc76b34165" kindref="member">external_interface_</ref>,<sp/>module,<sp/>state_code);</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"></highlight></codeline>
+<codeline lineno="117"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::runtime::binaryen</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/runtime/binaryen/runtime_manager.cpp"/>
+  </compounddef>
+</doxygen>

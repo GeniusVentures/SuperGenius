@@ -1,0 +1,212 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/de8/classsgns_1_1_linux_secure_storage" kind="class" language="C++" prot="public">
+    <compoundname>sgns::LinuxSecureStorage</compoundname>
+    <basecompoundref refid="d9/d71/classsgns_1_1_j_s_o_n_backend" prot="public" virt="non-virtual">sgns::JSONBackend</basecompoundref>
+    <includes refid="d8/db4/_linux_8hpp" local="no">Linux.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="dd/de8/classsgns_1_1_linux_secure_storage_1aa1020b2919813556a49d2bb638cd514b" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::LinuxSecureStorage::identifier_</definition>
+        <argsstring></argsstring>
+        <name>identifier_</name>
+        <qualifiedname>sgns::LinuxSecureStorage::identifier_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Linux.hpp" line="26" column="21" bodyfile="src/local_secure_storage/impl/Linux.hpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/de8/classsgns_1_1_linux_secure_storage_1a19cfa1dcd0623e227e79ef01ba5265f6" prot="private" static="no" mutable="no">
+        <type>SecretSchema</type>
+        <definition>SecretSchema sgns::LinuxSecureStorage::schema_</definition>
+        <argsstring></argsstring>
+        <name>schema_</name>
+        <qualifiedname>sgns::LinuxSecureStorage::schema_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Linux.hpp" line="27" column="22" bodyfile="src/local_secure_storage/impl/Linux.hpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dd/de8/classsgns_1_1_linux_secure_storage_1aa025bc977d747702eae08502d345f948" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::LinuxSecureStorage::LinuxSecureStorage</definition>
+        <argsstring>(std::string identifier)</argsstring>
+        <name>LinuxSecureStorage</name>
+        <qualifiedname>sgns::LinuxSecureStorage::LinuxSecureStorage</qualifiedname>
+        <param>
+          <type>std::string</type>
+          <declname>identifier</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Linux.hpp" line="12" column="18" bodyfile="src/local_secure_storage/impl/Linux.cpp" bodystart="18" bodyend="21"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/de8/classsgns_1_1_linux_secure_storage_1ad7651f04e4f7397465de71ea01968ce9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::LinuxSecureStorage::~LinuxSecureStorage</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~LinuxSecureStorage</name>
+        <qualifiedname>sgns::LinuxSecureStorage::~LinuxSecureStorage</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Linux.hpp" line="14" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/de8/classsgns_1_1_linux_secure_storage_1a4e24c58d7c44e03cd5bba1bd8d158fac" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::LinuxSecureStorage::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::LinuxSecureStorage::GetName</qualifiedname>
+        <reimplements refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a5e2595afc441ef277e89c6ed13fc3495">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Linux.hpp" line="16" column="21" bodyfile="src/local_secure_storage/impl/Linux.hpp" bodystart="16" bodyend="19"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/de8/classsgns_1_1_linux_secure_storage_1a4723809650162dc3f6082419a1c2b992" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; rapidjson::Document &gt;</type>
+        <definition>outcome::result&lt; rj::Document &gt; sgns::LinuxSecureStorage::LoadJSON</definition>
+        <argsstring>() const override</argsstring>
+        <name>LoadJSON</name>
+        <qualifiedname>sgns::LinuxSecureStorage::LoadJSON</qualifiedname>
+        <reimplements refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1aa20b2995d7c4d206ae8217b08ee94fc1">LoadJSON</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Linux.hpp" line="21" column="25" bodyfile="src/local_secure_storage/impl/Linux.cpp" bodystart="23" bodyend="55"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/de8/classsgns_1_1_linux_secure_storage_1a897476ddc216d7ec997f93d880ea90bd" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::LinuxSecureStorage::SaveJSON</definition>
+        <argsstring>(rapidjson::Document document) override</argsstring>
+        <name>SaveJSON</name>
+        <qualifiedname>sgns::LinuxSecureStorage::SaveJSON</qualifiedname>
+        <reimplements refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a7ec4c317139903bcb835bb3d33a4ae07">SaveJSON</reimplements>
+        <param>
+          <type>rapidjson::Document</type>
+          <declname>document</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Linux.hpp" line="23" column="25" bodyfile="src/local_secure_storage/impl/Linux.cpp" bodystart="57" bodyend="85"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="4">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="3">
+        <label>sgns::ISecureStorage</label>
+        <link refid="d5/db7/classsgns_1_1_i_secure_storage"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::JSONBackend</label>
+        <link refid="d9/d71/classsgns_1_1_j_s_o_n_backend"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::LinuxSecureStorage</label>
+        <link refid="dd/de8/classsgns_1_1_linux_secure_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::enable_shared_from_this&lt; ISecureStorage &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="4">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="3">
+        <label>sgns::ISecureStorage</label>
+        <link refid="d5/db7/classsgns_1_1_i_secure_storage"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::JSONBackend</label>
+        <link refid="d9/d71/classsgns_1_1_j_s_o_n_backend"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::LinuxSecureStorage</label>
+        <link refid="dd/de8/classsgns_1_1_linux_secure_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>-identifier_</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="5">
+        <label>std::enable_shared_from_this&lt; ISecureStorage &gt;</label>
+      </node>
+      <node id="6">
+        <label>std::string</label>
+        <childnode refid="7" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/local_secure_storage/impl/Linux.hpp" line="9" column="5" bodyfile="src/local_secure_storage/impl/Linux.hpp" bodystart="10" bodyend="28"/>
+    <listofallmembers>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a041dd45b9e2196bb757d23d2934876e4" prot="public" virt="virtual"><scope>sgns::LinuxSecureStorage</scope><name>DeleteKey</name></member>
+      <member refid="dd/de8/classsgns_1_1_linux_secure_storage_1a4e24c58d7c44e03cd5bba1bd8d158fac" prot="public" virt="virtual"><scope>sgns::LinuxSecureStorage</scope><name>GetName</name></member>
+      <member refid="dd/de8/classsgns_1_1_linux_secure_storage_1aa1020b2919813556a49d2bb638cd514b" prot="private" virt="non-virtual"><scope>sgns::LinuxSecureStorage</scope><name>identifier_</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a9e536564914936ba39ee7d67dfa1a316" prot="public" virt="non-virtual"><scope>sgns::LinuxSecureStorage</scope><name>JSONBackend</name></member>
+      <member refid="dd/de8/classsgns_1_1_linux_secure_storage_1aa025bc977d747702eae08502d345f948" prot="public" virt="non-virtual"><scope>sgns::LinuxSecureStorage</scope><name>LinuxSecureStorage</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a40da14b3444d1b03eac8164f59a3c347" prot="public" virt="virtual"><scope>sgns::LinuxSecureStorage</scope><name>Load</name></member>
+      <member refid="dd/de8/classsgns_1_1_linux_secure_storage_1a4723809650162dc3f6082419a1c2b992" prot="public" virt="virtual"><scope>sgns::LinuxSecureStorage</scope><name>LoadJSON</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a00f62ecffae03504a180358b004d61e4" prot="public" virt="virtual"><scope>sgns::LinuxSecureStorage</scope><name>Save</name></member>
+      <member refid="dd/de8/classsgns_1_1_linux_secure_storage_1a897476ddc216d7ec997f93d880ea90bd" prot="public" virt="virtual"><scope>sgns::LinuxSecureStorage</scope><name>SaveJSON</name></member>
+      <member refid="dd/de8/classsgns_1_1_linux_secure_storage_1a19cfa1dcd0623e227e79ef01ba5265f6" prot="private" virt="non-virtual"><scope>sgns::LinuxSecureStorage</scope><name>schema_</name></member>
+      <member refid="d5/db7/classsgns_1_1_i_secure_storage_1a5a10a540c9551ccad7d9c8e44cfd14d1" prot="public" virt="non-virtual"><scope>sgns::LinuxSecureStorage</scope><name>SecureBufferType</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::LinuxSecureStorage</scope><name>~IComponent</name></member>
+      <member refid="d5/db7/classsgns_1_1_i_secure_storage_1a941b5c4bbea8622d949ef341b129f55c" prot="public" virt="non-virtual"><scope>sgns::LinuxSecureStorage</scope><name>~ISecureStorage</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a8b69c80e8af12d7c16ada35f6ae2d170" prot="public" virt="non-virtual"><scope>sgns::LinuxSecureStorage</scope><name>~JSONBackend</name></member>
+      <member refid="dd/de8/classsgns_1_1_linux_secure_storage_1ad7651f04e4f7397465de71ea01968ce9" prot="public" virt="non-virtual"><scope>sgns::LinuxSecureStorage</scope><name>~LinuxSecureStorage</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/d6d/namespacesgns_1_1crypto_1_1_0d004155371024076222050000146270021064315014340176" kind="namespace" language="C++">
+    <compoundname>sgns::crypto::@004155371024076222050000146270021064315014340176</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/crypto_store/crypto_store_impl.cpp" line="12" column="3"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,185 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/d95/app__config_8hpp" kind="file" language="C++">
+    <compoundname>app_config.hpp</compoundname>
+    <includes local="no">spdlog/spdlog.h</includes>
+    <includes local="no">boost/asio/ip/tcp.hpp</includes>
+    <includes local="no">memory</includes>
+    <includes local="no">string</includes>
+    <includedby refid="d3/d0d/app__config__impl_8hpp" local="yes">src/application/impl/app_config_impl.hpp</includedby>
+    <includedby refid="d9/dd6/block__producing__node__application_8hpp" local="yes">src/application/impl/block_producing_node_application.hpp</includedby>
+    <includedby refid="de/d54/bridging__node__application_8hpp" local="yes">src/application/impl/bridging_node_application.hpp</includedby>
+    <includedby refid="d3/dde/syncing__node__application_8hpp" local="yes">src/application/impl/syncing_node_application.hpp</includedby>
+    <includedby refid="d6/dce/validating__node__application_8hpp" local="yes">src/application/impl/validating_node_application.hpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/application/app_config.hpp</label>
+        <link refid="dd/d95/app__config_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>boost/asio/ip/tcp.hpp</label>
+      </node>
+      <node id="4">
+        <label>memory</label>
+      </node>
+      <node id="2">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="5">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="3">
+        <label>node/app_delegate.cpp</label>
+        <link refid="d5/df0/app__delegate_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/application/app_config.hpp</label>
+        <link refid="dd/d95/app__config_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>src/application/impl/app_config_impl.cpp</label>
+        <link refid="da/de2/app__config__impl_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/application/impl/app_config_impl.hpp</label>
+        <link refid="d3/d0d/app__config__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>src/application/impl/block_producing_node_application.cpp</label>
+        <link refid="d0/d95/block__producing__node__application_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/application/impl/block_producing_node_application.hpp</label>
+        <link refid="d9/dd6/block__producing__node__application_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>src/application/impl/bridging_node_application.hpp</label>
+        <link refid="de/d54/bridging__node__application_8hpp"/>
+      </node>
+      <node id="9">
+        <label>src/application/impl/syncing_node_application.cpp</label>
+        <link refid="d9/d7b/syncing__node__application_8cpp"/>
+      </node>
+      <node id="8">
+        <label>src/application/impl/syncing_node_application.hpp</label>
+        <link refid="d3/dde/syncing__node__application_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>src/application/impl/validating_node_application.cpp</label>
+        <link refid="d3/d34/validating__node__application_8cpp"/>
+      </node>
+      <node id="10">
+        <label>src/application/impl/validating_node_application.hpp</label>
+        <link refid="d6/dce/validating__node__application_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d6/d85/classsgns_1_1application_1_1_app_configuration" prot="public">sgns::application::AppConfiguration</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="db/d40/namespacesgns_1_1application">sgns::application</innernamespace>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="db/d40/namespacesgns_1_1application_1a584cedf80f0bf06ab9d676db4ee5b252" prot="public" static="no">
+        <type>std::shared_ptr&lt; AppConfiguration &gt;</type>
+        <definition>using sgns::application::AppConfigPtr = std::shared_ptr&lt;AppConfiguration&gt;</definition>
+        <argsstring></argsstring>
+        <name>AppConfigPtr</name>
+        <qualifiedname>sgns::application::AppConfigPtr</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/app_config.hpp" line="71" column="5" bodyfile="src/application/app_config.hpp" bodystart="71" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_APP_CONFIG_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_APP_CONFIG_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;spdlog/spdlog.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/asio/ip/tcp.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;memory&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10" refid="db/d40/namespacesgns_1_1application" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="db/d40/namespacesgns_1_1application" kindref="compound">sgns::application</ref></highlight></codeline>
+<codeline lineno="11"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16" refid="dd/d37/classsgns_1_1_app_configuration" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration" kindref="compound">AppConfiguration</ref></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="19" refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fd" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">enum<sp/>struct</highlight><highlight class="normal"><sp/><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fd" kindref="member">LoadScheme</ref></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="21" refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fda6bf9973a421615abcc1e5ccc5a9977e9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fda6bf9973a421615abcc1e5ccc5a9977e9" kindref="member">kBlockProducing</ref>,</highlight></codeline>
+<codeline lineno="22" refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fda872e3f506d23d977bdffb8912d638ea3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fda872e3f506d23d977bdffb8912d638ea3" kindref="member">kValidating</ref>,</highlight></codeline>
+<codeline lineno="23" refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fda3d5cafbe757a68db854ea87134f51236" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fda3d5cafbe757a68db854ea87134f51236" kindref="member">kFullSyncing</ref>,</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26" refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa2dc3a6d43c1eec157ba08df15a5b6ea" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa2dc3a6d43c1eec157ba08df15a5b6ea" kindref="member">~AppConfiguration</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31" refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a74f0590dc4a3ca6dff738860902ae084" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a74f0590dc4a3ca6dff738860902ae084" kindref="member">genesis_path</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36" refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1ae171adb944dc2748185197774fcab66c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1ae171adb944dc2748185197774fcab66c" kindref="member">keystore_path</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41" refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a3f8b01b943d532a7c2c86220f05adbe9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a3f8b01b943d532a7c2c86220f05adbe9" kindref="member">rocksdb_path</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46" refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a550a82536f6c51016e67da90dffad2c5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>uint16_t<sp/><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a550a82536f6c51016e67da90dffad2c5" kindref="member">p2p_port</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="51" refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a208ab523d3876418b9cb162a70d6bc11" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::asio::ip::tcp::endpoint<sp/>&amp;<ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a208ab523d3876418b9cb162a70d6bc11" kindref="member">rpc_http_endpoint</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"></highlight></codeline>
+<codeline lineno="56" refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a377053229eb79d58cc523e15bd432f94" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::asio::ip::tcp::endpoint<sp/>&amp;<ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a377053229eb79d58cc523e15bd432f94" kindref="member">rpc_ws_endpoint</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight></codeline>
+<codeline lineno="61" refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a0fd65b30c9e26763f8c353c26d7e2af3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>spdlog::level::level_enum<sp/><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a0fd65b30c9e26763f8c353c26d7e2af3" kindref="member">verbosity</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"></highlight></codeline>
+<codeline lineno="66" refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a90f250f47e21de9fe30e1a40ea428b54" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a90f250f47e21de9fe30e1a40ea428b54" kindref="member">is_only_finalizing</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"></highlight></codeline>
+<codeline lineno="68" refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a43ad8410249921ee19d5e6df3acd43c3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a43ad8410249921ee19d5e6df3acd43c3" kindref="member">initialize_from_args</ref>(<sp/><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fd" kindref="member">LoadScheme</ref><sp/>scheme,<sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>argc,<sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>**argv<sp/>)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"></highlight></codeline>
+<codeline lineno="71" refid="db/d40/namespacesgns_1_1application_1a584cedf80f0bf06ab9d676db4ee5b252" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="db/d40/namespacesgns_1_1application_1a584cedf80f0bf06ab9d676db4ee5b252" kindref="member">AppConfigPtr</ref><sp/>=<sp/>std::shared_ptr&lt;AppConfiguration&gt;;</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"></highlight></codeline>
+<codeline lineno="73"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::application</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="74"><highlight class="normal"></highlight></codeline>
+<codeline lineno="75"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_APP_CONFIG_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/application/app_config.hpp"/>
+  </compounddef>
+</doxygen>

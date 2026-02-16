@@ -1,0 +1,562 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/df6/namespacesgns_1_1blockchain" kind="namespace" language="C++">
+    <compoundname>sgns::blockchain</compoundname>
+    <innerclass refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository" prot="public">sgns::blockchain::BlockHeaderRepository</innerclass>
+    <innerclass refid="de/de8/classsgns_1_1blockchain_1_1_block_storage" prot="public">sgns::blockchain::BlockStorage</innerclass>
+    <innerclass refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree" prot="public">sgns::blockchain::BlockTree</innerclass>
+    <innerclass refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl" prot="public">sgns::blockchain::BlockTreeImpl</innerclass>
+    <innerclass refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository" prot="public">sgns::blockchain::KeyValueBlockHeaderRepository</innerclass>
+    <innerclass refid="d1/daf/classsgns_1_1blockchain_1_1_key_value_block_storage" prot="public">sgns::blockchain::KeyValueBlockStorage</innerclass>
+    <innerclass refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry" prot="public">sgns::blockchain::ValidatorRegistry</innerclass>
+    <innernamespace refid="d0/d3d/namespacesgns_1_1blockchain_1_1prefix">sgns::blockchain::prefix</innernamespace>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="d9/df6/namespacesgns_1_1blockchain_1a3fc0313c5d47d95b48f02d1ebb6e0aea" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>BlockStatus</name>
+        <qualifiedname>sgns::blockchain::BlockStatus</qualifiedname>
+        <enumvalue id="d9/df6/namespacesgns_1_1blockchain_1a3fc0313c5d47d95b48f02d1ebb6e0aeaa4ddc1f10c5822c174470affbb45f9901" prot="public">
+          <name>InChain</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d9/df6/namespacesgns_1_1blockchain_1a3fc0313c5d47d95b48f02d1ebb6e0aeaa88183b946cc5f0e8c96b2e66e1c74a7e" prot="public">
+          <name>Unknown</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Status of a block </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_header_repository.hpp" line="15" column="5" bodyfile="src/blockchain/block_header_repository.hpp" bodystart="16" bodyend="19"/>
+      </memberdef>
+      <memberdef kind="enum" id="d9/df6/namespacesgns_1_1blockchain_1a61c1a0b749a99e37658dbab4f90c3027" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>BlockTreeError</name>
+        <qualifiedname>sgns::blockchain::BlockTreeError</qualifiedname>
+        <enumvalue id="d9/df6/namespacesgns_1_1blockchain_1a61c1a0b749a99e37658dbab4f90c3027a8cc0a99c6f0b3541978d823a4a81c52c" prot="public">
+          <name>INVALID_DB</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d9/df6/namespacesgns_1_1blockchain_1a61c1a0b749a99e37658dbab4f90c3027ad528e999bf11721171e8e1b6c3cd47a4" prot="public">
+          <name>NO_PARENT</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d9/df6/namespacesgns_1_1blockchain_1a61c1a0b749a99e37658dbab4f90c3027a85cf70e6f7ed394b5cbf2623d6303ce1" prot="public">
+          <name>BLOCK_EXISTS</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d9/df6/namespacesgns_1_1blockchain_1a61c1a0b749a99e37658dbab4f90c3027a2bec45c14f96f56c9f9a1e8feb75ef4e" prot="public">
+          <name>HASH_FAILED</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d9/df6/namespacesgns_1_1blockchain_1a61c1a0b749a99e37658dbab4f90c3027a020d8081d064ca26f7adf504c5fcbd4e" prot="public">
+          <name>NO_SUCH_BLOCK</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d9/df6/namespacesgns_1_1blockchain_1a61c1a0b749a99e37658dbab4f90c3027a0fdf5e7e212c03544ad74cbb21d4716f" prot="public">
+          <name>INCORRECT_ARGS</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d9/df6/namespacesgns_1_1blockchain_1a61c1a0b749a99e37658dbab4f90c3027ae8c0c70879b5895c615677261d64a1ee" prot="public">
+          <name>INTERNAL_ERROR</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Errors of the block tree are here, so that other modules can use them, for example, to compare a received error with those </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_tree_error.hpp" line="11" column="3" bodyfile="src/blockchain/block_tree_error.hpp" bodystart="11" bodyend="19"/>
+      </memberdef>
+      <memberdef kind="enum" id="d9/df6/namespacesgns_1_1blockchain_1a2be80d78670f65f34025631edcc0daaa" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>Error</name>
+        <qualifiedname>sgns::blockchain::Error</qualifiedname>
+        <enumvalue id="d9/df6/namespacesgns_1_1blockchain_1a2be80d78670f65f34025631edcc0daaaa138f3bbfa4e3fae296375dd0c1e837c2" prot="public">
+          <name>BLOCK_NOT_FOUND</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/common.hpp" line="14" column="3" bodyfile="src/blockchain/impl/common.hpp" bodystart="14" bodyend="19"/>
+      </memberdef>
+      <memberdef kind="enum" id="d9/df6/namespacesgns_1_1blockchain_1a11590769a0031f7c9d4250b51039fc2c" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>KeyValueRepositoryError</name>
+        <qualifiedname>sgns::blockchain::KeyValueRepositoryError</qualifiedname>
+        <enumvalue id="d9/df6/namespacesgns_1_1blockchain_1a11590769a0031f7c9d4250b51039fc2ca14eddb1ed548833eb26b0325f17b967e" prot="public">
+          <name>INVALID_KEY</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Errors that might occur during work with storage </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.hpp" line="41" column="3" bodyfile="src/blockchain/impl/storage_util.hpp" bodystart="41" bodyend="41"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="d9/df6/namespacesgns_1_1blockchain_1a5cbe1e87acec0d220558c16a0eff7b1b" prot="public" static="no">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>using sgns::blockchain::Buffer = base::Buffer</definition>
+        <argsstring></argsstring>
+        <name>Buffer</name>
+        <qualifiedname>sgns::blockchain::Buffer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.cpp" line="26" column="3" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d9/df6/namespacesgns_1_1blockchain_1aaba78d427dafac87700bec2f596a6bb5" prot="public" static="no">
+        <type><ref refid="d0/d3d/namespacesgns_1_1blockchain_1_1prefix_1affebeb618ce26afa1fa4b7deb2d78f8a" kindref="member">prefix::Prefix</ref></type>
+        <definition>using sgns::blockchain::Prefix = prefix::Prefix</definition>
+        <argsstring></argsstring>
+        <name>Prefix</name>
+        <qualifiedname>sgns::blockchain::Prefix</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.cpp" line="27" column="3" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d9/df6/namespacesgns_1_1blockchain_1a1328bc2d9067df4de32f6dedec7d6c58" prot="public" static="no">
+        <type><ref refid="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4bac" kindref="member">sgns::storage::DatabaseError</ref></type>
+        <definition>using sgns::blockchain::DatabaseError = sgns::storage::DatabaseError</definition>
+        <argsstring></argsstring>
+        <name>DatabaseError</name>
+        <qualifiedname>sgns::blockchain::DatabaseError</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.cpp" line="28" column="3" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="28" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d9/df6/namespacesgns_1_1blockchain_1af3f407d556e737a87e095c01cd79ece1" prot="public" static="no">
+        <type><ref refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable" kindref="compound">storage::face::Readable</ref>&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref>, <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>using sgns::blockchain::ReadableBufferMap = 
+storage::face::Readable&lt;base::Buffer, base::Buffer&gt;</definition>
+        <argsstring></argsstring>
+        <name>ReadableBufferMap</name>
+        <qualifiedname>sgns::blockchain::ReadableBufferMap</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/common.hpp" line="11" column="3" bodyfile="src/blockchain/impl/common.hpp" bodystart="11" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d9/df6/namespacesgns_1_1blockchain_1a8ff366c722ebc39b0e728102c3a55abf" prot="public" static="no">
+        <type>boost::variant&lt; BlockHash, <ref refid="de/d1b/key__value__block__header__repository_8cpp_1a4d41d58038f35d095940e2f3660d7381" kindref="member">BlockNumber</ref> &gt;</type>
+        <definition>using sgns::primitives::BlockId = boost::variant&lt;BlockHash, BlockNumber&gt;</definition>
+        <argsstring></argsstring>
+        <name>BlockId</name>
+        <qualifiedname>sgns::blockchain::BlockId</qualifiedname>
+        <briefdescription>
+<para>Block id is the variant over BlockHash and <ref refid="de/d1b/key__value__block__header__repository_8cpp_1a4d41d58038f35d095940e2f3660d7381" kindref="member">BlockNumber</ref>. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/key_value_block_storage.cpp" line="34" column="5" bodyfile="src/primitives/block_id.hpp" bodystart="14" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d9/df6/namespacesgns_1_1blockchain_1a70e1b00d356a3aac25e2a73cbeac0a2c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; base::Buffer &gt; sgns::blockchain::idToBufferKey</definition>
+        <argsstring>(crdt::GlobalDB &amp;db, const primitives::BlockId &amp;id)</argsstring>
+        <name>idToBufferKey</name>
+        <qualifiedname>sgns::blockchain::idToBufferKey</qualifiedname>
+        <param>
+          <type><ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b" kindref="compound">crdt::GlobalDB</ref> &amp;</type>
+          <declname>db</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Convert a block ID into a key, which is a first part of a key, by which the columns are stored in the database </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/types.cpp" line="17" column="19" bodyfile="src/blockchain/impl/types.cpp" bodystart="17" bodyend="33" declfile="src/blockchain/impl/common.hpp" declline="25" declcolumn="19"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/df6/namespacesgns_1_1blockchain_1a6623765be8c42f3dd30e691f8771073b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::string &gt;</type>
+        <definition>outcome::result&lt; std::string &gt; sgns::blockchain::idToStringKey</definition>
+        <argsstring>(crdt::GlobalDB &amp;db, const primitives::BlockId &amp;id)</argsstring>
+        <name>idToStringKey</name>
+        <qualifiedname>sgns::blockchain::idToStringKey</qualifiedname>
+        <param>
+          <type><ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b" kindref="compound">crdt::GlobalDB</ref> &amp;</type>
+          <declname>db</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Convert a block ID into a key, which is a first part of a key, by which the columns are stored in the database </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/types.cpp" line="35" column="19" bodyfile="src/blockchain/impl/types.cpp" bodystart="35" bodyend="58" declfile="src/blockchain/impl/common.hpp" declline="31" declcolumn="19"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/df6/namespacesgns_1_1blockchain_1a2ce3eb1eda14740c6814ca775fce5f46" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>base::Buffer sgns::blockchain::trieRoot</definition>
+        <argsstring>(const std::vector&lt; std::pair&lt; base::Buffer, base::Buffer &gt; &gt; &amp;key_vals)</argsstring>
+        <name>trieRoot</name>
+        <qualifiedname>sgns::blockchain::trieRoot</qualifiedname>
+        <param>
+          <type>const std::vector&lt; std::pair&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref>, <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt; &gt; &amp;</type>
+          <declname>key_vals</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Instantiate empty merkle trie, insert<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key_vals</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>pairs and </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> containing merkle root of resulting trie </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/types.cpp" line="60" column="16" bodyfile="src/blockchain/impl/types.cpp" bodystart="60" bodyend="76" declfile="src/blockchain/impl/common.hpp" declline="38" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/df6/namespacesgns_1_1blockchain_1a72ab292d3fa6c14625356b54787d38d0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::blockchain::putWithPrefix</definition>
+        <argsstring>(crdt::GlobalDB &amp;db, prefix::Prefix prefix, BlockNumber num, Hash256 block_hash, const base::Buffer &amp;value)</argsstring>
+        <name>putWithPrefix</name>
+        <qualifiedname>sgns::blockchain::putWithPrefix</qualifiedname>
+        <param>
+          <type><ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b" kindref="compound">crdt::GlobalDB</ref> &amp;</type>
+          <declname>db</declname>
+        </param>
+        <param>
+          <type><ref refid="d0/d3d/namespacesgns_1_1blockchain_1_1prefix_1affebeb618ce26afa1fa4b7deb2d78f8a" kindref="member">prefix::Prefix</ref></type>
+          <declname>prefix</declname>
+        </param>
+        <param>
+          <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref></type>
+          <declname>num</declname>
+        </param>
+        <param>
+          <type><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+          <declname>block_hash</declname>
+        </param>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Put an entry to key space prefix and corresponding lookup keys to ID_TO_LOOKUP_KEY space. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>db</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>database to put the entry to </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername><ref refid="d0/d3d/namespacesgns_1_1blockchain_1_1prefix" kindref="compound">prefix</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>keyspace for the entry value </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>num</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>block number that could be used to retrieve the value </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>block_hash</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>block hash that could be used to retrieve the value </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>data to be put to the storage </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>storage error if any </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.cpp" line="24" column="19" bodyfile="src/blockchain/impl/storage_util.cpp" bodystart="24" bodyend="39" declfile="src/blockchain/impl/storage_util.hpp" declline="62" declcolumn="19"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/df6/namespacesgns_1_1blockchain_1a3188966fc39fb0c1b0e1bc6b0235af48" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; base::Buffer &gt; sgns::blockchain::getWithPrefix</definition>
+        <argsstring>(crdt::GlobalDB &amp;db, prefix::Prefix prefix, const primitives::BlockId &amp;block_id)</argsstring>
+        <name>getWithPrefix</name>
+        <qualifiedname>sgns::blockchain::getWithPrefix</qualifiedname>
+        <param>
+          <type><ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b" kindref="compound">crdt::GlobalDB</ref> &amp;</type>
+          <declname>db</declname>
+        </param>
+        <param>
+          <type><ref refid="d0/d3d/namespacesgns_1_1blockchain_1_1prefix_1affebeb618ce26afa1fa4b7deb2d78f8a" kindref="member">prefix::Prefix</ref></type>
+          <declname>prefix</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>block_id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get an entry from the database. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>db</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>database to get the entry from </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername><ref refid="d0/d3d/namespacesgns_1_1blockchain_1_1prefix" kindref="compound">prefix</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>prefix with which the entry was put into </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>block_id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>id of the block to get entry for </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>encoded entry or error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.cpp" line="42" column="19" bodyfile="src/blockchain/impl/storage_util.cpp" bodystart="42" bodyend="48" declfile="src/blockchain/impl/storage_util.hpp" declline="75" declcolumn="19"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/df6/namespacesgns_1_1blockchain_1ac791bedcf43eee3eda2614fa9f973175" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>base::Buffer sgns::blockchain::NumberToBuffer</definition>
+        <argsstring>(primitives::BlockNumber n)</argsstring>
+        <name>NumberToBuffer</name>
+        <qualifiedname>sgns::blockchain::NumberToBuffer</qualifiedname>
+        <param>
+          <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref></type>
+          <declname>n</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Convert block number into short lookup key (LE representation) for blocks that are in the canonical chain.</para>
+<para>In the current database schema, this kind of key is only used for lookups into an index, NOT for storing header data or others. </para>
+        </detaileddescription>
+        <inbodydescription>
+<para><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> retval;</para>
+<para>Little endian for ( std::size_t i = 0; i &lt; sizeof(primitives::BlockNumber); ++i ) { retval.putUint8(static_cast&lt;uint8_t&gt;((n &gt;&gt; (i * 8)) &amp; 0xffu)) ; } return retval;</para>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.cpp" line="50" column="16" bodyfile="src/blockchain/impl/storage_util.cpp" bodystart="50" bodyend="74" declfile="src/blockchain/impl/storage_util.hpp" declline="87" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/df6/namespacesgns_1_1blockchain_1af9080210fd976de8ce559ae6ac63fea2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>base::Buffer sgns::blockchain::numberAndHashToLookupKey</definition>
+        <argsstring>(primitives::BlockNumber number, const base::Hash256 &amp;hash)</argsstring>
+        <name>numberAndHashToLookupKey</name>
+        <qualifiedname>sgns::blockchain::numberAndHashToLookupKey</qualifiedname>
+        <param>
+          <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref></type>
+          <declname>number</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref> &amp;</type>
+          <declname>hash</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Convert number and hash into long lookup key for blocks that are not in the canonical chain. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.cpp" line="76" column="16" bodyfile="src/blockchain/impl/storage_util.cpp" bodystart="76" bodyend="81" declfile="src/blockchain/impl/storage_util.hpp" declline="93" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/df6/namespacesgns_1_1blockchain_1a90dacdf2ef655a2abdc41fb7f9d29bb5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref> &gt;</type>
+        <definition>outcome::result&lt; primitives::BlockNumber &gt; sgns::blockchain::BufferToNumber</definition>
+        <argsstring>(const base::Buffer &amp;key)</argsstring>
+        <name>BufferToNumber</name>
+        <qualifiedname>sgns::blockchain::BufferToNumber</qualifiedname>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Converts buffer data to a block number </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.cpp" line="83" column="19" bodyfile="src/blockchain/impl/storage_util.cpp" bodystart="83" bodyend="107" declfile="src/blockchain/impl/storage_util.hpp" declline="99" declcolumn="19"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/df6/namespacesgns_1_1blockchain_1a0cc1bcbfa6448f544ab785b0bcf44a6e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>base::Buffer sgns::blockchain::prependPrefix</definition>
+        <argsstring>(const base::Buffer &amp;key, prefix::Prefix key_column)</argsstring>
+        <name>prependPrefix</name>
+        <qualifiedname>sgns::blockchain::prependPrefix</qualifiedname>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type><ref refid="d0/d3d/namespacesgns_1_1blockchain_1_1prefix_1affebeb618ce26afa1fa4b7deb2d78f8a" kindref="member">prefix::Prefix</ref></type>
+          <declname>key_column</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Concatenate prefix with key. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key buffer </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>key_column</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>prefix keyspace </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>key_column|key </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.cpp" line="109" column="16" bodyfile="src/blockchain/impl/storage_util.cpp" bodystart="109" bodyend="115" declfile="src/blockchain/impl/storage_util.hpp" declline="49" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/df6/namespacesgns_1_1blockchain_1a342d908db3d7971b1e6ef860b5fc0e8b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::blockchain::isNotFoundError</definition>
+        <argsstring>(outcome::result&lt; void &gt; result)</argsstring>
+        <name>isNotFoundError</name>
+        <qualifiedname>sgns::blockchain::isNotFoundError</qualifiedname>
+        <param>
+          <type>outcome::result&lt; void &gt;</type>
+          <declname>result</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>For a persistant map based storage checks whether result should be considered as <computeroutput>NOT FOUND</computeroutput> error </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.cpp" line="117" column="8" bodyfile="src/blockchain/impl/storage_util.cpp" bodystart="117" bodyend="123" declfile="src/blockchain/impl/storage_util.hpp" declline="106" declcolumn="8"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Auxiliary functions to simplify usage of persistant map based storage as a <ref refid="de/da2/classsgns_1_1_blockchain" kindref="compound">Blockchain</ref> storage </para>
+    </detaileddescription>
+    <location file="src/blockchain/block_header_repository.hpp" line="10" column="1"/>
+  </compounddef>
+</doxygen>

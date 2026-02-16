@@ -1,0 +1,327 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl" kind="class" language="C++" prot="public">
+    <compoundname>sgns::runtime::TrieStorageProviderImpl</compoundname>
+    <basecompoundref refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider" prot="public" virt="non-virtual">sgns::runtime::TrieStorageProvider</basecompoundref>
+    <includes refid="d4/d72/trie__storage__provider__impl_8hpp" local="no">trie_storage_provider_impl.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1afad7235828b2db5086580acf76827a49" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage" kindref="compound">storage::trie::TrieStorage</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;storage::trie::TrieStorage&gt; sgns::runtime::TrieStorageProviderImpl::trie_storage_</definition>
+        <argsstring></argsstring>
+        <name>trie_storage_</name>
+        <qualifiedname>sgns::runtime::TrieStorageProviderImpl::trie_storage_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/trie_storage_provider_impl.hpp" line="36" column="22" bodyfile="src/runtime/common/trie_storage_provider_impl.hpp" bodystart="36" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1a62ab68d732d29978f061481abe8edccc" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider_1af104e9115d50fe89780e74db0ec06eb0" kindref="member">Batch</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Batch&gt; sgns::runtime::TrieStorageProviderImpl::current_batch_</definition>
+        <argsstring></argsstring>
+        <name>current_batch_</name>
+        <qualifiedname>sgns::runtime::TrieStorageProviderImpl::current_batch_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/trie_storage_provider_impl.hpp" line="38" column="21" bodyfile="src/runtime/common/trie_storage_provider_impl.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1aa1c732a111fdaf2d60fde7510847c259" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider_1a116f251371b1ccd09a4c836e1d05e285" kindref="member">PersistentBatch</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;PersistentBatch&gt; sgns::runtime::TrieStorageProviderImpl::persistent_batch_</definition>
+        <argsstring></argsstring>
+        <name>persistent_batch_</name>
+        <qualifiedname>sgns::runtime::TrieStorageProviderImpl::persistent_batch_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/trie_storage_provider_impl.hpp" line="42" column="21" bodyfile="src/runtime/common/trie_storage_provider_impl.hpp" bodystart="42" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1a348a60c8b9c549d22432b6998bdf6e6d" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::TrieStorageProviderImpl::TrieStorageProviderImpl</definition>
+        <argsstring>(std::shared_ptr&lt; storage::trie::TrieStorage &gt; trie_storage)</argsstring>
+        <name>TrieStorageProviderImpl</name>
+        <qualifiedname>sgns::runtime::TrieStorageProviderImpl::TrieStorageProviderImpl</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage" kindref="compound">storage::trie::TrieStorage</ref> &gt;</type>
+          <declname>trie_storage</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/trie_storage_provider_impl.hpp" line="14" column="14" bodyfile="src/runtime/common/trie_storage_provider_impl.cpp" bodystart="5" bodyend="9"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1aa83356d0d4931e08d825f4b1cc3b76c3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::TrieStorageProviderImpl::~TrieStorageProviderImpl</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~TrieStorageProviderImpl</name>
+        <qualifiedname>sgns::runtime::TrieStorageProviderImpl::~TrieStorageProviderImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/trie_storage_provider_impl.hpp" line="17" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1a78725472c7a9c23da784b29287663f23" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::runtime::TrieStorageProviderImpl::setToEphemeral</definition>
+        <argsstring>() override</argsstring>
+        <name>setToEphemeral</name>
+        <qualifiedname>sgns::runtime::TrieStorageProviderImpl::setToEphemeral</qualifiedname>
+        <reimplements refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider_1a40ca7a8950cead5b598d1159717665e8">setToEphemeral</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Sets the current batch to a new ephemeral batch </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/trie_storage_provider_impl.hpp" line="19" column="21" bodyfile="src/runtime/common/trie_storage_provider_impl.cpp" bodystart="11" bodyend="15"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1ae7b3e946d14e525e805f32267e456344" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::runtime::TrieStorageProviderImpl::setToEphemeralAt</definition>
+        <argsstring>(const base::Hash256 &amp;state_root) override</argsstring>
+        <name>setToEphemeralAt</name>
+        <qualifiedname>sgns::runtime::TrieStorageProviderImpl::setToEphemeralAt</qualifiedname>
+        <reimplements refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider_1af0ce16e2e814f9fe60887133ea143646">setToEphemeralAt</reimplements>
+        <param>
+          <type>const <ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref> &amp;</type>
+          <declname>state_root</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/trie_storage_provider_impl.hpp" line="20" column="21" bodyfile="src/runtime/common/trie_storage_provider_impl.cpp" bodystart="17" bodyend="22"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1abc878b68ca35291332b93518c2541046" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::runtime::TrieStorageProviderImpl::setToPersistent</definition>
+        <argsstring>() override</argsstring>
+        <name>setToPersistent</name>
+        <qualifiedname>sgns::runtime::TrieStorageProviderImpl::setToPersistent</qualifiedname>
+        <reimplements refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider_1aecab1edd86dc55a0b24a42ccde54c5cc">setToPersistent</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Sets the current batch to the persistent batch (a persistent batch is unique as it accumulates changes for commit) </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/trie_storage_provider_impl.hpp" line="23" column="21" bodyfile="src/runtime/common/trie_storage_provider_impl.cpp" bodystart="24" bodyend="31"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1a74d66a1e6be22129d0cfcf52edbb9c54" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::runtime::TrieStorageProviderImpl::setToPersistentAt</definition>
+        <argsstring>(const base::Hash256 &amp;state_root) override</argsstring>
+        <name>setToPersistentAt</name>
+        <qualifiedname>sgns::runtime::TrieStorageProviderImpl::setToPersistentAt</qualifiedname>
+        <reimplements refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider_1a3bc79b9bda8671416a9b520fb35e0fea">setToPersistentAt</reimplements>
+        <param>
+          <type>const <ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref> &amp;</type>
+          <declname>state_root</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Sets the current batch to a new persistent batch at specified storage state <simplesect kind="warning"><para>this will reset storage state to th specified root and discard all changes accumulated in the current persistent batch </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/trie_storage_provider_impl.hpp" line="24" column="21" bodyfile="src/runtime/common/trie_storage_provider_impl.cpp" bodystart="33" bodyend="39"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1a2c22932cd70e77f8656015de01ffc6b5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>std::shared_ptr&lt; <ref refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider_1af104e9115d50fe89780e74db0ec06eb0" kindref="member">Batch</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; TrieStorageProviderImpl::Batch &gt; sgns::runtime::TrieStorageProviderImpl::getCurrentBatch</definition>
+        <argsstring>() const override</argsstring>
+        <name>getCurrentBatch</name>
+        <qualifiedname>sgns::runtime::TrieStorageProviderImpl::getCurrentBatch</qualifiedname>
+        <reimplements refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider_1a79ac3e177db9004390c3489876efb125">getCurrentBatch</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>current batch, if any was set (</para>
+</simplesect>
+<simplesect kind="see"><para><ref refid="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1a78725472c7a9c23da784b29287663f23" kindref="member">setToEphemeral</ref>, <ref refid="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1abc878b68ca35291332b93518c2541046" kindref="member">setToPersistent</ref>), null otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/trie_storage_provider_impl.hpp" line="28" column="21" bodyfile="src/runtime/common/trie_storage_provider_impl.cpp" bodystart="42" bodyend="44"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1aacaa9e4f3724ff45d80d77e69a716f69" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>boost::optional&lt; std::shared_ptr&lt; <ref refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider_1a116f251371b1ccd09a4c836e1d05e285" kindref="member">PersistentBatch</ref> &gt; &gt;</type>
+        <definition>boost::optional&lt; std::shared_ptr&lt; TrieStorageProviderImpl::PersistentBatch &gt; &gt; sgns::runtime::TrieStorageProviderImpl::tryGetPersistentBatch</definition>
+        <argsstring>() const override</argsstring>
+        <name>tryGetPersistentBatch</name>
+        <qualifiedname>sgns::runtime::TrieStorageProviderImpl::tryGetPersistentBatch</qualifiedname>
+        <reimplements refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider_1a453c97dff5b05c678a8d21af90e35ec2">tryGetPersistentBatch</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>current persistent batch, if the current batch is persistent, none otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/trie_storage_provider_impl.hpp" line="29" column="21" bodyfile="src/runtime/common/trie_storage_provider_impl.cpp" bodystart="47" bodyend="50"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1abc62d849dbcbbe12d407d9b0269347ee" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>bool</type>
+        <definition>bool sgns::runtime::TrieStorageProviderImpl::isCurrentlyPersistent</definition>
+        <argsstring>() const override</argsstring>
+        <name>isCurrentlyPersistent</name>
+        <qualifiedname>sgns::runtime::TrieStorageProviderImpl::isCurrentlyPersistent</qualifiedname>
+        <reimplements refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider_1a17478fde1d12d49b49b7cb7fa7693307">isCurrentlyPersistent</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>true, if the current batch is persistent, false otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/trie_storage_provider_impl.hpp" line="31" column="10" bodyfile="src/runtime/common/trie_storage_provider_impl.cpp" bodystart="52" bodyend="55"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1a96cf9f3ae0f15aa176959dcdc0bf9729" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; base::Buffer &gt; sgns::runtime::TrieStorageProviderImpl::forceCommit</definition>
+        <argsstring>() override</argsstring>
+        <name>forceCommit</name>
+        <qualifiedname>sgns::runtime::TrieStorageProviderImpl::forceCommit</qualifiedname>
+        <reimplements refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider_1a1e5fe351d17f09524bc8fb14a9c0ffa0">forceCommit</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Commits persistent changes even if the current batch is not persistent </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/trie_storage_provider_impl.hpp" line="33" column="21" bodyfile="src/runtime/common/trie_storage_provider_impl.cpp" bodystart="57" bodyend="62"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::runtime::TrieStorageProvider</label>
+        <link refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider"/>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::TrieStorageProviderImpl</label>
+        <link refid="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="5">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::TrieStorageProvider</label>
+        <link refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider"/>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::TrieStorageProviderImpl</label>
+        <link refid="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-trie_storage_</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-current_batch_</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-persistent_batch_</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::storage::trie::TrieStorage</label>
+        <link refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; Batch &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; Batch &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::shared_ptr&lt; PersistentBatch &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; PersistentBatch &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; sgns::storage::trie::TrieStorage &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::trie::TrieStorage &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/common/trie_storage_provider_impl.hpp" line="12" column="3" bodyfile="src/runtime/common/trie_storage_provider_impl.hpp" bodystart="12" bodyend="43"/>
+    <listofallmembers>
+      <member refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider_1af104e9115d50fe89780e74db0ec06eb0" prot="public" virt="non-virtual"><scope>sgns::runtime::TrieStorageProviderImpl</scope><name>Batch</name></member>
+      <member refid="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1a62ab68d732d29978f061481abe8edccc" prot="private" virt="non-virtual"><scope>sgns::runtime::TrieStorageProviderImpl</scope><name>current_batch_</name></member>
+      <member refid="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1a96cf9f3ae0f15aa176959dcdc0bf9729" prot="public" virt="virtual"><scope>sgns::runtime::TrieStorageProviderImpl</scope><name>forceCommit</name></member>
+      <member refid="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1a2c22932cd70e77f8656015de01ffc6b5" prot="public" virt="virtual"><scope>sgns::runtime::TrieStorageProviderImpl</scope><name>getCurrentBatch</name></member>
+      <member refid="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1abc62d849dbcbbe12d407d9b0269347ee" prot="public" virt="virtual"><scope>sgns::runtime::TrieStorageProviderImpl</scope><name>isCurrentlyPersistent</name></member>
+      <member refid="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1aa1c732a111fdaf2d60fde7510847c259" prot="private" virt="non-virtual"><scope>sgns::runtime::TrieStorageProviderImpl</scope><name>persistent_batch_</name></member>
+      <member refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider_1a116f251371b1ccd09a4c836e1d05e285" prot="public" virt="non-virtual"><scope>sgns::runtime::TrieStorageProviderImpl</scope><name>PersistentBatch</name></member>
+      <member refid="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1a78725472c7a9c23da784b29287663f23" prot="public" virt="virtual"><scope>sgns::runtime::TrieStorageProviderImpl</scope><name>setToEphemeral</name></member>
+      <member refid="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1ae7b3e946d14e525e805f32267e456344" prot="public" virt="virtual"><scope>sgns::runtime::TrieStorageProviderImpl</scope><name>setToEphemeralAt</name></member>
+      <member refid="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1abc878b68ca35291332b93518c2541046" prot="public" virt="virtual"><scope>sgns::runtime::TrieStorageProviderImpl</scope><name>setToPersistent</name></member>
+      <member refid="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1a74d66a1e6be22129d0cfcf52edbb9c54" prot="public" virt="virtual"><scope>sgns::runtime::TrieStorageProviderImpl</scope><name>setToPersistentAt</name></member>
+      <member refid="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1afad7235828b2db5086580acf76827a49" prot="private" virt="non-virtual"><scope>sgns::runtime::TrieStorageProviderImpl</scope><name>trie_storage_</name></member>
+      <member refid="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1a348a60c8b9c549d22432b6998bdf6e6d" prot="public" virt="non-virtual"><scope>sgns::runtime::TrieStorageProviderImpl</scope><name>TrieStorageProviderImpl</name></member>
+      <member refid="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1aacaa9e4f3724ff45d80d77e69a716f69" prot="public" virt="virtual"><scope>sgns::runtime::TrieStorageProviderImpl</scope><name>tryGetPersistentBatch</name></member>
+      <member refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider_1a7933fd7930373286276aa630a8711fe8" prot="public" virt="virtual"><scope>sgns::runtime::TrieStorageProviderImpl</scope><name>~TrieStorageProvider</name></member>
+      <member refid="d3/d6c/classsgns_1_1runtime_1_1_trie_storage_provider_impl_1aa83356d0d4931e08d825f4b1cc3b76c3" prot="public" virt="non-virtual"><scope>sgns::runtime::TrieStorageProviderImpl</scope><name>~TrieStorageProviderImpl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

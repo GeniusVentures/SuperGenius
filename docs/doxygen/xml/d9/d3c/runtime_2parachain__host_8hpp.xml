@@ -1,0 +1,182 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/d3c/runtime_2parachain__host_8hpp" kind="file" language="C++">
+    <compoundname>parachain_host.hpp</compoundname>
+    <includes refid="da/d1d/buffer_8hpp" local="yes">base/buffer.hpp</includes>
+    <includes refid="d1/dc8/primitives_2parachain__host_8hpp" local="yes">primitives/parachain_host.hpp</includes>
+    <includedby refid="d6/d15/parachain__host__impl_8hpp" local="yes">src/runtime/binaryen/runtime_api/parachain_host_impl.hpp</includedby>
+    <incdepgraph>
+      <node id="14">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>primitives/parachain_host.hpp</label>
+        <link refid="d1/dc8/primitives_2parachain__host_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/runtime/parachain_host.hpp</label>
+        <link refid="d9/d3c/runtime_2parachain__host_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>array</label>
+      </node>
+      <node id="5">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="17">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="6">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="12">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="13">
+        <label>boost/variant.hpp</label>
+      </node>
+      <node id="15">
+        <label>cstddef</label>
+      </node>
+      <node id="11">
+        <label>cstdint</label>
+      </node>
+      <node id="7">
+        <label>gsl/span</label>
+      </node>
+      <node id="19">
+        <label>iostream</label>
+      </node>
+      <node id="9">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="3">
+        <label>string_view</label>
+      </node>
+      <node id="4">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="3">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.cpp</label>
+        <link refid="db/dae/parachain__host__impl_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.hpp</label>
+        <link refid="d6/d15/parachain__host__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/runtime/parachain_host.hpp</label>
+        <link refid="d9/d3c/runtime_2parachain__host_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host" prot="public">sgns::runtime::ParachainHost</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="dd/da6/namespacesgns_1_1runtime">sgns::runtime</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_RUNTIME_PARACHAIN_HOST_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_RUNTIME_PARACHAIN_HOST_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="da/d1d/buffer_8hpp" kindref="compound">base/buffer.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d1/dc8/primitives_2parachain__host_8hpp" kindref="compound">primitives/parachain_host.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="dd/da6/namespacesgns_1_1runtime" kindref="compound">sgns::runtime</ref><sp/>{</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10" refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host" kindref="compound">ParachainHost</ref><sp/>{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">protected</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="12" refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1ac7e6910a71dec3b202c899a4d015b635" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1ac7e6910a71dec3b202c899a4d015b635" kindref="member">Buffer</ref><sp/>=<sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref>;</highlight></codeline>
+<codeline lineno="13" refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1a9c55bd5460286a75e30ebbf15736faba" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1a9c55bd5460286a75e30ebbf15736faba" kindref="member">ValidatorId</ref><sp/>=<sp/><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1af77fd397e09e5808e4fc788ebe8c7f04" kindref="member">primitives::parachain::ValidatorId</ref>;</highlight></codeline>
+<codeline lineno="14" refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1adb711d2970c012206d3d6595e62ebbaa" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1adb711d2970c012206d3d6595e62ebbaa" kindref="member">DutyRoster</ref><sp/>=<sp/><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1ae3b6d3a71137641e26ceeae872e7fb44" kindref="member">primitives::parachain::DutyRoster</ref>;</highlight></codeline>
+<codeline lineno="15" refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1ab29342fe3eedac6b5757202f2dc325f2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1ab29342fe3eedac6b5757202f2dc325f2" kindref="member">ParachainId</ref><sp/>=<sp/><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a69a3305a38fab362c69a2665cc45b89f" kindref="member">primitives::parachain::ParaId</ref>;</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="18" refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1aa58839b0ef893b1146ba82f7f8f79f34" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1aa58839b0ef893b1146ba82f7f8f79f34" kindref="member">~ParachainHost</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24" refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1ad61802ff50dfeb8fc7bea17e3b4afa44" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;DutyRoster&gt;<sp/><ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1ad61802ff50dfeb8fc7bea17e3b4afa44" kindref="member">duty_roster</ref>()<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30" refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1acbae32cd0ebc1139a477c3a2dd1756c0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;std::vector&lt;ParachainId&gt;&gt;<sp/><ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1acbae32cd0ebc1139a477c3a2dd1756c0" kindref="member">active_parachains</ref>()<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37" refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1a36efc5da7e626c83bd0a3418b29dfda4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;boost::optional&lt;Buffer&gt;&gt;<sp/><ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1a36efc5da7e626c83bd0a3418b29dfda4" kindref="member">parachain_head</ref>(</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1ab29342fe3eedac6b5757202f2dc325f2" kindref="member">ParachainId</ref><sp/></highlight><highlight class="keywordtype">id</highlight><highlight class="normal">)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;boost::optional&lt;sgns::base::Buffer&gt;&gt;</highlight></codeline>
+<codeline lineno="46" refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1acca80ee537435db33a120299ad30955b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1acca80ee537435db33a120299ad30955b" kindref="member">parachain_code</ref>(<ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1ab29342fe3eedac6b5757202f2dc325f2" kindref="member">ParachainId</ref><sp/></highlight><highlight class="keywordtype">id</highlight><highlight class="normal">)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="52" refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1a02d837bc6ea03484f3695c6ca5f5d4d9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;std::vector&lt;ValidatorId&gt;&gt;<sp/><ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1a02d837bc6ea03484f3695c6ca5f5d4d9" kindref="member">validators</ref>()<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight></codeline>
+<codeline lineno="55"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::runtime</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="56"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_SRC_RUNTIME_PARACHAIN_HOST_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/runtime/parachain_host.hpp"/>
+  </compounddef>
+</doxygen>

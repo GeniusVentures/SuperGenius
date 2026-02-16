@@ -1,0 +1,105 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/d5d/structsgns_1_1lambda__visitor_3_01_lambda_00_01_lambdas_8_8_8_01_4" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::lambda_visitor&lt; Lambda, Lambdas... &gt;</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">Lambda</basecompoundref>
+    <basecompoundref refid="d2/db4/structsgns_1_1lambda__visitor" prot="public" virt="non-virtual">sgns::lambda_visitor&lt; Lambdas... &gt;</basecompoundref>
+    <includes refid="d2/df0/visitor_8hpp" local="no">visitor.hpp</includes>
+    <templateparamlist>
+      <param>
+        <type>typename Lambda</type>
+      </param>
+      <param>
+        <type>typename...</type>
+        <declname>Lambdas</declname>
+        <defname>Lambdas</defname>
+      </param>
+    </templateparamlist>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d2/d5d/structsgns_1_1lambda__visitor_3_01_lambda_00_01_lambdas_8_8_8_01_4_1aec6c27b247a3c70f8ece8651dd449e40" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::lambda_visitor&lt; Lambda, Lambdas... &gt;::lambda_visitor</definition>
+        <argsstring>(Lambda lambda, Lambdas... lambdas)</argsstring>
+        <name>lambda_visitor</name>
+        <qualifiedname>sgns::lambda_visitor&lt; Lambda, Lambdas... &gt;::lambda_visitor</qualifiedname>
+        <param>
+          <type>Lambda</type>
+          <declname>lambda</declname>
+        </param>
+        <param>
+          <type>Lambdas...</type>
+          <declname>lambdas</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/visitor.hpp" line="19" column="9" bodyfile="src/base/visitor.hpp" bodystart="19" bodyend="21"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>Lambda</label>
+      </node>
+      <node id="4">
+        <label>sgns::lambda_visitor&lt; Lambdas &gt;</label>
+        <link refid="d2/db4/structsgns_1_1lambda__visitor"/>
+      </node>
+      <node id="1">
+        <label>sgns::lambda_visitor&lt; Lambda, Lambdas... &gt;</label>
+        <link refid="d2/d5d/structsgns_1_1lambda__visitor_3_01_lambda_00_01_lambdas_8_8_8_01_4"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; Lambda, Lambdas... &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::lambda_visitor&lt; Lambdas... &gt;</label>
+        <link refid="d2/db4/structsgns_1_1lambda__visitor"/>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; Lambdas... &gt;</edgelabel>
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>Lambda</label>
+      </node>
+      <node id="4">
+        <label>sgns::lambda_visitor&lt; Lambdas &gt;</label>
+        <link refid="d2/db4/structsgns_1_1lambda__visitor"/>
+      </node>
+      <node id="1">
+        <label>sgns::lambda_visitor&lt; Lambda, Lambdas... &gt;</label>
+        <link refid="d2/d5d/structsgns_1_1lambda__visitor_3_01_lambda_00_01_lambdas_8_8_8_01_4"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; Lambda, Lambdas... &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::lambda_visitor&lt; Lambdas... &gt;</label>
+        <link refid="d2/db4/structsgns_1_1lambda__visitor"/>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; Lambdas... &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/base/visitor.hpp" line="14" column="5" bodyfile="src/base/visitor.hpp" bodystart="15" bodyend="22"/>
+    <listofallmembers>
+      <member refid="d2/d5d/structsgns_1_1lambda__visitor_3_01_lambda_00_01_lambdas_8_8_8_01_4_1aec6c27b247a3c70f8ece8651dd449e40" prot="public" virt="non-virtual"><scope>sgns::lambda_visitor&lt; Lambda, Lambdas... &gt;</scope><name>lambda_visitor</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

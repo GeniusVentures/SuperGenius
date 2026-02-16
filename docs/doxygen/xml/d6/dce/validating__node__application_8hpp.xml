@@ -1,0 +1,352 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/dce/validating__node__application_8hpp" kind="file" language="C++">
+    <compoundname>validating_node_application.hpp</compoundname>
+    <includes refid="df/d62/sgns__application_8hpp" local="yes">application/sgns_application.hpp</includes>
+    <includes local="yes">api/service/api_service.hpp</includes>
+    <includes refid="dd/d95/app__config_8hpp" local="yes">application/app_config.hpp</includes>
+    <includes refid="d1/d83/configuration__storage_8hpp" local="yes">application/configuration_storage.hpp</includes>
+    <includes refid="d8/d59/local__key__storage_8hpp" local="yes">application/impl/local_key_storage.hpp</includes>
+    <includes local="yes">verification/finality/finality.hpp</includes>
+    <includes local="yes">verification/production.hpp</includes>
+    <includes local="yes">network/router.hpp</includes>
+    <includedby refid="d5/df0/app__delegate_8cpp" local="yes">node/app_delegate.cpp</includedby>
+    <includedby refid="d3/d34/validating__node__application_8cpp" local="yes">src/application/impl/validating_node_application.cpp</includedby>
+    <incdepgraph>
+      <node id="4">
+        <label>application/app_config.hpp</label>
+        <link refid="dd/d95/app__config_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>application/configuration_storage.hpp</label>
+        <link refid="d1/d83/configuration__storage_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>application/genesis_raw_config.hpp</label>
+        <link refid="db/dd2/genesis__raw__config_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>application/impl/local_key_storage.hpp</label>
+        <link refid="d8/d59/local__key__storage_8hpp"/>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/application/impl/validating_node_application.hpp</label>
+        <link refid="d6/dce/validating__node__application_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>application/key_storage.hpp</label>
+        <link refid="d0/d63/key__storage_8hpp"/>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>application/sgns_application.hpp</label>
+        <link refid="df/d62/sgns__application_8hpp"/>
+      </node>
+      <node id="25">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="34">
+        <label>crypto/ed25519_types.hpp</label>
+        <link refid="d4/d6e/ed25519__types_8hpp"/>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="36">
+        <label>crypto/sr25519_types.hpp</label>
+        <link refid="d2/d9c/sr25519__types_8hpp"/>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>primitives/common.hpp</label>
+        <link refid="d4/d26/src_2primitives_2common_8hpp"/>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>api/service/api_service.hpp</label>
+      </node>
+      <node id="27">
+        <label>array</label>
+      </node>
+      <node id="6">
+        <label>boost/asio/ip/tcp.hpp</label>
+      </node>
+      <node id="16">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="39">
+        <label>boost/filesystem.hpp</label>
+      </node>
+      <node id="28">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="38">
+        <label>boost/multiprecision/cpp_int.hpp</label>
+      </node>
+      <node id="17">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="40">
+        <label>boost/property_tree/ptree.hpp</label>
+      </node>
+      <node id="26">
+        <label>cstddef</label>
+      </node>
+      <node id="24">
+        <label>cstdint</label>
+      </node>
+      <node id="35">
+        <label>ed25519/ed25519.h</label>
+      </node>
+      <node id="18">
+        <label>gsl/span</label>
+      </node>
+      <node id="30">
+        <label>iostream</label>
+      </node>
+      <node id="33">
+        <label>libp2p/crypto/key.hpp</label>
+      </node>
+      <node id="20">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="11">
+        <label>libp2p/peer/peer_info.hpp</label>
+      </node>
+      <node id="7">
+        <label>memory</label>
+      </node>
+      <node id="43">
+        <label>network/router.hpp</label>
+      </node>
+      <node id="21">
+        <label>network/types/peer_list.hpp</label>
+      </node>
+      <node id="10">
+        <label>set</label>
+      </node>
+      <node id="5">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="37">
+        <label>sr25519.h</label>
+      </node>
+      <node id="8">
+        <label>string</label>
+      </node>
+      <node id="14">
+        <label>string_view</label>
+      </node>
+      <node id="15">
+        <label>vector</label>
+      </node>
+      <node id="41">
+        <label>verification/finality/finality.hpp</label>
+      </node>
+      <node id="42">
+        <label>verification/production.hpp</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>node/app_delegate.cpp</label>
+        <link refid="d5/df0/app__delegate_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/application/impl/validating_node_application.cpp</label>
+        <link refid="d3/d34/validating__node__application_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/application/impl/validating_node_application.hpp</label>
+        <link refid="d6/dce/validating__node__application_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="de/de2/classsgns_1_1application_1_1_validating_node_application" prot="public">sgns::application::ValidatingNodeApplication</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="db/d40/namespacesgns_1_1application">sgns::application</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_APPLICATION_IMPL_VALIDATING_NODE_APPLICATION_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_APPLICATION_IMPL_VALIDATING_NODE_APPLICATION_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="df/d62/sgns__application_8hpp" kindref="compound">application/sgns_application.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;api/service/api_service.hpp&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dd/d95/app__config_8hpp" kindref="compound">application/app_config.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d1/d83/configuration__storage_8hpp" kindref="compound">application/configuration_storage.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d8/d59/local__key__storage_8hpp" kindref="compound">application/impl/local_key_storage.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;verification/finality/finality.hpp&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;verification/production.hpp&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;network/router.hpp&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="db/d40/namespacesgns_1_1application" kindref="compound">sgns::application</ref></highlight></codeline>
+<codeline lineno="15"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17" refid="de/de2/classsgns_1_1application_1_1_validating_node_application" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a008fccfb7387d7b7e65fc3d941725fa7" kindref="member">ValidatingNodeApplication</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="da/d1d/classsgns_1_1application_1_1_sgns_application" kindref="compound">SgnsApplication</ref></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="19" refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a29a04337fa033834824df435ed9c7f21" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a29a04337fa033834824df435ed9c7f21" kindref="member">Production</ref><sp/>=<sp/>verification::Production;</highlight></codeline>
+<codeline lineno="20" refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a0e0add155704825bbd0f402b04d3fd5b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a0e0add155704825bbd0f402b04d3fd5b" kindref="member">Finality</ref><sp/><sp/><sp/>=<sp/>verification::finality::Finality;</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="23" refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a750ae8c88efc3a80c4226f1d6f23bfc6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a750ae8c88efc3a80c4226f1d6f23bfc6" kindref="member">~ValidatingNodeApplication</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a008fccfb7387d7b7e65fc3d941725fa7" kindref="member">ValidatingNodeApplication</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;AppConfiguration&gt;<sp/>&amp;config<sp/>);</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1aff4325a699ba31ed368f697896f90cc8" kindref="member">run</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>need<sp/>to<sp/>keep<sp/>all<sp/>of<sp/>these<sp/>instances,<sp/>since<sp/>injector<sp/>itself<sp/>is<sp/>destroyed</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="35" refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a17a7fd6db7aaacf9ff2029bd122cdf90" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;AppStateManager&gt;<sp/><ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a17a7fd6db7aaacf9ff2029bd122cdf90" kindref="member">app_state_manager_</ref>;</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37" refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a7ce025f8ddf19f1925f1b4d29133ebc1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;boost::asio::io_context&gt;<sp/><ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a7ce025f8ddf19f1925f1b4d29133ebc1" kindref="member">io_context_</ref>;</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="39" refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a50bb9d78cc46fa380cb0beca2cc96581" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;ConfigurationStorage&gt;<sp/><ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a50bb9d78cc46fa380cb0beca2cc96581" kindref="member">config_storage_</ref>;</highlight></codeline>
+<codeline lineno="40" refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a30a5a6b7020908837331a8549af6ab77" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;KeyStorage&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a30a5a6b7020908837331a8549af6ab77" kindref="member">key_storage_</ref>;</highlight></codeline>
+<codeline lineno="41" refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1aa7414fb2cc03617f99423031262f039f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;clock::SystemClock&gt;<sp/><sp/><sp/><ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1aa7414fb2cc03617f99423031262f039f" kindref="member">clock_</ref>;</highlight></codeline>
+<codeline lineno="42" refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1ac1c0e9f58ce736d815cdfb0ebfbe7b8e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;Production&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1ac1c0e9f58ce736d815cdfb0ebfbe7b8e" kindref="member">production_</ref>;</highlight></codeline>
+<codeline lineno="43" refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a6682b5c7976079354b49e62cc2569254" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;Finality&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a6682b5c7976079354b49e62cc2569254" kindref="member">finality_</ref>;</highlight></codeline>
+<codeline lineno="44" refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a2562928a2a55027fb03b534e95aca703" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;network::Router&gt;<sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a2562928a2a55027fb03b534e95aca703" kindref="member">router_</ref>;</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46" refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1af18eadc8063d7c32b076a7e870b02162" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;api::ApiService&gt;<sp/><ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1af18eadc8063d7c32b076a7e870b02162" kindref="member">jrpc_api_service_</ref>;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="48" refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a39b0a97ec174980c882f44b641062508" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Production::ExecutionStrategy<sp/><ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a39b0a97ec174980c882f44b641062508" kindref="member">production_execution_strategy_</ref>;</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight></codeline>
+<codeline lineno="50" refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a554411b1506cecc77894f1f8c8ba1f95" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref><sp/><ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application_1a554411b1506cecc77894f1f8c8ba1f95" kindref="member">logger_</ref>;</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"></highlight></codeline>
+<codeline lineno="53"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::application</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight></codeline>
+<codeline lineno="55"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_SRC_APPLICATION_IMPL_VALIDATING_NODE_APPLICATION_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/application/impl/validating_node_application.hpp"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,80 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/d6e/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1_1_blocks_changes_key" kind="struct" language="C++" prot="private">
+    <compoundname>sgns::storage::changes_trie::ChangesTrie::BlocksChangesKey</compoundname>
+    <basecompoundref refid="dd/d2f/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1_1_key_index" prot="public" virt="non-virtual">sgns::storage::changes_trie::ChangesTrie::KeyIndex</basecompoundref>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::storage::changes_trie::ChangesTrie::BlocksChangesKey</label>
+        <link refid="dd/d6e/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1_1_blocks_changes_key"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::storage::changes_trie::ChangesTrie::KeyIndex</label>
+        <link refid="dd/d2f/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1_1_key_index"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="9">
+        <label>T</label>
+      </node>
+      <node id="4">
+        <label>boost::equality_comparable&lt; Buffer &gt;</label>
+      </node>
+      <node id="5">
+        <label>boost::equality_comparable&lt; gsl::span&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="6">
+        <label>boost::equality_comparable&lt; std::vector&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="3">
+        <label>sgns::base::Buffer</label>
+        <link refid="de/dd5/classsgns_1_1base_1_1_buffer"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::changes_trie::ChangesTrie::BlocksChangesKey</label>
+        <link refid="dd/d6e/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1_1_blocks_changes_key"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::storage::changes_trie::ChangesTrie::KeyIndex</label>
+        <link refid="dd/d2f/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1_1_key_index"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+key</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::vector&lt; uint8_t &gt;</label>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/changes_trie/impl/changes_trie.hpp" line="50" column="5" bodyfile="src/storage/changes_trie/impl/changes_trie.hpp" bodystart="50" bodyend="50"/>
+    <listofallmembers>
+      <member refid="dd/d2f/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1_1_key_index_1a6889c973b60eb8223e4c5548f6b4aeed" prot="public" virt="non-virtual"><scope>sgns::storage::changes_trie::ChangesTrie::BlocksChangesKey</scope><name>block</name></member>
+      <member refid="dd/d2f/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_1_1_key_index_1a2d2b1a8659ec5cfe9f1c98f55f24b0fc" prot="public" virt="non-virtual"><scope>sgns::storage::changes_trie::ChangesTrie::BlocksChangesKey</scope><name>key</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

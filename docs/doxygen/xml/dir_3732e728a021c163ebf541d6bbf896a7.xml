@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_3732e728a021c163ebf541d6bbf896a7" kind="dir">
+    <compoundname>src/crdt/impl</compoundname>
+    <innerfile refid="d3/db3/atomic__transaction_8cpp">atomic_transaction.cpp</innerfile>
+    <innerfile refid="d2/d51/crdt__callback__manager_8cpp">crdt_callback_manager.cpp</innerfile>
+    <innerfile refid="d0/df2/crdt__data__filter_8cpp">crdt_data_filter.cpp</innerfile>
+    <innerfile refid="d9/d51/crdt__datastore_8cpp">crdt_datastore.cpp</innerfile>
+    <innerfile refid="d1/de6/crdt__heads_8cpp">crdt_heads.cpp</innerfile>
+    <innerfile refid="d4/d84/crdt__set_8cpp">crdt_set.cpp</innerfile>
+    <innerfile refid="d5/d9b/graphsync__dagsyncer_8cpp">graphsync_dagsyncer.cpp</innerfile>
+    <innerfile refid="dd/def/hierarchical__key_8cpp">hierarchical_key.cpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crdt/impl/"/>
+  </compounddef>
+</doxygen>

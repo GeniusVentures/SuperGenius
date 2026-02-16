@@ -1,0 +1,307 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/d90/configuration__storage__impl_8cpp" kind="file" language="C++">
+    <compoundname>configuration_storage_impl.cpp</compoundname>
+    <includes refid="d9/d22/configuration__storage__impl_8hpp" local="yes">application/impl/configuration_storage_impl.hpp</includes>
+    <includes local="no">boost/property_tree/json_parser.hpp</includes>
+    <includes local="no">libp2p/multi/multiaddress.hpp</includes>
+    <includes refid="db/d30/application_2impl_2config__reader_2error_8hpp" local="yes">application/impl/config_reader/error.hpp</includes>
+    <includes refid="db/da6/pt__util_8hpp" local="yes">application/impl/config_reader/pt_util.hpp</includes>
+    <includes refid="df/d28/hexutil_8hpp" local="yes">base/hexutil.hpp</includes>
+    <incdepgraph>
+      <node id="3">
+        <label>application/configuration_storage.hpp</label>
+        <link refid="d1/d83/configuration__storage_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>application/genesis_raw_config.hpp</label>
+        <link refid="db/dd2/genesis__raw__config_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>application/impl/config_reader/error.hpp</label>
+        <link refid="db/d30/application_2impl_2config__reader_2error_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>application/impl/config_reader/pt_util.hpp</label>
+        <link refid="db/da6/pt__util_8hpp"/>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/application/impl/configuration_storage_impl.cpp</label>
+        <link refid="d1/d90/configuration__storage__impl_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>application/impl/configuration_storage_impl.hpp</label>
+        <link refid="d9/d22/configuration__storage__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>primitives/common.hpp</label>
+        <link refid="d4/d26/src_2primitives_2common_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>array</label>
+      </node>
+      <node id="10">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="23">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="11">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="34">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="30">
+        <label>boost/property_tree/json_parser.hpp</label>
+      </node>
+      <node id="26">
+        <label>boost/property_tree/ptree.hpp</label>
+      </node>
+      <node id="21">
+        <label>cstddef</label>
+      </node>
+      <node id="19">
+        <label>cstdint</label>
+      </node>
+      <node id="12">
+        <label>gsl/span</label>
+      </node>
+      <node id="25">
+        <label>iostream</label>
+      </node>
+      <node id="31">
+        <label>libp2p/multi/multiaddress.hpp</label>
+      </node>
+      <node id="14">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="5">
+        <label>libp2p/peer/peer_info.hpp</label>
+      </node>
+      <node id="15">
+        <label>network/types/peer_list.hpp</label>
+      </node>
+      <node id="4">
+        <label>set</label>
+      </node>
+      <node id="28">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="29">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="17">
+        <label>string</label>
+      </node>
+      <node id="8">
+        <label>string_view</label>
+      </node>
+      <node id="9">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="db/d40/namespacesgns_1_1application">sgns::application</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d9/d22/configuration__storage__impl_8hpp" kindref="compound">application/impl/configuration_storage_impl.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/property_tree/json_parser.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libp2p/multi/multiaddress.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="db/d30/application_2impl_2config__reader_2error_8hpp" kindref="compound">application/impl/config_reader/error.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="db/da6/pt__util_8hpp" kindref="compound">application/impl/config_reader/pt_util.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="df/d28/hexutil_8hpp" kindref="compound">base/hexutil.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="db/d40/namespacesgns_1_1application" kindref="compound">sgns::application</ref><sp/>{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">/*<sp/>GenesisRawConfig<sp/>ConfigurationStorageImpl::getGenesis()<sp/>const<sp/>{</highlight></codeline>
+<codeline lineno="14"><highlight class="comment"><sp/><sp/><sp/><sp/>return<sp/>genesis_;</highlight></codeline>
+<codeline lineno="15"><highlight class="comment"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="16"><highlight class="comment"></highlight></codeline>
+<codeline lineno="17"><highlight class="comment"><sp/><sp/>network::PeerList<sp/>ConfigurationStorageImpl::getBootNodes()<sp/>const<sp/>{</highlight></codeline>
+<codeline lineno="18"><highlight class="comment"><sp/><sp/><sp/><sp/>return<sp/>boot_nodes_;</highlight></codeline>
+<codeline lineno="19"><highlight class="comment"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="20"><highlight class="comment"><sp/><sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/>outcome::result&lt;std::shared_ptr&lt;ConfigurationStorageImpl&gt;&gt;</highlight></codeline>
+<codeline lineno="22" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1ac1300f156d1ec24c2373f1cb579e0676" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1ac1300f156d1ec24c2373f1cb579e0676" kindref="member">ConfigurationStorageImpl::create</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;path)<sp/>{</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>config_storage<sp/>=<sp/>std::make_shared&lt;ConfigurationStorageImpl&gt;();</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>BOOST_OUTCOME_TRYV2(<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/>config_storage-&gt;loadFromJson(<sp/>path<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>config_storage;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">pt<sp/>=<sp/>boost::property_tree;</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a647eff73c0393d687a8f80188d8d4a06" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a647eff73c0393d687a8f80188d8d4a06" kindref="member">ConfigurationStorageImpl::loadFromJson</ref>(</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;file_path)<sp/>{</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/>pt::ptree<sp/>tree;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">try</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>pt::read_json(file_path,<sp/>tree);</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">catch</highlight><highlight class="normal"><sp/>(pt::json_parser_error<sp/>&amp;e)<sp/>{</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>spdlog::error(</highlight><highlight class="stringliteral">&quot;Parser<sp/>error:<sp/>{},<sp/>line<sp/>{}:<sp/>{}&quot;</highlight><highlight class="normal">,<sp/>e.filename(),<sp/>e.line(),<sp/>e.message());</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="db/d40/namespacesgns_1_1application_1aeec9e912f01414eb0080fcea28d0608ea993e14b6038e4569a690b5711a2faf7b" kindref="member">ConfigReaderError::PARSER_ERROR</ref>;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_OUTCOME_TRYV2(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a5d09ff85e01a5517bf4452deafb62305" kindref="member">loadGenesis</ref>(tree));</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_OUTCOME_TRYV2(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a0dda4c8b0a6bc77e999b4f96ae298a1c" kindref="member">loadBootNodes</ref>(tree));</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success();</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a5d09ff85e01a5517bf4452deafb62305" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a5d09ff85e01a5517bf4452deafb62305" kindref="member">ConfigurationStorageImpl::loadGenesis</ref>(</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::property_tree::ptree<sp/>&amp;tree)<sp/>{</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/>OUTCOME_TRY((</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/>genesis_tree),<sp/><ref refid="db/d40/namespacesgns_1_1application_1a6d5311b61c66f5458485c4f90eb9d69f" kindref="member">ensure</ref>(tree.get_child_optional(</highlight><highlight class="stringliteral">&quot;genesis&quot;</highlight><highlight class="normal">)));</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/>OUTCOME_TRY((</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/>genesis_raw_tree),</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="db/d40/namespacesgns_1_1application_1a6d5311b61c66f5458485c4f90eb9d69f" kindref="member">ensure</ref>(genesis_tree.get_child_optional(</highlight><highlight class="stringliteral">&quot;raw&quot;</highlight><highlight class="normal">)));</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/>boost::property_tree::ptree<sp/>top_tree;</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>v0.7<sp/>format</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal">(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>top_tree_opt<sp/>=<sp/>genesis_raw_tree.get_child_optional(</highlight><highlight class="stringliteral">&quot;top&quot;</highlight><highlight class="normal">);<sp/>top_tree_opt.has_value())<sp/>{</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>top_tree<sp/>=<sp/>top_tree_opt.value();</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">else</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Try<sp/>to<sp/>fall<sp/>back<sp/>to<sp/>v0.6</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>top_tree<sp/>=<sp/>genesis_raw_tree.begin()-&gt;second;</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;[key,<sp/>value]<sp/>:<sp/>top_tree)<sp/>{</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>get<sp/>rid<sp/>of<sp/>leading<sp/>0x<sp/>for<sp/>key<sp/>and<sp/>value<sp/>and<sp/>unhex</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>OUTCOME_TRY((</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/>key_processed),<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a1323ce5ec7250ac1f595cc02b990e03d" kindref="member">base::unhexWith0x</ref>(key));</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>OUTCOME_TRY((</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/>value_processed),<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a1323ce5ec7250ac1f595cc02b990e03d" kindref="member">base::unhexWith0x</ref>(value.data()));</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1ad6d028e0e6db15cbcb1ef78a9f8e61a8" kindref="member">genesis_</ref>.emplace_back(key_processed,<sp/>value_processed);</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>ignore<sp/>child<sp/>storages<sp/>as<sp/>they<sp/>are<sp/>not<sp/>yet<sp/>implemented</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="67"><highlight class="normal"></highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success();</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"></highlight></codeline>
+<codeline lineno="71" refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a0dda4c8b0a6bc77e999b4f96ae298a1c" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a0dda4c8b0a6bc77e999b4f96ae298a1c" kindref="member">ConfigurationStorageImpl::loadBootNodes</ref>(</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::property_tree::ptree<sp/>&amp;tree)<sp/>{</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/>OUTCOME_TRY((</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/>boot_nodes),<sp/><ref refid="db/d40/namespacesgns_1_1application_1a6d5311b61c66f5458485c4f90eb9d69f" kindref="member">ensure</ref>(tree.get_child_optional(</highlight><highlight class="stringliteral">&quot;bootNodes&quot;</highlight><highlight class="normal">)));</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;v<sp/>:<sp/>boot_nodes)<sp/>{</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>OUTCOME_TRY((</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/>multiaddr),</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>libp2p::multi::Multiaddress::create(v.second.data()));</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>OUTCOME_TRY((</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/>peer_id_base58),<sp/><ref refid="db/d40/namespacesgns_1_1application_1a6d5311b61c66f5458485c4f90eb9d69f" kindref="member">ensure</ref>(multiaddr.getPeerId()));</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"></highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>OUTCOME_TRY((</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/>peer_id),<sp/>libp2p::peer::PeerId::fromBase58(peer_id_base58));</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>libp2p::peer::PeerInfo<sp/>info{</highlight><highlight class="comment">/*.id<sp/>=*/</highlight><highlight class="normal"><sp/>std::move(peer_id),</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*.addresses<sp/>=*/</highlight><highlight class="normal"><sp/>{std::move(multiaddr)}};</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a11d0290b5f25fc98e12e26f0af1a8189" kindref="member">boot_nodes_</ref>.peers.push_back(info);</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success();</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"></highlight></codeline>
+<codeline lineno="87"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::application</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/application/impl/configuration_storage_impl.cpp"/>
+  </compounddef>
+</doxygen>

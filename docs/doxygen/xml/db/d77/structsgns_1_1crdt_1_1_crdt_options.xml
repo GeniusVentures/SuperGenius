@@ -1,0 +1,262 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="db/d77/structsgns_1_1crdt_1_1_crdt_options" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::crdt::CrdtOptions</compoundname>
+    <includes refid="d0/d2d/crdt__options_8hpp" local="no">crdt_options.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="db/d77/structsgns_1_1crdt_1_1_crdt_options_1ade72accd89471abe0a471aac9ad7010b" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>VerifyErrorCode</name>
+        <qualifiedname>sgns::crdt::CrdtOptions::VerifyErrorCode</qualifiedname>
+        <enumvalue id="db/d77/structsgns_1_1crdt_1_1_crdt_options_1ade72accd89471abe0a471aac9ad7010ba505a83f220c02df2f85c3810cd9ceb38" prot="public">
+          <name>Success</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="db/d77/structsgns_1_1crdt_1_1_crdt_options_1ade72accd89471abe0a471aac9ad7010baf28f1c4e6d2cc4325292489fcab443a8" prot="public">
+          <name>InvalidRebroadcastInterval</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="db/d77/structsgns_1_1crdt_1_1_crdt_options_1ade72accd89471abe0a471aac9ad7010ba6c398a9ca75c9496fc06062d77591102" prot="public">
+          <name>LoggerUndefinied</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="db/d77/structsgns_1_1crdt_1_1_crdt_options_1ade72accd89471abe0a471aac9ad7010baa1f6317e1efcbf2403865c27a8c3c18e" prot="public">
+          <name>BadNumberOfNumWorkers</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="db/d77/structsgns_1_1crdt_1_1_crdt_options_1ade72accd89471abe0a471aac9ad7010ba3879849d5d0e4e7aef7f678fba0b7cd2" prot="public">
+          <name>InvalidDAGSyncerTimeout</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_options.hpp" line="33" column="5" bodyfile="src/crdt/crdt_options.hpp" bodystart="34" bodyend="40"/>
+      </memberdef>
+      <memberdef kind="typedef" id="db/d77/structsgns_1_1crdt_1_1_crdt_options_1a6038b7689e9c2990e18bc90348130e72" prot="public" static="no">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>using sgns::crdt::CrdtOptions::Buffer = base::Buffer</definition>
+        <argsstring></argsstring>
+        <name>Buffer</name>
+        <qualifiedname>sgns::crdt::CrdtOptions::Buffer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_options.hpp" line="15" column="5" bodyfile="src/crdt/crdt_options.hpp" bodystart="15" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="db/d77/structsgns_1_1crdt_1_1_crdt_options_1a6a1d16ea8172ecd46640dc86012d3356" prot="public" static="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>using sgns::crdt::CrdtOptions::Logger = base::Logger</definition>
+        <argsstring></argsstring>
+        <name>Logger</name>
+        <qualifiedname>sgns::crdt::CrdtOptions::Logger</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_options.hpp" line="16" column="5" bodyfile="src/crdt/crdt_options.hpp" bodystart="16" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="db/d77/structsgns_1_1crdt_1_1_crdt_options_1a89ca7fa10177bf3fc0b44a7f272afa08" prot="public" static="no" mutable="no">
+        <type><ref refid="db/d77/structsgns_1_1crdt_1_1_crdt_options_1a6a1d16ea8172ecd46640dc86012d3356" kindref="member">Logger</ref></type>
+        <definition>Logger sgns::crdt::CrdtOptions::logger</definition>
+        <argsstring></argsstring>
+        <name>logger</name>
+        <qualifiedname>sgns::crdt::CrdtOptions::logger</qualifiedname>
+        <initializer>= nullptr</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_options.hpp" line="19" column="12" bodyfile="src/crdt/crdt_options.hpp" bodystart="19" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="db/d77/structsgns_1_1crdt_1_1_crdt_options_1a7aeb44c44d783b897a09d1f840973979" prot="public" static="no" mutable="no">
+        <type>long long</type>
+        <definition>long long sgns::crdt::CrdtOptions::rebroadcastIntervalMilliseconds</definition>
+        <argsstring></argsstring>
+        <name>rebroadcastIntervalMilliseconds</name>
+        <qualifiedname>sgns::crdt::CrdtOptions::rebroadcastIntervalMilliseconds</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>RebroadcastInterval specifies interval to rebroadcast data </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_options.hpp" line="22" column="15" bodyfile="src/crdt/crdt_options.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="db/d77/structsgns_1_1crdt_1_1_crdt_options_1abdd973e10b5a8eb5555b29eb42b7e7a9" prot="public" static="no" mutable="no">
+        <type>long long</type>
+        <definition>long long sgns::crdt::CrdtOptions::dagSyncerTimeoutSec</definition>
+        <argsstring></argsstring>
+        <name>dagSyncerTimeoutSec</name>
+        <qualifiedname>sgns::crdt::CrdtOptions::dagSyncerTimeoutSec</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>DAGSyncerTimeout specifies how long to wait for a <ref refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer" kindref="compound">DAGSyncer</ref>. Set to 0 to disable. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_options.hpp" line="27" column="15" bodyfile="src/crdt/crdt_options.hpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="db/d77/structsgns_1_1crdt_1_1_crdt_options_1af42221832e094181a5b28db731c93a73" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int sgns::crdt::CrdtOptions::numWorkers</definition>
+        <argsstring></argsstring>
+        <name>numWorkers</name>
+        <qualifiedname>sgns::crdt::CrdtOptions::numWorkers</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>NumWorkers specifies the number of workers ready to walk DAGs </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_options.hpp" line="30" column="9" bodyfile="src/crdt/crdt_options.hpp" bodystart="30" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="db/d77/structsgns_1_1crdt_1_1_crdt_options_1aab305809442a144afac20a961d229a8c" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="db/d77/structsgns_1_1crdt_1_1_crdt_options" kindref="compound">CrdtOptions</ref> &gt;</type>
+        <definition>static std::shared_ptr&lt; CrdtOptions &gt; sgns::crdt::CrdtOptions::DefaultOptions</definition>
+        <argsstring>()</argsstring>
+        <name>DefaultOptions</name>
+        <qualifiedname>sgns::crdt::CrdtOptions::DefaultOptions</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_options.hpp" line="42" column="28" bodyfile="src/crdt/crdt_options.hpp" bodystart="42" bodyend="50"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="db/d77/structsgns_1_1crdt_1_1_crdt_options_1adb96d53bc0f54d943fc4e17c70099478" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="db/d77/structsgns_1_1crdt_1_1_crdt_options_1ade72accd89471abe0a471aac9ad7010b" kindref="member">VerifyErrorCode</ref> &gt;</type>
+        <definition>outcome::result&lt; VerifyErrorCode &gt; sgns::crdt::CrdtOptions::Verify</definition>
+        <argsstring>() const</argsstring>
+        <name>Verify</name>
+        <qualifiedname>sgns::crdt::CrdtOptions::Verify</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Verifies <ref refid="db/d77/structsgns_1_1crdt_1_1_crdt_options" kindref="compound">CrdtOptions</ref> </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_options.hpp" line="53" column="21" bodyfile="src/crdt/crdt_options.hpp" bodystart="53" bodyend="68"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d77/structsgns_1_1crdt_1_1_crdt_options_1a0b068f3e7dbbac1b419730046e224c61" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::CrdtOptions::operator==</definition>
+        <argsstring>(const CrdtOptions &amp;rhs) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::crdt::CrdtOptions::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="db/d77/structsgns_1_1crdt_1_1_crdt_options" kindref="compound">CrdtOptions</ref> &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_options.hpp" line="70" column="10" bodyfile="src/crdt/crdt_options.hpp" bodystart="70" bodyend="73"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d77/structsgns_1_1crdt_1_1_crdt_options_1a617efebb239af7c590cd04b9a7ab96fd" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::CrdtOptions::operator!=</definition>
+        <argsstring>(const CrdtOptions &amp;rhs) const</argsstring>
+        <name>operator!=</name>
+        <qualifiedname>sgns::crdt::CrdtOptions::operator!=</qualifiedname>
+        <param>
+          <type>const <ref refid="db/d77/structsgns_1_1crdt_1_1_crdt_options" kindref="compound">CrdtOptions</ref> &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_options.hpp" line="75" column="10" bodyfile="src/crdt/crdt_options.hpp" bodystart="75" bodyend="78"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Options holds configurable values for <ref refid="db/dbb/classsgns_1_1crdt_1_1_crdt_datastore" kindref="compound">CrdtDatastore</ref>. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="4">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::crdt::CrdtOptions</label>
+        <link refid="db/d77/structsgns_1_1crdt_1_1_crdt_options"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+logger</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crdt/crdt_options.hpp" line="13" column="3" bodyfile="src/crdt/crdt_options.hpp" bodystart="14" bodyend="80"/>
+    <listofallmembers>
+      <member refid="db/d77/structsgns_1_1crdt_1_1_crdt_options_1a6038b7689e9c2990e18bc90348130e72" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtOptions</scope><name>Buffer</name></member>
+      <member refid="db/d77/structsgns_1_1crdt_1_1_crdt_options_1abdd973e10b5a8eb5555b29eb42b7e7a9" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtOptions</scope><name>dagSyncerTimeoutSec</name></member>
+      <member refid="db/d77/structsgns_1_1crdt_1_1_crdt_options_1aab305809442a144afac20a961d229a8c" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtOptions</scope><name>DefaultOptions</name></member>
+      <member refid="db/d77/structsgns_1_1crdt_1_1_crdt_options_1a6a1d16ea8172ecd46640dc86012d3356" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtOptions</scope><name>Logger</name></member>
+      <member refid="db/d77/structsgns_1_1crdt_1_1_crdt_options_1a89ca7fa10177bf3fc0b44a7f272afa08" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtOptions</scope><name>logger</name></member>
+      <member refid="db/d77/structsgns_1_1crdt_1_1_crdt_options_1af42221832e094181a5b28db731c93a73" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtOptions</scope><name>numWorkers</name></member>
+      <member refid="db/d77/structsgns_1_1crdt_1_1_crdt_options_1a617efebb239af7c590cd04b9a7ab96fd" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtOptions</scope><name>operator!=</name></member>
+      <member refid="db/d77/structsgns_1_1crdt_1_1_crdt_options_1a0b068f3e7dbbac1b419730046e224c61" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtOptions</scope><name>operator==</name></member>
+      <member refid="db/d77/structsgns_1_1crdt_1_1_crdt_options_1a7aeb44c44d783b897a09d1f840973979" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtOptions</scope><name>rebroadcastIntervalMilliseconds</name></member>
+      <member refid="db/d77/structsgns_1_1crdt_1_1_crdt_options_1adb96d53bc0f54d943fc4e17c70099478" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtOptions</scope><name>Verify</name></member>
+      <member refid="db/d77/structsgns_1_1crdt_1_1_crdt_options_1ade72accd89471abe0a471aac9ad7010b" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtOptions</scope><name>VerifyErrorCode</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

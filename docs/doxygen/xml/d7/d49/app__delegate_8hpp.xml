@@ -1,0 +1,102 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/d49/app__delegate_8hpp" kind="file" language="C++">
+    <compoundname>app_delegate.hpp</compoundname>
+    <includes local="no">boost/program_options.hpp</includes>
+    <includes local="no">iostream</includes>
+    <includedby refid="d5/df0/app__delegate_8cpp" local="yes">node/app_delegate.cpp</includedby>
+    <includedby refid="d2/dd2/entry_8cpp" local="yes">node/entry.cpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>node/app_delegate.hpp</label>
+        <link refid="d7/d49/app__delegate_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>boost/program_options.hpp</label>
+      </node>
+      <node id="3">
+        <label>iostream</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>node/app_delegate.cpp</label>
+        <link refid="d5/df0/app__delegate_8cpp"/>
+      </node>
+      <node id="1">
+        <label>node/app_delegate.hpp</label>
+        <link refid="d7/d49/app__delegate_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>node/entry.cpp</label>
+        <link refid="d2/dd2/entry_8cpp"/>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d7/d28/classsgns_1_1_app_delegate" prot="public">sgns::AppDelegate</innerclass>
+    <innernamespace refid="d4/da9/namespaceboost">boost</innernamespace>
+    <innernamespace refid="d9/d75/namespaceboost_1_1filesystem">boost::filesystem</innernamespace>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="db/d40/namespacesgns_1_1application">sgns::application</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_NODE_APP_DELEGATE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_NODE_APP_DELEGATE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/program_options.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;iostream&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7" refid="d4/da9/namespaceboost" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d4/da9/namespaceboost" kindref="compound">boost</ref></highlight></codeline>
+<codeline lineno="8"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="9" refid="d9/d75/namespaceboost_1_1filesystem" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d9/d75/namespaceboost_1_1filesystem" kindref="compound">filesystem</ref></highlight></codeline>
+<codeline lineno="10"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">path;</highlight></codeline>
+<codeline lineno="12"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="13"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="16"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">node_flags;</highlight></codeline>
+<codeline lineno="18"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="21"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="db/d40/namespacesgns_1_1application" kindref="compound">application</ref></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d8/dbd/classsgns_1_1application_1_1_block_producing_node_application" kindref="compound">BlockProducingNodeApplication</ref>;</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="de/de2/classsgns_1_1application_1_1_validating_node_application" kindref="compound">ValidatingNodeApplication</ref>;</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl" kindref="compound">AppConfigurationImpl</ref>;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>application</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36" refid="d7/d28/classsgns_1_1_app_delegate" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d7/d28/classsgns_1_1_app_delegate_1a17d6b461728504fc5a915c1c1446c8eb" kindref="member">AppDelegate</ref><sp/>{</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">explicit</highlight><highlight class="normal"><sp/><ref refid="d7/d28/classsgns_1_1_app_delegate_1a17d6b461728504fc5a915c1c1446c8eb" kindref="member">AppDelegate</ref><sp/>();</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d7/d28/classsgns_1_1_app_delegate_1a72200dbd41609da403d95e5c078b0d9e" kindref="member">~AppDelegate</ref><sp/>();</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/><ref refid="d7/d28/classsgns_1_1_app_delegate_1a4455dea1b7e5c61c1eddf586bc07c208" kindref="member">init</ref>(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>argc,<sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>*<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>*<sp/>argv);</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d7/d28/classsgns_1_1_app_delegate_1ac1136edb7fcbce497c1c4c59d37f75f9" kindref="member">run</ref>(</highlight><highlight class="comment">/*boost::filesystem::path<sp/>const<sp/>&amp;,<sp/>sgns::node_flags<sp/>const<sp/>&amp;<sp/>flags*/</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d7/d28/classsgns_1_1_app_delegate_1a1c5aa79f3baded505f0ce219f2636c85" kindref="member">exit</ref>();</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>boost::program_options::variables_map<sp/>vm;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d7/d28/classsgns_1_1_app_delegate_1a23054f15f822d5f2371e6b4abb3a3846" kindref="member">init_node</ref>(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>argc,<sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>*<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>*<sp/>argv);</highlight></codeline>
+<codeline lineno="64" refid="d7/d28/classsgns_1_1_app_delegate_1a79070f6dcedfe3a1270139d7aed43339" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;application::BlockProducingNodeApplication&gt;<sp/><ref refid="d7/d28/classsgns_1_1_app_delegate_1a79070f6dcedfe3a1270139d7aed43339" kindref="member">app_production</ref>;</highlight></codeline>
+<codeline lineno="65" refid="d7/d28/classsgns_1_1_app_delegate_1a8a74a26299d5c9c7822cfc8a15df00ac" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;application::ValidatingNodeApplication&gt;<sp/><ref refid="d7/d28/classsgns_1_1_app_delegate_1a8a74a26299d5c9c7822cfc8a15df00ac" kindref="member">app_validating</ref>;</highlight></codeline>
+<codeline lineno="66" refid="d7/d28/classsgns_1_1_app_delegate_1a7fe8aec529f948b6163e0a19478baa62" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;application::AppConfigurationImpl&gt;<sp/><ref refid="d7/d28/classsgns_1_1_app_delegate_1a7fe8aec529f948b6163e0a19478baa62" kindref="member">configuration</ref>;</highlight></codeline>
+<codeline lineno="67"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="68"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="69"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="node/app_delegate.hpp"/>
+  </compounddef>
+</doxygen>

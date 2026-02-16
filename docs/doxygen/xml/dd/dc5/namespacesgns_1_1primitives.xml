@@ -1,0 +1,2669 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/dc5/namespacesgns_1_1primitives" kind="namespace" language="C++">
+    <compoundname>sgns::primitives</compoundname>
+    <innerclass refid="de/d40/structsgns_1_1primitives_1_1_session" prot="public">sgns::primitives::Session</innerclass>
+    <innerclass refid="d6/d9c/structsgns_1_1primitives_1_1_subscriber" prot="public">sgns::primitives::Subscriber</innerclass>
+    <innerclass refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" prot="public">sgns::primitives::AuthorityId</innerclass>
+    <innerclass refid="db/dff/structsgns_1_1primitives_1_1_authority" prot="public">sgns::primitives::Authority</innerclass>
+    <innerclass refid="d6/d76/structsgns_1_1primitives_1_1_authority_list" prot="public">sgns::primitives::AuthorityList</innerclass>
+    <innerclass refid="da/dcc/structsgns_1_1primitives_1_1_block" prot="public">sgns::primitives::Block</innerclass>
+    <innerclass refid="d3/db4/structsgns_1_1primitives_1_1_block_data" prot="public">sgns::primitives::BlockData</innerclass>
+    <innerclass refid="d4/ded/structsgns_1_1primitives_1_1_block_header" prot="public">sgns::primitives::BlockHeader</innerclass>
+    <innerclass refid="de/d83/structsgns_1_1primitives_1_1_check_inherents_result" prot="public">sgns::primitives::CheckInherentsResult</innerclass>
+    <innerclass refid="d7/dcf/structsgns_1_1primitives_1_1_pre_runtime" prot="public">sgns::primitives::PreRuntime</innerclass>
+    <innerclass refid="d5/de0/structsgns_1_1primitives_1_1_verification" prot="public">sgns::primitives::Verification</innerclass>
+    <innerclass refid="d9/df8/structsgns_1_1primitives_1_1_seal" prot="public">sgns::primitives::Seal</innerclass>
+    <innerclass refid="d2/d62/structsgns_1_1primitives_1_1_extrinsic" prot="public">sgns::primitives::Extrinsic</innerclass>
+    <innerclass refid="de/df2/structsgns_1_1primitives_1_1_inherent_data" prot="public">sgns::primitives::InherentData</innerclass>
+    <innerclass refid="de/d97/structsgns_1_1primitives_1_1_justification" prot="public">sgns::primitives::Justification</innerclass>
+    <innerclass refid="d4/dbe/structsgns_1_1primitives_1_1_production_configuration" prot="public">sgns::primitives::ProductionConfiguration</innerclass>
+    <innerclass refid="da/d18/structsgns_1_1primitives_1_1_delay_in_chain" prot="public">sgns::primitives::DelayInChain</innerclass>
+    <innerclass refid="d4/d7b/structsgns_1_1primitives_1_1_authority_list_change" prot="public">sgns::primitives::AuthorityListChange</innerclass>
+    <innerclass refid="db/d4b/structsgns_1_1primitives_1_1_scheduled_change" prot="public">sgns::primitives::ScheduledChange</innerclass>
+    <innerclass refid="de/dc2/structsgns_1_1primitives_1_1_forced_change" prot="public">sgns::primitives::ForcedChange</innerclass>
+    <innerclass refid="d2/d91/structsgns_1_1primitives_1_1_on_disabled" prot="public">sgns::primitives::OnDisabled</innerclass>
+    <innerclass refid="db/df4/structsgns_1_1primitives_1_1_pause" prot="public">sgns::primitives::Pause</innerclass>
+    <innerclass refid="d3/da5/structsgns_1_1primitives_1_1_resume" prot="public">sgns::primitives::Resume</innerclass>
+    <innerclass refid="d6/d60/structsgns_1_1primitives_1_1_transaction" prot="public">sgns::primitives::Transaction</innerclass>
+    <innerclass refid="d3/d12/structsgns_1_1primitives_1_1_valid_transaction" prot="public">sgns::primitives::ValidTransaction</innerclass>
+    <innerclass refid="de/d6d/structsgns_1_1primitives_1_1_version" prot="public">sgns::primitives::Version</innerclass>
+    <innernamespace refid="df/d2f/namespacesgns_1_1primitives_1_1detail">sgns::primitives::detail</innernamespace>
+    <innernamespace refid="dd/d42/namespacesgns_1_1primitives_1_1parachain">sgns::primitives::parachain</innernamespace>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="dd/dc5/namespacesgns_1_1primitives_1a31db1235989cae28bc7e953e2cbf52f2" prot="public" static="no" strong="yes">
+        <type>uint8_t</type>
+        <name>ApplyOutcome</name>
+        <qualifiedname>sgns::primitives::ApplyOutcome</qualifiedname>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1a31db1235989cae28bc7e953e2cbf52f2ad0749aaba8b833466dfcbb0428e4f89c" prot="public">
+          <name>SUCCESS</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1a31db1235989cae28bc7e953e2cbf52f2ac2759effffc94bb9acc71d69fe3e8a1f" prot="public">
+          <name>FAIL</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/apply_result.hpp" line="10" column="3" bodyfile="src/primitives/apply_result.hpp" bodystart="10" bodyend="10"/>
+      </memberdef>
+      <memberdef kind="enum" id="dd/dc5/namespacesgns_1_1primitives_1a460aa4ba1c4c226a9999a737a5fdd06e" prot="public" static="no" strong="yes">
+        <type>uint8_t</type>
+        <name>ApplyError</name>
+        <qualifiedname>sgns::primitives::ApplyError</qualifiedname>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1a460aa4ba1c4c226a9999a737a5fdd06ea1445c3747a23b5fe26b9a373a5c6018a" prot="public">
+          <name>BAD_SIGNATURE</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+<para>Bad signature. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1a460aa4ba1c4c226a9999a737a5fdd06ea4d855a061b3066dc14a3b12ed26b5456" prot="public">
+          <name>STALE</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+<para>Nonce too low. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1a460aa4ba1c4c226a9999a737a5fdd06eafa4cec41dc4b368db740c5cb2300b7a3" prot="public">
+          <name>FUTURE</name>
+          <initializer>= 2</initializer>
+          <briefdescription>
+<para>Nonce too high. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1a460aa4ba1c4c226a9999a737a5fdd06ea68e07911f218d549fd4a4d737fbae8cb" prot="public">
+          <name>CANT_PAY</name>
+          <initializer>= 3</initializer>
+          <briefdescription>
+<para>Sending account had too low a balance. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1a460aa4ba1c4c226a9999a737a5fdd06ea281a46e5abc3e72f6f164797e22a98cc" prot="public">
+          <name>FULL_BLOCK</name>
+          <initializer>= 255</initializer>
+          <briefdescription>
+<para><ref refid="da/dcc/structsgns_1_1primitives_1_1_block" kindref="compound">Block</ref> is full, no more extrinsics can be applied. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/apply_result.hpp" line="28" column="3" bodyfile="src/primitives/apply_result.hpp" bodystart="28" bodyend="39"/>
+      </memberdef>
+      <memberdef kind="enum" id="dd/dc5/namespacesgns_1_1primitives_1a110a7031fbceb91e044a64c51d0279dd" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>InherentDataError</name>
+        <qualifiedname>sgns::primitives::InherentDataError</qualifiedname>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1a110a7031fbceb91e044a64c51d0279dda3d885ceb9eaf0ce420df9cf310d6d9e1" prot="public">
+          <name>IDENTIFIER_ALREADY_EXISTS</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1a110a7031fbceb91e044a64c51d0279dda361ef95a17a13b9cc68ebc7663610d76" prot="public">
+          <name>IDENTIFIER_DOES_NOT_EXIST</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>inherent data encode/decode error codes </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/inherent_data.hpp" line="21" column="3" bodyfile="src/primitives/inherent_data.hpp" bodystart="21" bodyend="24"/>
+      </memberdef>
+      <memberdef kind="enum" id="dd/dc5/namespacesgns_1_1primitives_1aec2a143154e31796fa584017229720c8" prot="public" static="no" strong="yes">
+        <type>uint8_t</type>
+        <name>InvalidTransaction</name>
+        <qualifiedname>sgns::primitives::InvalidTransaction</qualifiedname>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1aec2a143154e31796fa584017229720c8ac3755e61202abd74da5885d2e9c9160e" prot="public">
+          <name>Call</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+<para>The call of the transaction is not expected. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1aec2a143154e31796fa584017229720c8ac453a4b8e8d98e82f35b67f433e3b4da" prot="public">
+          <name>Payment</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+<para>General error to do with the inability to pay some fees (e.g. account balance too low). </para>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1aec2a143154e31796fa584017229720c8aadff855173c9b92b5478129af7d39e03" prot="public">
+          <name>Future</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+<para>General error to do with the transaction not yet being valid (e.g. nonce too high). </para>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1aec2a143154e31796fa584017229720c8af1ac273d3c6d8e6489bf332819a2f650" prot="public">
+          <name>Stale</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+<para>General error to do with the transaction being outdated (e.g. nonce too low). </para>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1aec2a143154e31796fa584017229720c8a4223de3061d2d322401a62e6290b84af" prot="public">
+          <name>BadProof</name>
+          <briefdescription>
+<para>General error to do with the transaction&apos;s proofs (e.g. signature). </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1aec2a143154e31796fa584017229720c8a298d88c11838a8c1a2f3e2f6a240d51f" prot="public">
+          <name>AncientBirthBlock</name>
+          <briefdescription>
+<para>The transaction birth block is ancient. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1aec2a143154e31796fa584017229720c8a6593c2e6c694c0f177b4d23dab81a222" prot="public">
+          <name>ExhaustsResources</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+<para>The transaction would exhaust the resources of current block.</para>
+<para>The transaction might be valid, but there are not enough resources left in the current block. </para>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1aec2a143154e31796fa584017229720c8a90589c47f06eb971d548591f23c285af" prot="public">
+          <name>Custom</name>
+          <briefdescription>
+<para>Any other custom invalid validity that is not covered by this enum. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction" kindref="compound">Transaction</ref> is invalid. Details are described by the error code. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/transaction_validity.hpp" line="92" column="3" bodyfile="src/primitives/transaction_validity.hpp" bodystart="92" bodyend="115"/>
+      </memberdef>
+      <memberdef kind="enum" id="dd/dc5/namespacesgns_1_1primitives_1a2acd57959b0142a6e26ae0373efc2f37" prot="public" static="no" strong="yes">
+        <type>uint8_t</type>
+        <name>UnknownTransaction</name>
+        <qualifiedname>sgns::primitives::UnknownTransaction</qualifiedname>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1a2acd57959b0142a6e26ae0373efc2f37a134aa723754a70aca4b4666babcad8e1" prot="public">
+          <name>CannotLookup</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+<para>Could not lookup some information that is required to validate the transaction. </para>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1a2acd57959b0142a6e26ae0373efc2f37a8d39b41c7eba495945ee236df2eb1dcf" prot="public">
+          <name>NoUnsignedValidator</name>
+          <briefdescription>
+<para>No validator found for the given unsigned transaction. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/dc5/namespacesgns_1_1primitives_1a2acd57959b0142a6e26ae0373efc2f37a90589c47f06eb971d548591f23c285af" prot="public">
+          <name>Custom</name>
+          <briefdescription>
+<para>Any other custom unknown validity that is not covered by this enum. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>An unknown transaction validity. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/transaction_validity.hpp" line="145" column="3" bodyfile="src/primitives/transaction_validity.hpp" bodystart="145" bodyend="153"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a8188644a9d945cf744cc636e39a4e0b3" prot="public" static="no">
+        <type>boost::variant&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1a31db1235989cae28bc7e953e2cbf52f2" kindref="member">ApplyOutcome</ref>, <ref refid="dd/dc5/namespacesgns_1_1primitives_1a460aa4ba1c4c226a9999a737a5fdd06e" kindref="member">ApplyError</ref> &gt;</type>
+        <definition>using sgns::primitives::ApplyResult = boost::variant&lt;ApplyOutcome, ApplyError&gt;</definition>
+        <argsstring></argsstring>
+        <name>ApplyResult</name>
+        <qualifiedname>sgns::primitives::ApplyResult</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/apply_result.hpp" line="57" column="3" bodyfile="src/primitives/apply_result.hpp" bodystart="57" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a0cc2548d85f1c749341c8ea228d1168e" prot="public" static="no">
+        <type>uint64_t</type>
+        <definition>using sgns::primitives::SubscriptionId = uint64_t</definition>
+        <argsstring></argsstring>
+        <name>SubscriptionId</name>
+        <qualifiedname>sgns::primitives::SubscriptionId</qualifiedname>
+        <briefdescription>
+<para><ref refid="dd/dc5/namespacesgns_1_1primitives_1a0cc2548d85f1c749341c8ea228d1168e" kindref="member">SubscriptionId</ref> primitive. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/author_api_primitives.hpp" line="19" column="3" bodyfile="src/primitives/author_api_primitives.hpp" bodystart="19" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a6810bd3ee844fca6a87654eef0c0c364" prot="public" static="no">
+        <type>boost::optional&lt; std::shared_ptr&lt; <ref refid="de/d40/structsgns_1_1primitives_1_1_session" kindref="compound">Session</ref> &gt; &gt;</type>
+        <definition>using sgns::primitives::Metadata = boost::optional&lt;std::shared_ptr&lt;Session&gt;&gt;</definition>
+        <argsstring></argsstring>
+        <name>Metadata</name>
+        <qualifiedname>sgns::primitives::Metadata</qualifiedname>
+        <briefdescription>
+<para><ref refid="dd/dc5/namespacesgns_1_1primitives_1a6810bd3ee844fca6a87654eef0c0c364" kindref="member">Metadata</ref> primitive. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/author_api_primitives.hpp" line="32" column="3" bodyfile="src/primitives/author_api_primitives.hpp" bodystart="32" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1aab37b377ae4dffc3684935d305830ea4" prot="public" static="no">
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>using sgns::primitives::ExtrinsicKey = std::vector&lt;uint8_t&gt;</definition>
+        <argsstring></argsstring>
+        <name>ExtrinsicKey</name>
+        <qualifiedname>sgns::primitives::ExtrinsicKey</qualifiedname>
+        <briefdescription>
+<para><ref refid="dd/dc5/namespacesgns_1_1primitives_1aab37b377ae4dffc3684935d305830ea4" kindref="member">ExtrinsicKey</ref> is used as a key to search extrinsic. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/author_api_primitives.hpp" line="44" column="3" bodyfile="src/primitives/author_api_primitives.hpp" bodystart="44" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a76ed3e049cb541757b4d386684854111" prot="public" static="no">
+        <type>uint64_t</type>
+        <definition>using sgns::primitives::AuthorityWeight = uint64_t</definition>
+        <argsstring></argsstring>
+        <name>AuthorityWeight</name>
+        <qualifiedname>sgns::primitives::AuthorityWeight</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/authority.hpp" line="10" column="3" bodyfile="src/primitives/authority.hpp" bodystart="10" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a2b73f06e6dcbc9302a94f7a9c6ed58e5" prot="public" static="no">
+        <type>uint64_t</type>
+        <definition>using sgns::primitives::AuthorityIndex = uint64_t</definition>
+        <argsstring></argsstring>
+        <name>AuthorityIndex</name>
+        <qualifiedname>sgns::primitives::AuthorityIndex</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">Authority</ref> index </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/authority.hpp" line="41" column="3" bodyfile="src/primitives/authority.hpp" bodystart="41" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a016631413654509e31b54b0d3ac7f865" prot="public" static="no">
+        <type>std::vector&lt; <ref refid="d2/d62/structsgns_1_1primitives_1_1_extrinsic" kindref="compound">Extrinsic</ref> &gt;</type>
+        <definition>using sgns::primitives::BlockBody = std::vector&lt;Extrinsic&gt;</definition>
+        <argsstring></argsstring>
+        <name>BlockBody</name>
+        <qualifiedname>sgns::primitives::BlockBody</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/block.hpp" line="10" column="3" bodyfile="src/primitives/block.hpp" bodystart="10" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" prot="public" static="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+        <definition>using sgns::primitives::BlockHash = base::Hash256</definition>
+        <argsstring></argsstring>
+        <name>BlockHash</name>
+        <qualifiedname>sgns::primitives::BlockHash</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/block_id.hpp" line="11" column="3" bodyfile="src/primitives/block_id.hpp" bodystart="11" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" prot="public" static="no">
+        <type>boost::variant&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">BlockHash</ref>, <ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">BlockNumber</ref> &gt;</type>
+        <definition>using sgns::primitives::BlockId = boost::variant&lt;BlockHash, BlockNumber&gt;</definition>
+        <argsstring></argsstring>
+        <name>BlockId</name>
+        <qualifiedname>sgns::primitives::BlockId</qualifiedname>
+        <briefdescription>
+<para><ref refid="da/dcc/structsgns_1_1primitives_1_1_block" kindref="compound">Block</ref> id is the variant over <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">BlockHash</ref> and <ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">BlockNumber</ref>. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/block_id.hpp" line="14" column="3" bodyfile="src/primitives/block_id.hpp" bodystart="14" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a954eb70f75996eae737945e62fec4e2e" prot="public" static="no">
+        <type>uint64_t</type>
+        <definition>using sgns::primitives::BlocksRequestId = uint64_t</definition>
+        <argsstring></argsstring>
+        <name>BlocksRequestId</name>
+        <qualifiedname>sgns::primitives::BlocksRequestId</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/common.hpp" line="10" column="3" bodyfile="src/primitives/common.hpp" bodystart="10" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" prot="public" static="no">
+        <type>uint64_t</type>
+        <definition>using sgns::primitives::BlockNumber = uint64_t</definition>
+        <argsstring></argsstring>
+        <name>BlockNumber</name>
+        <qualifiedname>sgns::primitives::BlockNumber</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/common.hpp" line="12" column="3" bodyfile="src/primitives/common.hpp" bodystart="12" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a49e00cc8ea1725af2bb470e0eee60109" prot="public" static="no">
+        <type><ref refid="de/d12/structsgns_1_1primitives_1_1detail_1_1_block_info_t" kindref="compound">detail::BlockInfoT</ref>&lt; struct BlockInfoTag &gt;</type>
+        <definition>using sgns::primitives::BlockInfo = detail::BlockInfoT&lt;struct BlockInfoTag&gt;</definition>
+        <argsstring></argsstring>
+        <name>BlockInfo</name>
+        <qualifiedname>sgns::primitives::BlockInfo</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/common.hpp" line="49" column="3" bodyfile="src/primitives/common.hpp" bodystart="49" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a5750bd8cf94be5a476bd9da95a34aaba" prot="public" static="no">
+        <type><ref refid="d1/d56/namespacesgns_1_1scale_1ac1997d51bb44310de23a0fd42d42aac0" kindref="member">scale::CompactInteger</ref></type>
+        <definition>using sgns::primitives::CompactInteger = scale::CompactInteger</definition>
+        <argsstring></argsstring>
+        <name>CompactInteger</name>
+        <qualifiedname>sgns::primitives::CompactInteger</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/compact_integer.hpp" line="10" column="3" bodyfile="src/primitives/compact_integer.hpp" bodystart="10" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a35bb0713379fbbf57b9dcd3704b53596" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; 4 &gt;</type>
+        <definition>using sgns::primitives::VerificationEngineId = base::Blob&lt;4&gt;</definition>
+        <argsstring></argsstring>
+        <name>VerificationEngineId</name>
+        <qualifiedname>sgns::primitives::VerificationEngineId</qualifiedname>
+        <briefdescription>
+<para><ref refid="d5/de0/structsgns_1_1primitives_1_1_verification" kindref="compound">Verification</ref> engine unique ID. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/digest.hpp" line="11" column="3" bodyfile="src/primitives/digest.hpp" bodystart="11" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1af13b68eef7bd75c3c56b1fcb0a46d3c7" prot="public" static="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+        <definition>using sgns::primitives::ChangesTrieRoot = base::Hash256</definition>
+        <argsstring></argsstring>
+        <name>ChangesTrieRoot</name>
+        <qualifiedname>sgns::primitives::ChangesTrieRoot</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>System digest item that contains the root of changes trie at given block. It is created for every block iff runtime supports changes trie creation. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/digest.hpp" line="23" column="3" bodyfile="src/primitives/digest.hpp" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1abd516d84b76367cf16186753fc895890" prot="public" static="no">
+        <type>boost::variant&lt; <ref refid="da/dac/structsgns_1_1_unused" kindref="compound">Unused</ref>&lt; 0 &gt;, <ref refid="da/dac/structsgns_1_1_unused" kindref="compound">Unused</ref>&lt; 1 &gt;, <ref refid="dd/dc5/namespacesgns_1_1primitives_1af13b68eef7bd75c3c56b1fcb0a46d3c7" kindref="member">ChangesTrieRoot</ref>, <ref refid="da/dac/structsgns_1_1_unused" kindref="compound">Unused</ref>&lt; 3 &gt;, <ref refid="d5/de0/structsgns_1_1primitives_1_1_verification" kindref="compound">Verification</ref>, <ref refid="d9/df8/structsgns_1_1primitives_1_1_seal" kindref="compound">Seal</ref>, <ref refid="d7/dcf/structsgns_1_1primitives_1_1_pre_runtime" kindref="compound">PreRuntime</ref> &gt;</type>
+        <definition>using sgns::primitives::DigestItem = boost::variant&lt;Unused&lt;0&gt;,        
+                                   Unused&lt;1&gt;,        
+                                   ChangesTrieRoot,  
+                                   Unused&lt;3&gt;,        
+                                   Verification,     
+                                   Seal,             
+                                   PreRuntime&gt;</definition>
+        <argsstring></argsstring>
+        <name>DigestItem</name>
+        <qualifiedname>sgns::primitives::DigestItem</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><ref refid="dd/dc5/namespacesgns_1_1primitives_1ab8880d489009bfb6d376eb6dc0c1a855" kindref="member">Digest</ref> item that is able to encode/decode &apos;system&apos; digest items and provide opaque access to other items. Note: order of types in variant matters. Should match type ids from here: </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/digest.hpp" line="91" column="3" bodyfile="src/primitives/digest.hpp" bodystart="91" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1ab8880d489009bfb6d376eb6dc0c1a855" prot="public" static="no">
+        <type>std::vector&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1abd516d84b76367cf16186753fc895890" kindref="member">DigestItem</ref> &gt;</type>
+        <definition>using sgns::primitives::Digest = std::vector&lt;DigestItem&gt;</definition>
+        <argsstring></argsstring>
+        <name>Digest</name>
+        <qualifiedname>sgns::primitives::Digest</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><ref refid="dd/dc5/namespacesgns_1_1primitives_1ab8880d489009bfb6d376eb6dc0c1a855" kindref="member">Digest</ref> is an implementation- and usage-defined entity, for example, information, needed to verify the block </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/digest.hpp" line="103" column="3" bodyfile="src/primitives/digest.hpp" bodystart="103" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1abd2964ee5c750201a675543e026ad732" prot="public" static="no">
+        <type>uint32_t</type>
+        <definition>using sgns::primitives::ExtrinsicIndex = uint32_t</definition>
+        <argsstring></argsstring>
+        <name>ExtrinsicIndex</name>
+        <qualifiedname>sgns::primitives::ExtrinsicIndex</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Index of an extrinsic in a block </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/extrinsic.hpp" line="13" column="3" bodyfile="src/primitives/extrinsic.hpp" bodystart="13" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a8422e89a738f542cf8371df481a9dcdb" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; 8u &gt;</type>
+        <definition>using sgns::primitives::InherentIdentifier = base::Blob&lt;8u&gt;</definition>
+        <argsstring></argsstring>
+        <name>InherentIdentifier</name>
+        <qualifiedname>sgns::primitives::InherentIdentifier</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/inherent_data.hpp" line="30" column="3" bodyfile="src/primitives/inherent_data.hpp" bodystart="30" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a6eb0f88a12597cb3e901560eef802d27" prot="public" static="no">
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>using sgns::primitives::OpaqueMetadata = std::vector&lt;uint8_t&gt;</definition>
+        <argsstring></argsstring>
+        <name>OpaqueMetadata</name>
+        <qualifiedname>sgns::primitives::OpaqueMetadata</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>SuperGenius primitive, which is opaque representation of RuntimeMetadata </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/opaque_metadata.hpp" line="13" column="3" bodyfile="src/primitives/opaque_metadata.hpp" bodystart="13" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a9cddd982f876ce09ce9ef308479611c9" prot="public" static="no">
+        <type>uint64_t</type>
+        <definition>using sgns::primitives::ProductionSlotNumber = uint64_t</definition>
+        <argsstring></argsstring>
+        <name>ProductionSlotNumber</name>
+        <qualifiedname>sgns::primitives::ProductionSlotNumber</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/production_configuration.hpp" line="13" column="3" bodyfile="src/primitives/production_configuration.hpp" bodystart="13" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a38ef7c6193dcebc37fcba10a1c6c7ed4" prot="public" static="no">
+        <type>clock::SystemClock</type>
+        <definition>using sgns::primitives::ProductionClock = clock::SystemClock</definition>
+        <argsstring></argsstring>
+        <name>ProductionClock</name>
+        <qualifiedname>sgns::primitives::ProductionClock</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/production_configuration.hpp" line="14" column="3" bodyfile="src/primitives/production_configuration.hpp" bodystart="14" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a7e9830ecb34f6b06f932a3ad23b2fb63" prot="public" static="no">
+        <type>ProductionClock::Duration</type>
+        <definition>using sgns::primitives::ProductionDuration = ProductionClock::Duration</definition>
+        <argsstring></argsstring>
+        <name>ProductionDuration</name>
+        <qualifiedname>sgns::primitives::ProductionDuration</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/production_configuration.hpp" line="15" column="3" bodyfile="src/primitives/production_configuration.hpp" bodystart="15" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a66f7254721d2a6e72bb6c5cfe999bb3a" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; <ref refid="df/d05/namespacesgns_1_1crypto_1_1constants_1_1sr25519_1_1vrf_1aee9c70f0446e34d0dbd0f93b69ff2ce5a187d6c92af680abedbe2346f446055f8" kindref="member">crypto::constants::sr25519::vrf::OUTPUT_SIZE</ref> &gt;</type>
+        <definition>using sgns::primitives::Randomness = base::Blob&lt;crypto::constants::sr25519::vrf::OUTPUT_SIZE&gt;</definition>
+        <argsstring></argsstring>
+        <name>Randomness</name>
+        <qualifiedname>sgns::primitives::Randomness</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/production_configuration.hpp" line="16" column="3" bodyfile="src/primitives/production_configuration.hpp" bodystart="16" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1ad392b4e4cac3ce9aea0bd7386ed8d7d9" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; 32 &gt;</type>
+        <definition>using sgns::primitives::SessionKey = base::Blob&lt;32&gt;</definition>
+        <argsstring></argsstring>
+        <name>SessionKey</name>
+        <qualifiedname>sgns::primitives::SessionKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/session_key.hpp" line="10" column="3" bodyfile="src/primitives/session_key.hpp" bodystart="10" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a08446031cdcbf0b8417d6a36fdf0f192" prot="public" static="no">
+        <type>boost::variant&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1aec2a143154e31796fa584017229720c8" kindref="member">InvalidTransaction</ref>, <ref refid="dd/dc5/namespacesgns_1_1primitives_1a2acd57959b0142a6e26ae0373efc2f37" kindref="member">UnknownTransaction</ref> &gt;</type>
+        <definition>using sgns::primitives::TransactionValidityError = 
+boost::variant&lt;InvalidTransaction, UnknownTransaction&gt;</definition>
+        <argsstring></argsstring>
+        <name>TransactionValidityError</name>
+        <qualifiedname>sgns::primitives::TransactionValidityError</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/transaction_validity.hpp" line="182" column="3" bodyfile="src/primitives/transaction_validity.hpp" bodystart="182" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a9bb55b15560eee3089114cc1b52b30c6" prot="public" static="no">
+        <type>boost::variant&lt; <ref refid="d3/d12/structsgns_1_1primitives_1_1_valid_transaction" kindref="compound">ValidTransaction</ref>, <ref refid="dd/dc5/namespacesgns_1_1primitives_1a08446031cdcbf0b8417d6a36fdf0f192" kindref="member">TransactionValidityError</ref> &gt;</type>
+        <definition>using sgns::primitives::TransactionValidity = 
+boost::variant&lt;ValidTransaction, TransactionValidityError&gt;</definition>
+        <argsstring></argsstring>
+        <name>TransactionValidity</name>
+        <qualifiedname>sgns::primitives::TransactionValidity</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Information on a transaction&apos;s validity and, if valid, on how it relate to other transactions. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/transaction_validity.hpp" line="189" column="3" bodyfile="src/primitives/transaction_validity.hpp" bodystart="189" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a7e52bb4e7c7894974e6ccf11be227f82" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; 8u &gt;</type>
+        <definition>using sgns::primitives::ApiId = base::Blob&lt;8u&gt;</definition>
+        <argsstring></argsstring>
+        <name>ApiId</name>
+        <qualifiedname>sgns::primitives::ApiId</qualifiedname>
+        <briefdescription>
+<para>The identity of a particular API interface that the runtime might provide. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This is the same structure as RuntimeVersion from substrate </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/version.hpp" line="20" column="3" bodyfile="src/primitives/version.hpp" bodystart="20" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1af0e4c5578f14a6235ef780e36ec82dc1" prot="public" static="no">
+        <type>std::pair&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1a7e52bb4e7c7894974e6ccf11be227f82" kindref="member">ApiId</ref>, uint32_t &gt;</type>
+        <definition>using sgns::primitives::Api = std::pair&lt;ApiId, uint32_t&gt;</definition>
+        <argsstring></argsstring>
+        <name>Api</name>
+        <qualifiedname>sgns::primitives::Api</qualifiedname>
+        <briefdescription>
+<para>single <ref refid="dd/dc5/namespacesgns_1_1primitives_1af0e4c5578f14a6235ef780e36ec82dc1" kindref="member">Api</ref> item </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/version.hpp" line="25" column="3" bodyfile="src/primitives/version.hpp" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1ad41a35e4207250aa9f1d43e1284638cc" prot="public" static="no">
+        <type>std::vector&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1af0e4c5578f14a6235ef780e36ec82dc1" kindref="member">Api</ref> &gt;</type>
+        <definition>using sgns::primitives::ApisVec = std::vector&lt;Api&gt;</definition>
+        <argsstring></argsstring>
+        <name>ApisVec</name>
+        <qualifiedname>sgns::primitives::ApisVec</qualifiedname>
+        <briefdescription>
+<para>A vector of pairs of <computeroutput><ref refid="dd/dc5/namespacesgns_1_1primitives_1a7e52bb4e7c7894974e6ccf11be227f82" kindref="member">ApiId</ref></computeroutput> and a <computeroutput>u32</computeroutput> for version. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/version.hpp" line="30" column="3" bodyfile="src/primitives/version.hpp" bodystart="30" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="var">
+      <memberdef kind="variable" id="dd/dc5/namespacesgns_1_1primitives_1a13bc152a39db1da5e52357d0a19195fb" prot="public" static="no" mutable="no">
+        <type>const auto</type>
+        <definition>const auto sgns::primitives::kProductionEngineId</definition>
+        <argsstring></argsstring>
+        <name>kProductionEngineId</name>
+        <qualifiedname>sgns::primitives::kProductionEngineId</qualifiedname>
+        <initializer>                                  =
+<ref refid="d4/dc6/classsgns_1_1base_1_1_blob_1a643cf089a58a27c7e61dc3f326b51679" kindref="member">VerificationEngineId::fromString</ref>(&quot;BABE&quot;).value()</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/digest.hpp" line="14" column="21" bodyfile="src/primitives/digest.hpp" bodystart="14" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/dc5/namespacesgns_1_1primitives_1a24e46f3ddce08feb565cf74555ac5374" prot="public" static="no" mutable="no">
+        <type>const auto</type>
+        <definition>const auto sgns::primitives::kFinalityEngineId</definition>
+        <argsstring></argsstring>
+        <name>kFinalityEngineId</name>
+        <qualifiedname>sgns::primitives::kFinalityEngineId</qualifiedname>
+        <initializer>                                =
+<ref refid="d4/dc6/classsgns_1_1base_1_1_blob_1a643cf089a58a27c7e61dc3f326b51679" kindref="member">VerificationEngineId::fromString</ref>(&quot;FRNK&quot;).value()</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/digest.hpp" line="17" column="21" bodyfile="src/primitives/digest.hpp" bodystart="17" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a60571c20c9fe5915a01bdc54c907fb2a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const ApplyOutcome &amp;outcome)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a31db1235989cae28bc7e953e2cbf52f2" kindref="member">ApplyOutcome</ref> &amp;</type>
+          <declname>outcome</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/apply_result.hpp" line="14" column="3" bodyfile="src/primitives/apply_result.hpp" bodystart="14" bodyend="17"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1ad81f5c71cc280996afab56bb8b0a452c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, ApplyOutcome &amp;outcome)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a31db1235989cae28bc7e953e2cbf52f2" kindref="member">ApplyOutcome</ref> &amp;</type>
+          <declname>outcome</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/apply_result.hpp" line="21" column="10" bodyfile="src/primitives/apply_result.hpp" bodystart="21" bodyend="26"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a8d56ad9a563e42af65a83bae6e62456f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const ApplyError &amp;error)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a460aa4ba1c4c226a9999a737a5fdd06e" kindref="member">ApplyError</ref> &amp;</type>
+          <declname>error</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/apply_result.hpp" line="43" column="3" bodyfile="src/primitives/apply_result.hpp" bodystart="43" bodyend="46"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a191a18428a6d16fa57224e5744af1c3d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, ApplyError &amp;error)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a460aa4ba1c4c226a9999a737a5fdd06e" kindref="member">ApplyError</ref> &amp;</type>
+          <declname>error</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/apply_result.hpp" line="50" column="10" bodyfile="src/primitives/apply_result.hpp" bodystart="50" bodyend="55"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a415abc2388c20aa55f43d96cd3166d0e" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::primitives::operator&lt;</definition>
+        <argsstring>(const AuthorityId &amp;lhs, const AuthorityId &amp;rhs)</argsstring>
+        <name>operator&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;</qualifiedname>
+        <param>
+          <type>const <ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">AuthorityId</ref> &amp;</type>
+          <declname>lhs</declname>
+        </param>
+        <param>
+          <type>const <ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">AuthorityId</ref> &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/authority.hpp" line="34" column="10" bodyfile="src/primitives/authority.hpp" bodystart="34" bodyend="36"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1aadff018f17528e172827ed318122ce9b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const AuthorityId &amp;a)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">AuthorityId</ref> &amp;</type>
+          <declname>a</declname>
+        </param>
+        <briefdescription>
+<para>outputs object of type <ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">AuthorityId</ref> to stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>a</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to output </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/authority.hpp" line="73" column="3" bodyfile="src/primitives/authority.hpp" bodystart="73" bodyend="75"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1ac0030967cb04c52a721dac1c191a8916" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, AuthorityId &amp;a)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">AuthorityId</ref> &amp;</type>
+          <declname>a</declname>
+        </param>
+        <briefdescription>
+<para>decodes object of type <ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">AuthorityId</ref> from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>a</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to decode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/authority.hpp" line="86" column="10" bodyfile="src/primitives/authority.hpp" bodystart="86" bodyend="88"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a1f8f4f588dfbacafee3722ec9859515d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const Authority &amp;a)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">Authority</ref> &amp;</type>
+          <declname>a</declname>
+        </param>
+        <briefdescription>
+<para>outputs object of type <ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">Authority</ref> to stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>a</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to output </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/authority.hpp" line="99" column="3" bodyfile="src/primitives/authority.hpp" bodystart="99" bodyend="101"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a9f8331b1e0fb54631d5e6e71cf6159a0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, Authority &amp;a)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">Authority</ref> &amp;</type>
+          <declname>a</declname>
+        </param>
+        <briefdescription>
+<para>decodes object of type <ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">Authority</ref> from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>a</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to decode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/authority.hpp" line="112" column="10" bodyfile="src/primitives/authority.hpp" bodystart="112" bodyend="114"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a4317e29c3498431fe39ba949cdfa2393" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const Block &amp;b)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="da/dcc/structsgns_1_1primitives_1_1_block" kindref="compound">Block</ref> &amp;</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+<para>outputs object of type <ref refid="da/dcc/structsgns_1_1primitives_1_1_block" kindref="compound">Block</ref> to stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>b</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to output </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/block.hpp" line="49" column="3" bodyfile="src/primitives/block.hpp" bodystart="49" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a5378f642772dcdacc284d64975fd9b93" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, Block &amp;b)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="da/dcc/structsgns_1_1primitives_1_1_block" kindref="compound">Block</ref> &amp;</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+<para>decodes object of type <ref refid="da/dcc/structsgns_1_1primitives_1_1_block" kindref="compound">Block</ref> from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>b</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to decode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/block.hpp" line="62" column="10" bodyfile="src/primitives/block.hpp" bodystart="62" bodyend="64"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a9859294b882a3e3177f976669af7fdd5" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::primitives::operator==</definition>
+        <argsstring>(const BlockData &amp;lhs, const BlockData &amp;rhs)</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::primitives::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="d3/db4/structsgns_1_1primitives_1_1_block_data" kindref="compound">BlockData</ref> &amp;</type>
+          <declname>lhs</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d3/db4/structsgns_1_1primitives_1_1_block_data" kindref="compound">BlockData</ref> &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+<para>compares two <ref refid="d3/db4/structsgns_1_1primitives_1_1_block_data" kindref="compound">BlockData</ref> instances </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>lhs</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>first instance </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>rhs</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>second instance </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if equal false otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/block_data.hpp" line="45" column="15" bodyfile="src/primitives/block_data.hpp" bodystart="45" bodyend="50"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a176a8ea826c23fb40a95eb355f959396" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const BlockData &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d3/db4/structsgns_1_1primitives_1_1_block_data" kindref="compound">BlockData</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>outputs object of type <ref refid="d3/db4/structsgns_1_1primitives_1_1_block_data" kindref="compound">BlockData</ref> to stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to output </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/block_data.hpp" line="61" column="3" bodyfile="src/primitives/block_data.hpp" bodystart="61" bodyend="64"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1aef8789af33f68e4c0768795b0c2aa980" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, BlockData &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="d3/db4/structsgns_1_1primitives_1_1_block_data" kindref="compound">BlockData</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>decodes object of type <ref refid="d3/db4/structsgns_1_1primitives_1_1_block_data" kindref="compound">BlockData</ref> from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to decode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/block_data.hpp" line="75" column="10" bodyfile="src/primitives/block_data.hpp" bodystart="75" bodyend="78"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a5725390f463818dabfae9642f7853c01" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const BlockHeader &amp;bh)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">BlockHeader</ref> &amp;</type>
+          <declname>bh</declname>
+        </param>
+        <briefdescription>
+<para>Outputs a <ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">BlockHeader</ref> to an encoding stream. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Output stream type. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Stream reference. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>bh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Header to output. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to stream. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/block_header.hpp" line="63" column="5" bodyfile="src/primitives/block_header.hpp" bodystart="63" bodyend="66"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a30d14c3a479947fc26208147003a6e6f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, BlockHeader &amp;bh)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">BlockHeader</ref> &amp;</type>
+          <declname>bh</declname>
+        </param>
+        <briefdescription>
+<para>Decodes a <ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">BlockHeader</ref> from a decoding stream. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Input stream type. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Stream reference. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>bh</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Header to populate. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to stream. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/block_header.hpp" line="76" column="12" bodyfile="src/primitives/block_header.hpp" bodystart="76" bodyend="82"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1af47e0e1f58f49caad7edfe379ddbc9dc" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, CheckInherentsResult &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="de/d83/structsgns_1_1primitives_1_1_check_inherents_result" kindref="compound">CheckInherentsResult</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/check_inherents_result.hpp" line="23" column="10" bodyfile="src/primitives/check_inherents_result.hpp" bodystart="23" bodyend="25"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1abe68372600d3ac5733e49f124d52c525" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const detail::DigestItemCommon &amp;dic)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="df/db0/structsgns_1_1primitives_1_1detail_1_1_digest_item_common" kindref="compound">detail::DigestItemCommon</ref> &amp;</type>
+          <declname>dic</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/digest.hpp" line="78" column="3" bodyfile="src/primitives/digest.hpp" bodystart="78" bodyend="80"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a7e0efbb621673822a9cd65938df4a9df" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, detail::DigestItemCommon &amp;dic)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="df/db0/structsgns_1_1primitives_1_1detail_1_1_digest_item_common" kindref="compound">detail::DigestItemCommon</ref> &amp;</type>
+          <declname>dic</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/digest.hpp" line="84" column="10" bodyfile="src/primitives/digest.hpp" bodystart="84" bodyend="86"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a379f9d592171310083c4453b2ea74ca2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const Extrinsic &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d2/d62/structsgns_1_1primitives_1_1_extrinsic" kindref="compound">Extrinsic</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>outputs object of type Extrinisic to stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to output </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/extrinsic.hpp" line="41" column="3" bodyfile="src/primitives/extrinsic.hpp" bodystart="41" bodyend="43"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a24a82a11735c77f62c80d0b482764442" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, Extrinsic &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="d2/d62/structsgns_1_1primitives_1_1_extrinsic" kindref="compound">Extrinsic</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>decodes object of type Extrinisic from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to output </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/extrinsic.hpp" line="54" column="10" bodyfile="src/primitives/extrinsic.hpp" bodystart="54" bodyend="56"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a7b41f090a462e8b797c2fda3ff3a2178" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const InherentData &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="de/df2/structsgns_1_1primitives_1_1_inherent_data" kindref="compound">InherentData</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>output <ref refid="de/df2/structsgns_1_1primitives_1_1_inherent_data" kindref="compound">InherentData</ref> object instance to stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to output </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/inherent_data.hpp" line="108" column="3" bodyfile="src/primitives/inherent_data.hpp" bodystart="108" bodyend="117"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a28140ccc44e232ce355761c2e6b6a225" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, InherentData &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="de/df2/structsgns_1_1primitives_1_1_inherent_data" kindref="compound">InherentData</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>decodes <ref refid="de/df2/structsgns_1_1primitives_1_1_inherent_data" kindref="compound">InherentData</ref> object instance from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to decode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/inherent_data.hpp" line="128" column="10" bodyfile="src/primitives/inherent_data.hpp" bodystart="128" bodyend="141"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a3267848202a494d6306e202d5ba2c93a" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::primitives::operator==</definition>
+        <argsstring>(const Justification &amp;lhs, const Justification &amp;rhs)</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::primitives::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="de/d97/structsgns_1_1primitives_1_1_justification" kindref="compound">Justification</ref> &amp;</type>
+          <declname>lhs</declname>
+        </param>
+        <param>
+          <type>const <ref refid="de/d97/structsgns_1_1primitives_1_1_justification" kindref="compound">Justification</ref> &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+<para>compares two <ref refid="de/d97/structsgns_1_1primitives_1_1_justification" kindref="compound">Justification</ref> instances </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>lhs</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>first instance </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>rhs</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>second instance </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if equal false otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/justification.hpp" line="28" column="15" bodyfile="src/primitives/justification.hpp" bodystart="28" bodyend="30"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a770ffce85eab38e7c9fb7034ef692aed" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const Justification &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="de/d97/structsgns_1_1primitives_1_1_justification" kindref="compound">Justification</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>outputs object of type <ref refid="de/d97/structsgns_1_1primitives_1_1_justification" kindref="compound">Justification</ref> to stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to output </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/justification.hpp" line="41" column="3" bodyfile="src/primitives/justification.hpp" bodystart="41" bodyend="43"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a77841998a98eedcfa266684060c7dfd7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, Justification &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="de/d97/structsgns_1_1primitives_1_1_justification" kindref="compound">Justification</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>decodes object of type <ref refid="de/d97/structsgns_1_1primitives_1_1_justification" kindref="compound">Justification</ref> from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to output </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/justification.hpp" line="54" column="10" bodyfile="src/primitives/justification.hpp" bodystart="54" bodyend="56"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a5d917bba5ecd136b1b6080dfa94b71b6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const ProductionConfiguration &amp;config)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d4/dbe/structsgns_1_1primitives_1_1_production_configuration" kindref="compound">ProductionConfiguration</ref> &amp;</type>
+          <declname>config</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/production_configuration.hpp" line="50" column="3" bodyfile="src/primitives/production_configuration.hpp" bodystart="50" bodyend="58"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a6e43e6c408cc5ee45e09faa236bcb6e1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, ProductionConfiguration &amp;config)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="d4/dbe/structsgns_1_1primitives_1_1_production_configuration" kindref="compound">ProductionConfiguration</ref> &amp;</type>
+          <declname>config</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/production_configuration.hpp" line="62" column="10" bodyfile="src/primitives/production_configuration.hpp" bodystart="62" bodyend="68"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1ac34ce93b11b0d4903de03d7e9e620b82" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const DelayInChain &amp;delay)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="da/d18/structsgns_1_1primitives_1_1_delay_in_chain" kindref="compound">DelayInChain</ref> &amp;</type>
+          <declname>delay</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/scheduled_change.hpp" line="43" column="3" bodyfile="src/primitives/scheduled_change.hpp" bodystart="43" bodyend="45"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a4c6aa3dd1fe2b9d28191c0a1ebd50143" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, DelayInChain &amp;delay)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="da/d18/structsgns_1_1primitives_1_1_delay_in_chain" kindref="compound">DelayInChain</ref> &amp;</type>
+          <declname>delay</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/scheduled_change.hpp" line="48" column="10" bodyfile="src/primitives/scheduled_change.hpp" bodystart="48" bodyend="50"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a76e894720aab1b9d614bbed4ede4b262" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const OnDisabled &amp;target)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d2/d91/structsgns_1_1primitives_1_1_on_disabled" kindref="compound">OnDisabled</ref> &amp;</type>
+          <declname>target</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/scheduled_change.hpp" line="53" column="3" bodyfile="src/primitives/scheduled_change.hpp" bodystart="53" bodyend="55"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1afabc5eaf5bacd6f25515ad940094117e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, OnDisabled &amp;target)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="d2/d91/structsgns_1_1primitives_1_1_on_disabled" kindref="compound">OnDisabled</ref> &amp;</type>
+          <declname>target</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/scheduled_change.hpp" line="58" column="10" bodyfile="src/primitives/scheduled_change.hpp" bodystart="58" bodyend="60"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1abc8478cbad2ab9aefd2952dd64473c18" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const AuthorityListChange &amp;alc)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d4/d7b/structsgns_1_1primitives_1_1_authority_list_change" kindref="compound">AuthorityListChange</ref> &amp;</type>
+          <declname>alc</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/scheduled_change.hpp" line="63" column="3" bodyfile="src/primitives/scheduled_change.hpp" bodystart="63" bodyend="65"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1ac42e6e22e34121d093525aec01711bd4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, AuthorityListChange &amp;alc)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="d4/d7b/structsgns_1_1primitives_1_1_authority_list_change" kindref="compound">AuthorityListChange</ref> &amp;</type>
+          <declname>alc</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/scheduled_change.hpp" line="68" column="10" bodyfile="src/primitives/scheduled_change.hpp" bodystart="68" bodyend="70"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1af1b123c2418820ff203128a251c255ee" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::primitives::operator==</definition>
+        <argsstring>(const Transaction &amp;v1, const Transaction &amp;v2)</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::primitives::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction" kindref="compound">Transaction</ref> &amp;</type>
+          <declname>v1</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction" kindref="compound">Transaction</ref> &amp;</type>
+          <declname>v2</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/transaction.hpp" line="60" column="15" bodyfile="src/primitives/transaction.hpp" bodystart="60" bodyend="65"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a8e7c96ac8ef4550d539941f674c0adf9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const InvalidTransaction &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1aec2a143154e31796fa584017229720c8" kindref="member">InvalidTransaction</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/transaction_validity.hpp" line="119" column="3" bodyfile="src/primitives/transaction_validity.hpp" bodystart="119" bodyend="124"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1abd7eda4e703ff651ea2ad9848d914135" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, InvalidTransaction &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1aec2a143154e31796fa584017229720c8" kindref="member">InvalidTransaction</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/transaction_validity.hpp" line="128" column="10" bodyfile="src/primitives/transaction_validity.hpp" bodystart="128" bodyend="142"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1ad6625c76b870728d6d81808c1c75dbd2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const UnknownTransaction &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a2acd57959b0142a6e26ae0373efc2f37" kindref="member">UnknownTransaction</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/transaction_validity.hpp" line="157" column="3" bodyfile="src/primitives/transaction_validity.hpp" bodystart="157" bodyend="162"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1ab1b06cc3310604f0b1ad8db234173808" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, UnknownTransaction &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a2acd57959b0142a6e26ae0373efc2f37" kindref="member">UnknownTransaction</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/transaction_validity.hpp" line="166" column="10" bodyfile="src/primitives/transaction_validity.hpp" bodystart="166" bodyend="180"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1aa219894b3f9fef77735045530ca7cc3f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const ValidTransaction &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d3/d12/structsgns_1_1primitives_1_1_valid_transaction" kindref="compound">ValidTransaction</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>outputs object of type Valid to stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to output </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/transaction_validity.hpp" line="201" column="3" bodyfile="src/primitives/transaction_validity.hpp" bodystart="201" bodyend="204"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a331b35436bc6af42a30e13d065b65248" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, ValidTransaction &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="d3/d12/structsgns_1_1primitives_1_1_valid_transaction" kindref="compound">ValidTransaction</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>decodes object of type Valid from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to decode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/transaction_validity.hpp" line="214" column="10" bodyfile="src/primitives/transaction_validity.hpp" bodystart="214" bodyend="217"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a90e57a54cda9314ecad309d7bcef252f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const Version &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="de/d6d/structsgns_1_1primitives_1_1_version" kindref="compound">Version</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>outputs object of type <ref refid="de/d6d/structsgns_1_1primitives_1_1_version" kindref="compound">Version</ref> to stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to output </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/version.hpp" line="103" column="3" bodyfile="src/primitives/version.hpp" bodystart="103" bodyend="106"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a5618946e6340ec413db771a5662caec0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, Version &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="de/d6d/structsgns_1_1primitives_1_1_version" kindref="compound">Version</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>decodes object of type <ref refid="de/d6d/structsgns_1_1primitives_1_1_version" kindref="compound">Version</ref> from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to decode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/version.hpp" line="117" column="10" bodyfile="src/primitives/version.hpp" bodystart="117" bodyend="120"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Authoring api primitives </para>
+    </detaileddescription>
+    <location file="src/primitives/apply_result.hpp" line="8" column="1"/>
+  </compounddef>
+</doxygen>

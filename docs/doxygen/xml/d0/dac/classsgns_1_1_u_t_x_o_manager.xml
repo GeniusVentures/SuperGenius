@@ -1,0 +1,1163 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/dac/classsgns_1_1_u_t_x_o_manager" kind="class" language="C++" prot="public">
+    <compoundname>sgns::UTXOManager</compoundname>
+    <includes refid="d1/dac/_u_t_x_o_manager_8hpp" local="no">UTXOManager.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1af4c2d5a35553359790f3c242f92af298" prot="public" static="no" strong="yes">
+        <type>uint8_t</type>
+        <name>UTXOState</name>
+        <qualifiedname>sgns::UTXOManager::UTXOState</qualifiedname>
+        <enumvalue id="d0/dac/classsgns_1_1_u_t_x_o_manager_1af4c2d5a35553359790f3c242f92af298acbc98cfd2075ae115a1930f14a1c816d" prot="public">
+          <name>UTXO_READY</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dac/classsgns_1_1_u_t_x_o_manager_1af4c2d5a35553359790f3c242f92af298a7aa360ca1b912755d30d3a9432a3d98e" prot="public">
+          <name>UTXO_RESERVED</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dac/classsgns_1_1_u_t_x_o_manager_1af4c2d5a35553359790f3c242f92af298ab3c8944d3f7d1492449efa92ef76041e" prot="public">
+          <name>UTXO_CONSUMED</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="17" column="9" bodyfile="src/account/UTXOManager.hpp" bodystart="18" bodyend="22"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a90b2d3eb75a76040175e50c86353102e" prot="public" static="no">
+        <type>std::pair&lt; <ref refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1af4c2d5a35553359790f3c242f92af298" kindref="member">UTXOState</ref>, <ref refid="da/da7/classsgns_1_1_genius_u_t_x_o" kindref="compound">GeniusUTXO</ref> &gt;</type>
+        <definition>using sgns::UTXOManager::UTXOData = std::pair&lt;UTXOState, GeniusUTXO&gt;</definition>
+        <argsstring></argsstring>
+        <name>UTXOData</name>
+        <qualifiedname>sgns::UTXOManager::UTXOData</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="24" column="9" bodyfile="src/account/UTXOManager.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a0e89c4787d5e5deb95b2f53f9d5a6e96" prot="public" static="no">
+        <type>std::function&lt; std::vector&lt; uint8_t &gt;(const std::vector&lt; uint8_t &gt; &amp;data)&gt;</type>
+        <definition>using sgns::UTXOManager::SignFunc = std::function&lt;std::vector&lt;uint8_t&gt;( const std::vector&lt;uint8_t&gt; &amp;data )&gt;</definition>
+        <argsstring></argsstring>
+        <name>SignFunc</name>
+        <qualifiedname>sgns::UTXOManager::SignFunc</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="25" column="9" bodyfile="src/account/UTXOManager.hpp" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a3c6c8bce86dfcc2c6f60a16b22849f25" prot="public" static="no">
+        <type>std::function&lt; bool(const std::string &amp;address, const std::vector&lt; uint8_t &gt; &amp;signature, const std::vector&lt; uint8_t &gt; &amp;data)&gt;</type>
+        <definition>using sgns::UTXOManager::VerifySignatureFunc = std::function&lt;bool( const std::string          &amp;address,
+                                                       const std::vector&lt;uint8_t&gt; &amp;signature,
+                                                       const std::vector&lt;uint8_t&gt; &amp;data )&gt;</definition>
+        <argsstring></argsstring>
+        <name>VerifySignatureFunc</name>
+        <qualifiedname>sgns::UTXOManager::VerifySignatureFunc</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="26" column="9" bodyfile="src/account/UTXOManager.hpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1ad2feb2206b17db07be80ae4b18b6f62f" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>std::string_view</type>
+        <definition>std::string_view sgns::UTXOManager::DB_PREFIX</definition>
+        <argsstring></argsstring>
+        <name>DB_PREFIX</name>
+        <qualifiedname>sgns::UTXOManager::DB_PREFIX</qualifiedname>
+        <initializer>= &quot;/utxo&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="143" column="43" bodyfile="src/account/UTXOManager.hpp" bodystart="143" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1ab3cff5084f87d161d3c33626de209367" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::UTXOManager::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::UTXOManager::logger_</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>( &quot;UTXOManager&quot; )</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="150" column="22" bodyfile="src/account/UTXOManager.hpp" bodystart="150" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a7ecba06bc4b501f617436442c08b561e" prot="private" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::UTXOManager::is_full_node_</definition>
+        <argsstring></argsstring>
+        <name>is_full_node_</name>
+        <qualifiedname>sgns::UTXOManager::is_full_node_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="152" column="43" bodyfile="src/account/UTXOManager.hpp" bodystart="152" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a613b0351c8b4cfa36c184a2c829159db" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::UTXOManager::address_</definition>
+        <argsstring></argsstring>
+        <name>address_</name>
+        <qualifiedname>sgns::UTXOManager::address_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="153" column="43" bodyfile="src/account/UTXOManager.hpp" bodystart="153" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a6b8844bc6d1344589083ee3fe16c8857" prot="private" static="no" mutable="no">
+        <type><ref refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a0e89c4787d5e5deb95b2f53f9d5a6e96" kindref="member">SignFunc</ref></type>
+        <definition>SignFunc sgns::UTXOManager::sign_</definition>
+        <argsstring></argsstring>
+        <name>sign_</name>
+        <qualifiedname>sgns::UTXOManager::sign_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="154" column="43" bodyfile="src/account/UTXOManager.hpp" bodystart="154" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a66845f6048cd5959170ebbf518fe2208" prot="private" static="no" mutable="no">
+        <type><ref refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a3c6c8bce86dfcc2c6f60a16b22849f25" kindref="member">VerifySignatureFunc</ref></type>
+        <definition>VerifySignatureFunc sgns::UTXOManager::verify_signature_</definition>
+        <argsstring></argsstring>
+        <name>verify_signature_</name>
+        <qualifiedname>sgns::UTXOManager::verify_signature_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="155" column="43" bodyfile="src/account/UTXOManager.hpp" bodystart="155" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1afdb597c310009eb63a45b7b514bb55dc" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb" kindref="compound">storage::rocksdb</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;storage::rocksdb&gt; sgns::UTXOManager::db_</definition>
+        <argsstring></argsstring>
+        <name>db_</name>
+        <qualifiedname>sgns::UTXOManager::db_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="156" column="25" bodyfile="src/account/UTXOManager.hpp" bodystart="156" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a2875acffa93cc0b2393d341856484f99" prot="private" static="no" mutable="yes">
+        <type>std::shared_mutex</type>
+        <definition>std::shared_mutex sgns::UTXOManager::utxos_mutex_</definition>
+        <argsstring></argsstring>
+        <name>utxos_mutex_</name>
+        <qualifiedname>sgns::UTXOManager::utxos_mutex_</qualifiedname>
+        <briefdescription>
+<para>Mutex for the UTXOs map. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="158" column="64" bodyfile="src/account/UTXOManager.hpp" bodystart="158" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1affc3daeb4344b62a6320c6bbb22a9375" prot="private" static="no" mutable="no">
+        <type>std::unordered_map&lt; std::string, std::vector&lt; <ref refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a90b2d3eb75a76040175e50c86353102e" kindref="member">UTXOData</ref> &gt; &gt;</type>
+        <definition>std::unordered_map&lt;std::string, std::vector&lt;UTXOData&gt; &gt; sgns::UTXOManager::utxos_</definition>
+        <argsstring></argsstring>
+        <name>utxos_</name>
+        <qualifiedname>sgns::UTXOManager::utxos_</qualifiedname>
+        <briefdescription>
+<para>Map of UTXOs by address. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="159" column="28" bodyfile="src/account/UTXOManager.hpp" bodystart="159" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a05300a52abaa41b7a8b34d74b3196e40" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::UTXOManager::UTXOManager</definition>
+        <argsstring>(const bool is_full_node, std::string address, SignFunc sign, VerifySignatureFunc verify_signature)</argsstring>
+        <name>UTXOManager</name>
+        <qualifiedname>sgns::UTXOManager::UTXOManager</qualifiedname>
+        <param>
+          <type>const bool</type>
+          <declname>is_full_node</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>address</declname>
+        </param>
+        <param>
+          <type><ref refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a0e89c4787d5e5deb95b2f53f9d5a6e96" kindref="member">SignFunc</ref></type>
+          <declname>sign</declname>
+        </param>
+        <param>
+          <type><ref refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a3c6c8bce86dfcc2c6f60a16b22849f25" kindref="member">VerifySignatureFunc</ref></type>
+          <declname>verify_signature</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="30" column="9" bodyfile="src/account/UTXOManager.hpp" bodystart="30" bodyend="39"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a7f5c99359f05da3b41979c6cab7c14d0" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::UTXOManager::GetBalance</definition>
+        <argsstring>() const</argsstring>
+        <name>GetBalance</name>
+        <qualifiedname>sgns::UTXOManager::GetBalance</qualifiedname>
+        <briefdescription>
+<para>Get the account&apos;s balance. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The total balance of the account </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="45" column="19" bodyfile="src/account/UTXOManager.cpp" bodystart="12" bodyend="15"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a0aaacdacc406fb4691ae1300f7e8c451" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::UTXOManager::GetBalance</definition>
+        <argsstring>(const std::string &amp;address) const</argsstring>
+        <name>GetBalance</name>
+        <qualifiedname>sgns::UTXOManager::GetBalance</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>address</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="47" column="19" bodyfile="src/account/UTXOManager.cpp" bodystart="17" bodyend="41"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1ab5ab91cee23c83a0e85454e547a6a835" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::UTXOManager::GetBalance</definition>
+        <argsstring>(const TokenID &amp;token_id) const</argsstring>
+        <name>GetBalance</name>
+        <qualifiedname>sgns::UTXOManager::GetBalance</qualifiedname>
+        <param>
+          <type>const <ref refid="d9/dd1/classsgns_1_1_token_i_d" kindref="compound">TokenID</ref> &amp;</type>
+          <declname>token_id</declname>
+        </param>
+        <briefdescription>
+<para>Get the accounts balance for a specific token. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">token_id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Token ID to get the balance </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The balance of the account for the specific token </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="54" column="18" bodyfile="src/account/UTXOManager.cpp" bodystart="43" bodyend="46"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a022a31d690d125be6c03825379bc4df6" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::UTXOManager::GetBalance</definition>
+        <argsstring>(const TokenID &amp;token_id, const std::string &amp;address) const</argsstring>
+        <name>GetBalance</name>
+        <qualifiedname>sgns::UTXOManager::GetBalance</qualifiedname>
+        <param>
+          <type>const <ref refid="d9/dd1/classsgns_1_1_token_i_d" kindref="compound">TokenID</ref> &amp;</type>
+          <declname>token_id</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>address</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="56" column="18" bodyfile="src/account/UTXOManager.cpp" bodystart="48" bodyend="71"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a1f1b8e7997270f7bca89243d2f928327" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::UTXOManager::PutUTXO</definition>
+        <argsstring>(GeniusUTXO new_utxo, const std::string &amp;address)</argsstring>
+        <name>PutUTXO</name>
+        <qualifiedname>sgns::UTXOManager::PutUTXO</qualifiedname>
+        <param>
+          <type><ref refid="da/da7/classsgns_1_1_genius_u_t_x_o" kindref="compound">GeniusUTXO</ref></type>
+          <declname>new_utxo</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>address</declname>
+        </param>
+        <briefdescription>
+<para>Add a new UTXO to the account. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">new_utxo</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The new UTXO to be added </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>address</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Address to add the UTXO to </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if the UTXO was added, false otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="64" column="14" bodyfile="src/account/UTXOManager.cpp" bodystart="73" bodyend="115"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1ad92ec73187bd9e332410e4790a087d8f" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::UTXOManager::PutUTXO</definition>
+        <argsstring>(const GeniusUTXO &amp;new_utxo)</argsstring>
+        <name>PutUTXO</name>
+        <qualifiedname>sgns::UTXOManager::PutUTXO</qualifiedname>
+        <param>
+          <type>const <ref refid="da/da7/classsgns_1_1_genius_u_t_x_o" kindref="compound">GeniusUTXO</ref> &amp;</type>
+          <declname>new_utxo</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="66" column="14" bodyfile="src/account/UTXOManager.hpp" bodystart="66" bodyend="69"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a19eed712ee8af80886c15fffadb9be06" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::UTXOManager::DeleteUTXO</definition>
+        <argsstring>(const base::Hash256 &amp;utxo_id, const std::string &amp;address)</argsstring>
+        <name>DeleteUTXO</name>
+        <qualifiedname>sgns::UTXOManager::DeleteUTXO</qualifiedname>
+        <param>
+          <type>const <ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref> &amp;</type>
+          <declname>utxo_id</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>address</declname>
+        </param>
+        <briefdescription>
+<para>Delete a UTXO from the account. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">utxo_id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The ID of the UTXO to be deleted </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>address</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Address to remove the UTXO from </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="76" column="14" bodyfile="src/account/UTXOManager.cpp" bodystart="117" bodyend="146"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1af2be1ef5fd24009cd3a5c261035c1e4c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::UTXOManager::ConsumeUTXOs</definition>
+        <argsstring>(const std::vector&lt; InputUTXOInfo &gt; &amp;infos, const std::string &amp;address)</argsstring>
+        <name>ConsumeUTXOs</name>
+        <qualifiedname>sgns::UTXOManager::ConsumeUTXOs</qualifiedname>
+        <param>
+          <type>const std::vector&lt; <ref refid="d3/dbc/structsgns_1_1_input_u_t_x_o_info" kindref="compound">InputUTXOInfo</ref> &gt; &amp;</type>
+          <declname>infos</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>address</declname>
+        </param>
+        <briefdescription>
+<para>Consume UTXOs from the account. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">infos</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Vector of UTXO information to be consumed </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>address</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Address to consume UTXOs from </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if all UTXOs were consumed, false otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="84" column="14" bodyfile="src/account/UTXOManager.cpp" bodystart="148" bodyend="187"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a82f98154372c7d4cd58a9b53bf1cdf78" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::UTXOManager::ConsumeUTXOs</definition>
+        <argsstring>(const std::vector&lt; InputUTXOInfo &gt; &amp;infos)</argsstring>
+        <name>ConsumeUTXOs</name>
+        <qualifiedname>sgns::UTXOManager::ConsumeUTXOs</qualifiedname>
+        <param>
+          <type>const std::vector&lt; <ref refid="d3/dbc/structsgns_1_1_input_u_t_x_o_info" kindref="compound">InputUTXOInfo</ref> &gt; &amp;</type>
+          <declname>infos</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="86" column="14" bodyfile="src/account/UTXOManager.hpp" bodystart="86" bodyend="89"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1aa18c864d7d92807a61eadc64ebc1ce3e" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; <ref refid="da/da7/classsgns_1_1_genius_u_t_x_o" kindref="compound">GeniusUTXO</ref> &gt;</type>
+        <definition>std::vector&lt; GeniusUTXO &gt; sgns::UTXOManager::GetUTXOs</definition>
+        <argsstring>(const std::string &amp;address) const</argsstring>
+        <name>GetUTXOs</name>
+        <qualifiedname>sgns::UTXOManager::GetUTXOs</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>address</declname>
+        </param>
+        <briefdescription>
+<para>Get UTXOs for a specific address. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">address</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The address to get UTXOs for </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Vector of UTXOs for the address </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="96" column="21" bodyfile="src/account/UTXOManager.cpp" bodystart="189" bodyend="207"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1aad9e7d8f9574ff8c509f5093890194d9" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::vector&lt; <ref refid="da/da7/classsgns_1_1_genius_u_t_x_o" kindref="compound">GeniusUTXO</ref> &gt;</type>
+        <definition>std::vector&lt; GeniusUTXO &gt; sgns::UTXOManager::GetUTXOs</definition>
+        <argsstring>() const</argsstring>
+        <name>GetUTXOs</name>
+        <qualifiedname>sgns::UTXOManager::GetUTXOs</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="98" column="21" bodyfile="src/account/UTXOManager.hpp" bodystart="98" bodyend="101"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a88b06eeb2b8e7d4fbd103968d55896c6" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::unordered_map&lt; std::string, std::vector&lt; <ref refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a90b2d3eb75a76040175e50c86353102e" kindref="member">UTXOData</ref> &gt; &gt;</type>
+        <definition>std::unordered_map&lt; std::string, std::vector&lt; UTXOManager::UTXOData &gt; &gt; sgns::UTXOManager::GetAllUTXOs</definition>
+        <argsstring>() const</argsstring>
+        <name>GetAllUTXOs</name>
+        <qualifiedname>sgns::UTXOManager::GetAllUTXOs</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="103" column="28" bodyfile="src/account/UTXOManager.cpp" bodystart="209" bodyend="213"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a144be17437f74d8f29923f89454e21b0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::UTXOManager::SetUTXOs</definition>
+        <argsstring>(const std::vector&lt; GeniusUTXO &gt; &amp;utxos, const std::string &amp;address)</argsstring>
+        <name>SetUTXOs</name>
+        <qualifiedname>sgns::UTXOManager::SetUTXOs</qualifiedname>
+        <param>
+          <type>const std::vector&lt; <ref refid="da/da7/classsgns_1_1_genius_u_t_x_o" kindref="compound">GeniusUTXO</ref> &gt; &amp;</type>
+          <declname>utxos</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>address</declname>
+        </param>
+        <briefdescription>
+<para>Set UTXOs for a specific address (replaces existing UTXOs). </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">utxos</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Vector of UTXOs to set for the address </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">address</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The address to set UTXOs for </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="110" column="25" bodyfile="src/account/UTXOManager.cpp" bodystart="215" bodyend="240"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a32bb68d4f2b26ab2eaca2caa85301771" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::UTXOManager::SetUTXOs</definition>
+        <argsstring>(const std::vector&lt; GeniusUTXO &gt; &amp;utxos)</argsstring>
+        <name>SetUTXOs</name>
+        <qualifiedname>sgns::UTXOManager::SetUTXOs</qualifiedname>
+        <param>
+          <type>const std::vector&lt; <ref refid="da/da7/classsgns_1_1_genius_u_t_x_o" kindref="compound">GeniusUTXO</ref> &gt; &amp;</type>
+          <declname>utxos</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="112" column="25" bodyfile="src/account/UTXOManager.hpp" bodystart="112" bodyend="115"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1ae0a56d5df504fe2f3dbe859923869a2b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d2/d2b/namespacesgns_1ab5ebc7fc374823b9575e303e417424fc" kindref="member">UTXOTxParameters</ref> &gt;</type>
+        <definition>outcome::result&lt; UTXOTxParameters &gt; sgns::UTXOManager::CreateTxParameter</definition>
+        <argsstring>(uint64_t amount, const std::string &amp;dest_address, const TokenID &amp;token_id)</argsstring>
+        <name>CreateTxParameter</name>
+        <qualifiedname>sgns::UTXOManager::CreateTxParameter</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>amount</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>dest_address</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d9/dd1/classsgns_1_1_token_i_d" kindref="compound">TokenID</ref> &amp;</type>
+          <declname>token_id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="117" column="25" bodyfile="src/account/UTXOManager.cpp" bodystart="242" bodyend="266"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1ae14bd144fba40ed007d1c634e54c00cc" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d2/d2b/namespacesgns_1ab5ebc7fc374823b9575e303e417424fc" kindref="member">UTXOTxParameters</ref> &gt;</type>
+        <definition>outcome::result&lt; UTXOTxParameters &gt; sgns::UTXOManager::CreateTxParameter</definition>
+        <argsstring>(const std::vector&lt; OutputDestInfo &gt; &amp;destinations, const TokenID &amp;token_id)</argsstring>
+        <name>CreateTxParameter</name>
+        <qualifiedname>sgns::UTXOManager::CreateTxParameter</qualifiedname>
+        <param>
+          <type>const std::vector&lt; <ref refid="dc/dfd/structsgns_1_1_output_dest_info" kindref="compound">OutputDestInfo</ref> &gt; &amp;</type>
+          <declname>destinations</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d9/dd1/classsgns_1_1_token_i_d" kindref="compound">TokenID</ref> &amp;</type>
+          <declname>token_id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="121" column="25" bodyfile="src/account/UTXOManager.cpp" bodystart="268" bodyend="292"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a61efff3e6b3b099ed269a0e29ac91e5c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::UTXOManager::ReserveUTXOs</definition>
+        <argsstring>(const std::vector&lt; InputUTXOInfo &gt; &amp;inputs)</argsstring>
+        <name>ReserveUTXOs</name>
+        <qualifiedname>sgns::UTXOManager::ReserveUTXOs</qualifiedname>
+        <param>
+          <type>const std::vector&lt; <ref refid="d3/dbc/structsgns_1_1_input_u_t_x_o_info" kindref="compound">InputUTXOInfo</ref> &gt; &amp;</type>
+          <declname>inputs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="124" column="14" bodyfile="src/account/UTXOManager.cpp" bodystart="294" bodyend="308"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a933bf5528090f3bb5aec63d3c2f505aa" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::UTXOManager::RollbackUTXOs</definition>
+        <argsstring>(const std::vector&lt; InputUTXOInfo &gt; &amp;inputs)</argsstring>
+        <name>RollbackUTXOs</name>
+        <qualifiedname>sgns::UTXOManager::RollbackUTXOs</qualifiedname>
+        <param>
+          <type>const std::vector&lt; <ref refid="d3/dbc/structsgns_1_1_input_u_t_x_o_info" kindref="compound">InputUTXOInfo</ref> &gt; &amp;</type>
+          <declname>inputs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="126" column="14" bodyfile="src/account/UTXOManager.cpp" bodystart="310" bodyend="324"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1ad4b3c444ef4ae3bb703707b7790362bf" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::UTXOManager::VerifyParameters</definition>
+        <argsstring>(const UTXOTxParameters &amp;params) const</argsstring>
+        <name>VerifyParameters</name>
+        <qualifiedname>sgns::UTXOManager::VerifyParameters</qualifiedname>
+        <param>
+          <type>const <ref refid="d2/d2b/namespacesgns_1ab5ebc7fc374823b9575e303e417424fc" kindref="member">UTXOTxParameters</ref> &amp;</type>
+          <declname>params</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="128" column="14" bodyfile="src/account/UTXOManager.hpp" bodystart="128" bodyend="131"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a07694613252c68cd40b705743f041d1a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::UTXOManager::VerifyParameters</definition>
+        <argsstring>(const UTXOTxParameters &amp;params, const std::string &amp;address) const</argsstring>
+        <name>VerifyParameters</name>
+        <qualifiedname>sgns::UTXOManager::VerifyParameters</qualifiedname>
+        <param>
+          <type>const <ref refid="d2/d2b/namespacesgns_1ab5ebc7fc374823b9575e303e417424fc" kindref="member">UTXOTxParameters</ref> &amp;</type>
+          <declname>params</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>address</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="133" column="14" bodyfile="src/account/UTXOManager.cpp" bodystart="326" bodyend="371"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1ad97fc518d48ddf7c64c117b6051e3aef" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; bool &gt;</type>
+        <definition>outcome::result&lt; bool &gt; sgns::UTXOManager::LoadUTXOs</definition>
+        <argsstring>(std::shared_ptr&lt; storage::rocksdb &gt; db)</argsstring>
+        <name>LoadUTXOs</name>
+        <qualifiedname>sgns::UTXOManager::LoadUTXOs</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb" kindref="compound">storage::rocksdb</ref> &gt;</type>
+          <declname>db</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="135" column="25" bodyfile="src/account/UTXOManager.cpp" bodystart="373" bodyend="440"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1aafda6b957ebcbb0f0b1783176fa2c1a3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::UTXOManager::StoreUTXOs</definition>
+        <argsstring>(const std::string &amp;address)</argsstring>
+        <name>StoreUTXOs</name>
+        <qualifiedname>sgns::UTXOManager::StoreUTXOs</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>address</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>True if loaded any UTXOs, false if loaded 0 UTXOs and error if one occurred </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="140" column="25" bodyfile="src/account/UTXOManager.cpp" bodystart="442" bodyend="494"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1ac674575ba1e3f408acb4f77ce48962dc" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::pair&lt; std::vector&lt; <ref refid="d3/dbc/structsgns_1_1_input_u_t_x_o_info" kindref="compound">InputUTXOInfo</ref> &gt;, uint64_t &gt; &gt;</type>
+        <definition>outcome::result&lt; std::pair&lt; std::vector&lt; InputUTXOInfo &gt;, uint64_t &gt; &gt; sgns::UTXOManager::SelectUTXOs</definition>
+        <argsstring>(uint64_t required_amount, const TokenID &amp;token_id)</argsstring>
+        <name>SelectUTXOs</name>
+        <qualifiedname>sgns::UTXOManager::SelectUTXOs</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>required_amount</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d9/dd1/classsgns_1_1_token_i_d" kindref="compound">TokenID</ref> &amp;</type>
+          <declname>token_id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="145" column="25" bodyfile="src/account/UTXOManager.cpp" bodystart="496" bodyend="534"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dac/classsgns_1_1_u_t_x_o_manager_1a63826c5c47b07809400f23085ec19dd5" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::UTXOManager::SignInputs</definition>
+        <argsstring>(std::vector&lt; InputUTXOInfo &gt; &amp;inputs) const</argsstring>
+        <name>SignInputs</name>
+        <qualifiedname>sgns::UTXOManager::SignInputs</qualifiedname>
+        <param>
+          <type>std::vector&lt; <ref refid="d3/dbc/structsgns_1_1_input_u_t_x_o_info" kindref="compound">InputUTXOInfo</ref> &gt; &amp;</type>
+          <declname>inputs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOManager.hpp" line="148" column="14" bodyfile="src/account/UTXOManager.cpp" bodystart="536" bodyend="544"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="11">
+        <label>BufferStorage</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+        <childnode refid="20" relation="public-inheritance">
+        </childnode>
+        <childnode refid="27" relation="public-inheritance">
+        </childnode>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="27">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="42">
+        <label>K</label>
+      </node>
+      <node id="6">
+        <label>T</label>
+      </node>
+      <node id="38">
+        <label>T1</label>
+      </node>
+      <node id="39">
+        <label>T2</label>
+      </node>
+      <node id="1">
+        <label>sgns::UTXOManager</label>
+        <link refid="d0/dac/classsgns_1_1_u_t_x_o_manager"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-DB_PREFIX</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>-address_</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-db_</edgelabel>
+        </childnode>
+        <childnode refid="33" relation="usage">
+          <edgelabel>-utxos_mutex_</edgelabel>
+        </childnode>
+        <childnode refid="34" relation="usage">
+          <edgelabel>-utxos_</edgelabel>
+        </childnode>
+      </node>
+      <node id="24">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="25" relation="public-inheritance">
+        </childnode>
+        <childnode refid="26" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>sgns::storage::face::BatchWriteMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="21" relation="public-inheritance">
+        </childnode>
+        <childnode refid="23" relation="public-inheritance">
+        </childnode>
+        <childnode refid="24" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="30">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="25" relation="public-inheritance">
+        </childnode>
+        <childnode refid="26" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="26">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="28">
+        <label>sgns::storage::face::GenericStorage&lt; K, V &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="29" relation="public-inheritance">
+        </childnode>
+        <childnode refid="30" relation="public-inheritance">
+        </childnode>
+        <childnode refid="27" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="13">
+        <label>sgns::storage::face::Iterable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="18">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="17">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>sgns::storage::face::ReadOnlyMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="13" relation="public-inheritance">
+        </childnode>
+        <childnode refid="15" relation="public-inheritance">
+        </childnode>
+        <childnode refid="17" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="29">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="15">
+        <label>sgns::storage::face::Readable&lt; Buffer, Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="16" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="19">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="22">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="21">
+        <label>sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="22" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="25">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="10">
+        <label>sgns::storage::rocksdb</label>
+        <link refid="d5/dbf/classsgns_1_1storage_1_1rocksdb"/>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+        <childnode refid="31" relation="usage">
+          <edgelabel>-db_</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="32" relation="usage">
+          <edgelabel>-options_</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>-path_</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="3">
+        <label>std::basic_string_view&lt; Char &gt;</label>
+      </node>
+      <node id="37">
+        <label>std::pair&lt; T1, T2 &gt;</label>
+        <childnode refid="38" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="39" relation="usage">
+          <edgelabel>+second_type</edgelabel>
+        </childnode>
+      </node>
+      <node id="36">
+        <label>std::pair&lt; UTXOState, GeniusUTXO &gt;</label>
+        <childnode refid="37" relation="template-instance">
+          <edgelabel>&lt; UTXOState, GeniusUTXO &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="33">
+        <label>std::shared_mutex</label>
+      </node>
+      <node id="5">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="31">
+        <label>std::shared_ptr&lt; DB &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; DB &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="32">
+        <label>std::shared_ptr&lt; Options &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; Options &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::shared_ptr&lt; sgns::storage::rocksdb &gt;</label>
+        <childnode refid="10" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::rocksdb &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::string</label>
+        <childnode refid="8" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::string_view</label>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="41">
+        <label>std::unordered_map&lt; K, T &gt;</label>
+        <childnode refid="42" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="34">
+        <label>std::unordered_map&lt; std::string, std::vector&lt; UTXOData &gt; &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="35" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="41" relation="template-instance">
+          <edgelabel>&lt; std::string, std::vector&lt; UTXOData &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="40">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="35">
+        <label>std::vector&lt; UTXOData &gt;</label>
+        <childnode refid="36" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="40" relation="template-instance">
+          <edgelabel>&lt; UTXOData &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/account/UTXOManager.hpp" line="14" column="5" bodyfile="src/account/UTXOManager.hpp" bodystart="15" bodyend="160"/>
+    <listofallmembers>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a613b0351c8b4cfa36c184a2c829159db" prot="private" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>address_</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1af2be1ef5fd24009cd3a5c261035c1e4c" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>ConsumeUTXOs</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a82f98154372c7d4cd58a9b53bf1cdf78" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>ConsumeUTXOs</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1ae0a56d5df504fe2f3dbe859923869a2b" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>CreateTxParameter</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1ae14bd144fba40ed007d1c634e54c00cc" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>CreateTxParameter</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1afdb597c310009eb63a45b7b514bb55dc" prot="private" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>db_</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1ad2feb2206b17db07be80ae4b18b6f62f" prot="private" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>DB_PREFIX</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a19eed712ee8af80886c15fffadb9be06" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>DeleteUTXO</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a88b06eeb2b8e7d4fbd103968d55896c6" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>GetAllUTXOs</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a7f5c99359f05da3b41979c6cab7c14d0" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>GetBalance</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a0aaacdacc406fb4691ae1300f7e8c451" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>GetBalance</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1ab5ab91cee23c83a0e85454e547a6a835" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>GetBalance</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a022a31d690d125be6c03825379bc4df6" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>GetBalance</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1aa18c864d7d92807a61eadc64ebc1ce3e" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>GetUTXOs</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1aad9e7d8f9574ff8c509f5093890194d9" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>GetUTXOs</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a7ecba06bc4b501f617436442c08b561e" prot="private" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>is_full_node_</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1ad97fc518d48ddf7c64c117b6051e3aef" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>LoadUTXOs</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1ab3cff5084f87d161d3c33626de209367" prot="private" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>logger_</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a1f1b8e7997270f7bca89243d2f928327" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>PutUTXO</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1ad92ec73187bd9e332410e4790a087d8f" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>PutUTXO</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a61efff3e6b3b099ed269a0e29ac91e5c" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>ReserveUTXOs</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a933bf5528090f3bb5aec63d3c2f505aa" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>RollbackUTXOs</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1ac674575ba1e3f408acb4f77ce48962dc" prot="private" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>SelectUTXOs</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a144be17437f74d8f29923f89454e21b0" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>SetUTXOs</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a32bb68d4f2b26ab2eaca2caa85301771" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>SetUTXOs</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a6b8844bc6d1344589083ee3fe16c8857" prot="private" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>sign_</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a0e89c4787d5e5deb95b2f53f9d5a6e96" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>SignFunc</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a63826c5c47b07809400f23085ec19dd5" prot="private" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>SignInputs</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1aafda6b957ebcbb0f0b1783176fa2c1a3" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>StoreUTXOs</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a90b2d3eb75a76040175e50c86353102e" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>UTXOData</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a05300a52abaa41b7a8b34d74b3196e40" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>UTXOManager</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1affc3daeb4344b62a6320c6bbb22a9375" prot="private" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>utxos_</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a2875acffa93cc0b2393d341856484f99" prot="private" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>utxos_mutex_</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1af4c2d5a35553359790f3c242f92af298" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>UTXOState</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a66845f6048cd5959170ebbf518fe2208" prot="private" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>verify_signature_</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1ad4b3c444ef4ae3bb703707b7790362bf" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>VerifyParameters</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a07694613252c68cd40b705743f041d1a" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>VerifyParameters</name></member>
+      <member refid="d0/dac/classsgns_1_1_u_t_x_o_manager_1a3c6c8bce86dfcc2c6f60a16b22849f25" prot="public" virt="non-virtual"><scope>sgns::UTXOManager</scope><name>VerifySignatureFunc</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

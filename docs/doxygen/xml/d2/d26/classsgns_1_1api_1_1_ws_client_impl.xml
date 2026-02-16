@@ -1,0 +1,427 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/d26/classsgns_1_1api_1_1_ws_client_impl" kind="class" language="C++" prot="public">
+    <compoundname>sgns::api::WsClientImpl</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">std::enable_shared_from_this&lt; WsClientImpl &gt;</basecompoundref>
+    <includes refid="d7/d3e/ws__client__impl_8hpp" local="no">ws_client_impl.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a26d95425a6d2dab3ea19c2f5ee89a24d" prot="public" static="no">
+        <type>boost::asio::io_context</type>
+        <definition>using sgns::api::WsClientImpl::Context = boost::asio::io_context</definition>
+        <argsstring></argsstring>
+        <name>Context</name>
+        <qualifiedname>sgns::api::WsClientImpl::Context</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="21" column="5" bodyfile="src/api/transport/impl/ws/ws_client_impl.hpp" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a163af5702a6f66a5777a4187c0745a73" prot="public" static="no">
+        <type>boost::asio::strand&lt; boost::asio::io_context::executor_type &gt;</type>
+        <definition>using sgns::api::WsClientImpl::ExecutorType = boost::asio::strand&lt;boost::asio::io_context::executor_type&gt;</definition>
+        <argsstring></argsstring>
+        <name>ExecutorType</name>
+        <qualifiedname>sgns::api::WsClientImpl::ExecutorType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="22" column="5" bodyfile="src/api/transport/impl/ws/ws_client_impl.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a1e9dec2fa141a532843c2b55d08b56f4" prot="public" static="no">
+        <type>boost::asio::basic_stream_socket&lt; boost::asio::ip::tcp &gt;</type>
+        <definition>using sgns::api::WsClientImpl::StreamSocket = boost::asio::basic_stream_socket&lt;boost::asio::ip::tcp&gt;</definition>
+        <argsstring></argsstring>
+        <name>StreamSocket</name>
+        <qualifiedname>sgns::api::WsClientImpl::StreamSocket</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="25" column="5" bodyfile="src/api/transport/impl/ws/ws_client_impl.hpp" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1ac740cb9f709e7a5df844a0914f2b30b6" prot="public" static="no">
+        <type>boost::beast::websocket::stream&lt; <ref refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a1e9dec2fa141a532843c2b55d08b56f4" kindref="member">StreamSocket</ref> &gt;</type>
+        <definition>using sgns::api::WsClientImpl::PlainWebSocketStream = boost::beast::websocket::stream&lt;StreamSocket&gt;</definition>
+        <argsstring></argsstring>
+        <name>PlainWebSocketStream</name>
+        <qualifiedname>sgns::api::WsClientImpl::PlainWebSocketStream</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="26" column="5" bodyfile="src/api/transport/impl/ws/ws_client_impl.hpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1ad2ce0ab4cd62e074805f163253ddf3b4" prot="public" static="no">
+        <type>boost::beast::ssl_stream&lt; <ref refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a1e9dec2fa141a532843c2b55d08b56f4" kindref="member">StreamSocket</ref> &gt;</type>
+        <definition>using sgns::api::WsClientImpl::SSLStream = boost::beast::ssl_stream&lt;StreamSocket&gt;</definition>
+        <argsstring></argsstring>
+        <name>SSLStream</name>
+        <qualifiedname>sgns::api::WsClientImpl::SSLStream</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="27" column="5" bodyfile="src/api/transport/impl/ws/ws_client_impl.hpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1ac2ae6080397f68efe3d6295e343b5877" prot="public" static="no">
+        <type>boost::beast::websocket::stream&lt; <ref refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1ad2ce0ab4cd62e074805f163253ddf3b4" kindref="member">SSLStream</ref> &gt;</type>
+        <definition>using sgns::api::WsClientImpl::SecureWebSocketStream = boost::beast::websocket::stream&lt;SSLStream&gt;</definition>
+        <argsstring></argsstring>
+        <name>SecureWebSocketStream</name>
+        <qualifiedname>sgns::api::WsClientImpl::SecureWebSocketStream</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="28" column="5" bodyfile="src/api/transport/impl/ws/ws_client_impl.hpp" bodystart="28" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1ae40b80acdb68549e2c7b1e32ea9c232f" prot="private" static="no" mutable="no">
+        <type>std::optional&lt; boost::asio::ssl::context &gt;</type>
+        <definition>std::optional&lt;boost::asio::ssl::context&gt; sgns::api::WsClientImpl::sslContext</definition>
+        <argsstring></argsstring>
+        <name>sslContext</name>
+        <qualifiedname>sgns::api::WsClientImpl::sslContext</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="45" column="19" bodyfile="src/api/transport/impl/ws/ws_client_impl.hpp" bodystart="45" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a12519986f5bde0ab880aef7ffb2411c5" prot="private" static="no" mutable="no">
+        <type>std::optional&lt; std::variant&lt; <ref refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1ac740cb9f709e7a5df844a0914f2b30b6" kindref="member">PlainWebSocketStream</ref>, <ref refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1ac2ae6080397f68efe3d6295e343b5877" kindref="member">SecureWebSocketStream</ref> &gt; &gt;</type>
+        <definition>std::optional&lt;std::variant&lt;PlainWebSocketStream, SecureWebSocketStream&gt; &gt; sgns::api::WsClientImpl::stream</definition>
+        <argsstring></argsstring>
+        <name>stream</name>
+        <qualifiedname>sgns::api::WsClientImpl::stream</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="46" column="19" bodyfile="src/api/transport/impl/ws/ws_client_impl.hpp" bodystart="46" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a05f0ed7d4a7f4b3f58c24b8911a35238" prot="private" static="no" mutable="no">
+        <type><ref refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a163af5702a6f66a5777a4187c0745a73" kindref="member">ExecutorType</ref></type>
+        <definition>ExecutorType sgns::api::WsClientImpl::strand</definition>
+        <argsstring></argsstring>
+        <name>strand</name>
+        <qualifiedname>sgns::api::WsClientImpl::strand</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="47" column="18" bodyfile="src/api/transport/impl/ws/ws_client_impl.hpp" bodystart="47" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a4e7af2c53d534591f10f14f426592f19" prot="private" static="no" mutable="no">
+        <type>boost::asio::ip::tcp::resolver</type>
+        <definition>boost::asio::ip::tcp::resolver sgns::api::WsClientImpl::resolver</definition>
+        <argsstring></argsstring>
+        <name>resolver</name>
+        <qualifiedname>sgns::api::WsClientImpl::resolver</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="48" column="36" bodyfile="src/api/transport/impl/ws/ws_client_impl.hpp" bodystart="48" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1af4b8c7c5b050958055a207a61227bd20" prot="private" static="no" mutable="no">
+        <type>boost::beast::flat_buffer</type>
+        <definition>boost::beast::flat_buffer sgns::api::WsClientImpl::buffer</definition>
+        <argsstring></argsstring>
+        <name>buffer</name>
+        <qualifiedname>sgns::api::WsClientImpl::buffer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="50" column="31" bodyfile="src/api/transport/impl/ws/ws_client_impl.hpp" bodystart="50" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1adc4293dd5d24d55c710ad2d5819a3641" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::api::WsClientImpl::host</definition>
+        <argsstring></argsstring>
+        <name>host</name>
+        <qualifiedname>sgns::api::WsClientImpl::host</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="52" column="17" bodyfile="src/api/transport/impl/ws/ws_client_impl.hpp" bodystart="52" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a96d7d1cfd68faed873afef0fbfff45bd" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::api::WsClientImpl::port</definition>
+        <argsstring></argsstring>
+        <name>port</name>
+        <qualifiedname>sgns::api::WsClientImpl::port</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="53" column="17" bodyfile="src/api/transport/impl/ws/ws_client_impl.hpp" bodystart="53" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1adf1a497bf9a6862b8c3ac59e93c31db6" prot="private" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::api::WsClientImpl::secure</definition>
+        <argsstring></argsstring>
+        <name>secure</name>
+        <qualifiedname>sgns::api::WsClientImpl::secure</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="54" column="10" bodyfile="src/api/transport/impl/ws/ws_client_impl.hpp" bodystart="54" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a76cbcb658f9fc772a00b7c1f5771069d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::api::WsClientImpl::WsClientImpl</definition>
+        <argsstring>(Context &amp;context, const std::string &amp;url)</argsstring>
+        <name>WsClientImpl</name>
+        <qualifiedname>sgns::api::WsClientImpl::WsClientImpl</qualifiedname>
+        <param>
+          <type><ref refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a26d95425a6d2dab3ea19c2f5ee89a24d" kindref="member">Context</ref> &amp;</type>
+          <declname>context</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>url</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="30" column="5" bodyfile="src/api/transport/impl/ws/ws_client_impl.cpp" bodystart="27" bodyend="56"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a9e1fae2305f241329f14dccbbc76fbee" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsClientImpl::start</definition>
+        <argsstring>()</argsstring>
+        <name>start</name>
+        <qualifiedname>sgns::api::WsClientImpl::start</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="33" column="10" bodyfile="src/api/transport/impl/ws/ws_client_impl.cpp" bodystart="58" bodyend="128"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1adea60d0a5bfd66831a226e9c54a7cccd" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsClientImpl::setMessageHandler</definition>
+        <argsstring>(std::function&lt; void(const std::string &amp;)&gt; handler)</argsstring>
+        <name>setMessageHandler</name>
+        <qualifiedname>sgns::api::WsClientImpl::setMessageHandler</qualifiedname>
+        <param>
+          <type>std::function&lt; void(const std::string &amp;)&gt;</type>
+          <declname>handler</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="36" column="10" bodyfile="src/api/transport/impl/ws/ws_client_impl.cpp" bodystart="151" bodyend="171"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1aa56eca55d4b874a4ab1ff2d5d453df49" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsClientImpl::send</definition>
+        <argsstring>(const std::string &amp;message)</argsstring>
+        <name>send</name>
+        <qualifiedname>sgns::api::WsClientImpl::send</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>message</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="39" column="10" bodyfile="src/api/transport/impl/ws/ws_client_impl.cpp" bodystart="173" bodyend="189"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1ae5831833ea0b547305ae64323d4dbaa1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsClientImpl::stop</definition>
+        <argsstring>()</argsstring>
+        <name>stop</name>
+        <qualifiedname>sgns::api::WsClientImpl::stop</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="42" column="10" bodyfile="src/api/transport/impl/ws/ws_client_impl.cpp" bodystart="191" bodyend="208"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a8e0c66c8faa93ffff6b833074088e11f" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsClientImpl::parseUrl</definition>
+        <argsstring>(const std::string &amp;url, std::string &amp;protocol, std::string &amp;host, std::string &amp;port)</argsstring>
+        <name>parseUrl</name>
+        <qualifiedname>sgns::api::WsClientImpl::parseUrl</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>url</declname>
+        </param>
+        <param>
+          <type>std::string &amp;</type>
+          <declname>protocol</declname>
+        </param>
+        <param>
+          <type>std::string &amp;</type>
+          <declname>host</declname>
+        </param>
+        <param>
+          <type>std::string &amp;</type>
+          <declname>port</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="57" column="10" bodyfile="src/api/transport/impl/ws/ws_client_impl.cpp" bodystart="7" bodyend="25"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1ade09e138d03ad237aab9b6296a8ce2cf" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsClientImpl::onWebSocketConnect</definition>
+        <argsstring>()</argsstring>
+        <name>onWebSocketConnect</name>
+        <qualifiedname>sgns::api::WsClientImpl::onWebSocketConnect</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="60" column="10" bodyfile="src/api/transport/impl/ws/ws_client_impl.cpp" bodystart="130" bodyend="149"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a97341c1ffaf4d698826e76f0adc7ca34" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsClientImpl::reportError</definition>
+        <argsstring>(const boost::system::error_code &amp;ec, const std::string &amp;context)</argsstring>
+        <name>reportError</name>
+        <qualifiedname>sgns::api::WsClientImpl::reportError</qualifiedname>
+        <param>
+          <type>const boost::system::error_code &amp;</type>
+          <declname>ec</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>context</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="63" column="10" bodyfile="src/api/transport/impl/ws/ws_client_impl.cpp" bodystart="210" bodyend="212"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::api::WsClientImpl</label>
+        <link refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; WsClientImpl &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::api::WsClientImpl</label>
+        <link refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-host</edgelabel>
+          <edgelabel>-port</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; WsClientImpl &gt;</label>
+      </node>
+      <node id="3">
+        <label>std::string</label>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/api/transport/impl/ws/ws_client_impl.hpp" line="18" column="1" bodyfile="src/api/transport/impl/ws/ws_client_impl.hpp" bodystart="18" bodyend="64"/>
+    <listofallmembers>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1af4b8c7c5b050958055a207a61227bd20" prot="private" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>buffer</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a26d95425a6d2dab3ea19c2f5ee89a24d" prot="public" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>Context</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a163af5702a6f66a5777a4187c0745a73" prot="public" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>ExecutorType</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1adc4293dd5d24d55c710ad2d5819a3641" prot="private" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>host</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1ade09e138d03ad237aab9b6296a8ce2cf" prot="private" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>onWebSocketConnect</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a8e0c66c8faa93ffff6b833074088e11f" prot="private" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>parseUrl</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1ac740cb9f709e7a5df844a0914f2b30b6" prot="public" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>PlainWebSocketStream</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a96d7d1cfd68faed873afef0fbfff45bd" prot="private" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>port</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a97341c1ffaf4d698826e76f0adc7ca34" prot="private" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>reportError</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a4e7af2c53d534591f10f14f426592f19" prot="private" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>resolver</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1adf1a497bf9a6862b8c3ac59e93c31db6" prot="private" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>secure</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1ac2ae6080397f68efe3d6295e343b5877" prot="public" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>SecureWebSocketStream</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1aa56eca55d4b874a4ab1ff2d5d453df49" prot="public" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>send</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1adea60d0a5bfd66831a226e9c54a7cccd" prot="public" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>setMessageHandler</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1ae40b80acdb68549e2c7b1e32ea9c232f" prot="private" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>sslContext</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1ad2ce0ab4cd62e074805f163253ddf3b4" prot="public" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>SSLStream</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a9e1fae2305f241329f14dccbbc76fbee" prot="public" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>start</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1ae5831833ea0b547305ae64323d4dbaa1" prot="public" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>stop</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a05f0ed7d4a7f4b3f58c24b8911a35238" prot="private" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>strand</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a12519986f5bde0ab880aef7ffb2411c5" prot="private" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>stream</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a1e9dec2fa141a532843c2b55d08b56f4" prot="public" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>StreamSocket</name></member>
+      <member refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a76cbcb658f9fc772a00b7c1f5771069d" prot="public" virt="non-virtual"><scope>sgns::api::WsClientImpl</scope><name>WsClientImpl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

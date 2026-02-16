@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_71615b694e57e8e147c90de439ca1dd0" kind="dir">
+    <compoundname>src/storage/trie/impl</compoundname>
+    <innerfile refid="db/d7d/ephemeral__trie__batch__impl_8cpp">ephemeral_trie_batch_impl.cpp</innerfile>
+    <innerfile refid="d9/d3e/ephemeral__trie__batch__impl_8hpp">ephemeral_trie_batch_impl.hpp</innerfile>
+    <innerfile refid="dd/dda/persistent__trie__batch__impl_8cpp">persistent_trie_batch_impl.cpp</innerfile>
+    <innerfile refid="d7/daf/persistent__trie__batch__impl_8hpp">persistent_trie_batch_impl.hpp</innerfile>
+    <innerfile refid="d1/dfc/topper__trie__batch__impl_8cpp">topper_trie_batch_impl.cpp</innerfile>
+    <innerfile refid="de/dc7/topper__trie__batch__impl_8hpp">topper_trie_batch_impl.hpp</innerfile>
+    <innerfile refid="d6/d01/trie__storage__backend__batch_8cpp">trie_storage_backend_batch.cpp</innerfile>
+    <innerfile refid="dc/d83/trie__storage__backend__batch_8hpp">trie_storage_backend_batch.hpp</innerfile>
+    <innerfile refid="de/db2/trie__storage__backend__impl_8cpp">trie_storage_backend_impl.cpp</innerfile>
+    <innerfile refid="d4/d72/trie__storage__backend__impl_8hpp">trie_storage_backend_impl.hpp</innerfile>
+    <innerfile refid="db/dc1/trie__storage__impl_8cpp">trie_storage_impl.cpp</innerfile>
+    <innerfile refid="d8/dd1/trie__storage__impl_8hpp">trie_storage_impl.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/storage/trie/impl/"/>
+  </compounddef>
+</doxygen>

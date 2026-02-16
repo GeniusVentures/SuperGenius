@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/d0d/namespacesgns_1_1face" kind="namespace" language="C++">
+    <compoundname>sgns::face</compoundname>
+    <innerclass refid="d3/dd5/classsgns_1_1face_1_1_generic_iterator" prot="public">sgns::face::GenericIterator</innerclass>
+    <innerclass refid="df/dd2/classsgns_1_1face_1_1_forward_iterator" prot="public">sgns::face::ForwardIterator</innerclass>
+    <innerclass refid="d4/dc6/classsgns_1_1face_1_1_generic_list" prot="public">sgns::face::GenericList</innerclass>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/storage/face/generic_iterator.hpp" line="8" column="1"/>
+  </compounddef>
+</doxygen>

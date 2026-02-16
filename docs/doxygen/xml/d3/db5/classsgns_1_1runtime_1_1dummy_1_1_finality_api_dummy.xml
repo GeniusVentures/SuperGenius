@@ -1,0 +1,222 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy" kind="class" language="C++" prot="public">
+    <compoundname>sgns::runtime::dummy::FinalityApiDummy</compoundname>
+    <basecompoundref refid="d8/d22/classsgns_1_1runtime_1_1_finality_api" prot="public" virt="non-virtual">sgns::runtime::FinalityApi</basecompoundref>
+    <includes refid="d5/d14/finality__api__dummy_8hpp" local="no">finality_api_dummy.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy_1a829cae20a829d550b188303d0bf3f2be" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d5/ddb/classsgns_1_1application_1_1_key_storage" kindref="compound">application::KeyStorage</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;application::KeyStorage&gt; sgns::runtime::dummy::FinalityApiDummy::key_storage_</definition>
+        <argsstring></argsstring>
+        <name>key_storage_</name>
+        <qualifiedname>sgns::runtime::dummy::FinalityApiDummy::key_storage_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/dummy/finality_api_dummy.hpp" line="29" column="21" bodyfile="src/runtime/dummy/finality_api_dummy.hpp" bodystart="29" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy_1af8929795bd0b2e846405116510a53d56" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::dummy::FinalityApiDummy::~FinalityApiDummy</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~FinalityApiDummy</name>
+        <qualifiedname>sgns::runtime::dummy::FinalityApiDummy::~FinalityApiDummy</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/dummy/finality_api_dummy.hpp" line="15" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy_1a91aab2e943c747dc9a7cd165ce3a7815" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::dummy::FinalityApiDummy::FinalityApiDummy</definition>
+        <argsstring>(std::shared_ptr&lt; application::KeyStorage &gt; key_storage)</argsstring>
+        <name>FinalityApiDummy</name>
+        <qualifiedname>sgns::runtime::dummy::FinalityApiDummy::FinalityApiDummy</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d5/ddb/classsgns_1_1application_1_1_key_storage" kindref="compound">application::KeyStorage</ref> &gt;</type>
+          <declname>key_storage</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/dummy/finality_api_dummy.hpp" line="17" column="14" bodyfile="src/runtime/dummy/finality_api_dummy.cpp" bodystart="8" bodyend="12"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy_1ac7117cc2ef7b5706344affe35a0baa49" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; boost::optional&lt; <ref refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a5a4915e08fadb4a886dd9587870175fd" kindref="member">ScheduledChange</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; boost::optional&lt; primitives::ScheduledChange &gt; &gt; sgns::runtime::dummy::FinalityApiDummy::pending_change</definition>
+        <argsstring>(const Digest &amp;digest) override</argsstring>
+        <name>pending_change</name>
+        <qualifiedname>sgns::runtime::dummy::FinalityApiDummy::pending_change</qualifiedname>
+        <reimplements refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a5c19577923762f3ab18ffd5307ba3d6c">pending_change</reimplements>
+        <param>
+          <type>const <ref refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1aa89fd8cc80a70ca91f223f5308da08ba" kindref="member">Digest</ref> &amp;</type>
+          <declname>digest</declname>
+        </param>
+        <briefdescription>
+<para>calls Finality_pending_change runtime api function, which checks a digest for pending changes. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>digest</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>digest to check </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>nullopt if there are no pending changes, scheduled change item if exists or error if error occured </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/dummy/finality_api_dummy.hpp" line="19" column="21" bodyfile="src/runtime/dummy/finality_api_dummy.cpp" bodystart="15" bodyend="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy_1adbd528c1439edb875484a94e2cdb9a73" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; boost::optional&lt; <ref refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1ae0d63bf636bb00c898b3a595a73c68c5" kindref="member">ForcedChange</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; boost::optional&lt; primitives::ForcedChange &gt; &gt; sgns::runtime::dummy::FinalityApiDummy::forced_change</definition>
+        <argsstring>(const Digest &amp;digest) override</argsstring>
+        <name>forced_change</name>
+        <qualifiedname>sgns::runtime::dummy::FinalityApiDummy::forced_change</qualifiedname>
+        <reimplements refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1ad1f0d171288f06b45eaf64c5fda28381">forced_change</reimplements>
+        <param>
+          <type>const <ref refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1aa89fd8cc80a70ca91f223f5308da08ba" kindref="member">Digest</ref> &amp;</type>
+          <declname>digest</declname>
+        </param>
+        <briefdescription>
+<para>calls Finality_forced_change runtime api function which checks a digest for forced changes </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>digest</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>digest to check </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>nullopt if no forced changes, forced change item if exists or error if error occured </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/dummy/finality_api_dummy.hpp" line="22" column="21" bodyfile="src/runtime/dummy/finality_api_dummy.cpp" bodystart="20" bodyend="23"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy_1a0e18b87a111e20165732bdf254985085" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d6/d76/structsgns_1_1primitives_1_1_authority_list" kindref="compound">primitives::AuthorityList</ref> &gt;</type>
+        <definition>outcome::result&lt; primitives::AuthorityList &gt; sgns::runtime::dummy::FinalityApiDummy::authorities</definition>
+        <argsstring>(const primitives::BlockId &amp;block_id) override</argsstring>
+        <name>authorities</name>
+        <qualifiedname>sgns::runtime::dummy::FinalityApiDummy::authorities</qualifiedname>
+        <reimplements refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1affe3ab475f3d66b9888b5c99db6af458">authorities</reimplements>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>block_id</declname>
+        </param>
+        <briefdescription>
+<para>calls Finality_authorities runtime api function </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>collection of current finality authorities with their weights </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/dummy/finality_api_dummy.hpp" line="25" column="21" bodyfile="src/runtime/dummy/finality_api_dummy.cpp" bodystart="24" bodyend="28"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Dummy implementation of the finality api. Should not be used in production. Instead of using runtime to get authorities, just returns current authority </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::runtime::FinalityApi</label>
+        <link refid="d8/d22/classsgns_1_1runtime_1_1_finality_api"/>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::dummy::FinalityApiDummy</label>
+        <link refid="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="5">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="4">
+        <label>sgns::application::KeyStorage</label>
+        <link refid="d5/ddb/classsgns_1_1application_1_1_key_storage"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::FinalityApi</label>
+        <link refid="d8/d22/classsgns_1_1runtime_1_1_finality_api"/>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::dummy::FinalityApiDummy</label>
+        <link refid="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-key_storage_</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; sgns::application::KeyStorage &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::application::KeyStorage &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/dummy/finality_api_dummy.hpp" line="13" column="3" bodyfile="src/runtime/dummy/finality_api_dummy.hpp" bodystart="13" bodyend="30"/>
+    <listofallmembers>
+      <member refid="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy_1a0e18b87a111e20165732bdf254985085" prot="public" virt="virtual"><scope>sgns::runtime::dummy::FinalityApiDummy</scope><name>authorities</name></member>
+      <member refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a6f27d6faadbbc8c35fe141f06c504371" prot="protected" virt="non-virtual"><scope>sgns::runtime::dummy::FinalityApiDummy</scope><name>BlockId</name></member>
+      <member refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a668eb0a4f163cc3e632c05077854864a" prot="protected" virt="non-virtual"><scope>sgns::runtime::dummy::FinalityApiDummy</scope><name>BlockNumber</name></member>
+      <member refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1aa89fd8cc80a70ca91f223f5308da08ba" prot="protected" virt="non-virtual"><scope>sgns::runtime::dummy::FinalityApiDummy</scope><name>Digest</name></member>
+      <member refid="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy_1a91aab2e943c747dc9a7cd165ce3a7815" prot="public" virt="non-virtual"><scope>sgns::runtime::dummy::FinalityApiDummy</scope><name>FinalityApiDummy</name></member>
+      <member refid="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy_1adbd528c1439edb875484a94e2cdb9a73" prot="public" virt="virtual"><scope>sgns::runtime::dummy::FinalityApiDummy</scope><name>forced_change</name></member>
+      <member refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1ae0d63bf636bb00c898b3a595a73c68c5" prot="protected" virt="non-virtual"><scope>sgns::runtime::dummy::FinalityApiDummy</scope><name>ForcedChange</name></member>
+      <member refid="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy_1a829cae20a829d550b188303d0bf3f2be" prot="private" virt="non-virtual"><scope>sgns::runtime::dummy::FinalityApiDummy</scope><name>key_storage_</name></member>
+      <member refid="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy_1ac7117cc2ef7b5706344affe35a0baa49" prot="public" virt="virtual"><scope>sgns::runtime::dummy::FinalityApiDummy</scope><name>pending_change</name></member>
+      <member refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a5a4915e08fadb4a886dd9587870175fd" prot="protected" virt="non-virtual"><scope>sgns::runtime::dummy::FinalityApiDummy</scope><name>ScheduledChange</name></member>
+      <member refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a0e0b19953936b90450ff71d6bbb8a535" prot="protected" virt="non-virtual"><scope>sgns::runtime::dummy::FinalityApiDummy</scope><name>SessionKey</name></member>
+      <member refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1a8e2b50ecbbffd8d20ac9cf8e715b709f" prot="protected" virt="non-virtual"><scope>sgns::runtime::dummy::FinalityApiDummy</scope><name>WeightedAuthority</name></member>
+      <member refid="d8/d22/classsgns_1_1runtime_1_1_finality_api_1ac0e656d3dcf33dfa16040a5dc3fc1143" prot="public" virt="virtual"><scope>sgns::runtime::dummy::FinalityApiDummy</scope><name>~FinalityApi</name></member>
+      <member refid="d3/db5/classsgns_1_1runtime_1_1dummy_1_1_finality_api_dummy_1af8929795bd0b2e846405116510a53d56" prot="public" virt="non-virtual"><scope>sgns::runtime::dummy::FinalityApiDummy</scope><name>~FinalityApiDummy</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

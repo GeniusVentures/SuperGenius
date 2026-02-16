@@ -1,0 +1,275 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/d9b/changes__trie__config_8hpp" kind="file" language="C++">
+    <compoundname>changes_trie_config.hpp</compoundname>
+    <includes local="no">cstdint</includes>
+    <includes local="no">type_traits</includes>
+    <includedby refid="d3/d51/changes__tracker_8hpp" local="yes">src/storage/changes_trie/changes_tracker.hpp</includedby>
+    <includedby refid="d1/dfb/changes__trie_8hpp" local="yes">src/storage/changes_trie/impl/changes_trie.hpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/storage/changes_trie/changes_trie_config.hpp</label>
+        <link refid="da/d9b/changes__trie__config_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>cstdint</label>
+      </node>
+      <node id="3">
+        <label>type_traits</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="4">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.cpp</label>
+        <link refid="de/d5e/core__factory__impl_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/runtime/binaryen/runtime_api/core_impl.cpp</label>
+        <link refid="dc/d7c/core__impl_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/runtime/binaryen/runtime_api/core_impl.hpp</label>
+        <link refid="d7/dbc/core__impl_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>src/storage/changes_trie/changes_tracker.hpp</label>
+        <link refid="d3/d51/changes__tracker_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/storage/changes_trie/changes_trie_config.hpp</label>
+        <link refid="da/d9b/changes__trie__config_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>src/storage/changes_trie/impl/changes_trie.cpp</label>
+        <link refid="d9/d77/changes__trie_8cpp"/>
+      </node>
+      <node id="12">
+        <label>src/storage/changes_trie/impl/changes_trie.hpp</label>
+        <link refid="d1/dfb/changes__trie_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>src/storage/changes_trie/impl/storage_changes_tracker_impl.cpp</label>
+        <link refid="d8/d2c/storage__changes__tracker__impl_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/storage/changes_trie/impl/storage_changes_tracker_impl.hpp</label>
+        <link refid="d7/d4b/storage__changes__tracker__impl_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>src/storage/trie/impl/persistent_trie_batch_impl.cpp</label>
+        <link refid="dd/dda/persistent__trie__batch__impl_8cpp"/>
+      </node>
+      <node id="8">
+        <label>src/storage/trie/impl/persistent_trie_batch_impl.hpp</label>
+        <link refid="d7/daf/persistent__trie__batch__impl_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>src/storage/trie/impl/trie_storage_impl.cpp</label>
+        <link refid="db/dc1/trie__storage__impl_8cpp"/>
+      </node>
+      <node id="11">
+        <label>src/storage/trie/impl/trie_storage_impl.hpp</label>
+        <link refid="d8/dd1/trie__storage__impl_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="da/d4a/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_config" prot="public">sgns::storage::changes_trie::ChangesTrieConfig</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d0/dbf/namespacesgns_1_1storage">sgns::storage</innernamespace>
+    <innernamespace refid="dd/d55/namespacesgns_1_1storage_1_1changes__trie">sgns::storage::changes_trie</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="dd/d55/namespacesgns_1_1storage_1_1changes__trie_1a5452d3afab2d6015fa1b7aaf048233b0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::storage::changes_trie::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const ChangesTrieConfig &amp;config)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::storage::changes_trie::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const ChangesTrieConfig &amp;</type>
+          <declname>config</declname>
+        </param>
+        <briefdescription>
+<para>scale-encodes config instance to stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>config</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to encode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/changes_trie_config.hpp" line="39" column="3" bodyfile="src/storage/changes_trie/changes_trie_config.hpp" bodystart="39" bodyend="42"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d55/namespacesgns_1_1storage_1_1changes__trie_1a0a07c4256363911a54264a261964e43a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::storage::changes_trie::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, ChangesTrieConfig &amp;config)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::storage::changes_trie::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>ChangesTrieConfig &amp;</type>
+          <declname>config</declname>
+        </param>
+        <briefdescription>
+<para>decodes config instance from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>config</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to decode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/changes_trie/changes_trie_config.hpp" line="53" column="10" bodyfile="src/storage/changes_trie/changes_trie_config.hpp" bodystart="53" bodyend="56"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_STORAGE_CHANGES_TRIE_CHANGES_TRIE_CONFIG</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_STORAGE_CHANGES_TRIE_CHANGES_TRIE_CONFIG</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstdint&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;type_traits&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="dd/d55/namespacesgns_1_1storage_1_1changes__trie" kindref="compound">sgns::storage::changes_trie</ref><sp/>{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11" refid="da/d4a/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_config" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="da/d4a/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_config" kindref="compound">ChangesTrieConfig</ref><sp/>{</highlight></codeline>
+<codeline lineno="17" refid="da/d4a/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_config_1adcf4d93e01241d33ea8c88b356f97688" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>uint32_t<sp/><ref refid="da/d4a/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_config_1adcf4d93e01241d33ea8c88b356f97688" kindref="member">digest_interval</ref>;</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="27" refid="da/d4a/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_config_1a63df0956e92590a68358dad9a6f28d87" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>uint32_t<sp/><ref refid="da/d4a/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_config_1a63df0956e92590a68358dad9a6f28d87" kindref="member">digest_levels</ref>;</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">Stream,</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>=<sp/>std::enable_if_t&lt;Stream::is_encoder_stream&gt;&gt;</highlight></codeline>
+<codeline lineno="39" refid="dd/d55/namespacesgns_1_1storage_1_1changes__trie_1a5452d3afab2d6015fa1b7aaf048233b0" refkind="member"><highlight class="normal"><sp/><sp/>Stream<sp/>&amp;<ref refid="dd/d55/namespacesgns_1_1storage_1_1changes__trie_1a5452d3afab2d6015fa1b7aaf048233b0" kindref="member">operator&lt;&lt;</ref>(Stream<sp/>&amp;s,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="da/d4a/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_config" kindref="compound">ChangesTrieConfig</ref><sp/>&amp;config)<sp/>{</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/>s<sp/>&lt;&lt;<sp/>config.<ref refid="da/d4a/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_config_1adcf4d93e01241d33ea8c88b356f97688" kindref="member">digest_interval</ref><sp/>&lt;&lt;<sp/>config.<ref refid="da/d4a/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_config_1a63df0956e92590a68358dad9a6f28d87" kindref="member">digest_levels</ref>;</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>s;</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">Stream,</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>=<sp/>std::enable_if_t&lt;Stream::is_decoder_stream&gt;&gt;</highlight></codeline>
+<codeline lineno="53" refid="dd/d55/namespacesgns_1_1storage_1_1changes__trie_1a0a07c4256363911a54264a261964e43a" refkind="member"><highlight class="normal"><sp/><sp/>Stream<sp/>&amp;<ref refid="dd/d55/namespacesgns_1_1storage_1_1changes__trie_1a0a07c4256363911a54264a261964e43a" kindref="member">operator&gt;&gt;</ref>(Stream<sp/>&amp;s,<sp/><ref refid="da/d4a/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_config" kindref="compound">ChangesTrieConfig</ref><sp/>&amp;config)<sp/>{</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/>s<sp/>&gt;&gt;<sp/>config.<ref refid="da/d4a/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_config_1adcf4d93e01241d33ea8c88b356f97688" kindref="member">digest_interval</ref><sp/>&gt;&gt;<sp/>config.<ref refid="da/d4a/structsgns_1_1storage_1_1changes__trie_1_1_changes_trie_config_1a63df0956e92590a68358dad9a6f28d87" kindref="member">digest_levels</ref>;</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>s;</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="57"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::storage::changes_trie</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="58"><highlight class="normal"></highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_STORAGE_CHANGES_TRIE_CHANGES_TRIE_CONFIG</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/storage/changes_trie/changes_trie_config.hpp"/>
+  </compounddef>
+</doxygen>

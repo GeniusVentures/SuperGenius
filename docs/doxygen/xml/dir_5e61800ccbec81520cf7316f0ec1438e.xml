@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_5e61800ccbec81520cf7316f0ec1438e" kind="dir">
+    <compoundname>src/blockchain/impl</compoundname>
+    <innerfile refid="df/d2c/block__header__repository_8cpp">block_header_repository.cpp</innerfile>
+    <innerfile refid="dc/dae/block__tree__error_8cpp">block_tree_error.cpp</innerfile>
+    <innerfile refid="d5/df4/block__tree__impl_8cpp">block_tree_impl.cpp</innerfile>
+    <innerfile refid="d7/d87/block__tree__impl_8hpp">block_tree_impl.hpp</innerfile>
+    <innerfile refid="da/d8c/_blockchain_8cpp">Blockchain.cpp</innerfile>
+    <innerfile refid="db/d1e/src_2blockchain_2impl_2common_8hpp">common.hpp</innerfile>
+    <innerfile refid="de/d1b/key__value__block__header__repository_8cpp">key_value_block_header_repository.cpp</innerfile>
+    <innerfile refid="dd/dc6/key__value__block__header__repository_8hpp">key_value_block_header_repository.hpp</innerfile>
+    <innerfile refid="de/de9/key__value__block__storage_8cpp">key_value_block_storage.cpp</innerfile>
+    <innerfile refid="d4/d6b/key__value__block__storage_8hpp">key_value_block_storage.hpp</innerfile>
+    <innerfile refid="d3/d2f/storage__util_8cpp">storage_util.cpp</innerfile>
+    <innerfile refid="dd/d87/storage__util_8hpp">storage_util.hpp</innerfile>
+    <innerfile refid="da/ddf/types_8cpp">types.cpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/blockchain/impl/"/>
+  </compounddef>
+</doxygen>

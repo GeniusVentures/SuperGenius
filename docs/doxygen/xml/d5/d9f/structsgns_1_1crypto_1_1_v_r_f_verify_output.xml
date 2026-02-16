@@ -1,0 +1,78 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/d9f/structsgns_1_1crypto_1_1_v_r_f_verify_output" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::crypto::VRFVerifyOutput</compoundname>
+    <includes refid="d2/d9c/sr25519__types_8hpp" local="no">sr25519_types.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d5/d9f/structsgns_1_1crypto_1_1_v_r_f_verify_output_1af16c76974b47187d50b5cb9a4870c3a5" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::crypto::VRFVerifyOutput::is_valid</definition>
+        <argsstring></argsstring>
+        <name>is_valid</name>
+        <qualifiedname>sgns::crypto::VRFVerifyOutput::is_valid</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="81" column="10" bodyfile="src/crypto/sr25519_types.hpp" bodystart="81" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d9f/structsgns_1_1crypto_1_1_v_r_f_verify_output_1a0dbc9a66ac8381ab058cd50a13a56f04" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::crypto::VRFVerifyOutput::is_less</definition>
+        <argsstring></argsstring>
+        <name>is_less</name>
+        <qualifiedname>sgns::crypto::VRFVerifyOutput::is_less</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="83" column="10" bodyfile="src/crypto/sr25519_types.hpp" bodystart="83" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="friend">
+      <memberdef kind="friend" id="d5/d9f/structsgns_1_1crypto_1_1_v_r_f_verify_output_1a98d3c59f16473f95ec33212b62813ea3" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::ostream &amp;</type>
+        <definition>std::ostream &amp; operator&lt;&lt;</definition>
+        <argsstring>(std::ostream &amp;out, const VRFVerifyOutput &amp;test_struct)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::crypto::VRFVerifyOutput::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>std::ostream &amp;</type>
+          <declname>out</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d5/d9f/structsgns_1_1crypto_1_1_v_r_f_verify_output" kindref="compound">VRFVerifyOutput</ref> &amp;</type>
+          <declname>test_struct</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="85" column="12" bodyfile="src/crypto/sr25519_types.hpp" bodystart="85" bodyend="88"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Output of a verifiable random function verification. </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::crypto::VRFVerifyOutput</label>
+        <link refid="d5/d9f/structsgns_1_1crypto_1_1_v_r_f_verify_output"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/crypto/sr25519_types.hpp" line="79" column="3" bodyfile="src/crypto/sr25519_types.hpp" bodystart="79" bodyend="90"/>
+    <listofallmembers>
+      <member refid="d5/d9f/structsgns_1_1crypto_1_1_v_r_f_verify_output_1a0dbc9a66ac8381ab058cd50a13a56f04" prot="public" virt="non-virtual"><scope>sgns::crypto::VRFVerifyOutput</scope><name>is_less</name></member>
+      <member refid="d5/d9f/structsgns_1_1crypto_1_1_v_r_f_verify_output_1af16c76974b47187d50b5cb9a4870c3a5" prot="public" virt="non-virtual"><scope>sgns::crypto::VRFVerifyOutput</scope><name>is_valid</name></member>
+      <member refid="d5/d9f/structsgns_1_1crypto_1_1_v_r_f_verify_output_1a98d3c59f16473f95ec33212b62813ea3" prot="public" virt="non-virtual"><scope>sgns::crypto::VRFVerifyOutput</scope><name>operator&lt;&lt;</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

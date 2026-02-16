@@ -1,0 +1,722 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/d31/_migration0__2__0_to1__0__0_8hpp" kind="file" language="C++">
+    <compoundname>Migration0_2_0To1_0_0.hpp</compoundname>
+    <includes local="no">memory</includes>
+    <includes local="no">string</includes>
+    <includes local="no">deque</includes>
+    <includes local="no">cstdint</includes>
+    <includes local="no">boost/asio/io_context.hpp</includes>
+    <includes local="no">ipfs_pubsub/gossip_pubsub_topic.hpp</includes>
+    <includes refid="d6/da3/logger_8hpp" local="yes">base/logger.hpp</includes>
+    <includes local="yes">upnp.hpp</includes>
+    <includes refid="d0/d0e/globaldb_8hpp" local="yes">crdt/globaldb/globaldb.hpp</includes>
+    <includes refid="d5/dda/outcome_8hpp" local="yes">outcome/outcome.hpp</includes>
+    <includes local="no">ipfs_lite/ipfs/graphsync/impl/network/network.hpp</includes>
+    <includes local="no">ipfs_lite/ipfs/graphsync/impl/local_requests.hpp</includes>
+    <includes local="no">libp2p/protocol/common/asio/asio_scheduler.hpp</includes>
+    <includes refid="d5/da7/_i_migration_step_8hpp" local="yes">IMigrationStep.hpp</includes>
+    <includedby refid="dc/dfe/_migration0__2__0_to1__0__0_8cpp" local="yes">src/account/Migration0_2_0To1_0_0.cpp</includedby>
+    <includedby refid="d2/d4b/_migration_manager_8cpp" local="yes">src/account/MigrationManager.cpp</includedby>
+    <incdepgraph>
+      <node id="82">
+        <label>IMigrationStep.hpp</label>
+        <link refid="d5/da7/_i_migration_step_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="66" relation="include">
+        </childnode>
+        <childnode refid="83" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/account/Migration0_2_0To1_0_0.hpp</label>
+        <link refid="d1/d31/_migration0__2__0_to1__0__0_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="80" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="81" relation="include">
+        </childnode>
+        <childnode refid="82" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>crdt/atomic_transaction.hpp</label>
+        <link refid="dd/d8f/atomic__transaction_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="63">
+        <label>crdt/broadcaster.hpp</label>
+        <link refid="d9/d25/broadcaster_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="64" relation="include">
+        </childnode>
+        <childnode refid="65" relation="include">
+        </childnode>
+        <childnode refid="66" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+      </node>
+      <node id="74">
+        <label>crdt/crdt_callback_manager.hpp</label>
+        <link refid="dc/d0f/crdt__callback__manager_8hpp"/>
+        <childnode refid="70" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="72" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="71">
+        <label>crdt/crdt_data_filter.hpp</label>
+        <link refid="d9/dc5/crdt__data__filter_8hpp"/>
+        <childnode refid="72" relation="include">
+        </childnode>
+        <childnode refid="70" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="73" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+      </node>
+      <node id="34">
+        <label>crdt/crdt_datastore.hpp</label>
+        <link refid="d5/d29/crdt__datastore_8hpp"/>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="61" relation="include">
+        </childnode>
+        <childnode refid="63" relation="include">
+        </childnode>
+        <childnode refid="67" relation="include">
+        </childnode>
+        <childnode refid="69" relation="include">
+        </childnode>
+        <childnode refid="71" relation="include">
+        </childnode>
+        <childnode refid="74" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+      </node>
+      <node id="61">
+        <label>crdt/crdt_heads.hpp</label>
+        <link refid="dc/d76/crdt__heads_8hpp"/>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="62" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+      </node>
+      <node id="69">
+        <label>crdt/crdt_options.hpp</label>
+        <link refid="d0/d2d/crdt__options_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="70" relation="include">
+        </childnode>
+      </node>
+      <node id="43">
+        <label>crdt/crdt_set.hpp</label>
+        <link refid="d4/d2e/crdt__set_8hpp"/>
+        <childnode refid="44" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+      </node>
+      <node id="67">
+        <label>crdt/dagsyncer.hpp</label>
+        <link refid="d5/db5/dagsyncer_8hpp"/>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="68" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="62" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>crdt/globaldb/globaldb.hpp</label>
+        <link refid="d0/d0e/globaldb_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="69" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="75" relation="include">
+        </childnode>
+      </node>
+      <node id="75">
+        <label>pubsub_broadcaster_ext.hpp</label>
+        <link refid="d7/db9/pubsub__broadcaster__ext_8hpp"/>
+        <childnode refid="63" relation="include">
+        </childnode>
+        <childnode refid="76" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="66" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="72" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="44" relation="include">
+        </childnode>
+      </node>
+      <node id="76">
+        <label>crdt/graphsync_dagsyncer.hpp</label>
+        <link refid="d6/dea/graphsync__dagsyncer_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="67" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="77" relation="include">
+        </childnode>
+        <childnode refid="78" relation="include">
+        </childnode>
+        <childnode refid="79" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>crdt/hierarchical_key.hpp</label>
+        <link refid="d5/dc7/hierarchical__key_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="29" relation="include">
+        </childnode>
+      </node>
+      <node id="60">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="51">
+        <label>storage/buffer_map_types.hpp</label>
+        <link refid="d8/dcc/buffer__map__types_8hpp"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="52" relation="include">
+        </childnode>
+        <childnode refid="55" relation="include">
+        </childnode>
+      </node>
+      <node id="54">
+        <label>storage/face/batchable.hpp</label>
+        <link refid="de/d87/batchable_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="55" relation="include">
+        </childnode>
+      </node>
+      <node id="53">
+        <label>storage/face/generic_maps.hpp</label>
+        <link refid="d9/daa/generic__maps_8hpp"/>
+        <childnode refid="54" relation="include">
+        </childnode>
+        <childnode refid="57" relation="include">
+        </childnode>
+        <childnode refid="59" relation="include">
+        </childnode>
+        <childnode refid="56" relation="include">
+        </childnode>
+      </node>
+      <node id="52">
+        <label>storage/face/generic_storage.hpp</label>
+        <link refid="d6/d4e/generic__storage_8hpp"/>
+        <childnode refid="53" relation="include">
+        </childnode>
+        <childnode refid="60" relation="include">
+        </childnode>
+      </node>
+      <node id="57">
+        <label>storage/face/iterable.hpp</label>
+        <link refid="db/d3e/iterable_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="58" relation="include">
+        </childnode>
+      </node>
+      <node id="58">
+        <label>storage/face/map_cursor.hpp</label>
+        <link refid="d9/d4b/map__cursor_8hpp"/>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="59">
+        <label>storage/face/readable.hpp</label>
+        <link refid="d5/dd2/readable_8hpp"/>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="55">
+        <label>storage/face/write_batch.hpp</label>
+        <link refid="d2/d76/write__batch_8hpp"/>
+        <childnode refid="56" relation="include">
+        </childnode>
+      </node>
+      <node id="56">
+        <label>storage/face/writeable.hpp</label>
+        <link refid="dc/da4/writeable_8hpp"/>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="45">
+        <label>storage/rocksdb/rocksdb.hpp</label>
+        <link refid="d1/d07/rocksdb_8hpp"/>
+        <childnode refid="46" relation="include">
+        </childnode>
+        <childnode refid="47" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="49" relation="include">
+        </childnode>
+        <childnode refid="50" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="51" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>boost/asio/io_context.hpp</label>
+      </node>
+      <node id="41">
+        <label>boost/asio/steady_timer.hpp</label>
+      </node>
+      <node id="25">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="14">
+        <label>boost/filesystem/path.hpp</label>
+      </node>
+      <node id="26">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="65">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="37">
+        <label>chrono</label>
+      </node>
+      <node id="40">
+        <label>condition_variable</label>
+      </node>
+      <node id="31">
+        <label>crdt/proto/delta.pb.h</label>
+      </node>
+      <node id="5">
+        <label>cstdint</label>
+      </node>
+      <node id="4">
+        <label>deque</label>
+      </node>
+      <node id="70">
+        <label>functional</label>
+      </node>
+      <node id="36">
+        <label>future</label>
+      </node>
+      <node id="27">
+        <label>gsl/span</label>
+      </node>
+      <node id="15">
+        <label>ipfs_lite/ipfs/graphsync/impl/graphsync_impl.hpp</label>
+      </node>
+      <node id="16">
+        <label>ipfs_lite/ipfs/graphsync/impl/local_requests.hpp</label>
+      </node>
+      <node id="77">
+        <label>ipfs_lite/ipfs/graphsync/impl/merkledag_bridge_impl.hpp</label>
+      </node>
+      <node id="80">
+        <label>ipfs_lite/ipfs/graphsync/impl/network/network.hpp</label>
+      </node>
+      <node id="78">
+        <label>ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp</label>
+      </node>
+      <node id="68">
+        <label>ipfs_lite/ipfs/merkledag/merkledag_service.hpp</label>
+      </node>
+      <node id="42">
+        <label>ipfs_lite/ipld/ipld_node.hpp</label>
+      </node>
+      <node id="7">
+        <label>ipfs_pubsub/gossip_pubsub_topic.hpp</label>
+      </node>
+      <node id="79">
+        <label>libp2p/host/host.hpp</label>
+      </node>
+      <node id="29">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="64">
+        <label>libp2p/peer/peer_info.hpp</label>
+      </node>
+      <node id="17">
+        <label>libp2p/protocol/autonat/autonat.hpp</label>
+      </node>
+      <node id="81">
+        <label>libp2p/protocol/common/asio/asio_scheduler.hpp</label>
+      </node>
+      <node id="18">
+        <label>libp2p/protocol/holepunch/holepunch_client.hpp</label>
+      </node>
+      <node id="19">
+        <label>libp2p/protocol/holepunch/holepunch_server.hpp</label>
+      </node>
+      <node id="20">
+        <label>libp2p/protocol/identify/identify.hpp</label>
+      </node>
+      <node id="39">
+        <label>map</label>
+      </node>
+      <node id="2">
+        <label>memory</label>
+      </node>
+      <node id="44">
+        <label>mutex</label>
+      </node>
+      <node id="33">
+        <label>optional</label>
+      </node>
+      <node id="32">
+        <label>primitives/cid/cid.hpp</label>
+      </node>
+      <node id="38">
+        <label>queue</label>
+      </node>
+      <node id="73">
+        <label>regex</label>
+      </node>
+      <node id="47">
+        <label>rocksdb/db.h</label>
+      </node>
+      <node id="49">
+        <label>rocksdb/options.h</label>
+      </node>
+      <node id="46">
+        <label>rocksdb/rocksdb_namespace.h</label>
+      </node>
+      <node id="48">
+        <label>rocksdb/slice.h</label>
+      </node>
+      <node id="50">
+        <label>rocksdb/write_batch.h</label>
+      </node>
+      <node id="62">
+        <label>set</label>
+      </node>
+      <node id="35">
+        <label>shared_mutex</label>
+      </node>
+      <node id="9">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="10">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="83">
+        <label>sstream</label>
+      </node>
+      <node id="3">
+        <label>string</label>
+      </node>
+      <node id="23">
+        <label>string_view</label>
+      </node>
+      <node id="66">
+        <label>tuple</label>
+      </node>
+      <node id="72">
+        <label>unordered_map</label>
+      </node>
+      <node id="13">
+        <label>unordered_set</label>
+      </node>
+      <node id="11">
+        <label>upnp.hpp</label>
+      </node>
+      <node id="24">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/account/Migration0_2_0To1_0_0.cpp</label>
+        <link refid="dc/dfe/_migration0__2__0_to1__0__0_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/account/Migration0_2_0To1_0_0.hpp</label>
+        <link refid="d1/d31/_migration0__2__0_to1__0__0_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>src/account/MigrationManager.cpp</label>
+        <link refid="d2/d4b/_migration_manager_8cpp"/>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0" prot="public">sgns::Migration0_2_0To1_0_0</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <briefdescription>
+<para>Versioned migration manager and migration step interface. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="date"><para>2025-05-29 </para>
+</simplesect>
+<simplesect kind="author"><para>Luiz Guilherme Rizzatto Zucchi </para>
+</simplesect>
+<simplesect kind="author"><para>Henrique A. Klein (<ulink url="mailto:hklein@gnus.ai">hklein@gnus.ai</ulink>) </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#pragma<sp/>once</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;memory&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;deque&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstdint&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/asio/io_context.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;ipfs_pubsub/gossip_pubsub_topic.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/da3/logger_8hpp" kindref="compound">base/logger.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;upnp.hpp&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d0/d0e/globaldb_8hpp" kindref="compound">crdt/globaldb/globaldb.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/dda/outcome_8hpp" kindref="compound">outcome/outcome.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;ipfs_lite/ipfs/graphsync/impl/network/network.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;ipfs_lite/ipfs/graphsync/impl/local_requests.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libp2p/protocol/common/asio/asio_scheduler.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/da7/_i_migration_step_8hpp" kindref="compound">IMigrationStep.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="29"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="35" refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a3e785fb8ce8204a344281d7db40afd94" kindref="member">Migration0_2_0To1_0_0</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d5/d0d/classsgns_1_1_i_migration_step" kindref="compound">IMigrationStep</ref></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a3e785fb8ce8204a344281d7db40afd94" kindref="member">Migration0_2_0To1_0_0</ref>(<sp/>std::shared_ptr&lt;boost::asio::io_context&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ioContext,</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;ipfs_pubsub::GossipPubSub&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>pubSub,</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;ipfs_lite::ipfs::graphsync::Network&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>graphsync,</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;libp2p::protocol::Scheduler&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>scheduler,</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;ipfs_lite::ipfs::graphsync::RequestIdGenerator&gt;<sp/>generator,</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>writeBasePath,</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>base58key<sp/>);</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"></highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a798431352485b54db97b025c643fd7a7" kindref="member">FromVersion</ref>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"></highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a7c459286684fe4768c4497840cd85457" kindref="member">ToVersion</ref>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"></highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a08f70d32fabbad498a63b7a7bc4d4454" kindref="member">Init</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"></highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;bool&gt;<sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1acfed607131716a51104619954a46d8ae" kindref="member">IsRequired</ref>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"></highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a7d17ee6e450261c36aea29a79391570b" kindref="member">Apply</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"></highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1ab23462d4cb23e170d90ae80e60f82719" kindref="member">ShutDown</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"></highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;std::shared_ptr&lt;crdt::GlobalDB&gt;&gt;<sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1af4e3ec7419ebef76ab9e5d1f9da95dea" kindref="member">InitTargetDb</ref>();</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"></highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;std::shared_ptr&lt;crdt::GlobalDB&gt;&gt;<sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a9bae35525e7be762d540fbddb63ab12c" kindref="member">InitLegacyDb</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;suffix<sp/>);</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"></highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;uint32_t&gt;<sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a4e57eae6a7e7421a0fef37307ff2a417" kindref="member">MigrateDb</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;crdt::GlobalDB&gt;<sp/>&amp;oldDb,</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;crdt::GlobalDB&gt;<sp/>&amp;newDb<sp/>);</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"></highlight></codeline>
+<codeline lineno="107" refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1ab351bb1ff3d3c601e38c894d94dd3c30" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;crdt::GlobalDB&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1ab351bb1ff3d3c601e38c894d94dd3c30" kindref="member">db_1_0_0_</ref>;<sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="108" refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a69af0cf8b437db4aec7b7c240ba9f3a0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;crdt::GlobalDB&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a69af0cf8b437db4aec7b7c240ba9f3a0" kindref="member">db_0_0_2_out_</ref>;<sp/></highlight></codeline>
+<codeline lineno="109" refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1aa06a8bee0190684c3c28e927201ef1a2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;crdt::GlobalDB&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1aa06a8bee0190684c3c28e927201ef1a2" kindref="member">db_0_0_2_in_</ref>;<sp/><sp/></highlight></codeline>
+<codeline lineno="110" refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1aeb87af760c9c60c2c6d1cd2aa1078c73" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;boost::asio::io_context&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1aeb87af760c9c60c2c6d1cd2aa1078c73" kindref="member">ioContext_</ref>;<sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="111" refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a829a4f3e412e91d5946ba7b661821ceb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;ipfs_pubsub::GossipPubSub&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a829a4f3e412e91d5946ba7b661821ceb" kindref="member">pubSub_</ref>;<sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="112" refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1aed98ebd4f234c616834b7b11e47333a3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;ipfs_lite::ipfs::graphsync::Network&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1aed98ebd4f234c616834b7b11e47333a3" kindref="member">graphsync_</ref>;<sp/></highlight></codeline>
+<codeline lineno="113" refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1abe242e3e92001e8218a4dceb1b15e233" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;libp2p::protocol::Scheduler&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1abe242e3e92001e8218a4dceb1b15e233" kindref="member">scheduler_</ref>;<sp/></highlight></codeline>
+<codeline lineno="114" refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1ab4f85a0cc6a2e15ecf282a176f7d0def" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;ipfs_lite::ipfs::graphsync::RequestIdGenerator&gt;<sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1ab4f85a0cc6a2e15ecf282a176f7d0def" kindref="member">generator_</ref>;<sp/></highlight></codeline>
+<codeline lineno="115" refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a84d3876f4a6472b7f1e57ea905d0d3a5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;crdt::AtomicTransaction&gt;<sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a84d3876f4a6472b7f1e57ea905d0d3a5" kindref="member">crdt_transaction_</ref>;<sp/></highlight></codeline>
+<codeline lineno="116" refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a1e418cf1db3d624f6c1be6e4f8832239" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a1e418cf1db3d624f6c1be6e4f8832239" kindref="member">writeBasePath_</ref>;<sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="117" refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1abc696a75438a59c1d8102501086f3aaa" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1abc696a75438a59c1d8102501086f3aaa" kindref="member">base58key_</ref>;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="118" refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1afdbc872429c8206ecca21193c80622d6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::unordered_set&lt;std::string&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1afdbc872429c8206ecca21193c80622d6" kindref="member">topics_</ref>;</highlight></codeline>
+<codeline lineno="119" refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a2fb1ba29242309c393eb62bf30a1a13c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref><sp/><ref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a2fb1ba29242309c393eb62bf30a1a13c" kindref="member">m_logger</ref><sp/>=<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>(<sp/></highlight><highlight class="stringliteral">&quot;MigrationStep&quot;</highlight><highlight class="normal"><sp/>);<sp/></highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="121"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/account/Migration0_2_0To1_0_0.hpp"/>
+  </compounddef>
+</doxygen>

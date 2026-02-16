@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_8f5e4fb549865540d4346189ec27fd9e" kind="dir">
+    <compoundname>src/storage/trie</compoundname>
+    <innerdir refid="dir_71615b694e57e8e147c90de439ca1dd0">src/storage/trie/impl</innerdir>
+    <innerdir refid="dir_e2cec131312c9f73de1b5c208575099e">src/storage/trie/serialization</innerdir>
+    <innerdir refid="dir_b96ded659b7e6f168a14461d5a0325d6">src/storage/trie/supergenius_trie</innerdir>
+    <innerfile refid="d6/d58/codec_8hpp">codec.hpp</innerfile>
+    <innerfile refid="df/dc8/src_2storage_2trie_2node_8hpp">node.hpp</innerfile>
+    <innerfile refid="dc/d8a/trie__batches_8hpp">trie_batches.hpp</innerfile>
+    <innerfile refid="dd/df1/trie__storage_8hpp">trie_storage.hpp</innerfile>
+    <innerfile refid="d3/dec/trie__storage__backend_8hpp">trie_storage_backend.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/storage/trie/"/>
+  </compounddef>
+</doxygen>

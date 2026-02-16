@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_a749e11ba167a416f235c44ad5aefafd" kind="dir">
+    <compoundname>src/application/impl</compoundname>
+    <innerdir refid="dir_62ccd131d210d3b7a9988ec120218200">src/application/impl/config_reader</innerdir>
+    <innerfile refid="da/de2/app__config__impl_8cpp">app_config_impl.cpp</innerfile>
+    <innerfile refid="d3/d0d/app__config__impl_8hpp">app_config_impl.hpp</innerfile>
+    <innerfile refid="de/d61/app__state__manager__impl_8cpp">app_state_manager_impl.cpp</innerfile>
+    <innerfile refid="db/df6/app__state__manager__impl_8hpp">app_state_manager_impl.hpp</innerfile>
+    <innerfile refid="d0/d95/block__producing__node__application_8cpp">block_producing_node_application.cpp</innerfile>
+    <innerfile refid="d9/dd6/block__producing__node__application_8hpp">block_producing_node_application.hpp</innerfile>
+    <innerfile refid="df/d96/bridging__node__application_8cpp">bridging_node_application.cpp</innerfile>
+    <innerfile refid="de/d54/bridging__node__application_8hpp">bridging_node_application.hpp</innerfile>
+    <innerfile refid="d1/d90/configuration__storage__impl_8cpp">configuration_storage_impl.cpp</innerfile>
+    <innerfile refid="d9/d22/configuration__storage__impl_8hpp">configuration_storage_impl.hpp</innerfile>
+    <innerfile refid="df/d89/local__key__storage_8cpp">local_key_storage.cpp</innerfile>
+    <innerfile refid="d8/d59/local__key__storage_8hpp">local_key_storage.hpp</innerfile>
+    <innerfile refid="d9/d7b/syncing__node__application_8cpp">syncing_node_application.cpp</innerfile>
+    <innerfile refid="d3/dde/syncing__node__application_8hpp">syncing_node_application.hpp</innerfile>
+    <innerfile refid="d3/d34/validating__node__application_8cpp">validating_node_application.cpp</innerfile>
+    <innerfile refid="d6/dce/validating__node__application_8hpp">validating_node_application.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/application/impl/"/>
+  </compounddef>
+</doxygen>

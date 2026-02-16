@@ -1,0 +1,120 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/df3/messaging__watcher_8cpp" kind="file" language="C++">
+    <compoundname>messaging_watcher.cpp</compoundname>
+    <includes refid="d9/da3/messaging__watcher_8hpp" local="yes">messaging_watcher.hpp</includes>
+    <includes local="no">boost/thread.hpp</includes>
+    <includes local="no">iostream</includes>
+    <incdepgraph>
+      <node id="1">
+        <label>src/watcher/messaging_watcher.cpp</label>
+        <link refid="d6/df3/messaging__watcher_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>messaging_watcher.hpp</label>
+        <link refid="d9/da3/messaging__watcher_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>boost/thread.hpp</label>
+      </node>
+      <node id="3">
+        <label>functional</label>
+      </node>
+      <node id="7">
+        <label>iostream</label>
+      </node>
+      <node id="6">
+        <label>rapidjson/document.h</label>
+      </node>
+      <node id="4">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d4/d7f/namespacesgns_1_1watcher">sgns::watcher</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d9/da3/messaging__watcher_8hpp" kindref="compound">messaging_watcher.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/thread.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;iostream&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5" refid="d4/d7f/namespacesgns_1_1watcher" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d4/d7f/namespacesgns_1_1watcher" kindref="compound">sgns::watcher</ref><sp/>{</highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Static<sp/>vector<sp/>to<sp/>hold<sp/>all<sp/>watcher<sp/>instances</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"><sp/><sp/><sp/><sp/>std::vector&lt;std::shared_ptr&lt;MessagingWatcher&gt;&gt;<sp/><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a64d7fea1ee2928106b8fa3e9d765b8fb" kindref="member">MessagingWatcher::m_watchers</ref>;</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10" refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a3dafcb831d68544a3d72399d7237157b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a3dafcb831d68544a3d72399d7237157b" kindref="member">MessagingWatcher::MessagingWatcher</ref>(<ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a4ffcee76e2e73d98589885408cfba57e" kindref="member">MessageCallback</ref><sp/>callback)</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a4692d3293117111d3256053e9c5be37a" kindref="member">messageCallback</ref>(<ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(callback)),<sp/><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a564631bff21e68e44020f76834203495" kindref="member">running</ref>(false)<sp/>{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14" refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1ad3eebc535cfe454e6f04af04be24574a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1ad3eebc535cfe454e6f04af04be24574a" kindref="member">MessagingWatcher::startWatching</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::lock_guard&lt;std::mutex&gt;<sp/>lock(<ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a43dac8ac3576d41a2cad59c5de0cce72" kindref="member">running_mutex</ref>);</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a564631bff21e68e44020f76834203495" kindref="member">running</ref>)<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a564631bff21e68e44020f76834203495" kindref="member">running</ref><sp/>=<sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a3b89299a5d50f7539fcb3799570baca0" kindref="member">watcherThread</ref><sp/>=<sp/>boost::thread(&amp;<ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a77d51f3f83c65ec24680094471c68bf9" kindref="member">MessagingWatcher::watch</ref>,<sp/></highlight><highlight class="keyword">this</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22" refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a070742650711d2e74dd97e7746a9c0c8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a070742650711d2e74dd97e7746a9c0c8" kindref="member">MessagingWatcher::stopWatching</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::lock_guard&lt;std::mutex&gt;<sp/>lock(<ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a43dac8ac3576d41a2cad59c5de0cce72" kindref="member">running_mutex</ref>);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a564631bff21e68e44020f76834203495" kindref="member">running</ref><sp/>=<sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a3b89299a5d50f7539fcb3799570baca0" kindref="member">watcherThread</ref>.joinable())<sp/>{</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a3b89299a5d50f7539fcb3799570baca0" kindref="member">watcherThread</ref>.join();</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33" refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1af3c7797a7b1847a58ed15d2223a982a8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1af3c7797a7b1847a58ed15d2223a982a8" kindref="member">MessagingWatcher::addWatcher</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;MessagingWatcher&gt;<sp/>&amp;newWatcher)<sp/>{</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a64d7fea1ee2928106b8fa3e9d765b8fb" kindref="member">m_watchers</ref>.push_back(newWatcher);</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37" refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1aa37dcd91910d193f8f09d89b09f7eb5e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1aa37dcd91910d193f8f09d89b09f7eb5e" kindref="member">MessagingWatcher::startAll</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;<ref refid="d4/d7f/namespacesgns_1_1watcher" kindref="compound">watcher</ref><sp/>:<sp/><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a64d7fea1ee2928106b8fa3e9d765b8fb" kindref="member">m_watchers</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/d7f/namespacesgns_1_1watcher" kindref="compound">watcher</ref>-&gt;startWatching();</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight></codeline>
+<codeline lineno="43" refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1ad436e4c641413ca69b2d2fecec453bee" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1ad436e4c641413ca69b2d2fecec453bee" kindref="member">MessagingWatcher::stopAll</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;<ref refid="d4/d7f/namespacesgns_1_1watcher" kindref="compound">watcher</ref><sp/>:<sp/><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a64d7fea1ee2928106b8fa3e9d765b8fb" kindref="member">m_watchers</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/d7f/namespacesgns_1_1watcher" kindref="compound">watcher</ref>-&gt;stopWatching();</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"></highlight></codeline>
+<codeline lineno="49" refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a77d51f3f83c65ec24680094471c68bf9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a77d51f3f83c65ec24680094471c68bf9" kindref="member">MessagingWatcher::watch</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">while</highlight><highlight class="normal"><sp/>(<ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a564631bff21e68e44020f76834203495" kindref="member">running</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Placeholder:<sp/>This<sp/>function<sp/>should<sp/>be<sp/>implemented<sp/>by<sp/>derived<sp/>classes</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Here,<sp/>it<sp/>will<sp/>simply<sp/>sleep<sp/>for<sp/>1<sp/>second,<sp/>but<sp/>derived<sp/>classes<sp/>should<sp/>provide<sp/>a<sp/>real<sp/>implementation.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boost::this_thread::sleep_for(boost::chrono::seconds(1));</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"></highlight></codeline>
+<codeline lineno="57" refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1acae0398c853569da510bcda71aa5c36d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1acae0398c853569da510bcda71aa5c36d" kindref="member">MessagingWatcher::isRunning</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::lock_guard&lt;std::mutex&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>lock(<ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a43dac8ac3576d41a2cad59c5de0cce72" kindref="member">running_mutex</ref>);</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a564631bff21e68e44020f76834203495" kindref="member">running</ref>;</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"></highlight></codeline>
+<codeline lineno="62"><highlight class="normal"></highlight></codeline>
+<codeline lineno="63"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::watcher</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/watcher/messaging_watcher.cpp"/>
+  </compounddef>
+</doxygen>

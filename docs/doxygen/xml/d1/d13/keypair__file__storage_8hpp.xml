@@ -1,0 +1,151 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/d13/keypair__file__storage_8hpp" kind="file" language="C++">
+    <compoundname>keypair_file_storage.hpp</compoundname>
+    <includes refid="d5/dda/outcome_8hpp" local="yes">outcome/outcome.hpp</includes>
+    <includes refid="d6/da3/logger_8hpp" local="yes">base/logger.hpp</includes>
+    <includes local="no">boost/filesystem/path.hpp</includes>
+    <includes local="no">libp2p/crypto/key.hpp</includes>
+    <includedby refid="df/de0/_genius_node_8cpp" local="yes">src/account/GeniusNode.cpp</includedby>
+    <includedby refid="dd/d87/storage__util_8hpp" local="yes">src/blockchain/impl/storage_util.hpp</includedby>
+    <includedby refid="d6/de2/globaldb_8cpp" local="yes">src/crdt/globaldb/globaldb.cpp</includedby>
+    <includedby refid="d7/dda/keypair__file__storage_8cpp" local="yes">src/crdt/globaldb/keypair_file_storage.cpp</includedby>
+    <incdepgraph>
+      <node id="4">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crdt/globaldb/keypair_file_storage.hpp</label>
+        <link refid="d1/d13/keypair__file__storage_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>boost/filesystem/path.hpp</label>
+      </node>
+      <node id="8">
+        <label>libp2p/crypto/key.hpp</label>
+      </node>
+      <node id="3">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="5">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="6">
+        <label>spdlog/spdlog.h</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/account/GeniusNode.cpp</label>
+        <link refid="df/de0/_genius_node_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/blockchain/impl/block_tree_impl.cpp</label>
+        <link refid="d5/df4/block__tree__impl_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/blockchain/impl/key_value_block_header_repository.cpp</label>
+        <link refid="de/d1b/key__value__block__header__repository_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/blockchain/impl/key_value_block_storage.cpp</label>
+        <link refid="de/de9/key__value__block__storage_8cpp"/>
+      </node>
+      <node id="7">
+        <label>src/blockchain/impl/storage_util.cpp</label>
+        <link refid="d3/d2f/storage__util_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/blockchain/impl/storage_util.hpp</label>
+        <link refid="dd/d87/storage__util_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>src/blockchain/impl/types.cpp</label>
+        <link refid="da/ddf/types_8cpp"/>
+      </node>
+      <node id="9">
+        <label>src/crdt/globaldb/globaldb.cpp</label>
+        <link refid="d6/de2/globaldb_8cpp"/>
+      </node>
+      <node id="10">
+        <label>src/crdt/globaldb/keypair_file_storage.cpp</label>
+        <link refid="d7/dda/keypair__file__storage_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/crdt/globaldb/keypair_file_storage.hpp</label>
+        <link refid="d1/d13/keypair__file__storage_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage" prot="public">sgns::crdt::KeyPairFileStorage</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d4/dd0/namespacesgns_1_1crdt">sgns::crdt</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_CRDT_KEYPAIR_FILE_STORAGE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_CRDT_KEYPAIR_FILE_STORAGE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/dda/outcome_8hpp" kindref="compound">outcome/outcome.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/da3/logger_8hpp" kindref="compound">base/logger.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/filesystem/path.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libp2p/crypto/key.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d4/dd0/namespacesgns_1_1crdt" kindref="compound">sgns::crdt</ref></highlight></codeline>
+<codeline lineno="10"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="11" refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a226dd56c8c1e710b80596d22240e7a8b" kindref="member">KeyPairFileStorage</ref></highlight></codeline>
+<codeline lineno="12"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a226dd56c8c1e710b80596d22240e7a8b" kindref="member">KeyPairFileStorage</ref>(<sp/>boost::filesystem::path<sp/>keyPath<sp/>);</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/>outcome::result&lt;libp2p::crypto::KeyPair&gt;<sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a690661841bd08971f1f9b62bab6dd4ac" kindref="member">GetKeyPair</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="19" refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a439c3479ec33fdd6099028f0a0d5a4d8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>boost::filesystem::path<sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a439c3479ec33fdd6099028f0a0d5a4d8" kindref="member">m_keyPath</ref>;</highlight></codeline>
+<codeline lineno="20" refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a7cf8fe152b11e69dd2b670c59ebaf76d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">sgns::base::Logger</ref><sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a7cf8fe152b11e69dd2b670c59ebaf76d" kindref="member">m_logger</ref><sp/>=<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">sgns::base::createLogger</ref>(</highlight><highlight class="stringliteral">&quot;KeyPairFileStorage&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="21"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="22"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_CRDT_KEYPAIR_FILE_STORAGE_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/crdt/globaldb/keypair_file_storage.hpp"/>
+  </compounddef>
+</doxygen>

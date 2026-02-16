@@ -1,0 +1,87 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/dd7/classsgns_1_1runtime_1_1_metadata" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::runtime::Metadata</compoundname>
+    <derivedcompoundref refid="dc/dc5/classsgns_1_1runtime_1_1binaryen_1_1_metadata_impl" prot="public" virt="non-virtual">sgns::runtime::binaryen::MetadataImpl</derivedcompoundref>
+    <includes refid="da/d24/metadata_8hpp" local="no">metadata.hpp</includes>
+    <sectiondef kind="protected-type">
+      <memberdef kind="typedef" id="dd/dd7/classsgns_1_1runtime_1_1_metadata_1a2c2f5f8a98fdad49642854c982143f5f" prot="protected" static="no">
+        <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a6eb0f88a12597cb3e901560eef802d27" kindref="member">primitives::OpaqueMetadata</ref></type>
+        <definition>using sgns::runtime::Metadata::OpaqueMetadata = primitives::OpaqueMetadata</definition>
+        <argsstring></argsstring>
+        <name>OpaqueMetadata</name>
+        <qualifiedname>sgns::runtime::Metadata::OpaqueMetadata</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/metadata.hpp" line="12" column="5" bodyfile="src/runtime/metadata.hpp" bodystart="12" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dd/dd7/classsgns_1_1runtime_1_1_metadata_1a80ea7c27e29ad3a816c0e26fd2f13ea5" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::runtime::Metadata::~Metadata</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Metadata</name>
+        <qualifiedname>sgns::runtime::Metadata::~Metadata</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/metadata.hpp" line="15" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dd7/classsgns_1_1runtime_1_1_metadata_1a076fd006031a308adb1f7aa62a334087" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="dd/dd7/classsgns_1_1runtime_1_1_metadata_1a2c2f5f8a98fdad49642854c982143f5f" kindref="member">OpaqueMetadata</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; OpaqueMetadata &gt; sgns::runtime::Metadata::metadata</definition>
+        <argsstring>()=0</argsstring>
+        <name>metadata</name>
+        <qualifiedname>sgns::runtime::Metadata::metadata</qualifiedname>
+        <reimplementedby refid="dc/dc5/classsgns_1_1runtime_1_1binaryen_1_1_metadata_impl_1aa627657271fa56114fdaa3966fe8c326">metadata</reimplementedby>
+        <briefdescription>
+<para>calls metadata method of <ref refid="dd/dd7/classsgns_1_1runtime_1_1_metadata" kindref="compound">Metadata</ref> runtime api </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>opaque metadata object or error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/metadata.hpp" line="21" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::runtime::Metadata</label>
+        <link refid="dd/dd7/classsgns_1_1runtime_1_1_metadata"/>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::binaryen::MetadataImpl</label>
+        <link refid="dc/dc5/classsgns_1_1runtime_1_1binaryen_1_1_metadata_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::runtime::Metadata</label>
+        <link refid="dd/dd7/classsgns_1_1runtime_1_1_metadata"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/metadata.hpp" line="10" column="3" bodyfile="src/runtime/metadata.hpp" bodystart="10" bodyend="22"/>
+    <listofallmembers>
+      <member refid="dd/dd7/classsgns_1_1runtime_1_1_metadata_1a076fd006031a308adb1f7aa62a334087" prot="public" virt="pure-virtual"><scope>sgns::runtime::Metadata</scope><name>metadata</name></member>
+      <member refid="dd/dd7/classsgns_1_1runtime_1_1_metadata_1a2c2f5f8a98fdad49642854c982143f5f" prot="protected" virt="non-virtual"><scope>sgns::runtime::Metadata</scope><name>OpaqueMetadata</name></member>
+      <member refid="dd/dd7/classsgns_1_1runtime_1_1_metadata_1a80ea7c27e29ad3a816c0e26fd2f13ea5" prot="public" virt="virtual"><scope>sgns::runtime::Metadata</scope><name>~Metadata</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

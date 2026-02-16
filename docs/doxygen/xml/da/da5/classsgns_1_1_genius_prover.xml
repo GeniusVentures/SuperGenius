@@ -1,0 +1,793 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/da5/classsgns_1_1_genius_prover" kind="class" language="C++" prot="public">
+    <compoundname>sgns::GeniusProver</compoundname>
+    <includes refid="d9/d35/_genius_prover_8hpp" local="no">GeniusProver.hpp</includes>
+    <innerclass refid="d0/d7f/structsgns_1_1_genius_prover_1_1_genius_proof" prot="public">sgns::GeniusProver::GeniusProof</innerclass>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="da/da5/classsgns_1_1_genius_prover_1a56c4322cb39ee2799637d8bc74f8c1d1" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>ProverError</name>
+        <qualifiedname>sgns::GeniusProver::ProverError</qualifiedname>
+        <enumvalue id="da/da5/classsgns_1_1_genius_prover_1a56c4322cb39ee2799637d8bc74f8c1d1a47ab623805893f3c6e683df83152ffaf" prot="public">
+          <name>INVALID_PROOF_GENERATED</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="da/da5/classsgns_1_1_genius_prover_1a56c4322cb39ee2799637d8bc74f8c1d1aaadee091fd7f2fe9185ac0ee19fd8c50" prot="public">
+          <name>TABLE_PATH_ERROR</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="da/da5/classsgns_1_1_genius_prover_1a56c4322cb39ee2799637d8bc74f8c1d1aeb9e1ed11a9380417d6e723449ea591a" prot="public">
+          <name>CIRCUIT_PATH_ERROR</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="da/da5/classsgns_1_1_genius_prover_1a56c4322cb39ee2799637d8bc74f8c1d1a663d5b950a920eac3a0362bd37408a8f" prot="public">
+          <name>PROOF_PATH_ERROR</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="da/da5/classsgns_1_1_genius_prover_1a56c4322cb39ee2799637d8bc74f8c1d1a9af1e8b98b02227388b19c11c12e0bd6" prot="public">
+          <name>EMPTY_PROOF</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="98" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="99" bodyend="105"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1aff0bce9e1e752f92570db61f8c10107e" prot="public" static="no">
+        <type>crypto3::zk::snark::placeholder_proof&lt; <ref refid="da/da5/classsgns_1_1_genius_prover_1afe46e07fde1f40005c881d278fb35e15" kindref="member">BlueprintFieldType</ref>, <ref refid="da/da5/classsgns_1_1_genius_prover_1acc3e352807a37570f5e570289fbc748a" kindref="member">PlaceholderParams</ref> &gt;</type>
+        <definition>using sgns::GeniusProver::ProofSnarkType = crypto3::zk::snark::placeholder_proof&lt;BlueprintFieldType, PlaceholderParams&gt;</definition>
+        <argsstring></argsstring>
+        <name>ProofSnarkType</name>
+        <qualifiedname>sgns::GeniusProver::ProofSnarkType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="82" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="82" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1a0a276b8954f36811668b4c1f45a7b960" prot="public" static="no">
+        <type>crypto3::marshalling::types::placeholder_proof&lt; nil::marshalling::field_type&lt; <ref refid="da/da5/classsgns_1_1_genius_prover_1af3879ba39419bb078f7971ec12dab709" kindref="member">ProverEndianess</ref> &gt;, <ref refid="da/da5/classsgns_1_1_genius_prover_1aff0bce9e1e752f92570db61f8c10107e" kindref="member">ProofSnarkType</ref> &gt;</type>
+        <definition>using sgns::GeniusProver::ProofType = crypto3::marshalling::types::placeholder_proof&lt;nil::marshalling::field_type&lt;ProverEndianess&gt;,
+                                                                        ProofSnarkType&gt;</definition>
+        <argsstring></argsstring>
+        <name>ProofType</name>
+        <qualifiedname>sgns::GeniusProver::ProofType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="83" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="83" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1ab388b26629bf69e5fc336c0ddf1f057f" prot="public" static="no">
+        <type>crypto3::marshalling::types::plonk_constraint_system&lt; nil::marshalling::field_type&lt; <ref refid="da/da5/classsgns_1_1_genius_prover_1af3879ba39419bb078f7971ec12dab709" kindref="member">ProverEndianess</ref> &gt;, <ref refid="da/da5/classsgns_1_1_genius_prover_1a2236ab5a8c3672c61f2ef45786ab72ad" kindref="member">ConstraintSystemType</ref> &gt;</type>
+        <definition>using sgns::GeniusProver::ConstraintMarshallingType = 
+crypto3::marshalling::types::plonk_constraint_system&lt;nil::marshalling::field_type&lt;ProverEndianess&gt;,
+                                                     ConstraintSystemType&gt;</definition>
+        <argsstring></argsstring>
+        <name>ConstraintMarshallingType</name>
+        <qualifiedname>sgns::GeniusProver::ConstraintMarshallingType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="85" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="85" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1a2c3060352a7937dec3936afeaaf7c5e9" prot="public" static="no">
+        <type>crypto3::marshalling::types::plonk_assignment_table&lt; nil::marshalling::field_type&lt; <ref refid="da/da5/classsgns_1_1_genius_prover_1af3879ba39419bb078f7971ec12dab709" kindref="member">ProverEndianess</ref> &gt;, <ref refid="da/da5/classsgns_1_1_genius_prover_1a3b3a36809450f8b5c0dc778e08ab150e" kindref="member">AssignmentTableType</ref> &gt;</type>
+        <definition>using sgns::GeniusProver::PlonkMarshalledTableType = 
+crypto3::marshalling::types::plonk_assignment_table&lt;nil::marshalling::field_type&lt;ProverEndianess&gt;,
+                                                    AssignmentTableType&gt;</definition>
+        <argsstring></argsstring>
+        <name>PlonkMarshalledTableType</name>
+        <qualifiedname>sgns::GeniusProver::PlonkMarshalledTableType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="88" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="88" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1a3dc5f97219b80de04b46b39ead2a83a1" prot="public" static="no">
+        <type>std::vector&lt; BlueprintFieldType::value_type &gt;</type>
+        <definition>using sgns::GeniusProver::ParameterType = std::vector&lt;BlueprintFieldType::value_type&gt;</definition>
+        <argsstring></argsstring>
+        <name>ParameterType</name>
+        <qualifiedname>sgns::GeniusProver::ParameterType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="91" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="91" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-type">
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1afe46e07fde1f40005c881d278fb35e15" prot="private" static="no">
+        <type>typename crypto3::algebra::curves::pallas::base_field_type</type>
+        <definition>using sgns::GeniusProver::BlueprintFieldType = typename crypto3::algebra::curves::pallas::base_field_type</definition>
+        <argsstring></argsstring>
+        <name>BlueprintFieldType</name>
+        <qualifiedname>sgns::GeniusProver::BlueprintFieldType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="58" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="58" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1a2cf2cd99559da267f2114513e9667192" prot="private" static="no">
+        <type>crypto3::hashes::keccak_1600&lt; 256 &gt;</type>
+        <definition>using sgns::GeniusProver::HashType = crypto3::hashes::keccak_1600&lt;256&gt;</definition>
+        <argsstring></argsstring>
+        <name>HashType</name>
+        <qualifiedname>sgns::GeniusProver::HashType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="59" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="59" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1af3879ba39419bb078f7971ec12dab709" prot="private" static="no">
+        <type>nil::marshalling::option::big_endian</type>
+        <definition>using sgns::GeniusProver::ProverEndianess = nil::marshalling::option::big_endian</definition>
+        <argsstring></argsstring>
+        <name>ProverEndianess</name>
+        <qualifiedname>sgns::GeniusProver::ProverEndianess</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="60" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="60" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1a2236ab5a8c3672c61f2ef45786ab72ad" prot="private" static="no">
+        <type>crypto3::zk::snark::plonk_constraint_system&lt; <ref refid="da/da5/classsgns_1_1_genius_prover_1afe46e07fde1f40005c881d278fb35e15" kindref="member">BlueprintFieldType</ref> &gt;</type>
+        <definition>using sgns::GeniusProver::ConstraintSystemType = crypto3::zk::snark::plonk_constraint_system&lt;BlueprintFieldType&gt;</definition>
+        <argsstring></argsstring>
+        <name>ConstraintSystemType</name>
+        <qualifiedname>sgns::GeniusProver::ConstraintSystemType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="61" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="61" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1a4d32ba953e02ea092f858c78c52ca22e" prot="private" static="no">
+        <type>crypto3::zk::snark::plonk_table_description&lt; <ref refid="da/da5/classsgns_1_1_genius_prover_1afe46e07fde1f40005c881d278fb35e15" kindref="member">BlueprintFieldType</ref> &gt;</type>
+        <definition>using sgns::GeniusProver::TableDescriptionType = crypto3::zk::snark::plonk_table_description&lt;BlueprintFieldType&gt;</definition>
+        <argsstring></argsstring>
+        <name>TableDescriptionType</name>
+        <qualifiedname>sgns::GeniusProver::TableDescriptionType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="62" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="62" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1ac1ed845ab7e2a6aefecef715320e1d73" prot="private" static="no">
+        <type>crypto3::zk::snark::plonk_column&lt; <ref refid="da/da5/classsgns_1_1_genius_prover_1afe46e07fde1f40005c881d278fb35e15" kindref="member">BlueprintFieldType</ref> &gt;</type>
+        <definition>using sgns::GeniusProver::PlonkColumn = crypto3::zk::snark::plonk_column&lt;BlueprintFieldType&gt;</definition>
+        <argsstring></argsstring>
+        <name>PlonkColumn</name>
+        <qualifiedname>sgns::GeniusProver::PlonkColumn</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="63" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="63" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1a3b3a36809450f8b5c0dc778e08ab150e" prot="private" static="no">
+        <type>crypto3::zk::snark::plonk_table&lt; <ref refid="da/da5/classsgns_1_1_genius_prover_1afe46e07fde1f40005c881d278fb35e15" kindref="member">BlueprintFieldType</ref>, <ref refid="da/da5/classsgns_1_1_genius_prover_1ac1ed845ab7e2a6aefecef715320e1d73" kindref="member">PlonkColumn</ref> &gt;</type>
+        <definition>using sgns::GeniusProver::AssignmentTableType = crypto3::zk::snark::plonk_table&lt;BlueprintFieldType, PlonkColumn&gt;</definition>
+        <argsstring></argsstring>
+        <name>AssignmentTableType</name>
+        <qualifiedname>sgns::GeniusProver::AssignmentTableType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="64" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="64" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1af19516ffe40bfc5889afa92fc1cbb079" prot="private" static="no">
+        <type>crypto3::zk::snark::plonk_public_table&lt; <ref refid="da/da5/classsgns_1_1_genius_prover_1afe46e07fde1f40005c881d278fb35e15" kindref="member">BlueprintFieldType</ref>, <ref refid="da/da5/classsgns_1_1_genius_prover_1ac1ed845ab7e2a6aefecef715320e1d73" kindref="member">PlonkColumn</ref> &gt;</type>
+        <definition>using sgns::GeniusProver::PublicTableType = crypto3::zk::snark::plonk_public_table&lt;BlueprintFieldType, PlonkColumn&gt;</definition>
+        <argsstring></argsstring>
+        <name>PublicTableType</name>
+        <qualifiedname>sgns::GeniusProver::PublicTableType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="65" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="65" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1a2e1227d9f5f0019efd8655b6fed8ff9f" prot="private" static="no">
+        <type>crypto3::zk::commitments::list_polynomial_commitment_params&lt; <ref refid="da/da5/classsgns_1_1_genius_prover_1a2cf2cd99559da267f2114513e9667192" kindref="member">HashType</ref>, <ref refid="da/da5/classsgns_1_1_genius_prover_1a2cf2cd99559da267f2114513e9667192" kindref="member">HashType</ref>, 9, 2 &gt;</type>
+        <definition>using sgns::GeniusProver::LpcParams = crypto3::zk::commitments::list_polynomial_commitment_params&lt;HashType, HashType, 9, 2&gt;</definition>
+        <argsstring></argsstring>
+        <name>LpcParams</name>
+        <qualifiedname>sgns::GeniusProver::LpcParams</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="66" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="66" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1a49cd360786b93b3c8fbeb217e6bf5589" prot="private" static="no">
+        <type>crypto3::zk::commitments::list_polynomial_commitment&lt; <ref refid="da/da5/classsgns_1_1_genius_prover_1afe46e07fde1f40005c881d278fb35e15" kindref="member">BlueprintFieldType</ref>, <ref refid="da/da5/classsgns_1_1_genius_prover_1a2e1227d9f5f0019efd8655b6fed8ff9f" kindref="member">LpcParams</ref> &gt;</type>
+        <definition>using sgns::GeniusProver::Lpc = crypto3::zk::commitments::list_polynomial_commitment&lt;BlueprintFieldType, LpcParams&gt;</definition>
+        <argsstring></argsstring>
+        <name>Lpc</name>
+        <qualifiedname>sgns::GeniusProver::Lpc</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="67" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="67" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1a8cc5b70068a57550788460f08fd31c6b" prot="private" static="no">
+        <type>typename crypto3::zk::commitments::lpc_commitment_scheme&lt; <ref refid="da/da5/classsgns_1_1_genius_prover_1a49cd360786b93b3c8fbeb217e6bf5589" kindref="member">Lpc</ref> &gt;</type>
+        <definition>using sgns::GeniusProver::LpcScheme = typename crypto3::zk::commitments::lpc_commitment_scheme&lt;Lpc&gt;</definition>
+        <argsstring></argsstring>
+        <name>LpcScheme</name>
+        <qualifiedname>sgns::GeniusProver::LpcScheme</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="68" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="68" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1a3a171627539efa7dc930c5b9d97ec782" prot="private" static="no">
+        <type>typename Lpc::fri_type::params_type</type>
+        <definition>using sgns::GeniusProver::FriParams = typename Lpc::fri_type::params_type</definition>
+        <argsstring></argsstring>
+        <name>FriParams</name>
+        <qualifiedname>sgns::GeniusProver::FriParams</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="69" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="69" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1aacbe93fa86ee86c71656999dd212f2d0" prot="private" static="no">
+        <type>crypto3::zk::snark::placeholder_circuit_params&lt; <ref refid="da/da5/classsgns_1_1_genius_prover_1afe46e07fde1f40005c881d278fb35e15" kindref="member">BlueprintFieldType</ref> &gt;</type>
+        <definition>using sgns::GeniusProver::CircuitParams = crypto3::zk::snark::placeholder_circuit_params&lt;BlueprintFieldType&gt;</definition>
+        <argsstring></argsstring>
+        <name>CircuitParams</name>
+        <qualifiedname>sgns::GeniusProver::CircuitParams</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="70" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="70" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1acc3e352807a37570f5e570289fbc748a" prot="private" static="no">
+        <type>crypto3::zk::snark::placeholder_params&lt; <ref refid="da/da5/classsgns_1_1_genius_prover_1aacbe93fa86ee86c71656999dd212f2d0" kindref="member">CircuitParams</ref>, <ref refid="da/da5/classsgns_1_1_genius_prover_1a8cc5b70068a57550788460f08fd31c6b" kindref="member">LpcScheme</ref> &gt;</type>
+        <definition>using sgns::GeniusProver::PlaceholderParams = crypto3::zk::snark::placeholder_params&lt;CircuitParams, LpcScheme&gt;</definition>
+        <argsstring></argsstring>
+        <name>PlaceholderParams</name>
+        <qualifiedname>sgns::GeniusProver::PlaceholderParams</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="71" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="71" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1a2da6fe61df40a023080a7e6b9a589883" prot="private" static="no">
+        <type>crypto3::zk::snark::placeholder_public_preprocessor&lt; <ref refid="da/da5/classsgns_1_1_genius_prover_1afe46e07fde1f40005c881d278fb35e15" kindref="member">BlueprintFieldType</ref>, <ref refid="da/da5/classsgns_1_1_genius_prover_1acc3e352807a37570f5e570289fbc748a" kindref="member">PlaceholderParams</ref> &gt;</type>
+        <definition>using sgns::GeniusProver::PublicPreprocessor = 
+crypto3::zk::snark::placeholder_public_preprocessor&lt;BlueprintFieldType, PlaceholderParams&gt;</definition>
+        <argsstring></argsstring>
+        <name>PublicPreprocessor</name>
+        <qualifiedname>sgns::GeniusProver::PublicPreprocessor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="72" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="72" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1abb9f5e65996fa3b512f13d5dda298b0c" prot="private" static="no">
+        <type>PublicPreprocessor::preprocessed_data_type</type>
+        <definition>using sgns::GeniusProver::PublicPreprocessedData = PublicPreprocessor::preprocessed_data_type</definition>
+        <argsstring></argsstring>
+        <name>PublicPreprocessedData</name>
+        <qualifiedname>sgns::GeniusProver::PublicPreprocessedData</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="74" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="74" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1a88934b09244bcf0c6a551819de0ade6a" prot="private" static="no">
+        <type>crypto3::zk::snark::placeholder_private_preprocessor&lt; <ref refid="da/da5/classsgns_1_1_genius_prover_1afe46e07fde1f40005c881d278fb35e15" kindref="member">BlueprintFieldType</ref>, <ref refid="da/da5/classsgns_1_1_genius_prover_1acc3e352807a37570f5e570289fbc748a" kindref="member">PlaceholderParams</ref> &gt;</type>
+        <definition>using sgns::GeniusProver::PrivatePreprocessor = 
+crypto3::zk::snark::placeholder_private_preprocessor&lt;BlueprintFieldType, PlaceholderParams&gt;</definition>
+        <argsstring></argsstring>
+        <name>PrivatePreprocessor</name>
+        <qualifiedname>sgns::GeniusProver::PrivatePreprocessor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="75" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="75" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1ade3be1e30b9c6beda267f03f89411e91" prot="private" static="no">
+        <type>PrivatePreprocessor::preprocessed_data_type</type>
+        <definition>using sgns::GeniusProver::PrivatePreprocessedData = PrivatePreprocessor::preprocessed_data_type</definition>
+        <argsstring></argsstring>
+        <name>PrivatePreprocessedData</name>
+        <qualifiedname>sgns::GeniusProver::PrivatePreprocessedData</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="77" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="77" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1a28111fd104332f5d56377df84487ff2d" prot="private" static="no">
+        <type>crypto3::zk::snark::placeholder_prover&lt; <ref refid="da/da5/classsgns_1_1_genius_prover_1afe46e07fde1f40005c881d278fb35e15" kindref="member">BlueprintFieldType</ref>, <ref refid="da/da5/classsgns_1_1_genius_prover_1acc3e352807a37570f5e570289fbc748a" kindref="member">PlaceholderParams</ref> &gt;</type>
+        <definition>using sgns::GeniusProver::ProverType = crypto3::zk::snark::placeholder_prover&lt;BlueprintFieldType, PlaceholderParams&gt;</definition>
+        <argsstring></argsstring>
+        <name>ProverType</name>
+        <qualifiedname>sgns::GeniusProver::ProverType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="78" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="78" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="da/da5/classsgns_1_1_genius_prover_1ae9643b0e81e75ab947ea73eedcc9b00d" prot="private" static="no">
+        <type>std::pair&lt; <ref refid="da/da5/classsgns_1_1_genius_prover_1a4d32ba953e02ea092f858c78c52ca22e" kindref="member">TableDescriptionType</ref>, <ref refid="da/da5/classsgns_1_1_genius_prover_1a3b3a36809450f8b5c0dc778e08ab150e" kindref="member">AssignmentTableType</ref> &gt;</type>
+        <definition>using sgns::GeniusProver::PlonkTablePair = std::pair&lt;TableDescriptionType, AssignmentTableType&gt;</definition>
+        <argsstring></argsstring>
+        <name>PlonkTablePair</name>
+        <qualifiedname>sgns::GeniusProver::PlonkTablePair</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="79" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="79" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="da/da5/classsgns_1_1_genius_prover_1aab29e46719bd5b87b7d80b614ec88a07" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>const std::size_t</type>
+        <definition>const std::size_t sgns::GeniusProver::COMPONENT_CONSTANT_COLUMNS_DEFAULT</definition>
+        <argsstring></argsstring>
+        <name>COMPONENT_CONSTANT_COLUMNS_DEFAULT</name>
+        <qualifiedname>sgns::GeniusProver::COMPONENT_CONSTANT_COLUMNS_DEFAULT</qualifiedname>
+        <initializer>= 5</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="142" column="44" bodyfile="src/proof/GeniusProver.hpp" bodystart="142" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/da5/classsgns_1_1_genius_prover_1aaecb29126e1ac7bd5e2ebdd4362b7468" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>const std::size_t</type>
+        <definition>const std::size_t sgns::GeniusProver::EXPAND_FACTOR_DEFAULT</definition>
+        <argsstring></argsstring>
+        <name>EXPAND_FACTOR_DEFAULT</name>
+        <qualifiedname>sgns::GeniusProver::EXPAND_FACTOR_DEFAULT</qualifiedname>
+        <initializer>= 2</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="143" column="44" bodyfile="src/proof/GeniusProver.hpp" bodystart="143" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="da/da5/classsgns_1_1_genius_prover_1a1b3ddc093c55de9fa68b394fee6e8cba" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::GeniusProver::GeniusProver</definition>
+        <argsstring>()</argsstring>
+        <name>GeniusProver</name>
+        <qualifiedname>sgns::GeniusProver::GeniusProver</qualifiedname>
+        <briefdescription>
+<para>Constructs a <ref refid="da/da5/classsgns_1_1_genius_prover" kindref="compound">GeniusProver</ref> with default settings. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="96" column="9" bodyfile="src/proof/GeniusProver.hpp" bodystart="96" bodyend="96"/>
+      </memberdef>
+      <memberdef kind="function" id="da/da5/classsgns_1_1_genius_prover_1a862c45e1bf1a0fe450e10105e7318602" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d0/d7f/structsgns_1_1_genius_prover_1_1_genius_proof" kindref="compound">GeniusProof</ref> &gt;</type>
+        <definition>outcome::result&lt; GeniusProver::GeniusProof &gt; sgns::GeniusProver::CreateProof</definition>
+        <argsstring>(const GeniusAssigner::AssignerOutput &amp;assigner_outputs) const</argsstring>
+        <name>CreateProof</name>
+        <qualifiedname>sgns::GeniusProver::CreateProof</qualifiedname>
+        <param>
+          <type>const <ref refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output" kindref="compound">GeniusAssigner::AssignerOutput</ref> &amp;</type>
+          <declname>assigner_outputs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="123" column="25" bodyfile="src/proof/GeniusProver.cpp" bodystart="33" bodyend="82"/>
+      </memberdef>
+      <memberdef kind="function" id="da/da5/classsgns_1_1_genius_prover_1aa48b39dc7aa28706a99dfd0afe722357" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d0/d7f/structsgns_1_1_genius_prover_1_1_genius_proof" kindref="compound">GeniusProof</ref> &gt;</type>
+        <definition>outcome::result&lt; GeniusProver::GeniusProof &gt; sgns::GeniusProver::CreateProof</definition>
+        <argsstring>(const std::string &amp;circuit_file, const std::string &amp;assignment_table_file) const</argsstring>
+        <name>CreateProof</name>
+        <qualifiedname>sgns::GeniusProver::CreateProof</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>circuit_file</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>assignment_table_file</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="125" column="25" bodyfile="src/proof/GeniusProver.cpp" bodystart="84" bodyend="109"/>
+      </memberdef>
+      <memberdef kind="function" id="da/da5/classsgns_1_1_genius_prover_1aeb68221c7e606cda4126d700b9a857dc" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::GeniusProver::WriteProofToFile</definition>
+        <argsstring>(const ProofType &amp;proof, const std::string &amp;path) const</argsstring>
+        <name>WriteProofToFile</name>
+        <qualifiedname>sgns::GeniusProver::WriteProofToFile</qualifiedname>
+        <param>
+          <type>const <ref refid="da/da5/classsgns_1_1_genius_prover_1a0a276b8954f36811668b4c1f45a7b960" kindref="member">ProofType</ref> &amp;</type>
+          <declname>proof</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="138" column="30" bodyfile="src/proof/GeniusProver.cpp" bodystart="210" bodyend="224"/>
+      </memberdef>
+      <memberdef kind="function" id="da/da5/classsgns_1_1_genius_prover_1a6a324c87dc66f4f7b984544bd0dc44f4" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>std::vector&lt; uint8_t &gt; sgns::GeniusProver::WriteProofToVector</definition>
+        <argsstring>(const ProofType &amp;proof) const</argsstring>
+        <name>WriteProofToVector</name>
+        <qualifiedname>sgns::GeniusProver::WriteProofToVector</qualifiedname>
+        <param>
+          <type>const <ref refid="da/da5/classsgns_1_1_genius_prover_1a0a276b8954f36811668b4c1f45a7b960" kindref="member">ProofType</ref> &amp;</type>
+          <declname>proof</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="139" column="21" bodyfile="src/proof/GeniusProver.cpp" bodystart="226" bodyend="229"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="da/da5/classsgns_1_1_genius_prover_1a3f482d45eaeff1b1721f95d7553eeff9" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::GeniusProver::VerifyProof</definition>
+        <argsstring>(const GeniusProof &amp;proof)</argsstring>
+        <name>VerifyProof</name>
+        <qualifiedname>sgns::GeniusProver::VerifyProof</qualifiedname>
+        <param>
+          <type>const <ref refid="d0/d7f/structsgns_1_1_genius_prover_1_1_genius_proof" kindref="compound">GeniusProof</ref> &amp;</type>
+          <declname>proof</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="128" column="21" bodyfile="src/proof/GeniusProver.cpp" bodystart="111" bodyend="161"/>
+      </memberdef>
+      <memberdef kind="function" id="da/da5/classsgns_1_1_genius_prover_1a7bfb40b8cb5ddf4a501831e26f8d1418" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::GeniusProver::VerifyProof</definition>
+        <argsstring>(const ProofType &amp;proof, const GeniusAssigner::AssignerOutput &amp;assigner_outputs)</argsstring>
+        <name>VerifyProof</name>
+        <qualifiedname>sgns::GeniusProver::VerifyProof</qualifiedname>
+        <param>
+          <type>const <ref refid="da/da5/classsgns_1_1_genius_prover_1a0a276b8954f36811668b4c1f45a7b960" kindref="member">ProofType</ref> &amp;</type>
+          <declname>proof</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output" kindref="compound">GeniusAssigner::AssignerOutput</ref> &amp;</type>
+          <declname>assigner_outputs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="129" column="21" bodyfile="src/proof/GeniusProver.cpp" bodystart="163" bodyend="192"/>
+      </memberdef>
+      <memberdef kind="function" id="da/da5/classsgns_1_1_genius_prover_1a58cf28dea23d14ade90ec155c55a2420" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::GeniusProver::VerifyProof</definition>
+        <argsstring>(const ProofSnarkType &amp;proof, const PublicPreprocessedData &amp;public_data, const TableDescriptionType &amp;desc, const ConstraintSystemType &amp;constrains_sys, const LpcScheme &amp;scheme, std::vector&lt; ParameterType &gt; pub_parameters)</argsstring>
+        <name>VerifyProof</name>
+        <qualifiedname>sgns::GeniusProver::VerifyProof</qualifiedname>
+        <param>
+          <type>const <ref refid="da/da5/classsgns_1_1_genius_prover_1aff0bce9e1e752f92570db61f8c10107e" kindref="member">ProofSnarkType</ref> &amp;</type>
+          <declname>proof</declname>
+        </param>
+        <param>
+          <type>const <ref refid="da/da5/classsgns_1_1_genius_prover_1abb9f5e65996fa3b512f13d5dda298b0c" kindref="member">PublicPreprocessedData</ref> &amp;</type>
+          <declname>public_data</declname>
+        </param>
+        <param>
+          <type>const <ref refid="da/da5/classsgns_1_1_genius_prover_1a4d32ba953e02ea092f858c78c52ca22e" kindref="member">TableDescriptionType</ref> &amp;</type>
+          <declname>desc</declname>
+        </param>
+        <param>
+          <type>const <ref refid="da/da5/classsgns_1_1_genius_prover_1a2236ab5a8c3672c61f2ef45786ab72ad" kindref="member">ConstraintSystemType</ref> &amp;</type>
+          <declname>constrains_sys</declname>
+        </param>
+        <param>
+          <type>const <ref refid="da/da5/classsgns_1_1_genius_prover_1a8cc5b70068a57550788460f08fd31c6b" kindref="member">LpcScheme</ref> &amp;</type>
+          <declname>scheme</declname>
+        </param>
+        <param>
+          <type>std::vector&lt; <ref refid="da/da5/classsgns_1_1_genius_prover_1a3dc5f97219b80de04b46b39ead2a83a1" kindref="member">ParameterType</ref> &gt;</type>
+          <declname>pub_parameters</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="131" column="21" bodyfile="src/proof/GeniusProver.cpp" bodystart="194" bodyend="208"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="da/da5/classsgns_1_1_genius_prover_1a44dfcfd313596174a0a2e7b81414f21e" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="da/da5/classsgns_1_1_genius_prover_1a2236ab5a8c3672c61f2ef45786ab72ad" kindref="member">ConstraintSystemType</ref></type>
+        <definition>GeniusProver::ConstraintSystemType sgns::GeniusProver::MakePlonkConstraintSystem</definition>
+        <argsstring>(const GeniusAssigner::PlonkConstraintSystemType &amp;constrains)</argsstring>
+        <name>MakePlonkConstraintSystem</name>
+        <qualifiedname>sgns::GeniusProver::MakePlonkConstraintSystem</qualifiedname>
+        <param>
+          <type>const <ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a636b6edfc3948db5355f97c042edac23" kindref="member">GeniusAssigner::PlonkConstraintSystemType</ref> &amp;</type>
+          <declname>constrains</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="145" column="37" bodyfile="src/proof/GeniusProver.cpp" bodystart="231" bodyend="239"/>
+      </memberdef>
+      <memberdef kind="function" id="da/da5/classsgns_1_1_genius_prover_1a4e8ac1cd565935e8a08ade98806cd364" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="da/da5/classsgns_1_1_genius_prover_1ae9643b0e81e75ab947ea73eedcc9b00d" kindref="member">PlonkTablePair</ref></type>
+        <definition>GeniusProver::PlonkTablePair sgns::GeniusProver::MakePlonkTableDescription</definition>
+        <argsstring>(const GeniusAssigner::PlonkAssignTableType &amp;table)</argsstring>
+        <name>MakePlonkTableDescription</name>
+        <qualifiedname>sgns::GeniusProver::MakePlonkTableDescription</qualifiedname>
+        <param>
+          <type>const <ref refid="d6/d8b/classsgns_1_1_genius_assigner_1afa467b5b38c772695d1365d4ac6601b6" kindref="member">GeniusAssigner::PlonkAssignTableType</ref> &amp;</type>
+          <declname>table</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="148" column="31" bodyfile="src/proof/GeniusProver.cpp" bodystart="241" bodyend="245"/>
+      </memberdef>
+      <memberdef kind="function" id="da/da5/classsgns_1_1_genius_prover_1a7cba5bf7459e9cab75293d6a3d4550ea" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="da/da5/classsgns_1_1_genius_prover_1a3a171627539efa7dc930c5b9d97ec782" kindref="member">FriParams</ref></type>
+        <definition>GeniusProver::FriParams sgns::GeniusProver::MakeFRIParams</definition>
+        <argsstring>(std::size_t rows_amount, const unsigned int max_step=1, std::size_t expand_factor=0)</argsstring>
+        <name>MakeFRIParams</name>
+        <qualifiedname>sgns::GeniusProver::MakeFRIParams</qualifiedname>
+        <param>
+          <type>std::size_t</type>
+          <declname>rows_amount</declname>
+        </param>
+        <param>
+          <type>const unsigned int</type>
+          <declname>max_step</declname>
+          <defval>1</defval>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>expand_factor</declname>
+          <defval>0</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="150" column="26" bodyfile="src/proof/GeniusProver.cpp" bodystart="247" bodyend="259"/>
+      </memberdef>
+      <memberdef kind="function" id="da/da5/classsgns_1_1_genius_prover_1a6f652eb29ba88db60d6ab74183777226" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; std::size_t &gt;</type>
+        <definition>std::vector&lt; std::size_t &gt; sgns::GeniusProver::GenerateRandomStepList</definition>
+        <argsstring>(const std::size_t r, const unsigned int max_step)</argsstring>
+        <name>GenerateRandomStepList</name>
+        <qualifiedname>sgns::GeniusProver::GenerateRandomStepList</qualifiedname>
+        <param>
+          <type>const std::size_t</type>
+          <declname>r</declname>
+        </param>
+        <param>
+          <type>const unsigned int</type>
+          <declname>max_step</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="154" column="28" bodyfile="src/proof/GeniusProver.cpp" bodystart="288" bodyend="314"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="da/da5/classsgns_1_1_genius_prover_1ab1270bfc542666abc6d5ee4e01f35641" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="da/da5/classsgns_1_1_genius_prover_1a0a276b8954f36811668b4c1f45a7b960" kindref="member">ProofType</ref></type>
+        <definition>GeniusProver::ProofType sgns::GeniusProver::FillPlaceholderProof</definition>
+        <argsstring>(const ProofSnarkType &amp;proof, const FriParams &amp;commitment_params) const</argsstring>
+        <name>FillPlaceholderProof</name>
+        <qualifiedname>sgns::GeniusProver::FillPlaceholderProof</qualifiedname>
+        <param>
+          <type>const <ref refid="da/da5/classsgns_1_1_genius_prover_1aff0bce9e1e752f92570db61f8c10107e" kindref="member">ProofSnarkType</ref> &amp;</type>
+          <declname>proof</declname>
+        </param>
+        <param>
+          <type>const <ref refid="da/da5/classsgns_1_1_genius_prover_1a3a171627539efa7dc930c5b9d97ec782" kindref="member">FriParams</ref> &amp;</type>
+          <declname>commitment_params</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusProver.hpp" line="156" column="19" bodyfile="src/proof/GeniusProver.cpp" bodystart="261" bodyend="286"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Prover class of SuperGenius. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::GeniusProver</label>
+        <link refid="da/da5/classsgns_1_1_genius_prover"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/proof/GeniusProver.hpp" line="56" column="5" bodyfile="src/proof/GeniusProver.hpp" bodystart="57" bodyend="157"/>
+    <listofallmembers>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a3b3a36809450f8b5c0dc778e08ab150e" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>AssignmentTableType</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1afe46e07fde1f40005c881d278fb35e15" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>BlueprintFieldType</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1aacbe93fa86ee86c71656999dd212f2d0" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>CircuitParams</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1aab29e46719bd5b87b7d80b614ec88a07" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>COMPONENT_CONSTANT_COLUMNS_DEFAULT</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1ab388b26629bf69e5fc336c0ddf1f057f" prot="public" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>ConstraintMarshallingType</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a2236ab5a8c3672c61f2ef45786ab72ad" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>ConstraintSystemType</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a862c45e1bf1a0fe450e10105e7318602" prot="public" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>CreateProof</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1aa48b39dc7aa28706a99dfd0afe722357" prot="public" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>CreateProof</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1aaecb29126e1ac7bd5e2ebdd4362b7468" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>EXPAND_FACTOR_DEFAULT</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1ab1270bfc542666abc6d5ee4e01f35641" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>FillPlaceholderProof</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a3a171627539efa7dc930c5b9d97ec782" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>FriParams</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a6f652eb29ba88db60d6ab74183777226" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>GenerateRandomStepList</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a1b3ddc093c55de9fa68b394fee6e8cba" prot="public" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>GeniusProver</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a2cf2cd99559da267f2114513e9667192" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>HashType</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a49cd360786b93b3c8fbeb217e6bf5589" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>Lpc</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a2e1227d9f5f0019efd8655b6fed8ff9f" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>LpcParams</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a8cc5b70068a57550788460f08fd31c6b" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>LpcScheme</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a7cba5bf7459e9cab75293d6a3d4550ea" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>MakeFRIParams</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a44dfcfd313596174a0a2e7b81414f21e" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>MakePlonkConstraintSystem</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a4e8ac1cd565935e8a08ade98806cd364" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>MakePlonkTableDescription</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a3dc5f97219b80de04b46b39ead2a83a1" prot="public" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>ParameterType</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1acc3e352807a37570f5e570289fbc748a" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>PlaceholderParams</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1ac1ed845ab7e2a6aefecef715320e1d73" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>PlonkColumn</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a2c3060352a7937dec3936afeaaf7c5e9" prot="public" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>PlonkMarshalledTableType</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1ae9643b0e81e75ab947ea73eedcc9b00d" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>PlonkTablePair</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1ade3be1e30b9c6beda267f03f89411e91" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>PrivatePreprocessedData</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a88934b09244bcf0c6a551819de0ade6a" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>PrivatePreprocessor</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1aff0bce9e1e752f92570db61f8c10107e" prot="public" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>ProofSnarkType</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a0a276b8954f36811668b4c1f45a7b960" prot="public" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>ProofType</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1af3879ba39419bb078f7971ec12dab709" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>ProverEndianess</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a56c4322cb39ee2799637d8bc74f8c1d1" prot="public" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>ProverError</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a28111fd104332f5d56377df84487ff2d" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>ProverType</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1abb9f5e65996fa3b512f13d5dda298b0c" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>PublicPreprocessedData</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a2da6fe61df40a023080a7e6b9a589883" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>PublicPreprocessor</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1af19516ffe40bfc5889afa92fc1cbb079" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>PublicTableType</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a4d32ba953e02ea092f858c78c52ca22e" prot="private" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>TableDescriptionType</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a3f482d45eaeff1b1721f95d7553eeff9" prot="public" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>VerifyProof</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a7bfb40b8cb5ddf4a501831e26f8d1418" prot="public" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>VerifyProof</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a58cf28dea23d14ade90ec155c55a2420" prot="public" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>VerifyProof</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1aeb68221c7e606cda4126d700b9a857dc" prot="public" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>WriteProofToFile</name></member>
+      <member refid="da/da5/classsgns_1_1_genius_prover_1a6a324c87dc66f4f7b984544bd0dc44f4" prot="public" virt="non-virtual"><scope>sgns::GeniusProver</scope><name>WriteProofToVector</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

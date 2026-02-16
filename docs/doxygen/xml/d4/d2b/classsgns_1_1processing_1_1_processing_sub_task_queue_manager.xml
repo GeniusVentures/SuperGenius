@@ -1,0 +1,1315 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager" kind="class" language="C++" prot="public">
+    <compoundname>sgns::processing::ProcessingSubTaskQueueManager</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">std::enable_shared_from_this&lt; ProcessingSubTaskQueueManager &gt;</basecompoundref>
+    <includes refid="dd/dd8/processing__subtask__queue__manager_8hpp" local="no">processing_subtask_queue_manager.hpp</includes>
+    <innerclass refid="da/d9a/structsgns_1_1processing_1_1_processing_sub_task_queue_manager_1_1_ownership_request" prot="private">sgns::processing::ProcessingSubTaskQueueManager::OwnershipRequest</innerclass>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a1f0647de08945ce0ef31ad39987db277" prot="public" static="no">
+        <type>std::function&lt; void(boost::optional&lt; const SGProcessing::SubTask &amp; &gt;)&gt;</type>
+        <definition>using sgns::processing::ProcessingSubTaskQueueManager::SubTaskGrabbedCallback = std::function&lt;void( boost::optional&lt;const SGProcessing::SubTask &amp;&gt; )&gt;</definition>
+        <argsstring></argsstring>
+        <name>SubTaskGrabbedCallback</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::SubTaskGrabbedCallback</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="27" column="9" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a024e1448e55fe5d18f50a2345180562d" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel" kindref="compound">ProcessingSubTaskQueueChannel</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;ProcessingSubTaskQueueChannel&gt; sgns::processing::ProcessingSubTaskQueueManager::m_queueChannel</definition>
+        <argsstring></argsstring>
+        <name>m_queueChannel</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_queueChannel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="171" column="25" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="171" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aec8daf4ba76373dc5effc1e39b2e0740" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; boost::asio::io_context &gt;</type>
+        <definition>std::shared_ptr&lt;boost::asio::io_context&gt; sgns::processing::ProcessingSubTaskQueueManager::m_context</definition>
+        <argsstring></argsstring>
+        <name>m_context</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_context</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="172" column="31" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="172" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a27a51a2a29d70cce8a3d5d843fa2bace" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::processing::ProcessingSubTaskQueueManager::m_localNodeId</definition>
+        <argsstring></argsstring>
+        <name>m_localNodeId</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_localNodeId</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="173" column="56" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="173" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a18ab97be8407809d9222fed92290888d" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; SGProcessing::SubTaskQueue &gt;</type>
+        <definition>std::shared_ptr&lt;SGProcessing::SubTaskQueue&gt; sgns::processing::ProcessingSubTaskQueueManager::m_queue</definition>
+        <argsstring></argsstring>
+        <name>m_queue</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_queue</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="175" column="25" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="175" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a6e22483081287c06850f64cbac2696d2" prot="private" static="no" mutable="yes">
+        <type>std::recursive_mutex</type>
+        <definition>std::recursive_mutex sgns::processing::ProcessingSubTaskQueueManager::m_queueMutex</definition>
+        <argsstring></argsstring>
+        <name>m_queueMutex</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_queueMutex</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="176" column="53" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="176" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a4cafcaa72c80e8e7656477230642a2bb" prot="private" static="no" mutable="no">
+        <type>std::list&lt; <ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a1f0647de08945ce0ef31ad39987db277" kindref="member">SubTaskGrabbedCallback</ref> &gt;</type>
+        <definition>std::list&lt;SubTaskGrabbedCallback&gt; sgns::processing::ProcessingSubTaskQueueManager::m_onSubTaskGrabbedCallbacks</definition>
+        <argsstring></argsstring>
+        <name>m_onSubTaskGrabbedCallbacks</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_onSubTaskGrabbedCallbacks</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="177" column="29" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="177" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ac4618259590e6fd69d1a9babe36a98da" prot="private" static="no" mutable="no">
+        <type>std::function&lt; void(const std::vector&lt; std::string &gt; &amp;)&gt;</type>
+        <definition>std::function&lt;void( const std::vector&lt;std::string&gt; &amp; )&gt; sgns::processing::ProcessingSubTaskQueueManager::m_subTaskQueueAssignmentEventSink</definition>
+        <argsstring></argsstring>
+        <name>m_subTaskQueueAssignmentEventSink</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_subTaskQueueAssignmentEventSink</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="179" column="23" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="179" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aa9fce59958aadf2a726a675cdad86ad1" prot="private" static="no" mutable="no">
+        <type>std::set&lt; std::string &gt;</type>
+        <definition>std::set&lt;std::string&gt; sgns::processing::ProcessingSubTaskQueueManager::m_processedSubTaskIds</definition>
+        <argsstring></argsstring>
+        <name>m_processedSubTaskIds</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_processedSubTaskIds</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="180" column="52" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="180" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1adabc3e796078ad5fa577d94925b8a154" prot="private" static="no" mutable="no">
+        <type>boost::asio::deadline_timer</type>
+        <definition>boost::asio::deadline_timer sgns::processing::ProcessingSubTaskQueueManager::m_dltQueueResponseTimeout</definition>
+        <argsstring></argsstring>
+        <name>m_dltQueueResponseTimeout</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_dltQueueResponseTimeout</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="182" column="42" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="182" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a275af5faff22625b7b8ea50e3f6edda5" prot="private" static="no" mutable="no">
+        <type>boost::posix_time::time_duration</type>
+        <definition>boost::posix_time::time_duration sgns::processing::ProcessingSubTaskQueueManager::m_queueResponseTimeout</definition>
+        <argsstring></argsstring>
+        <name>m_queueResponseTimeout</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_queueResponseTimeout</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="183" column="42" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="183" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a9c7fd32c44fdbce9ac4ffa4c44acc44c" prot="private" static="no" mutable="no">
+        <type>boost::asio::deadline_timer</type>
+        <definition>boost::asio::deadline_timer sgns::processing::ProcessingSubTaskQueueManager::m_dltGrabSubTaskTimeout</definition>
+        <argsstring></argsstring>
+        <name>m_dltGrabSubTaskTimeout</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_dltGrabSubTaskTimeout</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="185" column="37" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="185" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a890514576e84a545de471876da16216e" prot="private" static="no" mutable="no">
+        <type><ref refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue" kindref="compound">ProcessingSubTaskQueue</ref></type>
+        <definition>ProcessingSubTaskQueue sgns::processing::ProcessingSubTaskQueueManager::m_processingQueue</definition>
+        <argsstring></argsstring>
+        <name>m_processingQueue</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_processingQueue</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="187" column="52" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="187" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a7bbb2263b0238c4fac4b61a8fcf2837c" prot="private" static="no" mutable="no">
+        <type>std::chrono::system_clock::duration</type>
+        <definition>std::chrono::system_clock::duration sgns::processing::ProcessingSubTaskQueueManager::m_processingTimeout</definition>
+        <argsstring></argsstring>
+        <name>m_processingTimeout</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_processingTimeout</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="188" column="52" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="188" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a6ad7aa847ad069697274686cfa5b0bbf" prot="private" static="no" mutable="no">
+        <type>std::function&lt; void(const std::string &amp;)&gt;</type>
+        <definition>std::function&lt;void( const std::string &amp; )&gt; sgns::processing::ProcessingSubTaskQueueManager::m_processingErrorSink</definition>
+        <argsstring></argsstring>
+        <name>m_processingErrorSink</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_processingErrorSink</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="189" column="23" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="189" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a2280321f3241f78592944b11d039e5b0" prot="private" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::processing::ProcessingSubTaskQueueManager::m_queue_timestamp_</definition>
+        <argsstring></argsstring>
+        <name>m_queue_timestamp_</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_queue_timestamp_</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="191" column="18" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="191" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a07847273b91f6be2f40a8f34d8fd909b" prot="private" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::processing::ProcessingSubTaskQueueManager::m_ownership_acquired_at_</definition>
+        <argsstring></argsstring>
+        <name>m_ownership_acquired_at_</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_ownership_acquired_at_</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="192" column="18" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="192" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ac5bd57d58f5f4ebaed11a830b8e755d0" prot="private" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::processing::ProcessingSubTaskQueueManager::m_ownership_last_delta_time_</definition>
+        <argsstring></argsstring>
+        <name>m_ownership_last_delta_time_</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_ownership_last_delta_time_</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="193" column="18" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="193" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a75cd28e2150a6910464d12374677ebfd" prot="private" static="no" mutable="no">
+        <type>std::queue&lt; <ref refid="da/d9a/structsgns_1_1processing_1_1_processing_sub_task_queue_manager_1_1_ownership_request" kindref="compound">OwnershipRequest</ref> &gt;</type>
+        <definition>std::queue&lt;OwnershipRequest&gt; sgns::processing::ProcessingSubTaskQueueManager::m_ownershipRequestQueue</definition>
+        <argsstring></argsstring>
+        <name>m_ownershipRequestQueue</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_ownershipRequestQueue</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="202" column="20" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="202" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a53831e50b23870857367916cd2b3d737" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::processing::ProcessingSubTaskQueueManager::m_logger</definition>
+        <argsstring></argsstring>
+        <name>m_logger</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_logger</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>( &quot;ProcessingSubTaskQueueManager&quot; )</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="204" column="47" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="204" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a7f528efc73ec9a2789eccad15d5408a0" prot="private" static="no" mutable="no">
+        <type>std::chrono::steady_clock::time_point</type>
+        <definition>std::chrono::steady_clock::time_point sgns::processing::ProcessingSubTaskQueueManager::m_lastQueueUpdateTime</definition>
+        <argsstring></argsstring>
+        <name>m_lastQueueUpdateTime</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_lastQueueUpdateTime</qualifiedname>
+        <initializer>= std::chrono::steady_clock::now()</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="205" column="47" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="205" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ace6ff6c8a02a1729b882fed70a783c34" prot="private" static="no" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::processing::ProcessingSubTaskQueueManager::m_processedSubtasksInCurrentOwnership</definition>
+        <argsstring></argsstring>
+        <name>m_processedSubtasksInCurrentOwnership</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_processedSubtasksInCurrentOwnership</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="207" column="24" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="207" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aeda73fec51c46057d9716671dc3738b1" prot="private" static="no" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::processing::ProcessingSubTaskQueueManager::m_defaultMaxSubtasksPerOwnership</definition>
+        <argsstring></argsstring>
+        <name>m_defaultMaxSubtasksPerOwnership</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_defaultMaxSubtasksPerOwnership</qualifiedname>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="208" column="24" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="208" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1add28943f610b31075ecaf525f4199f55" prot="private" static="no" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::processing::ProcessingSubTaskQueueManager::m_maxSubtasksPerOwnership</definition>
+        <argsstring></argsstring>
+        <name>m_maxSubtasksPerOwnership</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_maxSubtasksPerOwnership</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="209" column="24" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="209" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1adeeda817b77e42daccb2af193f4c71d7" prot="private" static="no" mutable="no">
+        <type>const uint64_t</type>
+        <definition>const uint64_t sgns::processing::ProcessingSubTaskQueueManager::m_delayBetweenProcessingMs</definition>
+        <argsstring></argsstring>
+        <name>m_delayBetweenProcessingMs</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_delayBetweenProcessingMs</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="210" column="24" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="210" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1addda6a3ef38a4c30ac6889e1cb4b3849" prot="private" static="no" mutable="no">
+        <type>std::chrono::steady_clock::time_point</type>
+        <definition>std::chrono::steady_clock::time_point sgns::processing::ProcessingSubTaskQueueManager::m_lastActiveCountCheck</definition>
+        <argsstring></argsstring>
+        <name>m_lastActiveCountCheck</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_lastActiveCountCheck</qualifiedname>
+        <initializer>= std::chrono::steady_clock::now()</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="212" column="47" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="212" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aade088954cbbe2738353dddc0c716c02" prot="private" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::processing::ProcessingSubTaskQueueManager::m_waitTimeBeforeReset</definition>
+        <argsstring></argsstring>
+        <name>m_waitTimeBeforeReset</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_waitTimeBeforeReset</qualifiedname>
+        <initializer>= 3000</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="213" column="47" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="213" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a78394b835b99f82ccba56e993fd6dc55" prot="private" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingSubTaskQueueManager::m_initialDelayPassed</definition>
+        <argsstring></argsstring>
+        <name>m_initialDelayPassed</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::m_initialDelayPassed</qualifiedname>
+        <initializer>= false</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="214" column="47" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="214" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aa96bcb99c4d9dff1e34670c62eaa92f0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::processing::ProcessingSubTaskQueueManager::ProcessingSubTaskQueueManager</definition>
+        <argsstring>(std::shared_ptr&lt; ProcessingSubTaskQueueChannel &gt; queueChannel, std::shared_ptr&lt; boost::asio::io_context &gt; context, const std::string &amp;localNodeId, std::function&lt; void(const std::string &amp;)&gt; processingErrorSink, uint64_t delayBetweenProcessingMs=20)</argsstring>
+        <name>ProcessingSubTaskQueueManager</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::ProcessingSubTaskQueueManager</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel" kindref="compound">ProcessingSubTaskQueueChannel</ref> &gt;</type>
+          <declname>queueChannel</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; boost::asio::io_context &gt;</type>
+          <declname>context</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>localNodeId</declname>
+        </param>
+        <param>
+          <type>std::function&lt; void(const std::string &amp;)&gt;</type>
+          <declname>processingErrorSink</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>delayBetweenProcessingMs</declname>
+          <defval>20</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Construct an empty queue manager. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>queueChannel</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- Task processing channel. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>context</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- IO context to handle timers. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>localNodeId</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- Local processing node ID. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>processingErrorSink</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- Callback for processing errors. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>delayBetweenProcessingMs</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- Delay between processing cycles (ms). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="36" column="9" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="8" bodyend="26"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a0140e45a14f2454f54ed8d7cfd5a754f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::processing::ProcessingSubTaskQueueManager::~ProcessingSubTaskQueueManager</definition>
+        <argsstring>()</argsstring>
+        <name>~ProcessingSubTaskQueueManager</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::~ProcessingSubTaskQueueManager</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="41" column="9" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="34" bodyend="37"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a5697ff506e0df474205e0acac8146d60" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueManager::SetProcessingTimeout</definition>
+        <argsstring>(const std::chrono::system_clock::duration &amp;processingTimeout)</argsstring>
+        <name>SetProcessingTimeout</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::SetProcessingTimeout</qualifiedname>
+        <param>
+          <type>const std::chrono::system_clock::duration &amp;</type>
+          <declname>processingTimeout</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Set a timeout for subtask processing <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>processingTimeout</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- subtask processing timeout Once the timeout is exceeded the subtask is marked as expired. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="47" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="28" bodyend="32"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1af0c2ca45e36ba445a93648a148f2248a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingSubTaskQueueManager::CreateQueue</definition>
+        <argsstring>(std::list&lt; SGProcessing::SubTask &gt; &amp;subTasks)</argsstring>
+        <name>CreateQueue</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::CreateQueue</qualifiedname>
+        <param>
+          <type>std::list&lt; SGProcessing::SubTask &gt; &amp;</type>
+          <declname>subTasks</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Create a subtask queue by splitting the task to subtasks using the processing code <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>subTasks</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- a list of subtasks that should be added to the queue in subtasks to allow a validation </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>false if not queue was created due to errors </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="54" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="39" bodyend="113"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a834485f841eb14666bdb127d3eeae016" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueManager::GrabSubTask</definition>
+        <argsstring>(SubTaskGrabbedCallback onSubTaskGrabbedCallback)</argsstring>
+        <name>GrabSubTask</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::GrabSubTask</qualifiedname>
+        <param>
+          <type><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a1f0647de08945ce0ef31ad39987db277" kindref="member">SubTaskGrabbedCallback</ref></type>
+          <declname>onSubTaskGrabbedCallback</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Asynchronous getting of a subtask from the queue <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>onSubTaskGrabbedCallback</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>a callback that is called when a grabbed iosubtask is locked by the local node </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="59" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="344" bodyend="351"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a83a89b3e7b3c68bee87735198fdf8448" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingSubTaskQueueManager::MoveOwnershipTo</definition>
+        <argsstring>(const std::string &amp;nodeId)</argsstring>
+        <name>MoveOwnershipTo</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::MoveOwnershipTo</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>nodeId</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Transfer the queue ownership to another processing node <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>nodeId</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- processing node ID that the ownership should be transferred </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="64" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="367" bodyend="377"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a907583b4b55d4c0d2d3c48994f9aa9cc" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingSubTaskQueueManager::HasOwnership</definition>
+        <argsstring>() const</argsstring>
+        <name>HasOwnership</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::HasOwnership</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Checks id the local processing node owns the queue <simplesect kind="return"><para>true is the local node owns the queue </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="69" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="379" bodyend="384"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1acd21eaddd28f647b99707a102aa4f07d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingSubTaskQueueManager::ProcessSubTaskQueueMessage</definition>
+        <argsstring>(SGProcessing::SubTaskQueue *queue)</argsstring>
+        <name>ProcessSubTaskQueueMessage</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::ProcessSubTaskQueueMessage</qualifiedname>
+        <param>
+          <type>SGProcessing::SubTaskQueue *</type>
+          <declname>queue</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Changes the local queue state with respect to passed queue snapshot The method should be called from a processing channel message handler <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>queue</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>received queue snapshot </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="75" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="393" bodyend="465"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ad405ae9d1800b63f30ab868fd1b43de6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingSubTaskQueueManager::ProcessSubTaskQueueRequestMessage</definition>
+        <argsstring>(const SGProcessing::SubTaskQueueRequest &amp;request)</argsstring>
+        <name>ProcessSubTaskQueueRequestMessage</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::ProcessSubTaskQueueRequestMessage</qualifiedname>
+        <param>
+          <type>const SGProcessing::SubTaskQueueRequest &amp;</type>
+          <declname>request</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Changes the local queue state with respect to passed queue request The method should be called from a processing channel message handler <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>request</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>is a request for the queue ownership transferring </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="81" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="467" bodyend="518"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ada807add471dd304cefc19cebe6f5ac9" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::unique_ptr&lt; SGProcessing::SubTaskQueue &gt;</type>
+        <definition>std::unique_ptr&lt; SGProcessing::SubTaskQueue &gt; sgns::processing::ProcessingSubTaskQueueManager::GetQueueSnapshot</definition>
+        <argsstring>() const</argsstring>
+        <name>GetQueueSnapshot</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::GetQueueSnapshot</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Returns the current local queue snapshot <simplesect kind="return"><para>the queue snapshot </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="86" column="25" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="594" bodyend="604"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a2680a17086b901356fe2309052541707" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueManager::ChangeSubTaskProcessingStates</definition>
+        <argsstring>(const std::set&lt; std::string &gt; &amp;subTaskIds, bool isProcessed)</argsstring>
+        <name>ChangeSubTaskProcessingStates</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::ChangeSubTaskProcessingStates</qualifiedname>
+        <param>
+          <type>const std::set&lt; std::string &gt; &amp;</type>
+          <declname>subTaskIds</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>isProcessed</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Mark a subtask as processed/unprocessed <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>subTaskIds</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- a list of subtask which state should be changed </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>isProcessed</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- new state </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="92" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="606" bodyend="649"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a148c01bf4b8f285d958737f866d62049" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingSubTaskQueueManager::IsQueueInit</definition>
+        <argsstring>()</argsstring>
+        <name>IsQueueInit</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::IsQueueInit</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Check whether queue has been initialized to prevent nullptr access to the queue. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="96" column="14" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="96" bodyend="99"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a5ae6e2b3d6d936d0c7a2e073ef6029da" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingSubTaskQueueManager::IsProcessed</definition>
+        <argsstring>() const</argsstring>
+        <name>IsProcessed</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::IsProcessed</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Checks if all subtask in the queue are processed <simplesect kind="return"><para>true if the queue is processed </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="104" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="651" bodyend="668"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a13f73871e1227e85e4722eb16f157eeb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueManager::SetSubTaskQueueAssignmentEventSink</definition>
+        <argsstring>(std::function&lt; void(const std::vector&lt; std::string &gt; &amp;)&gt; subTaskQueueAssignmentEventSink)</argsstring>
+        <name>SetSubTaskQueueAssignmentEventSink</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::SetSubTaskQueueAssignmentEventSink</qualifiedname>
+        <param>
+          <type>std::function&lt; void(const std::vector&lt; std::string &gt; &amp;)&gt;</type>
+          <declname>subTaskQueueAssignmentEventSink</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Sink that gets subtask assignment events <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>subTaskQueueAssignmentEventSink</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>* lambda or function handling the event </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="110" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="670" bodyend="689"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a4ee374a416f37d0e071dc01a7178169b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::processing::ProcessingSubTaskQueueManager::GetCurrentQueueTimestamp</definition>
+        <argsstring>()</argsstring>
+        <name>GetCurrentQueueTimestamp</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::GetCurrentQueueTimestamp</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Retrieves the current timestamp associated with the queue. <simplesect kind="return"><para>The current queue timestamp as a 64-bit unsigned integer. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="116" column="18" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="790" bodyend="795"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a7a2c3870148304e6b51f26637c7580d4" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueManager::SetMaxSubtasksPerOwnership</definition>
+        <argsstring>(size_t maxSubtasksPerOwnership)</argsstring>
+        <name>SetMaxSubtasksPerOwnership</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::SetMaxSubtasksPerOwnership</qualifiedname>
+        <param>
+          <type>size_t</type>
+          <declname>maxSubtasksPerOwnership</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Sets the maximum number of subtasks that can be owned at one time.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>maxSubtasksPerOwnership</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The maximum number of subtasks that can be assigned to a single ownership instance. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="123" column="14" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="123" bodyend="126"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aacd881cf0de2c0918e5f42860a205403" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingSubTaskQueueManager::UpdateQueue</definition>
+        <argsstring>(SGProcessing::SubTaskQueue *queue)</argsstring>
+        <name>UpdateQueue</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::UpdateQueue</qualifiedname>
+        <param>
+          <type>SGProcessing::SubTaskQueue *</type>
+          <declname>queue</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Updates the local queue with a snapshot that have the most recent timestamp <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>queue</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- the queue snapshot </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="132" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="115" bodyend="178"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aedd4a0db3bb9ca5e64849e92492cfcd4" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueManager::HandleQueueRequestTimeout</definition>
+        <argsstring>(const boost::system::error_code &amp;ec)</argsstring>
+        <name>HandleQueueRequestTimeout</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::HandleQueueRequestTimeout</qualifiedname>
+        <param>
+          <type>const boost::system::error_code &amp;</type>
+          <declname>ec</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="134" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="520" bodyend="592"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1acc9caf8e11fa7be0e1e97b851b0a3d80" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueManager::PublishSubTaskQueue</definition>
+        <argsstring>()</argsstring>
+        <name>PublishSubTaskQueue</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::PublishSubTaskQueue</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="135" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="386" bodyend="391"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ad0a6342afe4662b8cdb61d81a1ad10f0" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueManager::ProcessPendingSubTaskGrabbing</definition>
+        <argsstring>()</argsstring>
+        <name>ProcessPendingSubTaskGrabbing</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::ProcessPendingSubTaskGrabbing</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="136" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="180" bodyend="327"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a96c750599979026c9b37cdac072f2af4" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueManager::GrabSubTasks</definition>
+        <argsstring>()</argsstring>
+        <name>GrabSubTasks</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::GrabSubTasks</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="137" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="353" bodyend="365"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a97eaedc99b43bb0a157681f7d9cc4831" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueManager::HandleGrabSubTaskTimeout</definition>
+        <argsstring>(const boost::system::error_code &amp;ec)</argsstring>
+        <name>HandleGrabSubTaskTimeout</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::HandleGrabSubTaskTimeout</qualifiedname>
+        <param>
+          <type>const boost::system::error_code &amp;</type>
+          <declname>ec</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="138" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="329" bodyend="342"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a1ff4db442a3a8050ad94a2b11e3cb09e" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueManager::LogQueue</definition>
+        <argsstring>() const</argsstring>
+        <name>LogQueue</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::LogQueue</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="139" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="691" bodyend="711"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a64ea092e1d4ae462c238828d9f3d2de5" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingSubTaskQueueManager::HasAvailableWork</definition>
+        <argsstring>(bool checkOwnershipQuota=true) const</argsstring>
+        <name>HasAvailableWork</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::HasAvailableWork</qualifiedname>
+        <param>
+          <type>bool</type>
+          <declname>checkOwnershipQuota</declname>
+          <defval>true</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Check if the queue has any current work to do <simplesect kind="return"><para>bool if there is work to be done </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="145" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="713" bodyend="730"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a44937976afcead07dccc39f57e7a9cd4" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueManager::UpdateQueueTimestamp</definition>
+        <argsstring>()</argsstring>
+        <name>UpdateQueueTimestamp</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::UpdateQueueTimestamp</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Updates m_queue_timestamp_ based on current ownership duration </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="149" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="732" bodyend="753"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a62a32e5ebd1cec9972b85aafb7e678d8" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueManager::CheckActiveCount</definition>
+        <argsstring>()</argsstring>
+        <name>CheckActiveCount</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::CheckActiveCount</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="151" column="14" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="755" bodyend="788"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a1acdde2b00c188475d050ba529153feb" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::processing::ProcessingSubTaskQueueManager::CalculateGrabSubTaskTimeout</definition>
+        <argsstring>() const</argsstring>
+        <name>CalculateGrabSubTaskTimeout</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::CalculateGrabSubTaskTimeout</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Calculates the timeout for grabbing a subtask in milliseconds.</para>
+<para>This method determines the remaining time until the current lock on the subtask expires in the queue&apos;s time base. If the lock is already expired, a minimal timeout value is returned. The calculated timeout is capped at a maximum threshold to ensure a reasonable upper limit.</para>
+<para><simplesect kind="return"><para>The timeout duration in milliseconds for grabbing a subtask. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="163" column="18" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="797" bodyend="823"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a3a0879af207b8c0e784a09d367636866" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; int &gt;</type>
+        <definition>std::vector&lt; int &gt; sgns::processing::ProcessingSubTaskQueueManager::UpdateUnprocessedSubTaskIndices</definition>
+        <argsstring>(const SGProcessing::SubTaskQueue *queue) const</argsstring>
+        <name>UpdateUnprocessedSubTaskIndices</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::UpdateUnprocessedSubTaskIndices</qualifiedname>
+        <param>
+          <type>const SGProcessing::SubTaskQueue *</type>
+          <declname>queue</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Updates the list of unprocessed subtask indices and <simplesect kind="return"><para>if any unprocessed subtasks are available </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="169" column="21" bodyfile="src/processing/processing_subtask_queue_manager.cpp" bodystart="825" bodyend="856"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Distributed subtask queue manager. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::processing::ProcessingSubTaskQueueManager</label>
+        <link refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; ProcessingSubTaskQueueManager &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="16">
+        <label>K</label>
+      </node>
+      <node id="6">
+        <label>T</label>
+      </node>
+      <node id="17">
+        <label>sgns::processing::ProcessingSubTaskQueue</label>
+        <link refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue"/>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-m_localNodeId</edgelabel>
+        </childnode>
+        <childnode refid="18" relation="usage">
+          <edgelabel>-m_enabledItemIndices</edgelabel>
+        </childnode>
+        <childnode refid="20" relation="usage">
+          <edgelabel>-m_logger</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::processing::ProcessingSubTaskQueueChannel</label>
+        <link refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel"/>
+      </node>
+      <node id="1">
+        <label>sgns::processing::ProcessingSubTaskQueueManager</label>
+        <link refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-m_queueChannel</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>-m_context</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-m_localNodeId</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>-m_queue</edgelabel>
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>-m_queueMutex</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>-m_onSubTaskGrabbedCallbacks</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="usage">
+          <edgelabel>-m_processedSubTaskIds</edgelabel>
+        </childnode>
+        <childnode refid="17" relation="usage">
+          <edgelabel>-m_processingQueue</edgelabel>
+        </childnode>
+        <childnode refid="21" relation="usage">
+          <edgelabel>-m_ownershipRequestQueue</edgelabel>
+        </childnode>
+        <childnode refid="20" relation="usage">
+          <edgelabel>-m_logger</edgelabel>
+        </childnode>
+      </node>
+      <node id="22">
+        <label>sgns::processing::ProcessingSubTaskQueueManager::OwnershipRequest</label>
+        <link refid="da/d9a/structsgns_1_1processing_1_1_processing_sub_task_queue_manager_1_1_ownership_request"/>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+node_id</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; ProcessingSubTaskQueueManager &gt;</label>
+      </node>
+      <node id="13">
+        <label>std::list&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::list&lt; SubTaskGrabbedCallback &gt;</label>
+        <childnode refid="13" relation="template-instance">
+          <edgelabel>&lt; SubTaskGrabbedCallback &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="23">
+        <label>std::queue&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>std::queue&lt; sgns::processing::ProcessingSubTaskQueueManager::OwnershipRequest &gt;</label>
+        <childnode refid="22" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="23" relation="template-instance">
+          <edgelabel>&lt; sgns::processing::ProcessingSubTaskQueueManager::OwnershipRequest &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::recursive_mutex</label>
+      </node>
+      <node id="15">
+        <label>std::set&lt; K &gt;</label>
+        <childnode refid="16" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+      </node>
+      <node id="14">
+        <label>std::set&lt; std::string &gt;</label>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="15" relation="template-instance">
+          <edgelabel>&lt; std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::shared_ptr&lt; SGProcessing::SubTaskQueue &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; SGProcessing::SubTaskQueue &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::shared_ptr&lt; boost::asio::io_context &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; boost::asio::io_context &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; sgns::processing::ProcessingSubTaskQueueChannel &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; sgns::processing::ProcessingSubTaskQueueChannel &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="20">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::string</label>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="18">
+        <label>std::vector&lt; int &gt;</label>
+        <childnode refid="19" relation="template-instance">
+          <edgelabel>&lt; int &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/processing/processing_subtask_queue_manager.hpp" line="24" column="5" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="25" bodyend="215"/>
+    <listofallmembers>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a1acdde2b00c188475d050ba529153feb" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>CalculateGrabSubTaskTimeout</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a2680a17086b901356fe2309052541707" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>ChangeSubTaskProcessingStates</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a62a32e5ebd1cec9972b85aafb7e678d8" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>CheckActiveCount</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1af0c2ca45e36ba445a93648a148f2248a" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>CreateQueue</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a4ee374a416f37d0e071dc01a7178169b" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>GetCurrentQueueTimestamp</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ada807add471dd304cefc19cebe6f5ac9" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>GetQueueSnapshot</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a834485f841eb14666bdb127d3eeae016" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>GrabSubTask</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a96c750599979026c9b37cdac072f2af4" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>GrabSubTasks</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a97eaedc99b43bb0a157681f7d9cc4831" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>HandleGrabSubTaskTimeout</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aedd4a0db3bb9ca5e64849e92492cfcd4" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>HandleQueueRequestTimeout</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a64ea092e1d4ae462c238828d9f3d2de5" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>HasAvailableWork</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a907583b4b55d4c0d2d3c48994f9aa9cc" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>HasOwnership</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a5ae6e2b3d6d936d0c7a2e073ef6029da" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>IsProcessed</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a148c01bf4b8f285d958737f866d62049" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>IsQueueInit</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a1ff4db442a3a8050ad94a2b11e3cb09e" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>LogQueue</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aec8daf4ba76373dc5effc1e39b2e0740" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_context</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aeda73fec51c46057d9716671dc3738b1" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_defaultMaxSubtasksPerOwnership</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1adeeda817b77e42daccb2af193f4c71d7" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_delayBetweenProcessingMs</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a9c7fd32c44fdbce9ac4ffa4c44acc44c" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_dltGrabSubTaskTimeout</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1adabc3e796078ad5fa577d94925b8a154" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_dltQueueResponseTimeout</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a78394b835b99f82ccba56e993fd6dc55" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_initialDelayPassed</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1addda6a3ef38a4c30ac6889e1cb4b3849" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_lastActiveCountCheck</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a7f528efc73ec9a2789eccad15d5408a0" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_lastQueueUpdateTime</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a27a51a2a29d70cce8a3d5d843fa2bace" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_localNodeId</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a53831e50b23870857367916cd2b3d737" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_logger</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1add28943f610b31075ecaf525f4199f55" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_maxSubtasksPerOwnership</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a4cafcaa72c80e8e7656477230642a2bb" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_onSubTaskGrabbedCallbacks</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a07847273b91f6be2f40a8f34d8fd909b" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_ownership_acquired_at_</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ac5bd57d58f5f4ebaed11a830b8e755d0" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_ownership_last_delta_time_</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a75cd28e2150a6910464d12374677ebfd" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_ownershipRequestQueue</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aa9fce59958aadf2a726a675cdad86ad1" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_processedSubTaskIds</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ace6ff6c8a02a1729b882fed70a783c34" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_processedSubtasksInCurrentOwnership</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a6ad7aa847ad069697274686cfa5b0bbf" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_processingErrorSink</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a890514576e84a545de471876da16216e" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_processingQueue</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a7bbb2263b0238c4fac4b61a8fcf2837c" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_processingTimeout</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a18ab97be8407809d9222fed92290888d" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_queue</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a2280321f3241f78592944b11d039e5b0" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_queue_timestamp_</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a024e1448e55fe5d18f50a2345180562d" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_queueChannel</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a6e22483081287c06850f64cbac2696d2" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_queueMutex</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a275af5faff22625b7b8ea50e3f6edda5" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_queueResponseTimeout</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ac4618259590e6fd69d1a9babe36a98da" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_subTaskQueueAssignmentEventSink</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aade088954cbbe2738353dddc0c716c02" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>m_waitTimeBeforeReset</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a83a89b3e7b3c68bee87735198fdf8448" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>MoveOwnershipTo</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aa96bcb99c4d9dff1e34670c62eaa92f0" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>ProcessingSubTaskQueueManager</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ad0a6342afe4662b8cdb61d81a1ad10f0" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>ProcessPendingSubTaskGrabbing</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1acd21eaddd28f647b99707a102aa4f07d" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>ProcessSubTaskQueueMessage</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ad405ae9d1800b63f30ab868fd1b43de6" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>ProcessSubTaskQueueRequestMessage</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1acc9caf8e11fa7be0e1e97b851b0a3d80" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>PublishSubTaskQueue</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a7a2c3870148304e6b51f26637c7580d4" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>SetMaxSubtasksPerOwnership</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a5697ff506e0df474205e0acac8146d60" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>SetProcessingTimeout</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a13f73871e1227e85e4722eb16f157eeb" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>SetSubTaskQueueAssignmentEventSink</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a1f0647de08945ce0ef31ad39987db277" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>SubTaskGrabbedCallback</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aacd881cf0de2c0918e5f42860a205403" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>UpdateQueue</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a44937976afcead07dccc39f57e7a9cd4" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>UpdateQueueTimestamp</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a3a0879af207b8c0e784a09d367636866" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>UpdateUnprocessedSubTaskIndices</name></member>
+      <member refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a0140e45a14f2454f54ed8d7cfd5a754f" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager</scope><name>~ProcessingSubTaskQueueManager</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

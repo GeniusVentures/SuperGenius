@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_992fd4856b792033fb818793670eda51" kind="dir">
+    <compoundname>src/crypto/bip39/impl</compoundname>
+    <innerfile refid="d4/d53/bip39__provider__impl_8cpp">bip39_provider_impl.cpp</innerfile>
+    <innerfile refid="da/df8/bip39__provider__impl_8hpp">bip39_provider_impl.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/bip39/impl/"/>
+  </compounddef>
+</doxygen>

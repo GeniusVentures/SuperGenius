@@ -1,0 +1,702 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl" kind="class" language="C++" prot="public">
+    <compoundname>sgns::storage::trie::PersistentTrieBatchImpl</compoundname>
+    <basecompoundref refid="db/d71/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch" prot="public" virt="non-virtual">sgns::storage::trie::PersistentTrieBatch</basecompoundref>
+    <includes refid="d7/daf/persistent__trie__batch__impl_8hpp" local="no">persistent_trie_batch_impl.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1aae5db2831febbdff22e8884cf5150401" prot="public" static="no">
+        <type>std::function&lt; void(const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;)&gt;</type>
+        <definition>using sgns::storage::trie::PersistentTrieBatchImpl::RootChangedEventHandler = std::function&lt;void(const base::Buffer &amp;)&gt;</definition>
+        <argsstring></argsstring>
+        <name>RootChangedEventHandler</name>
+        <qualifiedname>sgns::storage::trie::PersistentTrieBatchImpl::RootChangedEventHandler</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp" line="15" column="5" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.hpp" bodystart="15" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a7f71ae10f061a958a0902986b8d15a02" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec" kindref="compound">Codec</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Codec&gt; sgns::storage::trie::PersistentTrieBatchImpl::codec_</definition>
+        <argsstring></argsstring>
+        <name>codec_</name>
+        <qualifiedname>sgns::storage::trie::PersistentTrieBatchImpl::codec_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp" line="38" column="21" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a86835bf2c465b218e4cd43c47c8eb0b6" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer" kindref="compound">TrieSerializer</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;TrieSerializer&gt; sgns::storage::trie::PersistentTrieBatchImpl::serializer_</definition>
+        <argsstring></argsstring>
+        <name>serializer_</name>
+        <qualifiedname>sgns::storage::trie::PersistentTrieBatchImpl::serializer_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp" line="39" column="21" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.hpp" bodystart="39" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a2649c400f07c0dc750fed3d1548a5e93" prot="private" static="no" mutable="no">
+        <type>boost::optional&lt; std::shared_ptr&lt; <ref refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker" kindref="compound">changes_trie::ChangesTracker</ref> &gt; &gt;</type>
+        <definition>boost::optional&lt;std::shared_ptr&lt;changes_trie::ChangesTracker&gt; &gt; sgns::storage::trie::PersistentTrieBatchImpl::changes_</definition>
+        <argsstring></argsstring>
+        <name>changes_</name>
+        <qualifiedname>sgns::storage::trie::PersistentTrieBatchImpl::changes_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp" line="40" column="21" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.hpp" bodystart="40" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a944f375e7cae4aa03888a5945fe5ca41" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; <ref refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie" kindref="compound">SuperGeniusTrie</ref> &gt;</type>
+        <definition>std::unique_ptr&lt;SuperGeniusTrie&gt; sgns::storage::trie::PersistentTrieBatchImpl::trie_</definition>
+        <argsstring></argsstring>
+        <name>trie_</name>
+        <qualifiedname>sgns::storage::trie::PersistentTrieBatchImpl::trie_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp" line="41" column="21" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.hpp" bodystart="41" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a346e271aba4482f5f1c95f9d909e490c" prot="private" static="no" mutable="no">
+        <type><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1aae5db2831febbdff22e8884cf5150401" kindref="member">RootChangedEventHandler</ref></type>
+        <definition>RootChangedEventHandler sgns::storage::trie::PersistentTrieBatchImpl::root_changed_handler_</definition>
+        <argsstring></argsstring>
+        <name>root_changed_handler_</name>
+        <qualifiedname>sgns::storage::trie::PersistentTrieBatchImpl::root_changed_handler_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp" line="42" column="29" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.hpp" bodystart="42" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1ac31f107cd48ced812097a7c04b76eb1b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::PersistentTrieBatchImpl::PersistentTrieBatchImpl</definition>
+        <argsstring>(std::shared_ptr&lt; Codec &gt; codec, std::shared_ptr&lt; TrieSerializer &gt; serializer, boost::optional&lt; std::shared_ptr&lt; changes_trie::ChangesTracker &gt; &gt; changes, std::unique_ptr&lt; SuperGeniusTrie &gt; trie, RootChangedEventHandler &amp;&amp;handler)</argsstring>
+        <name>PersistentTrieBatchImpl</name>
+        <qualifiedname>sgns::storage::trie::PersistentTrieBatchImpl::PersistentTrieBatchImpl</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec" kindref="compound">Codec</ref> &gt;</type>
+          <declname>codec</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer" kindref="compound">TrieSerializer</ref> &gt;</type>
+          <declname>serializer</declname>
+        </param>
+        <param>
+          <type>boost::optional&lt; std::shared_ptr&lt; <ref refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker" kindref="compound">changes_trie::ChangesTracker</ref> &gt; &gt;</type>
+          <declname>changes</declname>
+        </param>
+        <param>
+          <type>std::unique_ptr&lt; <ref refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie" kindref="compound">SuperGeniusTrie</ref> &gt;</type>
+          <declname>trie</declname>
+        </param>
+        <param>
+          <type><ref refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1aae5db2831febbdff22e8884cf5150401" kindref="member">RootChangedEventHandler</ref> &amp;&amp;</type>
+          <declname>handler</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp" line="17" column="5" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.cpp" bodystart="19" bodyend="45"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1ae76cc7d9edeb709fceafb8d212e795b3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::PersistentTrieBatchImpl::~PersistentTrieBatchImpl</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~PersistentTrieBatchImpl</name>
+        <qualifiedname>sgns::storage::trie::PersistentTrieBatchImpl::~PersistentTrieBatchImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp" line="23" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a9c7e947b63951d35327942d3b488ee08" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; Buffer &gt; sgns::storage::trie::PersistentTrieBatchImpl::commit</definition>
+        <argsstring>() override</argsstring>
+        <name>commit</name>
+        <qualifiedname>sgns::storage::trie::PersistentTrieBatchImpl::commit</qualifiedname>
+        <reimplements refid="db/d71/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_1aba5723b1be9b51c707abca33581ae189">commit</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Commits changes to a persistent storage <simplesect kind="return"><para>the root of the committed trie </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp" line="25" column="21" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.cpp" bodystart="47" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1aec92bdfe519553706a3f47fd7a065dfd" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>std::unique_ptr&lt; <ref refid="d2/d7a/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch" kindref="compound">TopperTrieBatch</ref> &gt;</type>
+        <definition>std::unique_ptr&lt; TopperTrieBatch &gt; sgns::storage::trie::PersistentTrieBatchImpl::batchOnTop</definition>
+        <argsstring>() override</argsstring>
+        <name>batchOnTop</name>
+        <qualifiedname>sgns::storage::trie::PersistentTrieBatchImpl::batchOnTop</qualifiedname>
+        <reimplements refid="db/d71/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_1a8afe5ddcd593d936317f3e7d4ca38db7">batchOnTop</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Creates a batch on top of this batch </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp" line="26" column="21" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.cpp" bodystart="53" bodyend="55"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a6870a20efd581632ee1f6bf031c0f342" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; Buffer &gt; sgns::storage::trie::PersistentTrieBatchImpl::get</definition>
+        <argsstring>(const Buffer &amp;key) const override</argsstring>
+        <name>get</name>
+        <qualifiedname>sgns::storage::trie::PersistentTrieBatchImpl::get</qualifiedname>
+        <reimplements refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a0aeb44c506c0f66a5d7bf3f3be4baebe">get</reimplements>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Get value by key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>K </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>V </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp" line="28" column="21" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.cpp" bodystart="57" bodyend="60"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a67e8d0cf66f03dcc9c4f2815d57d5ebc" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>std::unique_ptr&lt; <ref refid="d0/dbf/namespacesgns_1_1storage_1af3943c7b4511cc2ca91cfcac7f94fac3" kindref="member">BufferMapCursor</ref> &gt;</type>
+        <definition>std::unique_ptr&lt; BufferMapCursor &gt; sgns::storage::trie::PersistentTrieBatchImpl::cursor</definition>
+        <argsstring>() override</argsstring>
+        <name>cursor</name>
+        <qualifiedname>sgns::storage::trie::PersistentTrieBatchImpl::cursor</qualifiedname>
+        <reimplements refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable_1a44ca82af98f642669b5237f535b58001">cursor</reimplements>
+        <briefdescription>
+<para>Returns new key-value iterator. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>kv iterator </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp" line="29" column="21" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.cpp" bodystart="62" bodyend="64"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a6e1bf96c765bd1009f95c8ff4b49dffb" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>bool</type>
+        <definition>bool sgns::storage::trie::PersistentTrieBatchImpl::contains</definition>
+        <argsstring>(const Buffer &amp;key) const override</argsstring>
+        <name>contains</name>
+        <qualifiedname>sgns::storage::trie::PersistentTrieBatchImpl::contains</qualifiedname>
+        <reimplements refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a0d7d1047789a450de21caff78afc5c37">contains</reimplements>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Returns true if given key-value binding exists in the storage. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>K </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if key has value, false otherwise. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp" line="30" column="10" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.cpp" bodystart="66" bodyend="68"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a94168acb03daeef6cb889ee49c0bb76c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>bool</type>
+        <definition>bool sgns::storage::trie::PersistentTrieBatchImpl::empty</definition>
+        <argsstring>() const override</argsstring>
+        <name>empty</name>
+        <qualifiedname>sgns::storage::trie::PersistentTrieBatchImpl::empty</qualifiedname>
+        <reimplements refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a829c8fbd3e864503defcaa43c8c2699b">empty</reimplements>
+        <briefdescription>
+<para>Returns true if the storage is empty. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp" line="31" column="10" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.cpp" bodystart="70" bodyend="72"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a6cedd358357eb0f89acebe2b5c90e0ca" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::trie::PersistentTrieBatchImpl::clearPrefix</definition>
+        <argsstring>(const Buffer &amp;prefix) override</argsstring>
+        <name>clearPrefix</name>
+        <qualifiedname>sgns::storage::trie::PersistentTrieBatchImpl::clearPrefix</qualifiedname>
+        <reimplements refid="dc/d88/classsgns_1_1storage_1_1trie_1_1_trie_batch_1af3a6d09746fc3ca5dbe79b3ae1a1ae60">clearPrefix</reimplements>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>prefix</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Remove all trie entries which key begins with the supplied prefix </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp" line="32" column="21" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.cpp" bodystart="74" bodyend="78"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a4963f2832b0765f607a4bf8418c02155" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::trie::PersistentTrieBatchImpl::put</definition>
+        <argsstring>(const Buffer &amp;key, const Buffer &amp;value) override</argsstring>
+        <name>put</name>
+        <qualifiedname>sgns::storage::trie::PersistentTrieBatchImpl::put</qualifiedname>
+        <reimplements refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a6c94f5ac466050295a32f93aeb5a0e8c">put</reimplements>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+<para>Store value by key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>result containing void if put successful, error otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp" line="33" column="21" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.cpp" bodystart="80" bodyend="83"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1aff0d88e618ff0c2b701ae174372a801b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::trie::PersistentTrieBatchImpl::put</definition>
+        <argsstring>(const Buffer &amp;key, Buffer &amp;&amp;value) override</argsstring>
+        <name>put</name>
+        <qualifiedname>sgns::storage::trie::PersistentTrieBatchImpl::put</qualifiedname>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;&amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp" line="34" column="21" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.cpp" bodystart="85" bodyend="93"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a7b833dbee413838243003052e75d4f37" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::trie::PersistentTrieBatchImpl::remove</definition>
+        <argsstring>(const Buffer &amp;key) override</argsstring>
+        <name>remove</name>
+        <qualifiedname>sgns::storage::trie::PersistentTrieBatchImpl::remove</qualifiedname>
+        <reimplements refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a13a83e4a2fa9540c366e277871701ac3">remove</reimplements>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Remove value by key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>K </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>error code if error happened </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp" line="35" column="21" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.cpp" bodystart="95" bodyend="101"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="9">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="8">
+        <label>sgns::storage::face::Iterable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="9" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="4">
+        <label>sgns::storage::face::Readable&lt; Buffer, Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="6">
+        <label>sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::storage::trie::PersistentTrieBatch</label>
+        <link refid="db/d71/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::PersistentTrieBatchImpl</label>
+        <link refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::trie::TrieBatch</label>
+        <link refid="dc/d88/classsgns_1_1storage_1_1trie_1_1_trie_batch"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="8" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::enable_shared_from_this&lt; PersistentTrieBatch &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="13">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="15">
+        <label>T</label>
+      </node>
+      <node id="28">
+        <label>sgns::storage::face::GenericMap&lt; K, V &gt;</label>
+        <link refid="d4/d01/structsgns_1_1storage_1_1face_1_1_generic_map"/>
+        <childnode refid="29" relation="public-inheritance">
+        </childnode>
+        <childnode refid="30" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>sgns::storage::face::GenericMap&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d4/d01/structsgns_1_1storage_1_1face_1_1_generic_map"/>
+        <childnode refid="21" relation="public-inheritance">
+        </childnode>
+        <childnode refid="27" relation="public-inheritance">
+        </childnode>
+        <childnode refid="28" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="8">
+        <label>sgns::storage::face::Iterable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="9" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="25">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="22">
+        <label>sgns::storage::face::Iterable&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="9" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="24">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="25" relation="public-inheritance">
+        </childnode>
+        <childnode refid="26" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="25" relation="public-inheritance">
+        </childnode>
+        <childnode refid="26" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>sgns::storage::face::ReadOnlyMap&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="22" relation="public-inheritance">
+        </childnode>
+        <childnode refid="23" relation="public-inheritance">
+        </childnode>
+        <childnode refid="24" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="4">
+        <label>sgns::storage::face::Readable&lt; Buffer, Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="26">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="23">
+        <label>sgns::storage::face::Readable&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="6">
+        <label>sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="30">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="27">
+        <label>sgns::storage::face::Writeable&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>sgns::storage::trie::Codec</label>
+        <link refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec"/>
+        <childnode refid="13" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::storage::trie::PersistentTrieBatch</label>
+        <link refid="db/d71/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::PersistentTrieBatchImpl</label>
+        <link refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>-codec_</edgelabel>
+        </childnode>
+        <childnode refid="16" relation="usage">
+          <edgelabel>-serializer_</edgelabel>
+        </childnode>
+        <childnode refid="18" relation="usage">
+          <edgelabel>-trie_</edgelabel>
+        </childnode>
+      </node>
+      <node id="19">
+        <label>sgns::storage::trie::SuperGeniusTrie</label>
+        <link refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie"/>
+        <childnode refid="20" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::trie::TrieBatch</label>
+        <link refid="dc/d88/classsgns_1_1storage_1_1trie_1_1_trie_batch"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="8" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>sgns::storage::trie::TrieSerializer</label>
+        <link refid="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer"/>
+        <childnode refid="13" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::enable_shared_from_this&lt; PersistentTrieBatch &gt;</label>
+      </node>
+      <node id="14">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="15" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::shared_ptr&lt; sgns::storage::trie::Codec &gt;</label>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::trie::Codec &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>std::shared_ptr&lt; sgns::storage::trie::TrieSerializer &gt;</label>
+        <childnode refid="17" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::trie::TrieSerializer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="31">
+        <label>std::unique_ptr&lt; T &gt;</label>
+        <childnode refid="15" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="18">
+        <label>std::unique_ptr&lt; sgns::storage::trie::SuperGeniusTrie &gt;</label>
+        <childnode refid="19" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="31" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::trie::SuperGeniusTrie &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/trie/impl/persistent_trie_batch_impl.hpp" line="13" column="3" bodyfile="src/storage/trie/impl/persistent_trie_batch_impl.hpp" bodystart="13" bodyend="43"/>
+    <listofallmembers>
+      <member refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1aec92bdfe519553706a3f47fd7a065dfd" prot="public" virt="virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>batchOnTop</name></member>
+      <member refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a2649c400f07c0dc750fed3d1548a5e93" prot="private" virt="non-virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>changes_</name></member>
+      <member refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a6cedd358357eb0f89acebe2b5c90e0ca" prot="public" virt="virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>clearPrefix</name></member>
+      <member refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a7f71ae10f061a958a0902986b8d15a02" prot="private" virt="non-virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>codec_</name></member>
+      <member refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a9c7e947b63951d35327942d3b488ee08" prot="public" virt="virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>commit</name></member>
+      <member refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a6e1bf96c765bd1009f95c8ff4b49dffb" prot="public" virt="virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>contains</name></member>
+      <member refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a67e8d0cf66f03dcc9c4f2815d57d5ebc" prot="public" virt="virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>cursor</name></member>
+      <member refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a94168acb03daeef6cb889ee49c0bb76c" prot="public" virt="virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>empty</name></member>
+      <member refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a6870a20efd581632ee1f6bf031c0f342" prot="public" virt="virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>get</name></member>
+      <member refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1ac31f107cd48ced812097a7c04b76eb1b" prot="public" virt="non-virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>PersistentTrieBatchImpl</name></member>
+      <member refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a4963f2832b0765f607a4bf8418c02155" prot="public" virt="virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>put</name></member>
+      <member refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1aff0d88e618ff0c2b701ae174372a801b" prot="public" virt="non-virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>put</name></member>
+      <member refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a7b833dbee413838243003052e75d4f37" prot="public" virt="virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>remove</name></member>
+      <member refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a346e271aba4482f5f1c95f9d909e490c" prot="private" virt="non-virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>root_changed_handler_</name></member>
+      <member refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1aae5db2831febbdff22e8884cf5150401" prot="public" virt="non-virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>RootChangedEventHandler</name></member>
+      <member refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a86835bf2c465b218e4cd43c47c8eb0b6" prot="private" virt="non-virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>serializer_</name></member>
+      <member refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1a944f375e7cae4aa03888a5945fe5ca41" prot="private" virt="non-virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>trie_</name></member>
+      <member refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable_1ad46259be5d5a46afb966c0ddfb78fa45" prot="public" virt="virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>~Iterable</name></member>
+      <member refid="d1/d3f/classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl_1ae76cc7d9edeb709fceafb8d212e795b3" prot="public" virt="non-virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>~PersistentTrieBatchImpl</name></member>
+      <member refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a481cee90de071b4bc04fae066e25236f" prot="public" virt="virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>~Readable</name></member>
+      <member refid="dc/d88/classsgns_1_1storage_1_1trie_1_1_trie_batch_1ac77f098527a6c04f28f593e5d6881741" prot="public" virt="non-virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>~TrieBatch</name></member>
+      <member refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1adb986d79f420f5829cae3d6659430a00" prot="public" virt="virtual"><scope>sgns::storage::trie::PersistentTrieBatchImpl</scope><name>~Writeable</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

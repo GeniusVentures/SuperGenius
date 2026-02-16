@@ -1,0 +1,68 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/ddd/structsgns_1_1application_1_1_app_state_exception" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::application::AppStateException</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">std::runtime_error</basecompoundref>
+    <includes refid="df/d24/app__state__manager_8hpp" local="no">app_state_manager.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d0/ddd/structsgns_1_1application_1_1_app_state_exception_1a1e7db421c808e79a222d8004bdca363c" prot="public" static="no" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::AppStateException::AppStateException</definition>
+        <argsstring>(std::string message)</argsstring>
+        <name>AppStateException</name>
+        <qualifiedname>sgns::application::AppStateException::AppStateException</qualifiedname>
+        <param>
+          <type>std::string</type>
+          <declname>message</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/app_state_manager.hpp" line="90" column="14" bodyfile="src/application/app_state_manager.hpp" bodystart="90" bodyend="91"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::application::AppStateException</label>
+        <link refid="d0/ddd/structsgns_1_1application_1_1_app_state_exception"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::exception</label>
+      </node>
+      <node id="2">
+        <label>std::runtime_error</label>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::application::AppStateException</label>
+        <link refid="d0/ddd/structsgns_1_1application_1_1_app_state_exception"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::exception</label>
+      </node>
+      <node id="2">
+        <label>std::runtime_error</label>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/application/app_state_manager.hpp" line="89" column="3" bodyfile="src/application/app_state_manager.hpp" bodystart="89" bodyend="92"/>
+    <listofallmembers>
+      <member refid="d0/ddd/structsgns_1_1application_1_1_app_state_exception_1a1e7db421c808e79a222d8004bdca363c" prot="public" virt="non-virtual"><scope>sgns::application::AppStateException</scope><name>AppStateException</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

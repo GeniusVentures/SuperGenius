@@ -1,0 +1,378 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/df9/classsgns_1_1confirm__req" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::confirm_req</compoundname>
+    <basecompoundref refid="db/da6/classsgns_1_1message" prot="public" virt="non-virtual">sgns::message</basecompoundref>
+    <includes refid="da/d8d/node_2common_8hpp" local="no">common.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d5/df9/classsgns_1_1confirm__req_1a18af8f6f8858010f010b302d2b8c43ea" prot="public" static="no" mutable="no">
+        <type>std::shared_ptr&lt; sgns::block &gt;</type>
+        <definition>std::shared_ptr&lt;sgns::block&gt; sgns::confirm_req::block</definition>
+        <argsstring></argsstring>
+        <name>block</name>
+        <qualifiedname>sgns::confirm_req::block</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="314" column="17" bodyfile="node/common.hpp" bodystart="314" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/df9/classsgns_1_1confirm__req_1abc2685b7085665b76ba01908ce90fbb9" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; std::pair&lt; sgns::block_hash, sgns::root &gt; &gt;</type>
+        <definition>std::vector&lt;std::pair&lt;sgns::block_hash, sgns::root&gt; &gt; sgns::confirm_req::roots_hashes</definition>
+        <argsstring></argsstring>
+        <name>roots_hashes</name>
+        <qualifiedname>sgns::confirm_req::roots_hashes</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="315" column="13" bodyfile="node/common.hpp" bodystart="315" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d5/df9/classsgns_1_1confirm__req_1a81c12bde0b6d4f33f26e7d42cf8e18d2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::confirm_req::confirm_req</definition>
+        <argsstring>(bool &amp;, sgns::stream &amp;, sgns::message_header const &amp;, sgns::block_uniquer *=nullptr)</argsstring>
+        <name>confirm_req</name>
+        <qualifiedname>sgns::confirm_req::confirm_req</qualifiedname>
+        <param>
+          <type>bool &amp;</type>
+          <defname>error_a</defname>
+        </param>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type><ref refid="de/d6d/classsgns_1_1message__header" kindref="compound">sgns::message_header</ref> const &amp;</type>
+          <defname>header_a</defname>
+        </param>
+        <param>
+          <type>sgns::block_uniquer *</type>
+          <defname>uniquer_a</defname>
+          <defval>nullptr</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="306" column="1" bodyfile="node/common.cpp" bodystart="657" bodyend="664"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/df9/classsgns_1_1confirm__req_1a6c7f334bd1838467f4e9e65039536fd2" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::confirm_req::confirm_req</definition>
+        <argsstring>(std::shared_ptr&lt; sgns::block &gt;)</argsstring>
+        <name>confirm_req</name>
+        <qualifiedname>sgns::confirm_req::confirm_req</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; sgns::block &gt;</type>
+          <defname>block_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="307" column="10" bodyfile="node/common.cpp" bodystart="666" bodyend="671"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/df9/classsgns_1_1confirm__req_1a6a99a4d827a38d4d61b4f632574bb2e8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::confirm_req::confirm_req</definition>
+        <argsstring>(std::vector&lt; std::pair&lt; sgns::block_hash, sgns::root &gt; &gt; const &amp;)</argsstring>
+        <name>confirm_req</name>
+        <qualifiedname>sgns::confirm_req::confirm_req</qualifiedname>
+        <param>
+          <type>std::vector&lt; std::pair&lt; sgns::block_hash, sgns::root &gt; &gt; const &amp;</type>
+          <defname>roots_hashes_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="308" column="1" bodyfile="node/common.cpp" bodystart="673" bodyend="681"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/df9/classsgns_1_1confirm__req_1a89a85d0328c1644bd5eaa35ebf40a780" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::confirm_req::confirm_req</definition>
+        <argsstring>(sgns::block_hash const &amp;, sgns::root const &amp;)</argsstring>
+        <name>confirm_req</name>
+        <qualifiedname>sgns::confirm_req::confirm_req</qualifiedname>
+        <param>
+          <type>sgns::block_hash const &amp;</type>
+          <defname>hash_a</defname>
+        </param>
+        <param>
+          <type>sgns::root const &amp;</type>
+          <defname>root_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="309" column="1" bodyfile="node/common.cpp" bodystart="683" bodyend="692"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/df9/classsgns_1_1confirm__req_1a1ab27babb45f19c76572bbf8bdad546a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::confirm_req::serialize</definition>
+        <argsstring>(sgns::stream &amp;, bool) const override</argsstring>
+        <name>serialize</name>
+        <qualifiedname>sgns::confirm_req::serialize</qualifiedname>
+        <reimplements refid="db/da6/classsgns_1_1message_1a7caa91e43882d5ce6b2f84e7a180bfd8">serialize</reimplements>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type>bool</type>
+          <defname>use_epoch_2_min_version_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="310" column="6" bodyfile="node/common.cpp" bodystart="699" bodyend="717"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/df9/classsgns_1_1confirm__req_1a587573ee184fd24ddfca6f70f7bd8872" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::confirm_req::deserialize</definition>
+        <argsstring>(sgns::stream &amp;, sgns::block_uniquer *=nullptr)</argsstring>
+        <name>deserialize</name>
+        <qualifiedname>sgns::confirm_req::deserialize</qualifiedname>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type>sgns::block_uniquer *</type>
+          <defname>uniquer_a</defname>
+          <defval>nullptr</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="311" column="6" bodyfile="node/common.cpp" bodystart="719" bodyend="754"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/df9/classsgns_1_1confirm__req_1a0317fef8f2a1eacd3f40fbe3487b176f" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::confirm_req::visit</definition>
+        <argsstring>(sgns::message_visitor &amp;) const override</argsstring>
+        <name>visit</name>
+        <qualifiedname>sgns::confirm_req::visit</qualifiedname>
+        <reimplements refid="db/da6/classsgns_1_1message_1a85e15104bd6bb3f97732067f4a31b418">visit</reimplements>
+        <param>
+          <type><ref refid="dd/d84/classsgns_1_1message__visitor" kindref="compound">sgns::message_visitor</ref> &amp;</type>
+          <defname>visitor_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="312" column="6" bodyfile="node/common.cpp" bodystart="694" bodyend="697"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/df9/classsgns_1_1confirm__req_1a322d363d0b425a87fb90dc603637dd06" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::confirm_req::operator==</definition>
+        <argsstring>(sgns::confirm_req const &amp;) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::confirm_req::operator==</qualifiedname>
+        <param>
+          <type><ref refid="d5/df9/classsgns_1_1confirm__req" kindref="compound">sgns::confirm_req</ref> const &amp;</type>
+          <defname>other_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="313" column="6" bodyfile="node/common.cpp" bodystart="756" bodyend="768"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/df9/classsgns_1_1confirm__req_1ac48d3a684f296b1994182ec1e6639759" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::confirm_req::roots_string</definition>
+        <argsstring>() const</argsstring>
+        <name>roots_string</name>
+        <qualifiedname>sgns::confirm_req::roots_string</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="316" column="13" bodyfile="node/common.cpp" bodystart="770" bodyend="781"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d5/df9/classsgns_1_1confirm__req_1a2f8c577bb2a378367ee6e6025df8f8fc" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t sgns::confirm_req::size</definition>
+        <argsstring>(sgns::block_type, size_t=0)</argsstring>
+        <name>size</name>
+        <qualifiedname>sgns::confirm_req::size</qualifiedname>
+        <param>
+          <type>sgns::block_type</type>
+          <defname>type_a</defname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <defname>count</defname>
+          <defval>0</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="317" column="15" bodyfile="node/common.cpp" bodystart="783" bodyend="795"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::confirm_req</label>
+        <link refid="d5/df9/classsgns_1_1confirm__req"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::message</label>
+        <link refid="db/da6/classsgns_1_1message"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="8">
+        <label>T</label>
+      </node>
+      <node id="12">
+        <label>T1</label>
+      </node>
+      <node id="13">
+        <label>T2</label>
+      </node>
+      <node id="1">
+        <label>sgns::confirm_req</label>
+        <link refid="d5/df9/classsgns_1_1confirm__req"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+block</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+roots_hashes</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::message</label>
+        <link refid="db/da6/classsgns_1_1message"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+header</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::message_header</label>
+        <link refid="de/d6d/classsgns_1_1message__header"/>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+block_type_mask</edgelabel>
+          <edgelabel>+count_mask</edgelabel>
+          <edgelabel>+extensions</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::bitset&lt; Bits &gt;</label>
+      </node>
+      <node id="4">
+        <label>std::bitset&lt; 16 &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; 16 &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::pair&lt; T1, T2 &gt;</label>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="13" relation="usage">
+          <edgelabel>+second_type</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::pair&lt; sgns::block_hash, sgns::root &gt;</label>
+        <childnode refid="11" relation="template-instance">
+          <edgelabel>&lt; sgns::block_hash, sgns::root &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; sgns::block &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; sgns::block &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="14">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::vector&lt; std::pair&lt; sgns::block_hash, sgns::root &gt; &gt;</label>
+        <childnode refid="10" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; std::pair&lt; sgns::block_hash, sgns::root &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="node/common.hpp" line="303" column="1" bodyfile="node/common.hpp" bodystart="304" bodyend="318"/>
+    <listofallmembers>
+      <member refid="d5/df9/classsgns_1_1confirm__req_1a18af8f6f8858010f010b302d2b8c43ea" prot="public" virt="non-virtual"><scope>sgns::confirm_req</scope><name>block</name></member>
+      <member refid="d5/df9/classsgns_1_1confirm__req_1a81c12bde0b6d4f33f26e7d42cf8e18d2" prot="public" virt="non-virtual"><scope>sgns::confirm_req</scope><name>confirm_req</name></member>
+      <member refid="d5/df9/classsgns_1_1confirm__req_1a6c7f334bd1838467f4e9e65039536fd2" prot="public" virt="non-virtual"><scope>sgns::confirm_req</scope><name>confirm_req</name></member>
+      <member refid="d5/df9/classsgns_1_1confirm__req_1a6a99a4d827a38d4d61b4f632574bb2e8" prot="public" virt="non-virtual"><scope>sgns::confirm_req</scope><name>confirm_req</name></member>
+      <member refid="d5/df9/classsgns_1_1confirm__req_1a89a85d0328c1644bd5eaa35ebf40a780" prot="public" virt="non-virtual"><scope>sgns::confirm_req</scope><name>confirm_req</name></member>
+      <member refid="d5/df9/classsgns_1_1confirm__req_1a587573ee184fd24ddfca6f70f7bd8872" prot="public" virt="non-virtual"><scope>sgns::confirm_req</scope><name>deserialize</name></member>
+      <member refid="db/da6/classsgns_1_1message_1abc0de834dc846d1d86110caec8a4b7db" prot="public" virt="non-virtual"><scope>sgns::confirm_req</scope><name>header</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a1c0d801d4625dbcc8a9f40a5c6631b2c" prot="public" virt="non-virtual"><scope>sgns::confirm_req</scope><name>message</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a2fbf35d959e3532e2ce4675c9c26761e" prot="public" virt="non-virtual"><scope>sgns::confirm_req</scope><name>message</name></member>
+      <member refid="d5/df9/classsgns_1_1confirm__req_1a322d363d0b425a87fb90dc603637dd06" prot="public" virt="non-virtual"><scope>sgns::confirm_req</scope><name>operator==</name></member>
+      <member refid="d5/df9/classsgns_1_1confirm__req_1abc2685b7085665b76ba01908ce90fbb9" prot="public" virt="non-virtual"><scope>sgns::confirm_req</scope><name>roots_hashes</name></member>
+      <member refid="d5/df9/classsgns_1_1confirm__req_1ac48d3a684f296b1994182ec1e6639759" prot="public" virt="non-virtual"><scope>sgns::confirm_req</scope><name>roots_string</name></member>
+      <member refid="d5/df9/classsgns_1_1confirm__req_1a1ab27babb45f19c76572bbf8bdad546a" prot="public" virt="virtual"><scope>sgns::confirm_req</scope><name>serialize</name></member>
+      <member refid="d5/df9/classsgns_1_1confirm__req_1a2f8c577bb2a378367ee6e6025df8f8fc" prot="public" virt="non-virtual"><scope>sgns::confirm_req</scope><name>size</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a2ad934099e11461e98605fcb5b001c0b" prot="public" virt="non-virtual"><scope>sgns::confirm_req</scope><name>to_bytes</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a5ae4e86a1763a52b65e042caed25ee54" prot="public" virt="non-virtual"><scope>sgns::confirm_req</scope><name>to_shared_const_buffer</name></member>
+      <member refid="d5/df9/classsgns_1_1confirm__req_1a0317fef8f2a1eacd3f40fbe3487b176f" prot="public" virt="virtual"><scope>sgns::confirm_req</scope><name>visit</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a144f9f336461eb5a17eac7825ba23b41" prot="public" virt="virtual"><scope>sgns::confirm_req</scope><name>~message</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

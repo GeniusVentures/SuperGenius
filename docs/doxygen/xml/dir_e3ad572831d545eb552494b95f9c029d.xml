@@ -1,0 +1,152 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_e3ad572831d545eb552494b95f9c029d" kind="dir">
+    <compoundname>src/scale</compoundname>
+    <innerdir refid="dir_0bac89866673b9346e6f1bef0c671d78">src/scale/detail</innerdir>
+    <innerfile refid="db/d80/scale_8hpp">scale.hpp</innerfile>
+    <innerfile refid="da/d0f/scale__decoder__stream_8cpp">scale_decoder_stream.cpp</innerfile>
+    <innerfile refid="de/dab/scale__decoder__stream_8hpp">scale_decoder_stream.hpp</innerfile>
+    <innerfile refid="de/dc0/scale__encoder__stream_8cpp">scale_encoder_stream.cpp</innerfile>
+    <innerfile refid="dc/da0/scale__encoder__stream_8hpp">scale_encoder_stream.hpp</innerfile>
+    <innerfile refid="dc/d2a/scale__error_8cpp">scale_error.cpp</innerfile>
+    <innerfile refid="d0/d8d/scale__error_8hpp">scale_error.hpp</innerfile>
+    <innerfile refid="dd/d27/scale_2types_8hpp">types.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<sect1 id="dir_e3ad572831d545eb552494b95f9c029d_1autotoc_md0">
+<title>SCALE codec C++ implementation</title><para>fully meets polkadot specification.\ It allows encoding and decoding following data types:<itemizedlist>
+<listitem><para>Built-in integer types specified by size:<itemizedlist>
+<listitem><para><computeroutput>uint8_t</computeroutput>, <computeroutput>int8_t</computeroutput></para>
+</listitem><listitem><para><computeroutput>uint16_t</computeroutput>, <computeroutput>int16_t</computeroutput></para>
+</listitem><listitem><para><computeroutput>uint32_t</computeroutput>, <computeroutput>int32_t</computeroutput></para>
+</listitem><listitem><para><computeroutput>uint64_t</computeroutput>, <computeroutput>int64_t</computeroutput></para>
+</listitem></itemizedlist>
+</para>
+</listitem><listitem><para>bool values</para>
+</listitem><listitem><para>pairs of types represented by <computeroutput>std::pair&lt;T1, T2&gt;</computeroutput></para>
+</listitem><listitem><para>compact integers represented by CompactInteger type</para>
+</listitem><listitem><para>optional values represented by <computeroutput>boost::optional&lt;T&gt;</computeroutput><itemizedlist>
+<listitem><para>as special case of optional values <computeroutput>boost::optional&lt;bool&gt;</computeroutput> is encoded using one byte following specification.</para>
+</listitem></itemizedlist>
+</para>
+</listitem><listitem><para>collections of items represented by <computeroutput>std::vector&lt;T&gt;</computeroutput></para>
+</listitem><listitem><para>variants represented by <computeroutput>boost::variant&lt;T...&gt;</computeroutput></para>
+</listitem></itemizedlist>
+</para>
+</sect1>
+<sect1 id="dir_e3ad572831d545eb552494b95f9c029d_1autotoc_md1">
+<title>ScaleEncoderStream</title><para>class ScaleEncoderStream is in charge of encoding data</para>
+<para><programlisting filename=".c++"><codeline><highlight class="normal">ScaleEncoderStream<sp/>s;</highlight></codeline>
+<codeline><highlight class="normal">uint32_t<sp/>ui32<sp/>=<sp/>123u;</highlight></codeline>
+<codeline><highlight class="normal">uint8_t<sp/>ui8<sp/>=<sp/>234u;</highlight></codeline>
+<codeline><highlight class="normal">std::string<sp/>str<sp/>=<sp/></highlight><highlight class="stringliteral">&quot;asdasdasd&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline><highlight class="normal"></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>*<sp/>raw_str<sp/>=<sp/></highlight><highlight class="stringliteral">&quot;zxczxczx&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>b<sp/>=<sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline><highlight class="normal"><ref refid="dd/dc5/namespacesgns_1_1primitives_1a5750bd8cf94be5a476bd9da95a34aaba" kindref="member">CompactInteger</ref><sp/>ci<sp/>=<sp/>123456789;</highlight></codeline>
+<codeline><highlight class="normal">boost::variant&lt;uint8_t,<sp/>uint32_t,<sp/>CompactInteger&gt;<sp/>vint<sp/>=<sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a5750bd8cf94be5a476bd9da95a34aaba" kindref="member">CompactInteger</ref>(12345);</highlight></codeline>
+<codeline><highlight class="normal">boost::optional&lt;std::string&gt;<sp/>opt_str<sp/>=<sp/></highlight><highlight class="stringliteral">&quot;asdfghjkl&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline><highlight class="normal">boost::optional&lt;bool&gt;<sp/>opt_bool<sp/>=<sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline><highlight class="normal">std::pair&lt;uint8_t,<sp/>uint32_t&gt;<sp/>pair{1u,<sp/>2u};</highlight></codeline>
+<codeline><highlight class="normal">std::vector&lt;uint32_t&gt;<sp/>coll_ui32<sp/>=<sp/>{1u,<sp/>2u,<sp/>3u,<sp/>4u};</highlight></codeline>
+<codeline><highlight class="normal">std::vector&lt;std::string&gt;<sp/>coll_str<sp/>=<sp/>{</highlight><highlight class="stringliteral">&quot;asd&quot;</highlight><highlight class="normal">,<sp/></highlight><highlight class="stringliteral">&quot;fgh&quot;</highlight><highlight class="normal">,<sp/></highlight><highlight class="stringliteral">&quot;jkl&quot;</highlight><highlight class="normal">};</highlight></codeline>
+<codeline><highlight class="normal">std::vector&lt;std::vector&lt;int32_t&gt;&gt;<sp/>coll_coll_i32<sp/>=<sp/>{{1,<sp/>2,<sp/>3},<sp/>{4,<sp/>5,<sp/>6,<sp/>7}};</highlight></codeline>
+<codeline><highlight class="normal"></highlight><highlight class="keywordflow">try</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>s<sp/>&lt;&lt;<sp/>ui32<sp/>&lt;&lt;<sp/>ui8<sp/>&lt;&lt;<sp/>str<sp/>&lt;&lt;<sp/>raw_str<sp/>&lt;&lt;<sp/>b<sp/>&lt;&lt;<sp/>ci<sp/>&lt;&lt;<sp/>vint;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>s<sp/>&lt;&lt;<sp/>opt_str<sp/>&lt;&lt;<sp/>opt_bool<sp/>&lt;&lt;<sp/>pair<sp/>&lt;&lt;<sp/>coll_ui32<sp/>&lt;&lt;<sp/>coll_str<sp/>&lt;&lt;<sp/>coll_coll_i32;</highlight></codeline>
+<codeline><highlight class="normal">}<sp/></highlight><highlight class="keywordflow">catch</highlight><highlight class="normal"><sp/>(std::runtime_error<sp/>&amp;e)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>handle<sp/>error</highlight><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>for<sp/>example<sp/>make<sp/>and<sp/>return<sp/>outcome::result</highlight><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(e.code());</highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+</programlisting> You can now get encoded data: <programlisting filename=".c++"><codeline><highlight class="normal"><ref refid="d1/d56/namespacesgns_1_1scale_1a5dfaa1d4f83677c0074ffc18021503cc" kindref="member">ByteArray</ref><sp/>data<sp/>=<sp/>s.data();</highlight></codeline>
+</programlisting></para>
+</sect1>
+<sect1 id="dir_e3ad572831d545eb552494b95f9c029d_1autotoc_md2">
+<title>ScaleDecoderStream</title><para>class ScaleEncoderStream is in charge of encoding data</para>
+<para><programlisting filename=".c++"><codeline><highlight class="normal"><ref refid="d1/d56/namespacesgns_1_1scale_1a5dfaa1d4f83677c0074ffc18021503cc" kindref="member">ByteArray</ref><sp/>bytes<sp/>=<sp/>{...};</highlight></codeline>
+<codeline><highlight class="normal">ScaleEncoderStream<sp/>s(bytes);</highlight></codeline>
+<codeline><highlight class="normal">uint32_t<sp/>ui32<sp/>=<sp/>0u;</highlight></codeline>
+<codeline><highlight class="normal">uint8_t<sp/>ui8<sp/>=<sp/>0u;</highlight></codeline>
+<codeline><highlight class="normal">std::string<sp/>str;</highlight></codeline>
+<codeline><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>b<sp/>=<sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline><highlight class="normal"><ref refid="dd/dc5/namespacesgns_1_1primitives_1a5750bd8cf94be5a476bd9da95a34aaba" kindref="member">CompactInteger</ref><sp/>ci;</highlight></codeline>
+<codeline><highlight class="normal">boost::variant&lt;uint8_t,<sp/>uint32_t,<sp/>CompactInteger&gt;<sp/>vint;</highlight></codeline>
+<codeline><highlight class="normal">boost::optional&lt;std::string&gt;<sp/>opt_str;</highlight></codeline>
+<codeline><highlight class="normal">boost::optional&lt;bool&gt;<sp/>opt_bool;</highlight></codeline>
+<codeline><highlight class="normal">std::pair&lt;uint8_t,<sp/>uint32_t&gt;<sp/>pair{};</highlight></codeline>
+<codeline><highlight class="normal">std::vector&lt;uint32_t&gt;<sp/>coll_ui32;</highlight></codeline>
+<codeline><highlight class="normal">std::vector&lt;std::string&gt;<sp/>coll_str;</highlight></codeline>
+<codeline><highlight class="normal">std::vector&lt;std::vector&lt;int32_t&gt;&gt;<sp/>coll_coll_i32;</highlight></codeline>
+<codeline><highlight class="normal"></highlight><highlight class="keywordflow">try</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>s<sp/>&gt;&gt;<sp/>ui32<sp/>&gt;&gt;<sp/>ui8<sp/>&gt;&gt;<sp/>str<sp/>&gt;&gt;<sp/>b<sp/>&gt;&gt;<sp/>ci<sp/>&gt;&gt;<sp/>vint;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>s<sp/>&gt;&gt;<sp/>opt_str<sp/>&gt;&gt;<sp/>opt_bool<sp/>&gt;&gt;<sp/>pair<sp/>&gt;&gt;<sp/>coll_ui32<sp/>&gt;&gt;<sp/>coll_str<sp/>&gt;&gt;<sp/>coll_coll_i32;</highlight></codeline>
+<codeline><highlight class="normal">}<sp/></highlight><highlight class="keywordflow">catch</highlight><highlight class="normal"><sp/>(std::system_error<sp/>&amp;e)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>handle<sp/>error</highlight><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+</programlisting></para>
+</sect1>
+<sect1 id="dir_e3ad572831d545eb552494b95f9c029d_1autotoc_md3">
+<title>Custom types</title><para>You may need to encode or decode custom data types, you have to define custom &lt;&lt; and &gt;&gt; operators. Please note, that your custom data types must be default-constructible. <programlisting filename=".c++"><codeline><highlight class="keyword">struct<sp/></highlight><highlight class="normal">MyType<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>a<sp/>=<sp/>0;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>std::string<sp/>b;</highlight></codeline>
+<codeline><highlight class="normal">};</highlight></codeline>
+<codeline><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal">ScaleEncoderStream<sp/>&amp;<ref refid="df/d5f/_token_i_d_8hpp_1afb4ab7b435340fc7bac8631aed6cf4ae" kindref="member">operator&lt;&lt;</ref>(ScaleEncoderStream<sp/>&amp;s,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>MyType<sp/>&amp;v)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>s<sp/>&lt;&lt;<sp/>v.a<sp/>&lt;&lt;<sp/>v.b;</highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+<codeline><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal">ScaleDecoderStream<sp/>&amp;<ref refid="d4/dcb/namespacesgns_1_1base_1aae443f961a4d58289b9b0c1cb09eaa24" kindref="member">operator&gt;&gt;</ref>(ScaleDecoderStream<sp/>&amp;s,<sp/>MyType<sp/>&amp;v)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>s<sp/>&gt;&gt;<sp/>v.a<sp/>&gt;&gt;<sp/>v.b;</highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+</programlisting> Now you can use them in collections, optionals and variants <programlisting filename=".c++"><codeline><highlight class="normal">std::vector&lt;MyType&gt;<sp/>v<sp/>=<sp/>{{1,<sp/></highlight><highlight class="stringliteral">&quot;asd&quot;</highlight><highlight class="normal">},<sp/>{2,<sp/></highlight><highlight class="stringliteral">&quot;qwe&quot;</highlight><highlight class="normal">}};</highlight></codeline>
+<codeline><highlight class="normal">ScaleEncoderStream<sp/>s;</highlight></codeline>
+<codeline><highlight class="normal"></highlight><highlight class="keywordflow">try</highlight><highlight class="normal"><sp/>{<sp/></highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>s<sp/>&lt;&lt;<sp/>v;</highlight></codeline>
+<codeline><highlight class="normal">}<sp/></highlight><highlight class="keywordflow">catch</highlight><highlight class="normal"><sp/>(...)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>handle<sp/>error</highlight><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+</programlisting> The same for <computeroutput>ScaleDecoderStream</computeroutput> <programlisting filename=".c++"><codeline><highlight class="normal"><ref refid="d1/d56/namespacesgns_1_1scale_1a5dfaa1d4f83677c0074ffc18021503cc" kindref="member">ByteArray</ref><sp/>data<sp/>=<sp/>{...};</highlight></codeline>
+<codeline><highlight class="normal">std::vector&lt;MyType&gt;<sp/>v;</highlight></codeline>
+<codeline><highlight class="normal">ScaleDecoderStream<sp/>s{data};</highlight></codeline>
+<codeline><highlight class="normal"></highlight><highlight class="keywordflow">try</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>s<sp/>&gt;&gt;<sp/>v;</highlight></codeline>
+<codeline><highlight class="normal">}<sp/></highlight><highlight class="keywordflow">catch</highlight><highlight class="normal"><sp/>(...)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>handle<sp/>error</highlight><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+</programlisting></para>
+</sect1>
+<sect1 id="dir_e3ad572831d545eb552494b95f9c029d_1autotoc_md4">
+<title>Convenience functions</title><para>Convenience functions <programlisting filename=".c++"><codeline><highlight class="keyword">template</highlight><highlight class="normal">&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>T&gt;<sp/></highlight></codeline>
+<codeline><highlight class="normal">outcome::result&lt;std::vector&lt;uint8_t&gt;&gt;<sp/><ref refid="d1/d56/namespacesgns_1_1scale_1abb9671741457166ff4d8e2174d9d6388" kindref="member">encode</ref>(T<sp/>&amp;&amp;t);</highlight></codeline>
+<codeline><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>T&gt;</highlight></codeline>
+<codeline><highlight class="normal">outcome::result&lt;T&gt;<sp/><ref refid="d1/d56/namespacesgns_1_1scale_1a96d6e97850c2835b935122c2698af51a" kindref="member">decode</ref>(gsl::span&lt;const<sp/>uint8_t&gt;<sp/>span)</highlight></codeline>
+<codeline><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal"></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>T&gt;</highlight></codeline>
+<codeline><highlight class="normal">outcome::result&lt;T&gt;<sp/><ref refid="d1/d56/namespacesgns_1_1scale_1a96d6e97850c2835b935122c2698af51a" kindref="member">decode</ref>(ScaleDecoderStream<sp/>&amp;s)<sp/><sp/></highlight></codeline>
+</programlisting> are wrappers over <computeroutput>&lt;&lt;</computeroutput> and <computeroutput>&gt;&gt;</computeroutput> operators described above.</para>
+<para>Encoding data using <computeroutput>encode</computeroutput> convenience function looks as follows: <programlisting filename=".c++"><codeline><highlight class="normal">std::vector&lt;uint32_t&gt;<sp/>v<sp/>=<sp/>{1u,<sp/>2u,<sp/>3u,<sp/>4u};</highlight></codeline>
+<codeline><highlight class="normal"></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;result<sp/>=<sp/><ref refid="d1/d56/namespacesgns_1_1scale_1abb9671741457166ff4d8e2174d9d6388" kindref="member">encode</ref>(v);</highlight></codeline>
+<codeline><highlight class="normal"></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!res)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>handle<sp/>error</highlight><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+</programlisting></para>
+<para>Decoding data using <computeroutput>decode</computeroutput> convenience function looks as follows:</para>
+<para><programlisting filename=".c++"><codeline><highlight class="normal"><ref refid="d1/d56/namespacesgns_1_1scale_1a5dfaa1d4f83677c0074ffc18021503cc" kindref="member">ByteArray</ref><sp/>bytes<sp/>=<sp/>{...};</highlight></codeline>
+<codeline><highlight class="normal">outcome::result&lt;MyType&gt;<sp/>result<sp/>=<sp/>decode&lt;MyType&gt;(bytes);</highlight></codeline>
+<codeline><highlight class="normal"></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!result)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>handle<sp/>error</highlight><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+</programlisting> or <programlisting filename=".c++"><codeline><highlight class="normal"><ref refid="d1/d56/namespacesgns_1_1scale_1a5dfaa1d4f83677c0074ffc18021503cc" kindref="member">ByteArray</ref><sp/>bytes<sp/>=<sp/>{...};</highlight></codeline>
+<codeline><highlight class="normal">ScaleDecoderStream<sp/>s(bytes);</highlight></codeline>
+<codeline><highlight class="normal">outcome::result&lt;MyType&gt;<sp/>result<sp/>=<sp/>decode&lt;MyType&gt;(s);</highlight></codeline>
+<codeline><highlight class="normal"></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!result)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>handle<sp/>error</highlight><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+</programlisting> </para>
+</sect1>
+    </detaileddescription>
+    <location file="src/scale/"/>
+  </compounddef>
+</doxygen>

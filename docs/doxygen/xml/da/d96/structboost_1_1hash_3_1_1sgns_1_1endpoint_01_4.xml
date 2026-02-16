@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/d96/structboost_1_1hash_3_1_1sgns_1_1endpoint_01_4" kind="struct" language="C++" prot="public">
+    <compoundname>boost::hash&lt;::sgns::endpoint &gt;</compoundname>
+    <includes refid="da/d8d/node_2common_8hpp" local="no">common.hpp</includes>
+    <templateparamlist>
+    </templateparamlist>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="da/d96/structboost_1_1hash_3_1_1sgns_1_1endpoint_01_4_1a19200de4799328b8c17ccc1a39f47092" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t boost::hash&lt;::sgns::endpoint &gt;::operator()</definition>
+        <argsstring>(::sgns::endpoint const &amp;endpoint_a) const</argsstring>
+        <name>operator()</name>
+        <qualifiedname>boost::hash&lt;::sgns::endpoint &gt;::operator()</qualifiedname>
+        <param>
+          <type><ref refid="d2/d2b/namespacesgns_1aa38696c91743d80c510521ceaf06a591" kindref="member">::sgns::endpoint</ref> const &amp;</type>
+          <declname>endpoint_a</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="130" column="8" bodyfile="node/common.hpp" bodystart="130" bodyend="134"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>boost::hash&lt;::sgns::endpoint &gt;</label>
+        <link refid="da/d96/structboost_1_1hash_3_1_1sgns_1_1endpoint_01_4"/>
+      </node>
+    </collaborationgraph>
+    <location file="node/common.hpp" line="128" column="1" bodyfile="node/common.hpp" bodystart="129" bodyend="135"/>
+    <listofallmembers>
+      <member refid="da/d96/structboost_1_1hash_3_1_1sgns_1_1endpoint_01_4_1a19200de4799328b8c17ccc1a39f47092" prot="public" virt="non-virtual"><scope>boost::hash&lt;::sgns::endpoint &gt;</scope><name>operator()</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

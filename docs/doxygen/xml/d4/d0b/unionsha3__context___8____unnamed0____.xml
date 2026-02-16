@@ -1,0 +1,51 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/d0b/unionsha3__context___8____unnamed0____" kind="union" language="C++" prot="public">
+    <compoundname>sha3_context_.__unnamed0__</compoundname>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d4/d0b/unionsha3__context___8____unnamed0_____1a676ee00ac088037cc66364ad0e6b4912" prot="public" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition></definition>
+        <argsstring>[SHA3_KECCAK_SPONGE_WORDS]</argsstring>
+        <name>s</name>
+        <qualifiedname>sha3_context_.__unnamed0__::s</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="17" column="14"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d0b/unionsha3__context___8____unnamed0_____1a6943966b1148e19a5007da5b955360df" prot="public" static="no" mutable="no">
+        <type>uint8_t</type>
+        <definition></definition>
+        <argsstring>[SHA3_KECCAK_SPONGE_WORDS *8]</argsstring>
+        <name>sb</name>
+        <qualifiedname>sha3_context_.__unnamed0__::sb</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="18" column="13"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sha3_context_.__unnamed0__</label>
+        <link refid="d4/d0b/unionsha3__context___8____unnamed0____"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/crypto/keccak/keccak.h" line="16" column="3" bodyfile="src/crypto/keccak/keccak.h" bodystart="16" bodyend="19"/>
+    <listofallmembers>
+      <member refid="d4/d0b/unionsha3__context___8____unnamed0_____1a676ee00ac088037cc66364ad0e6b4912" prot="public" virt="non-virtual"><scope>sha3_context_.__unnamed0__</scope><name>s</name></member>
+      <member refid="d4/d0b/unionsha3__context___8____unnamed0_____1a6943966b1148e19a5007da5b955360df" prot="public" virt="non-virtual"><scope>sha3_context_.__unnamed0__</scope><name>sb</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

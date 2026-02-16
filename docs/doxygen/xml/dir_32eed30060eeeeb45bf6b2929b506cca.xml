@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_32eed30060eeeeb45bf6b2929b506cca" kind="dir">
+    <compoundname>src/api/transport</compoundname>
+    <innerdir refid="dir_21bf0675ff604c4caeb46121520de5ef">src/api/transport/impl</innerdir>
+    <innerfile refid="db/d9c/api_2transport_2error_8cpp">error.cpp</innerfile>
+    <innerfile refid="d9/d19/api_2transport_2error_8hpp">error.hpp</innerfile>
+    <innerfile refid="df/d31/listener_8hpp">listener.hpp</innerfile>
+    <innerfile refid="d7/db2/rpc__io__context_8hpp">rpc_io_context.hpp</innerfile>
+    <innerfile refid="d7/d5c/rpc__thread__pool_8cpp">rpc_thread_pool.cpp</innerfile>
+    <innerfile refid="d2/d58/rpc__thread__pool_8hpp">rpc_thread_pool.hpp</innerfile>
+    <innerfile refid="d4/d5e/session_8hpp">session.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/api/transport/"/>
+  </compounddef>
+</doxygen>

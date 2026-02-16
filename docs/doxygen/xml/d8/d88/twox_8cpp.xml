@@ -1,0 +1,268 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d8/d88/twox_8cpp" kind="file" language="C++">
+    <compoundname>twox.cpp</compoundname>
+    <includes refid="d9/ded/twox_8hpp" local="yes">crypto/twox/twox.hpp</includes>
+    <includes local="no">xxhash.h</includes>
+    <incdepgraph>
+      <node id="3">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crypto/twox/twox.cpp</label>
+        <link refid="d8/d88/twox_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>crypto/twox/twox.hpp</label>
+        <link refid="d9/ded/twox_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>array</label>
+      </node>
+      <node id="6">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="4">
+        <label>cstddef</label>
+      </node>
+      <node id="10">
+        <label>gsl/span</label>
+      </node>
+      <node id="13">
+        <label>iostream</label>
+      </node>
+      <node id="12">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="8">
+        <label>string_view</label>
+      </node>
+      <node id="9">
+        <label>vector</label>
+      </node>
+      <node id="14">
+        <label>xxhash.h</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6e/namespacesgns_1_1crypto">sgns::crypto</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1a4b20ab50c70e28b440f26dc3370ef455" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crypto::make_twox64</definition>
+        <argsstring>(const uint8_t *in, uint32_t len, uint8_t *out)</argsstring>
+        <name>make_twox64</name>
+        <qualifiedname>sgns::crypto::make_twox64</qualifiedname>
+        <param>
+          <type>const uint8_t *</type>
+          <declname>in</declname>
+        </param>
+        <param>
+          <type>uint32_t</type>
+          <declname>len</declname>
+        </param>
+        <param>
+          <type>uint8_t *</type>
+          <declname>out</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/twox/twox.cpp" line="6" column="8" bodyfile="src/crypto/twox/twox.cpp" bodystart="6" bodyend="9"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1a72d85c7f8f997b4f6262ea5042922bee" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>base::Hash64</type>
+        <definition>base::Hash64 sgns::crypto::make_twox64</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; buf)</argsstring>
+        <name>make_twox64</name>
+        <qualifiedname>sgns::crypto::make_twox64</qualifiedname>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>buf</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/twox/twox.cpp" line="11" column="16" bodyfile="src/crypto/twox/twox.cpp" bodystart="11" bodyend="15" declfile="src/crypto/twox/twox.hpp" declline="8" declcolumn="18"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1a45b2e0565959be955dd02608eea6a846" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crypto::make_twox128</definition>
+        <argsstring>(const uint8_t *in, uint32_t len, uint8_t *out)</argsstring>
+        <name>make_twox128</name>
+        <qualifiedname>sgns::crypto::make_twox128</qualifiedname>
+        <param>
+          <type>const uint8_t *</type>
+          <declname>in</declname>
+        </param>
+        <param>
+          <type>uint32_t</type>
+          <declname>len</declname>
+        </param>
+        <param>
+          <type>uint8_t *</type>
+          <declname>out</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/twox/twox.cpp" line="17" column="8" bodyfile="src/crypto/twox/twox.cpp" bodystart="17" bodyend="21"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1aa74a30287da71356cec776d00e41aa6a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>base::Hash128</type>
+        <definition>base::Hash128 sgns::crypto::make_twox128</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; buf)</argsstring>
+        <name>make_twox128</name>
+        <qualifiedname>sgns::crypto::make_twox128</qualifiedname>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>buf</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/twox/twox.cpp" line="23" column="17" bodyfile="src/crypto/twox/twox.cpp" bodystart="23" bodyend="27" declfile="src/crypto/twox/twox.hpp" declline="10" declcolumn="19"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1a237c0c015c8ca17a9f316e5a84feeb3a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crypto::make_twox256</definition>
+        <argsstring>(const uint8_t *in, uint32_t len, uint8_t *out)</argsstring>
+        <name>make_twox256</name>
+        <qualifiedname>sgns::crypto::make_twox256</qualifiedname>
+        <param>
+          <type>const uint8_t *</type>
+          <declname>in</declname>
+        </param>
+        <param>
+          <type>uint32_t</type>
+          <declname>len</declname>
+        </param>
+        <param>
+          <type>uint8_t *</type>
+          <declname>out</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/twox/twox.cpp" line="29" column="8" bodyfile="src/crypto/twox/twox.cpp" bodystart="29" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1a7aade05096bd9646ece215600e888e70" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="de/d1b/key__value__block__header__repository_8cpp_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+        <definition>base::Hash256 sgns::crypto::make_twox256</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; buf)</argsstring>
+        <name>make_twox256</name>
+        <qualifiedname>sgns::crypto::make_twox256</qualifiedname>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>buf</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/twox/twox.cpp" line="37" column="17" bodyfile="src/crypto/twox/twox.cpp" bodystart="37" bodyend="41" declfile="src/crypto/twox/twox.hpp" declline="12" declcolumn="19"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d9/ded/twox_8hpp" kindref="compound">crypto/twox/twox.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;xxhash.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d6e/namespacesgns_1_1crypto" kindref="compound">sgns::crypto</ref><sp/>{</highlight></codeline>
+<codeline lineno="6" refid="df/d6e/namespacesgns_1_1crypto_1a4b20ab50c70e28b440f26dc3370ef455" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a4b20ab50c70e28b440f26dc3370ef455" kindref="member">make_twox64</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uint8_t<sp/>*in,<sp/>uint32_t<sp/>len,<sp/>uint8_t<sp/>*out)<sp/>{</highlight></codeline>
+<codeline lineno="7"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>*ptr<sp/>=<sp/></highlight><highlight class="keyword">reinterpret_cast&lt;</highlight><highlight class="normal">uint64_t<sp/>*</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(out);</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"><sp/><sp/><sp/><sp/>ptr[0]<sp/>=<sp/>XXH64(in,<sp/>len,<sp/>0);</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11" refid="df/d6e/namespacesgns_1_1crypto_1a72d85c7f8f997b4f6262ea5042922bee" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a6fcc14244fc08a51e93f6c85d24f3562" kindref="member">base::Hash64</ref><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a4b20ab50c70e28b440f26dc3370ef455" kindref="member">make_twox64</ref>(gsl::span&lt;const<sp/>uint8_t&gt;<sp/>buf)<sp/>{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a6fcc14244fc08a51e93f6c85d24f3562" kindref="member">base::Hash64</ref><sp/>hash{};</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a4b20ab50c70e28b440f26dc3370ef455" kindref="member">make_twox64</ref>(buf.data(),<sp/>buf.size(),<sp/>hash.data());</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>hash;</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17" refid="df/d6e/namespacesgns_1_1crypto_1a45b2e0565959be955dd02608eea6a846" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a45b2e0565959be955dd02608eea6a846" kindref="member">make_twox128</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uint8_t<sp/>*in,<sp/>uint32_t<sp/>len,<sp/>uint8_t<sp/>*out)<sp/>{</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>*ptr<sp/>=<sp/></highlight><highlight class="keyword">reinterpret_cast&lt;</highlight><highlight class="normal">uint64_t<sp/>*</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(out);</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/>ptr[0]<sp/>=<sp/>XXH64(in,<sp/>len,<sp/>0);</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/>ptr[1]<sp/>=<sp/>XXH64(in,<sp/>len,<sp/>1);</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23" refid="df/d6e/namespacesgns_1_1crypto_1aa74a30287da71356cec776d00e41aa6a" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a13f0ff8307c68dd02b7474681fffbe98" kindref="member">base::Hash128</ref><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a45b2e0565959be955dd02608eea6a846" kindref="member">make_twox128</ref>(gsl::span&lt;const<sp/>uint8_t&gt;<sp/>buf)<sp/>{</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a13f0ff8307c68dd02b7474681fffbe98" kindref="member">base::Hash128</ref><sp/>hash{};</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a45b2e0565959be955dd02608eea6a846" kindref="member">make_twox128</ref>(buf.data(),<sp/>buf.size(),<sp/>hash.data());</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>hash;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29" refid="df/d6e/namespacesgns_1_1crypto_1a237c0c015c8ca17a9f316e5a84feeb3a" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a237c0c015c8ca17a9f316e5a84feeb3a" kindref="member">make_twox256</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uint8_t<sp/>*in,<sp/>uint32_t<sp/>len,<sp/>uint8_t<sp/>*out)<sp/>{</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>*ptr<sp/>=<sp/></highlight><highlight class="keyword">reinterpret_cast&lt;</highlight><highlight class="normal">uint64_t<sp/>*</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(out);</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/>ptr[0]<sp/>=<sp/>XXH64(in,<sp/>len,<sp/>0);</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/>ptr[1]<sp/>=<sp/>XXH64(in,<sp/>len,<sp/>1);</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/>ptr[2]<sp/>=<sp/>XXH64(in,<sp/>len,<sp/>2);</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/>ptr[3]<sp/>=<sp/>XXH64(in,<sp/>len,<sp/>3);</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37" refid="df/d6e/namespacesgns_1_1crypto_1a7aade05096bd9646ece215600e888e70" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a237c0c015c8ca17a9f316e5a84feeb3a" kindref="member">make_twox256</ref>(gsl::span&lt;const<sp/>uint8_t&gt;<sp/>buf)<sp/>{</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref><sp/>hash{};</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a237c0c015c8ca17a9f316e5a84feeb3a" kindref="member">make_twox256</ref>(buf.data(),<sp/>buf.size(),<sp/>hash.data());</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>hash;</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="42"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="src/crypto/twox/twox.cpp"/>
+  </compounddef>
+</doxygen>

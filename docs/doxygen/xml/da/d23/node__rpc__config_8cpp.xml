@@ -1,0 +1,74 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/d23/node__rpc__config_8cpp" kind="file" language="C++">
+    <compoundname>node_rpc_config.cpp</compoundname>
+    <includes local="no">lib/config.hpp</includes>
+    <includes local="no">lib/jsonconfig.hpp</includes>
+    <includes local="no">lib/tomlconfig.hpp</includes>
+    <includes refid="d4/d08/node__rpc__config_8hpp" local="yes">node_rpc_config.hpp</includes>
+    <incdepgraph>
+      <node id="1">
+        <label>node/node_rpc_config.cpp</label>
+        <link refid="da/d23/node__rpc__config_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>node_rpc_config.hpp</label>
+        <link refid="d4/d08/node__rpc__config_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>lib/config.hpp</label>
+      </node>
+      <node id="6">
+        <label>lib/errors.hpp</label>
+      </node>
+      <node id="3">
+        <label>lib/jsonconfig.hpp</label>
+      </node>
+      <node id="4">
+        <label>lib/tomlconfig.hpp</label>
+      </node>
+      <node id="7">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&lt;lib/config.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;lib/jsonconfig.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;lib/tomlconfig.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d4/d08/node__rpc__config_8hpp" kindref="compound">node_rpc_config.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8" refid="d2/dab/classsgns_1_1node__rpc__config_1a3f8cd2d049c640993603a83a02c1676b" refkind="member"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/dab/classsgns_1_1node__rpc__config_1a3f8cd2d049c640993603a83a02c1676b" kindref="member">sgns::node_rpc_config::migrate</ref><sp/>(sgns::jsonconfig<sp/>&amp;<sp/>json,<sp/>boost::filesystem::path<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;<sp/>data_path)</highlight></codeline>
+<codeline lineno="9"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/><sp/><sp/>sgns::jsonconfig<sp/>rpc_json;</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>rpc_config_path<sp/>=<sp/>sgns::get_rpc_config_path<sp/>(data_path);</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>rpc_error<sp/>(rpc_json.read<sp/>(rpc_config_path));</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(rpc_error<sp/>||<sp/>rpc_json.empty<sp/>())</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Migrate<sp/>RPC<sp/>info<sp/>across</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>json.write<sp/>(rpc_config_path);</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="18"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="node/node_rpc_config.cpp"/>
+  </compounddef>
+</doxygen>

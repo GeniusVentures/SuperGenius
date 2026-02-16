@@ -1,0 +1,275 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor" kind="class" language="C++" prot="public">
+    <compoundname>sgns::storage::rocksdb::Cursor</compoundname>
+    <basecompoundref refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor" prot="public" virt="non-virtual">sgns::storage::face::MapCursor&lt; Buffer, Buffer &gt;</basecompoundref>
+    <includes refid="db/d06/rocksdb__cursor_8hpp" local="no">rocksdb_cursor.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a492229a528ac87feaf7de0ebadb4b979" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a4c81a1024edb1d6c7cd81361de6b4db8" kindref="member">Iterator</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Iterator&gt; sgns::storage::rocksdb::Cursor::i_</definition>
+        <argsstring></argsstring>
+        <name>i_</name>
+        <qualifiedname>sgns::storage::rocksdb::Cursor::i_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_cursor.hpp" line="39" column="21" bodyfile="src/storage/rocksdb/rocksdb_cursor.hpp" bodystart="39" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a2e670311141a452d01f619613714c284" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::rocksdb::Cursor::~Cursor</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~Cursor</name>
+        <qualifiedname>sgns::storage::rocksdb::Cursor::~Cursor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_cursor.hpp" line="18" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a73ba864eccc81ebfaaa1fe1ae475efed" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::rocksdb::Cursor::Cursor</definition>
+        <argsstring>(std::shared_ptr&lt; Iterator &gt; it)</argsstring>
+        <name>Cursor</name>
+        <qualifiedname>sgns::storage::rocksdb::Cursor::Cursor</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a4c81a1024edb1d6c7cd81361de6b4db8" kindref="member">Iterator</ref> &gt;</type>
+          <declname>it</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_cursor.hpp" line="20" column="14" bodyfile="src/storage/rocksdb/rocksdb_cursor.cpp" bodystart="10" bodyend="11"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a1ca1a15047a7ce5e68e443a9b7c9fb29" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::rocksdb::Cursor::seekToFirst</definition>
+        <argsstring>() override</argsstring>
+        <name>seekToFirst</name>
+        <qualifiedname>sgns::storage::rocksdb::Cursor::seekToFirst</qualifiedname>
+        <reimplements refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1ab94b4d14a0f9a9a071db04994f554b4b">seekToFirst</reimplements>
+        <briefdescription>
+<para>Same as std::begin(...);. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_cursor.hpp" line="22" column="21" bodyfile="src/storage/rocksdb/rocksdb_cursor.cpp" bodystart="13" bodyend="17"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1afa06d59a068abdf0a0e1e589f7f54ad4" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::rocksdb::Cursor::seek</definition>
+        <argsstring>(const Buffer &amp;key) override</argsstring>
+        <name>seek</name>
+        <qualifiedname>sgns::storage::rocksdb::Cursor::seek</qualifiedname>
+        <reimplements refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1a1ee1f250e632122582d02f410369f8e2">seek</reimplements>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Find given key and seek iterator to this key. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_cursor.hpp" line="24" column="21" bodyfile="src/storage/rocksdb/rocksdb_cursor.cpp" bodystart="19" bodyend="23"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a5d1bfd58bfa010aae1682d9f132a79b2" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::rocksdb::Cursor::seekToLast</definition>
+        <argsstring>() override</argsstring>
+        <name>seekToLast</name>
+        <qualifiedname>sgns::storage::rocksdb::Cursor::seekToLast</qualifiedname>
+        <reimplements refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1a849a708a4a8bcd9e004f9b8ea62283a7">seekToLast</reimplements>
+        <briefdescription>
+<para>Same as std::rbegin(...);, e.g. points to the last valid element. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_cursor.hpp" line="26" column="21" bodyfile="src/storage/rocksdb/rocksdb_cursor.cpp" bodystart="25" bodyend="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a8a941c3fa46ef99a949fd91f3c288e2f" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>bool</type>
+        <definition>bool sgns::storage::rocksdb::Cursor::isValid</definition>
+        <argsstring>() const override</argsstring>
+        <name>isValid</name>
+        <qualifiedname>sgns::storage::rocksdb::Cursor::isValid</qualifiedname>
+        <reimplements refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1ae440e958a9172cf9661e91f65f67fc4f">isValid</reimplements>
+        <briefdescription>
+<para>Is iterator valid? </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>true if iterator points to the element of map, false otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_cursor.hpp" line="28" column="10" bodyfile="src/storage/rocksdb/rocksdb_cursor.cpp" bodystart="31" bodyend="34"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a7639639792227b9da0023a003204797e" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::rocksdb::Cursor::next</definition>
+        <argsstring>() override</argsstring>
+        <name>next</name>
+        <qualifiedname>sgns::storage::rocksdb::Cursor::next</qualifiedname>
+        <reimplements refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1ae6e709b813b7b837eeb0507e91e995e5">next</reimplements>
+        <briefdescription>
+<para>Make step forward. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_cursor.hpp" line="30" column="21" bodyfile="src/storage/rocksdb/rocksdb_cursor.cpp" bodystart="36" bodyend="40"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a6350014de21e2ee474202398b2f5ec3d" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::rocksdb::Cursor::prev</definition>
+        <argsstring>() override</argsstring>
+        <name>prev</name>
+        <qualifiedname>sgns::storage::rocksdb::Cursor::prev</qualifiedname>
+        <reimplements refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1ab00e624a68d1c1a107fcb91dd53d97b3">prev</reimplements>
+        <briefdescription>
+<para>Make step backwards. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_cursor.hpp" line="32" column="21" bodyfile="src/storage/rocksdb/rocksdb_cursor.cpp" bodystart="42" bodyend="46"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a34861fb7dba5becd8f2bbb12ac5c838b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; Buffer &gt; sgns::storage::rocksdb::Cursor::key</definition>
+        <argsstring>() const override</argsstring>
+        <name>key</name>
+        <qualifiedname>sgns::storage::rocksdb::Cursor::key</qualifiedname>
+        <reimplements refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1a4924be6694aef0f87174cd235f4f21ae">key</reimplements>
+        <briefdescription>
+<para>Getter for key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>key </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_cursor.hpp" line="34" column="21" bodyfile="src/storage/rocksdb/rocksdb_cursor.cpp" bodystart="48" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1af68caff11e3e0bd891bfc4225bc02b2a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; Buffer &gt; sgns::storage::rocksdb::Cursor::value</definition>
+        <argsstring>() const override</argsstring>
+        <name>value</name>
+        <qualifiedname>sgns::storage::rocksdb::Cursor::value</qualifiedname>
+        <reimplements refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1a75161503b4cee69b0b4723dbe4febf66">value</reimplements>
+        <briefdescription>
+<para>Getter for value. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>value </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_cursor.hpp" line="36" column="21" bodyfile="src/storage/rocksdb/rocksdb_cursor.cpp" bodystart="53" bodyend="56"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Instance of cursor can be used as bidirectional iterator over key-value bindings of the Map. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>BufferMapCursor</label>
+        <link refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor"/>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::face::MapCursor&lt; K, V &gt;</label>
+        <link refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor"/>
+      </node>
+      <node id="1">
+        <label>sgns::storage::rocksdb::Cursor</label>
+        <link refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>BufferMapCursor</label>
+        <link refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor"/>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>T</label>
+      </node>
+      <node id="3">
+        <label>sgns::storage::face::MapCursor&lt; K, V &gt;</label>
+        <link refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor"/>
+      </node>
+      <node id="1">
+        <label>sgns::storage::rocksdb::Cursor</label>
+        <link refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-i_</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::shared_ptr&lt; Iterator &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; Iterator &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/rocksdb/rocksdb_cursor.hpp" line="16" column="3" bodyfile="src/storage/rocksdb/rocksdb_cursor.hpp" bodystart="16" bodyend="40"/>
+    <listofallmembers>
+      <member refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a73ba864eccc81ebfaaa1fe1ae475efed" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb::Cursor</scope><name>Cursor</name></member>
+      <member refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a492229a528ac87feaf7de0ebadb4b979" prot="private" virt="non-virtual"><scope>sgns::storage::rocksdb::Cursor</scope><name>i_</name></member>
+      <member refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a8a941c3fa46ef99a949fd91f3c288e2f" prot="public" virt="virtual"><scope>sgns::storage::rocksdb::Cursor</scope><name>isValid</name></member>
+      <member refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a34861fb7dba5becd8f2bbb12ac5c838b" prot="public" virt="virtual"><scope>sgns::storage::rocksdb::Cursor</scope><name>key</name></member>
+      <member refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a7639639792227b9da0023a003204797e" prot="public" virt="virtual"><scope>sgns::storage::rocksdb::Cursor</scope><name>next</name></member>
+      <member refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a6350014de21e2ee474202398b2f5ec3d" prot="public" virt="virtual"><scope>sgns::storage::rocksdb::Cursor</scope><name>prev</name></member>
+      <member refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1afa06d59a068abdf0a0e1e589f7f54ad4" prot="public" virt="virtual"><scope>sgns::storage::rocksdb::Cursor</scope><name>seek</name></member>
+      <member refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a1ca1a15047a7ce5e68e443a9b7c9fb29" prot="public" virt="virtual"><scope>sgns::storage::rocksdb::Cursor</scope><name>seekToFirst</name></member>
+      <member refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a5d1bfd58bfa010aae1682d9f132a79b2" prot="public" virt="virtual"><scope>sgns::storage::rocksdb::Cursor</scope><name>seekToLast</name></member>
+      <member refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1af68caff11e3e0bd891bfc4225bc02b2a" prot="public" virt="virtual"><scope>sgns::storage::rocksdb::Cursor</scope><name>value</name></member>
+      <member refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a2e670311141a452d01f619613714c284" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb::Cursor</scope><name>~Cursor</name></member>
+      <member refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1aa0ad20c2b901c2ee1a8a8a0be0f169c0" prot="public" virt="virtual"><scope>sgns::storage::rocksdb::Cursor</scope><name>~MapCursor</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

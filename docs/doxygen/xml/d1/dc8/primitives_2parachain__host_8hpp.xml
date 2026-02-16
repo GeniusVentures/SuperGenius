@@ -1,0 +1,368 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/dc8/primitives_2parachain__host_8hpp" kind="file" language="C++">
+    <compoundname>parachain_host.hpp</compoundname>
+    <includes local="no">cstdint</includes>
+    <includes local="no">vector</includes>
+    <includes local="no">boost/optional.hpp</includes>
+    <includes local="no">boost/variant.hpp</includes>
+    <includes refid="d4/d16/blob_8hpp" local="yes">base/blob.hpp</includes>
+    <includedby refid="d9/d3c/runtime_2parachain__host_8hpp" local="yes">src/runtime/parachain_host.hpp</includedby>
+    <incdepgraph>
+      <node id="6">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/primitives/parachain_host.hpp</label>
+        <link refid="d1/dc8/primitives_2parachain__host_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>array</label>
+      </node>
+      <node id="9">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="4">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="5">
+        <label>boost/variant.hpp</label>
+      </node>
+      <node id="7">
+        <label>cstddef</label>
+      </node>
+      <node id="2">
+        <label>cstdint</label>
+      </node>
+      <node id="12">
+        <label>gsl/span</label>
+      </node>
+      <node id="15">
+        <label>iostream</label>
+      </node>
+      <node id="14">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="11">
+        <label>string_view</label>
+      </node>
+      <node id="3">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="1">
+        <label>src/primitives/parachain_host.hpp</label>
+        <link refid="d1/dc8/primitives_2parachain__host_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.cpp</label>
+        <link refid="db/dae/parachain__host__impl_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.hpp</label>
+        <link refid="d6/d15/parachain__host__impl_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>src/runtime/parachain_host.hpp</label>
+        <link refid="d9/d3c/runtime_2parachain__host_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d9/d91/structsgns_1_1primitives_1_1parachain_1_1_relay" prot="public">sgns::primitives::parachain::Relay</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="dd/dc5/namespacesgns_1_1primitives">sgns::primitives</innernamespace>
+    <innernamespace refid="dd/d42/namespacesgns_1_1primitives_1_1parachain">sgns::primitives::parachain</innernamespace>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="dd/d42/namespacesgns_1_1primitives_1_1parachain_1af77fd397e09e5808e4fc788ebe8c7f04" prot="public" static="no">
+        <type>base::Blob&lt; 32 &gt;</type>
+        <definition>using sgns::primitives::parachain::ValidatorId = base::Blob&lt;32&gt;</definition>
+        <argsstring></argsstring>
+        <name>ValidatorId</name>
+        <qualifiedname>sgns::primitives::parachain::ValidatorId</qualifiedname>
+        <briefdescription>
+<para><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1af77fd397e09e5808e4fc788ebe8c7f04" kindref="member">ValidatorId</ref> primitive is an ed25519 or sr25519 public key. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/parachain_host.hpp" line="17" column="3" bodyfile="src/primitives/parachain_host.hpp" bodystart="17" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a69a3305a38fab362c69a2665cc45b89f" prot="public" static="no">
+        <type>uint32_t</type>
+        <definition>using sgns::primitives::parachain::ParaId = uint32_t</definition>
+        <argsstring></argsstring>
+        <name>ParaId</name>
+        <qualifiedname>sgns::primitives::parachain::ParaId</qualifiedname>
+        <briefdescription>
+<para>ParachainId primitive is an uint32_t. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/parachain_host.hpp" line="22" column="3" bodyfile="src/primitives/parachain_host.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a7dd0ee24a141426092c2511b35714c97" prot="public" static="no">
+        <type>ParaId</type>
+        <definition>using sgns::primitives::parachain::Parachain = ParaId</definition>
+        <argsstring></argsstring>
+        <name>Parachain</name>
+        <qualifiedname>sgns::primitives::parachain::Parachain</qualifiedname>
+        <briefdescription>
+<para><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a7dd0ee24a141426092c2511b35714c97" kindref="member">Parachain</ref> primitive. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/parachain_host.hpp" line="33" column="3" bodyfile="src/primitives/parachain_host.hpp" bodystart="33" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a274cc9cb70d6cfa21cc152b03c7756d4" prot="public" static="no">
+        <type>boost::variant&lt; Relay, Parachain &gt;</type>
+        <definition>using sgns::primitives::parachain::Chain = boost::variant&lt;Relay, Parachain&gt;</definition>
+        <argsstring></argsstring>
+        <name>Chain</name>
+        <qualifiedname>sgns::primitives::parachain::Chain</qualifiedname>
+        <briefdescription>
+<para><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a274cc9cb70d6cfa21cc152b03c7756d4" kindref="member">Chain</ref> primitive. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/parachain_host.hpp" line="38" column="3" bodyfile="src/primitives/parachain_host.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/d42/namespacesgns_1_1primitives_1_1parachain_1ae3b6d3a71137641e26ceeae872e7fb44" prot="public" static="no">
+        <type>std::vector&lt; Chain &gt;</type>
+        <definition>using sgns::primitives::parachain::DutyRoster = std::vector&lt;Chain&gt;</definition>
+        <argsstring></argsstring>
+        <name>DutyRoster</name>
+        <qualifiedname>sgns::primitives::parachain::DutyRoster</qualifiedname>
+        <briefdescription>
+<para><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1ae3b6d3a71137641e26ceeae872e7fb44" kindref="member">DutyRoster</ref> primitive. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/parachain_host.hpp" line="43" column="3" bodyfile="src/primitives/parachain_host.hpp" bodystart="43" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a2b7b93cb3c3004a665a2b23fbefa792d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::parachain::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const Relay &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::parachain::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const Relay &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>outputs <ref refid="d9/d91/structsgns_1_1primitives_1_1parachain_1_1_relay" kindref="compound">Relay</ref> instance to stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>reference to stream </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to output </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/parachain_host.hpp" line="54" column="3" bodyfile="src/primitives/parachain_host.hpp" bodystart="54" bodyend="56"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a7f1f3be47b26d3d1c2d6c829156a5c14" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::parachain::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, Relay &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::parachain::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>Relay &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>decodes <ref refid="d9/d91/structsgns_1_1primitives_1_1parachain_1_1_relay" kindref="compound">Relay</ref> instance from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>reference to stream </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to decode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/parachain_host.hpp" line="67" column="10" bodyfile="src/primitives/parachain_host.hpp" bodystart="67" bodyend="69"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_PRIMITIVES_PARACHAIN_HOST_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_PRIMITIVES_PARACHAIN_HOST_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstdint&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;vector&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/optional.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/variant.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d4/d16/blob_8hpp" kindref="compound">base/blob.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13" refid="dd/d42/namespacesgns_1_1primitives_1_1parachain" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain" kindref="compound">sgns::primitives::parachain</ref><sp/>{</highlight></codeline>
+<codeline lineno="17" refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1af77fd397e09e5808e4fc788ebe8c7f04" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1af77fd397e09e5808e4fc788ebe8c7f04" kindref="member">ValidatorId</ref><sp/>=<sp/><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob&lt;32&gt;</ref>;</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22" refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a69a3305a38fab362c69a2665cc45b89f" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a69a3305a38fab362c69a2665cc45b89f" kindref="member">ParaId</ref><sp/>=<sp/>uint32_t;</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27" refid="d9/d91/structsgns_1_1primitives_1_1parachain_1_1_relay" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="d9/d91/structsgns_1_1primitives_1_1parachain_1_1_relay" kindref="compound">Relay</ref><sp/>{};</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>TODO(yuraz):<sp/>PRE-152<sp/>update<sp/>Relay<sp/>content<sp/>when<sp/>it<sp/>updates<sp/>in<sp/>supergenius</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33" refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a7dd0ee24a141426092c2511b35714c97" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a7dd0ee24a141426092c2511b35714c97" kindref="member">Parachain</ref><sp/>=<sp/><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a69a3305a38fab362c69a2665cc45b89f" kindref="member">ParaId</ref>;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="38" refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a274cc9cb70d6cfa21cc152b03c7756d4" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a274cc9cb70d6cfa21cc152b03c7756d4" kindref="member">Chain</ref><sp/>=<sp/>boost::variant&lt;Relay,<sp/>Parachain&gt;;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="43" refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1ae3b6d3a71137641e26ceeae872e7fb44" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1ae3b6d3a71137641e26ceeae872e7fb44" kindref="member">DutyRoster</ref><sp/>=<sp/>std::vector&lt;Chain&gt;;</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>TODO(yuraz):<sp/>PRE-152<sp/>update<sp/>Relay<sp/>&lt;&lt;<sp/>and<sp/>&gt;&gt;<sp/>operators</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/><sp/>when<sp/>Relay<sp/>updates<sp/>in<sp/>supergenius</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>Stream,<sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>=<sp/>std::enable_if_t&lt;Stream::is_encoder_stream&gt;&gt;</highlight></codeline>
+<codeline lineno="54" refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a2b7b93cb3c3004a665a2b23fbefa792d" refkind="member"><highlight class="normal"><sp/><sp/>Stream<sp/>&amp;<ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a2b7b93cb3c3004a665a2b23fbefa792d" kindref="member">operator&lt;&lt;</ref>(Stream<sp/>&amp;s,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d9/d91/structsgns_1_1primitives_1_1parachain_1_1_relay" kindref="compound">Relay</ref><sp/>&amp;v)<sp/>{</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>s;</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">Stream,</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>=<sp/>std::enable_if_t&lt;Stream::is_decoder_stream&gt;&gt;</highlight></codeline>
+<codeline lineno="67" refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a7f1f3be47b26d3d1c2d6c829156a5c14" refkind="member"><highlight class="normal"><sp/><sp/>Stream<sp/>&amp;<ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a7f1f3be47b26d3d1c2d6c829156a5c14" kindref="member">operator&gt;&gt;</ref>(Stream<sp/>&amp;s,<sp/><ref refid="d9/d91/structsgns_1_1primitives_1_1parachain_1_1_relay" kindref="compound">Relay</ref><sp/>&amp;v)<sp/>{</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>s;</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="70"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::primitives::parachain</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="71"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_SRC_PRIMITIVES_PARACHAIN_HOST_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/primitives/parachain_host.hpp"/>
+  </compounddef>
+</doxygen>

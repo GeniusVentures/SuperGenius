@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/d05/namespacesgns_1_1crypto_1_1constants_1_1sr25519_1_1vrf" kind="namespace" language="C++">
+    <compoundname>sgns::crypto::constants::sr25519::vrf</compoundname>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="df/d05/namespacesgns_1_1crypto_1_1constants_1_1sr25519_1_1vrf_1aee9c70f0446e34d0dbd0f93b69ff2ce5" prot="public" static="no" strong="no">
+        <type></type>
+        <name>@045157362313214045075122263133334236152064206063</name>
+        <qualifiedname>sgns::crypto::constants::sr25519::vrf::@045157362313214045075122263133334236152064206063</qualifiedname>
+        <enumvalue id="df/d05/namespacesgns_1_1crypto_1_1constants_1_1sr25519_1_1vrf_1aee9c70f0446e34d0dbd0f93b69ff2ce5ab1e2fb3dd62cdecd9f187f910aa0e35e" prot="public">
+          <name>PROOF_SIZE</name>
+          <initializer>= SR25519_VRF_PROOF_SIZE</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d05/namespacesgns_1_1crypto_1_1constants_1_1sr25519_1_1vrf_1aee9c70f0446e34d0dbd0f93b69ff2ce5a187d6c92af680abedbe2346f446055f8" prot="public">
+          <name>OUTPUT_SIZE</name>
+          <initializer>= SR25519_VRF_OUTPUT_SIZE</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Important constants to deal with vrf </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="30" column="7" bodyfile="src/crypto/sr25519_types.hpp" bodystart="30" bodyend="33"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/sr25519_types.hpp" line="26" column="5"/>
+  </compounddef>
+</doxygen>

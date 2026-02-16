@@ -1,0 +1,96 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/d91/structsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1_1_chain_config" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::evmwatcher::EvmMessagingWatcher::ChainConfig</compoundname>
+    <includes refid="dc/d21/evm__messaging__watcher_8hpp" local="no">evm_messaging_watcher.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d7/d91/structsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1_1_chain_config_1a58c84560591cbc823b8aa48e274b8a00" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::evmwatcher::EvmMessagingWatcher::ChainConfig::rpc_url</definition>
+        <argsstring></argsstring>
+        <name>rpc_url</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::ChainConfig::rpc_url</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="22" column="25" bodyfile="src/watcher/impl/evm_messaging_watcher.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/d91/structsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1_1_chain_config_1a3f274d865d749277a58a3c631773d645" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::evmwatcher::EvmMessagingWatcher::ChainConfig::chain_id</definition>
+        <argsstring></argsstring>
+        <name>chain_id</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::ChainConfig::chain_id</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="23" column="25" bodyfile="src/watcher/impl/evm_messaging_watcher.hpp" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/d91/structsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1_1_chain_config_1abac6b06066b932b574d05bbf0ec672e3" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::evmwatcher::EvmMessagingWatcher::ChainConfig::chain_name</definition>
+        <argsstring></argsstring>
+        <name>chain_name</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::ChainConfig::chain_name</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="24" column="25" bodyfile="src/watcher/impl/evm_messaging_watcher.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/d91/structsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1_1_chain_config_1a2ba50063fa85812867f895e2e10dc7bc" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::evmwatcher::EvmMessagingWatcher::ChainConfig::ws_url</definition>
+        <argsstring></argsstring>
+        <name>ws_url</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::ChainConfig::ws_url</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="25" column="25" bodyfile="src/watcher/impl/evm_messaging_watcher.hpp" bodystart="25" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::evmwatcher::EvmMessagingWatcher::ChainConfig</label>
+        <link refid="d7/d91/structsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1_1_chain_config"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+chain_id</edgelabel>
+          <edgelabel>+chain_name</edgelabel>
+          <edgelabel>+rpc_url</edgelabel>
+          <edgelabel>+ws_url</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="2">
+        <label>std::string</label>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="21" column="9" bodyfile="src/watcher/impl/evm_messaging_watcher.hpp" bodystart="21" bodyend="26"/>
+    <listofallmembers>
+      <member refid="d7/d91/structsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1_1_chain_config_1a3f274d865d749277a58a3c631773d645" prot="public" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher::ChainConfig</scope><name>chain_id</name></member>
+      <member refid="d7/d91/structsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1_1_chain_config_1abac6b06066b932b574d05bbf0ec672e3" prot="public" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher::ChainConfig</scope><name>chain_name</name></member>
+      <member refid="d7/d91/structsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1_1_chain_config_1a58c84560591cbc823b8aa48e274b8a00" prot="public" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher::ChainConfig</scope><name>rpc_url</name></member>
+      <member refid="d7/d91/structsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1_1_chain_config_1a2ba50063fa85812867f895e2e10dc7bc" prot="public" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher::ChainConfig</scope><name>ws_url</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

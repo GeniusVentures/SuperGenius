@@ -1,0 +1,353 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/dc5/classsgns_1_1runtime_1_1binaryen_1_1_metadata_impl" kind="class" language="C++" prot="public">
+    <compoundname>sgns::runtime::binaryen::MetadataImpl</compoundname>
+    <basecompoundref refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api" prot="public" virt="non-virtual">sgns::runtime::binaryen::RuntimeApi</basecompoundref>
+    <basecompoundref refid="dd/dd7/classsgns_1_1runtime_1_1_metadata" prot="public" virt="non-virtual">sgns::runtime::Metadata</basecompoundref>
+    <includes refid="dc/dcf/metadata__impl_8hpp" local="no">metadata_impl.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dc/dc5/classsgns_1_1runtime_1_1binaryen_1_1_metadata_impl_1ac0bfa405194a16285af54d30f01adae6" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::binaryen::MetadataImpl::MetadataImpl</definition>
+        <argsstring>(const std::shared_ptr&lt; WasmProvider &gt; &amp;wasm_provider, const std::shared_ptr&lt; RuntimeManager &gt; &amp;runtime_manager)</argsstring>
+        <name>MetadataImpl</name>
+        <qualifiedname>sgns::runtime::binaryen::MetadataImpl::MetadataImpl</qualifiedname>
+        <param>
+          <type>const std::shared_ptr&lt; <ref refid="d2/d00/classsgns_1_1runtime_1_1_wasm_provider" kindref="compound">WasmProvider</ref> &gt; &amp;</type>
+          <declname>wasm_provider</declname>
+        </param>
+        <param>
+          <type>const std::shared_ptr&lt; <ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager" kindref="compound">RuntimeManager</ref> &gt; &amp;</type>
+          <declname>runtime_manager</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/metadata_impl.hpp" line="11" column="14" bodyfile="src/runtime/binaryen/runtime_api/metadata_impl.cpp" bodystart="7" bodyend="10"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/dc5/classsgns_1_1runtime_1_1binaryen_1_1_metadata_impl_1ae89a38454878bcc753e1fe70bd2e058d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::binaryen::MetadataImpl::~MetadataImpl</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~MetadataImpl</name>
+        <qualifiedname>sgns::runtime::binaryen::MetadataImpl::~MetadataImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/metadata_impl.hpp" line="15" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/dc5/classsgns_1_1runtime_1_1binaryen_1_1_metadata_impl_1aa627657271fa56114fdaa3966fe8c326" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="dd/dd7/classsgns_1_1runtime_1_1_metadata_1a2c2f5f8a98fdad49642854c982143f5f" kindref="member">OpaqueMetadata</ref> &gt;</type>
+        <definition>outcome::result&lt; OpaqueMetadata &gt; sgns::runtime::binaryen::MetadataImpl::metadata</definition>
+        <argsstring>() override</argsstring>
+        <name>metadata</name>
+        <qualifiedname>sgns::runtime::binaryen::MetadataImpl::metadata</qualifiedname>
+        <reimplements refid="dd/dd7/classsgns_1_1runtime_1_1_metadata_1a076fd006031a308adb1f7aa62a334087">metadata</reimplements>
+        <briefdescription>
+<para>calls metadata method of <ref refid="dd/dd7/classsgns_1_1runtime_1_1_metadata" kindref="compound">Metadata</ref> runtime api </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>opaque metadata object or error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/metadata_impl.hpp" line="17" column="21" bodyfile="src/runtime/binaryen/runtime_api/metadata_impl.cpp" bodystart="12" bodyend="15"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>sgns::runtime::Metadata</label>
+        <link refid="dd/dd7/classsgns_1_1runtime_1_1_metadata"/>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::binaryen::MetadataImpl</label>
+        <link refid="dc/dc5/classsgns_1_1runtime_1_1binaryen_1_1_metadata_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::binaryen::RuntimeApi</label>
+        <link refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="15">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="24">
+        <label>K</label>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="20">
+        <label>sgns::base::Blob&lt; size_ &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>sgns::base::Blob&lt; 32 &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+        <childnode refid="20" relation="template-instance">
+          <edgelabel>&lt; 32 &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="14">
+        <label>sgns::crypto::Hasher</label>
+        <link refid="dd/d14/classsgns_1_1crypto_1_1_hasher"/>
+        <childnode refid="15" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>sgns::runtime::Metadata</label>
+        <link refid="dd/dd7/classsgns_1_1runtime_1_1_metadata"/>
+      </node>
+      <node id="9">
+        <label>sgns::runtime::TrieStorageProvider</label>
+        <link refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider"/>
+      </node>
+      <node id="31">
+        <label>sgns::runtime::WasmProvider</label>
+        <link refid="d2/d00/classsgns_1_1runtime_1_1_wasm_provider"/>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::binaryen::MetadataImpl</label>
+        <link refid="dc/dc5/classsgns_1_1runtime_1_1binaryen_1_1_metadata_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="33" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::binaryen::RuntimeApi</label>
+        <link refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-runtime_manager_</edgelabel>
+        </childnode>
+        <childnode refid="30" relation="usage">
+          <edgelabel>-wasm_provider_</edgelabel>
+        </childnode>
+        <childnode refid="32" relation="usage">
+          <edgelabel>-executor_</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="26">
+        <label>sgns::runtime::binaryen::RuntimeExternalInterface</label>
+        <link refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface"/>
+        <childnode refid="27" relation="public-inheritance">
+        </childnode>
+        <childnode refid="28" relation="usage">
+          <edgelabel>-extension_</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::runtime::binaryen::RuntimeManager</label>
+        <link refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager"/>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-storage_provider_</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>-extension_factory_</edgelabel>
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>-module_factory_</edgelabel>
+        </childnode>
+        <childnode refid="13" relation="usage">
+          <edgelabel>-hasher_</edgelabel>
+        </childnode>
+        <childnode refid="16" relation="usage">
+          <edgelabel>-modules_mutex_</edgelabel>
+        </childnode>
+        <childnode refid="17" relation="usage">
+          <edgelabel>-modules_</edgelabel>
+        </childnode>
+        <childnode refid="25" relation="usage">
+          <edgelabel>-external_interface_</edgelabel>
+        </childnode>
+      </node>
+      <node id="32">
+        <label>sgns::runtime::binaryen::WasmExecutor</label>
+        <link refid="dc/dac/classsgns_1_1runtime_1_1binaryen_1_1_wasm_executor"/>
+      </node>
+      <node id="22">
+        <label>sgns::runtime::binaryen::WasmModule</label>
+        <link refid="d9/d10/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module"/>
+      </node>
+      <node id="12">
+        <label>sgns::runtime::binaryen::WasmModuleFactory</label>
+        <link refid="df/dd7/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_factory"/>
+      </node>
+      <node id="19">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="23">
+        <label>std::map&lt; K, T &gt;</label>
+        <childnode refid="24" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>std::map&lt; sgns::base::Blob&lt; 32 &gt;, std::shared_ptr&lt; sgns::runtime::binaryen::WasmModule &gt; &gt;</label>
+        <childnode refid="18" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="21" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="23" relation="template-instance">
+          <edgelabel>&lt; sgns::base::Blob&lt; 32 &gt;, std::shared_ptr&lt; sgns::runtime::binaryen::WasmModule &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>std::mutex</label>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::shared_ptr&lt; extensions::ExtensionFactory &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; extensions::ExtensionFactory &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="13">
+        <label>std::shared_ptr&lt; sgns::crypto::Hasher &gt;</label>
+        <childnode refid="14" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::crypto::Hasher &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; sgns::runtime::TrieStorageProvider &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::TrieStorageProvider &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="30">
+        <label>std::shared_ptr&lt; sgns::runtime::WasmProvider &gt;</label>
+        <childnode refid="31" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::WasmProvider &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="25">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::RuntimeExternalInterface &gt;</label>
+        <childnode refid="26" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::RuntimeExternalInterface &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::RuntimeManager &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::RuntimeManager &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::WasmModule &gt;</label>
+        <childnode refid="22" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::WasmModule &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::WasmModuleFactory &gt;</label>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::WasmModuleFactory &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="29">
+        <label>std::unique_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="28">
+        <label>std::unique_ptr&lt; extensions::Extension &gt;</label>
+        <childnode refid="29" relation="template-instance">
+          <edgelabel>&lt; extensions::Extension &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="27">
+        <label>wasm::ShellExternalInterface</label>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/binaryen/runtime_api/metadata_impl.hpp" line="9" column="3" bodyfile="src/runtime/binaryen/runtime_api/metadata_impl.hpp" bodystart="9" bodyend="18"/>
+    <listofallmembers>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1a6a085102349cc88fbd0099b70bf7e094" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::MetadataImpl</scope><name>CallPersistency</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1acfbd16edc772cd082596bed9e6566588" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::MetadataImpl</scope><name>createRuntimeEnvironment</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1af9734bde832439b75009b3c3b8d19f3d" prot="protected" virt="non-virtual"><scope>sgns::runtime::binaryen::MetadataImpl</scope><name>execute</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1ad69effae3d32855dd3ed8d72beb346e5" prot="protected" virt="non-virtual"><scope>sgns::runtime::binaryen::MetadataImpl</scope><name>executeAt</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1aef8cd1c4cdd70ce1c52099eef6bd5573" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::MetadataImpl</scope><name>executeMaybeAt</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1a1b44a491f5ffd5a2b6a38383e00bce0e" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::MetadataImpl</scope><name>executor_</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1af4b70c18825ad6baa9632577739db535" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::MetadataImpl</scope><name>logger_</name></member>
+      <member refid="dc/dc5/classsgns_1_1runtime_1_1binaryen_1_1_metadata_impl_1aa627657271fa56114fdaa3966fe8c326" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::MetadataImpl</scope><name>metadata</name></member>
+      <member refid="dc/dc5/classsgns_1_1runtime_1_1binaryen_1_1_metadata_impl_1ac0bfa405194a16285af54d30f01adae6" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::MetadataImpl</scope><name>MetadataImpl</name></member>
+      <member refid="dd/dd7/classsgns_1_1runtime_1_1_metadata_1a2c2f5f8a98fdad49642854c982143f5f" prot="protected" virt="non-virtual"><scope>sgns::runtime::binaryen::MetadataImpl</scope><name>OpaqueMetadata</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1a206146e3ce08b0f7707b28c15892f4a5" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::MetadataImpl</scope><name>runtime_manager_</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1a54231e096e02eb06de8d3764468e3624" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::MetadataImpl</scope><name>RuntimeApi</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1ae5923b27dda9129f8ab8c4fdb011452d" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::MetadataImpl</scope><name>wasm_provider_</name></member>
+      <member refid="dd/dd7/classsgns_1_1runtime_1_1_metadata_1a80ea7c27e29ad3a816c0e26fd2f13ea5" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::MetadataImpl</scope><name>~Metadata</name></member>
+      <member refid="dc/dc5/classsgns_1_1runtime_1_1binaryen_1_1_metadata_impl_1ae89a38454878bcc753e1fe70bd2e058d" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::MetadataImpl</scope><name>~MetadataImpl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

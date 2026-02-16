@@ -1,0 +1,170 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/dc7/wallet_8hpp" kind="file" language="C++">
+    <compoundname>wallet.hpp</compoundname>
+    <includes local="no">secure/blockstore.hpp</includes>
+    <includes local="no">secure/common.hpp</includes>
+    <includedby refid="d9/df9/common_8cpp" local="yes">node/common.cpp</includedby>
+    <includedby refid="dc/d78/node_2node_8hpp" local="yes">node/node.hpp</includedby>
+    <includedby refid="d7/de1/wallet_8cpp" local="yes">node/wallet.cpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>node/wallet.hpp</label>
+        <link refid="d4/dc7/wallet_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>secure/blockstore.hpp</label>
+      </node>
+      <node id="3">
+        <label>secure/common.hpp</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="4">
+        <label>node/cli.cpp</label>
+        <link refid="dd/d48/cli_8cpp"/>
+      </node>
+      <node id="2">
+        <label>node/common.cpp</label>
+        <link refid="d9/df9/common_8cpp"/>
+      </node>
+      <node id="5">
+        <label>node/node.cpp</label>
+        <link refid="d7/d70/node_8cpp"/>
+      </node>
+      <node id="3">
+        <label>node/node.hpp</label>
+        <link refid="dc/d78/node_2node_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>node/wallet.cpp</label>
+        <link refid="d7/de1/wallet_8cpp"/>
+      </node>
+      <node id="1">
+        <label>node/wallet.hpp</label>
+        <link refid="d4/dc7/wallet_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d2/d51/classsgns_1_1wallet__store" prot="public">sgns::wallet_store</innerclass>
+    <innerclass refid="d2/d21/classsgns_1_1wallet" prot="public">sgns::wallet</innerclass>
+    <innerclass refid="d1/d2f/classsgns_1_1wallets" prot="public">sgns::wallets</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a1070beeedcc492ad783d0fcb8eaa6590" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::unique_ptr&lt; container_info_component &gt;</type>
+        <definition>std::unique_ptr&lt; container_info_component &gt; sgns::collect_container_info</definition>
+        <argsstring>(wallets &amp;wallets, const std::string &amp;name)</argsstring>
+        <name>collect_container_info</name>
+        <qualifiedname>sgns::collect_container_info</qualifiedname>
+        <param>
+          <type>wallets &amp;</type>
+          <declname>wallets</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>name</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/wallet.hpp" line="71" column="17" declfile="node/wallet.hpp" declline="71" declcolumn="17"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_NODE_WALLET_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_NODE_WALLET_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;secure/blockstore.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;secure/common.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="6"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="de/ddf/classsgns_1_1node" kindref="compound">node</ref>;</highlight></codeline>
+<codeline lineno="8" refid="d2/d51/classsgns_1_1wallet__store" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d2/d51/classsgns_1_1wallet__store" kindref="compound">wallet_store</ref><sp/>final</highlight></codeline>
+<codeline lineno="9"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="12" refid="d2/d21/classsgns_1_1wallet" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d2/d21/classsgns_1_1wallet" kindref="compound">wallet</ref><sp/>final<sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>std::enable_shared_from_this&lt;sgns::wallet&gt;</highlight></codeline>
+<codeline lineno="13"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19" refid="d1/d2f/classsgns_1_1wallets" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d1/d2f/classsgns_1_1wallets_1a52635db3481fb85720aa811f98fe7fc0" kindref="member">wallets</ref><sp/>final</highlight></codeline>
+<codeline lineno="20"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d2f/classsgns_1_1wallets_1a52635db3481fb85720aa811f98fe7fc0" kindref="member">wallets</ref><sp/>(</highlight><highlight class="keywordtype">bool</highlight><highlight class="normal">,<sp/><ref refid="de/ddf/classsgns_1_1node" kindref="compound">sgns::node</ref><sp/>&amp;);</highlight></codeline>
+<codeline lineno="23" refid="d1/d2f/classsgns_1_1wallets_1a5b484dd76baef3c1c871fe28fbc9c790" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d2f/classsgns_1_1wallets_1a5b484dd76baef3c1c871fe28fbc9c790" kindref="member">~wallets</ref><sp/>();</highlight></codeline>
+<codeline lineno="24" refid="d1/d2f/classsgns_1_1wallets_1aca0b2117dec9b5eeaf6d534b552daeee" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;sgns::wallet&gt;<sp/><ref refid="d1/d2f/classsgns_1_1wallets_1aca0b2117dec9b5eeaf6d534b552daeee" kindref="member">open</ref><sp/>(sgns::wallet_id<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;);</highlight></codeline>
+<codeline lineno="25" refid="d1/d2f/classsgns_1_1wallets_1a40ad702d6a772d438799d1f91f09cf25" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;sgns::wallet&gt;<sp/><ref refid="d1/d2f/classsgns_1_1wallets_1a40ad702d6a772d438799d1f91f09cf25" kindref="member">create</ref><sp/>(sgns::wallet_id<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;);</highlight></codeline>
+<codeline lineno="26" refid="d1/d2f/classsgns_1_1wallets_1ae7bb76c6438d46ae2bd746a97b81de0b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d1/d2f/classsgns_1_1wallets_1ae7bb76c6438d46ae2bd746a97b81de0b" kindref="member">search_pending</ref><sp/>(sgns::wallet_id<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;);</highlight></codeline>
+<codeline lineno="27" refid="d1/d2f/classsgns_1_1wallets_1a6e19b998446b4cdbda978f5b5fdd24ec" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d1/d2f/classsgns_1_1wallets_1a6e19b998446b4cdbda978f5b5fdd24ec" kindref="member">search_pending_all</ref><sp/>();</highlight></codeline>
+<codeline lineno="28" refid="d1/d2f/classsgns_1_1wallets_1a32afdfc0079e957e16e5e489b4d5d126" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d1/d2f/classsgns_1_1wallets_1a32afdfc0079e957e16e5e489b4d5d126" kindref="member">destroy</ref><sp/>(sgns::wallet_id<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;);</highlight></codeline>
+<codeline lineno="29" refid="d1/d2f/classsgns_1_1wallets_1a81d07f2bb6819adda467645b47c8ea29" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d1/d2f/classsgns_1_1wallets_1a81d07f2bb6819adda467645b47c8ea29" kindref="member">reload</ref><sp/>();</highlight></codeline>
+<codeline lineno="30" refid="d1/d2f/classsgns_1_1wallets_1a92b247c3ad3f81353a8239e7007bdd80" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d1/d2f/classsgns_1_1wallets_1a92b247c3ad3f81353a8239e7007bdd80" kindref="member">do_wallet_actions</ref><sp/>();</highlight></codeline>
+<codeline lineno="31" refid="d1/d2f/classsgns_1_1wallets_1ac048106526c4e6654e098c3422a7e47f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d1/d2f/classsgns_1_1wallets_1ac048106526c4e6654e098c3422a7e47f" kindref="member">queue_wallet_action</ref><sp/>(sgns::uint128_t<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;,<sp/>std::shared_ptr&lt;sgns::wallet&gt;,<sp/>std::function&lt;</highlight><highlight class="keywordtype">void</highlight><highlight class="normal">(<ref refid="d2/d21/classsgns_1_1wallet" kindref="compound">sgns::wallet</ref><sp/>&amp;)&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;);</highlight></codeline>
+<codeline lineno="32" refid="d1/d2f/classsgns_1_1wallets_1adc78ad4a70cb4460494fc605f9d776a9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d1/d2f/classsgns_1_1wallets_1adc78ad4a70cb4460494fc605f9d776a9" kindref="member">foreach_representative</ref><sp/>(std::function&lt;</highlight><highlight class="keywordtype">void</highlight><highlight class="normal">(sgns::public_key<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;,<sp/>sgns::raw_key<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;)&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;);</highlight></codeline>
+<codeline lineno="33" refid="d1/d2f/classsgns_1_1wallets_1add1dba132a33a9ce332bfdd198a2a8ac" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d1/d2f/classsgns_1_1wallets_1add1dba132a33a9ce332bfdd198a2a8ac" kindref="member">exists</ref><sp/>(sgns::transaction<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;,<sp/>sgns::public_key<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;);</highlight></codeline>
+<codeline lineno="34" refid="d1/d2f/classsgns_1_1wallets_1aa5d30c0dddec3e25cbd7a8b9c093538d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d1/d2f/classsgns_1_1wallets_1aa5d30c0dddec3e25cbd7a8b9c093538d" kindref="member">stop</ref><sp/>();</highlight></codeline>
+<codeline lineno="35" refid="d1/d2f/classsgns_1_1wallets_1ad23da076c5e0f23a0a6bcb5be7562802" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d1/d2f/classsgns_1_1wallets_1ad23da076c5e0f23a0a6bcb5be7562802" kindref="member">clear_send_ids</ref><sp/>(sgns::transaction<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;);</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>sgns::wallet_representative_counts<sp/>rep_counts<sp/>();</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="37" refid="d1/d2f/classsgns_1_1wallets_1a26b6071ed786039c6e92afb5f9745a84" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d1/d2f/classsgns_1_1wallets_1a26b6071ed786039c6e92afb5f9745a84" kindref="member">check_rep</ref><sp/>(sgns::account<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;,<sp/>sgns::uint128_t<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="38" refid="d1/d2f/classsgns_1_1wallets_1a872ca5cc2a12bf90915e2d1c68336aac" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d1/d2f/classsgns_1_1wallets_1a872ca5cc2a12bf90915e2d1c68336aac" kindref="member">compute_reps</ref><sp/>();</highlight></codeline>
+<codeline lineno="39" refid="d1/d2f/classsgns_1_1wallets_1af7c1be3dd19e0dae6257850f31048709" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d1/d2f/classsgns_1_1wallets_1af7c1be3dd19e0dae6257850f31048709" kindref="member">ongoing_compute_reps</ref><sp/>();</highlight></codeline>
+<codeline lineno="40" refid="d1/d2f/classsgns_1_1wallets_1a83eafabc3472d7134df3fcb9131b4dbf" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d1/d2f/classsgns_1_1wallets_1a83eafabc3472d7134df3fcb9131b4dbf" kindref="member">split_if_needed</ref><sp/>(sgns::transaction<sp/>&amp;,<sp/>sgns::block_store<sp/>&amp;);</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>void<sp/>move_table<sp/>(std::string<sp/>const<sp/>&amp;,<sp/>MDB_txn<sp/>*,<sp/>MDB_txn<sp/>*);</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="42" refid="d1/d2f/classsgns_1_1wallets_1a555ba107162a6c47288d87c73873a01d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>sgns::network_params<sp/><ref refid="d1/d2f/classsgns_1_1wallets_1a555ba107162a6c47288d87c73873a01d" kindref="member">network_params</ref>;</highlight></codeline>
+<codeline lineno="43" refid="d1/d2f/classsgns_1_1wallets_1a824520fdd94df7f20fed5de6250a13ff" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::function&lt;void(</highlight><highlight class="keywordtype">bool</highlight><highlight class="normal">)&gt;<sp/><ref refid="d1/d2f/classsgns_1_1wallets_1a824520fdd94df7f20fed5de6250a13ff" kindref="member">observer</ref>;</highlight></codeline>
+<codeline lineno="44" refid="d1/d2f/classsgns_1_1wallets_1ae33090e18214c6548d825159cbd5e533" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::unordered_map&lt;sgns::wallet_id,<sp/>std::shared_ptr&lt;sgns::wallet&gt;&gt;<sp/><ref refid="d1/d2f/classsgns_1_1wallets_1ae33090e18214c6548d825159cbd5e533" kindref="member">items</ref>;</highlight></codeline>
+<codeline lineno="45" refid="d1/d2f/classsgns_1_1wallets_1a351d477d68263ff5dfb88073c9f4f767" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::multimap&lt;sgns::uint128_t,<sp/>std::pair&lt;std::shared_ptr&lt;sgns::wallet&gt;,<sp/>std::function&lt;void(<ref refid="d2/d21/classsgns_1_1wallet" kindref="compound">sgns::wallet</ref><sp/>&amp;)&gt;&gt;,<sp/>std::greater&lt;sgns::uint128_t&gt;&gt;<sp/><ref refid="d1/d2f/classsgns_1_1wallets_1a351d477d68263ff5dfb88073c9f4f767" kindref="member">actions</ref>;</highlight></codeline>
+<codeline lineno="46" refid="d1/d2f/classsgns_1_1wallets_1ad54802b7984f1f8025aedb1e9f75b822" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>sgns::locked&lt;std::unordered_map&lt;sgns::account,<sp/>sgns::root&gt;&gt;<sp/><ref refid="d1/d2f/classsgns_1_1wallets_1ad54802b7984f1f8025aedb1e9f75b822" kindref="member">delayed_work</ref>;</highlight></codeline>
+<codeline lineno="47" refid="d1/d2f/classsgns_1_1wallets_1a054129aa2271a2beba9761ccfe0b7380" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::mutex<sp/><ref refid="d1/d2f/classsgns_1_1wallets_1a054129aa2271a2beba9761ccfe0b7380" kindref="member">mutex</ref>;</highlight></codeline>
+<codeline lineno="48" refid="d1/d2f/classsgns_1_1wallets_1ae98142ce8f7409d0e5a5036d2ac1e510" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::mutex<sp/><ref refid="d1/d2f/classsgns_1_1wallets_1ae98142ce8f7409d0e5a5036d2ac1e510" kindref="member">action_mutex</ref>;</highlight></codeline>
+<codeline lineno="49" refid="d1/d2f/classsgns_1_1wallets_1a815f51f1e59e8ebf0c1207a95d209204" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>sgns::condition_variable<sp/><ref refid="d1/d2f/classsgns_1_1wallets_1a815f51f1e59e8ebf0c1207a95d209204" kindref="member">condition</ref>;</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>sgns::kdf<sp/>kdf;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>MDB_dbi<sp/>handle;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>MDB_dbi<sp/>send_action_ids;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>sgns::node<sp/>&amp;<sp/>node;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>sgns::mdb_env<sp/>&amp;<sp/>env;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="55" refid="d1/d2f/classsgns_1_1wallets_1ad10a24e62d76fe6fd561e6800a2afa7c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::atomic&lt;bool&gt;<sp/><ref refid="d1/d2f/classsgns_1_1wallets_1ad10a24e62d76fe6fd561e6800a2afa7c" kindref="member">stopped</ref>;</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>std::shared_ptr&lt;sgns::work_watcher&gt;<sp/>watcher;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="57" refid="d1/d2f/classsgns_1_1wallets_1a3e66ebb54d8ce1db213e90e93bb94641" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::thread<sp/><ref refid="d1/d2f/classsgns_1_1wallets_1a3e66ebb54d8ce1db213e90e93bb94641" kindref="member">thread</ref>;</highlight></codeline>
+<codeline lineno="58" refid="d1/d2f/classsgns_1_1wallets_1aa468e36974f85a11564f13edff99597b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>sgns::uint128_t<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d1/d2f/classsgns_1_1wallets_1aa468e36974f85a11564f13edff99597b" kindref="member">generate_priority</ref>;</highlight></codeline>
+<codeline lineno="59" refid="d1/d2f/classsgns_1_1wallets_1af19726773ce1267d0a4d8a93bd54a634" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>sgns::uint128_t<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d1/d2f/classsgns_1_1wallets_1af19726773ce1267d0a4d8a93bd54a634" kindref="member">high_priority</ref>;</highlight></codeline>
+<codeline lineno="61" refid="d1/d2f/classsgns_1_1wallets_1ae8fc96776acd15098fc3c3dd389486b4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>sgns::write_transaction<sp/><ref refid="d1/d2f/classsgns_1_1wallets_1ae8fc96776acd15098fc3c3dd389486b4" kindref="member">tx_begin_write</ref><sp/>();</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"></highlight></codeline>
+<codeline lineno="64" refid="d1/d2f/classsgns_1_1wallets_1a32c1157eb86ccd6a9b442949b4b92c5c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>sgns::read_transaction<sp/><ref refid="d1/d2f/classsgns_1_1wallets_1a32c1157eb86ccd6a9b442949b4b92c5c" kindref="member">tx_begin_read</ref><sp/>();</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"></highlight></codeline>
+<codeline lineno="66"><highlight class="normal"></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="67" refid="d1/d2f/classsgns_1_1wallets_1a5e435bb2f23e9742ebaaac70eb287aaa" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::mutex<sp/><ref refid="d1/d2f/classsgns_1_1wallets_1a5e435bb2f23e9742ebaaac70eb287aaa" kindref="member">counts_mutex</ref>;</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>sgns::wallet_representative_counts<sp/>counts;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="69"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"></highlight></codeline>
+<codeline lineno="71" refid="d2/d2b/namespacesgns_1a1070beeedcc492ad783d0fcb8eaa6590" refkind="member"><highlight class="normal">std::unique_ptr&lt;container_info_component&gt;<sp/><ref refid="d2/d2b/namespacesgns_1a1070beeedcc492ad783d0fcb8eaa6590" kindref="member">collect_container_info</ref><sp/>(<ref refid="d1/d2f/classsgns_1_1wallets" kindref="compound">wallets</ref><sp/>&amp;<sp/><ref refid="d1/d2f/classsgns_1_1wallets" kindref="compound">wallets</ref>,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<sp/>name);</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"></highlight></codeline>
+<codeline lineno="73"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="node/wallet.hpp"/>
+  </compounddef>
+</doxygen>

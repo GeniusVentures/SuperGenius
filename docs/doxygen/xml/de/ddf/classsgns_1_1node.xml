@@ -1,0 +1,671 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/ddf/classsgns_1_1node" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::node</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">std::enable_shared_from_this&lt; sgns::node &gt;</basecompoundref>
+    <includes refid="dc/d78/node_2node_8hpp" local="no">node.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="de/ddf/classsgns_1_1node_1a4f266ce575b79282db6183d83315ba8a" prot="public" static="no" mutable="no">
+        <type>sgns::keypair</type>
+        <definition>sgns::keypair sgns::node::node_id</definition>
+        <argsstring></argsstring>
+        <name>node_id</name>
+        <qualifiedname>sgns::node::node_id</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="32" column="15" bodyfile="node/node.hpp" bodystart="32" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/ddf/classsgns_1_1node_1a07b017f9c17a3f96c80fef349d4f6b6c" prot="public" static="no" mutable="no">
+        <type>std::unique_ptr&lt; sgns::block_store &gt;</type>
+        <definition>std::unique_ptr&lt;sgns::block_store&gt; sgns::node::store_impl</definition>
+        <argsstring></argsstring>
+        <name>store_impl</name>
+        <qualifiedname>sgns::node::store_impl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="33" column="21" bodyfile="node/node.hpp" bodystart="33" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/ddf/classsgns_1_1node_1a0b8e85ecf587a660c350046e89fa88f5" prot="public" static="no" mutable="no">
+        <type>sgns::block_store &amp;</type>
+        <definition>sgns::block_store&amp; sgns::node::store</definition>
+        <argsstring></argsstring>
+        <name>store</name>
+        <qualifiedname>sgns::node::store</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="34" column="24" bodyfile="node/node.hpp" bodystart="34" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/ddf/classsgns_1_1node_1a395981e446514b1a8703d07f929a5522" prot="public" static="no" mutable="no">
+        <type>sgns::ledger</type>
+        <definition>sgns::ledger sgns::node::ledger</definition>
+        <argsstring></argsstring>
+        <name>ledger</name>
+        <qualifiedname>sgns::node::ledger</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="35" column="18" bodyfile="node/node.hpp" bodystart="35" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/ddf/classsgns_1_1node_1a3ea16dd3c3f5cf68c553a63136228684" prot="public" static="no" mutable="no">
+        <type>sgns::network_params</type>
+        <definition>sgns::network_params sgns::node::network_params</definition>
+        <argsstring></argsstring>
+        <name>network_params</name>
+        <qualifiedname>sgns::node::network_params</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="36" column="26" bodyfile="node/node.hpp" bodystart="36" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/ddf/classsgns_1_1node_1a63e53287055f835c62f24e0e4435e2ff" prot="public" static="no" mutable="no">
+        <type>sgns::stat</type>
+        <definition>sgns::stat sgns::node::stats</definition>
+        <argsstring></argsstring>
+        <name>stats</name>
+        <qualifiedname>sgns::node::stats</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="37" column="16" bodyfile="node/node.hpp" bodystart="37" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/ddf/classsgns_1_1node_1a0fdbfc686514e947e1a6211db1182145" prot="public" static="no" mutable="no">
+        <type><ref refid="d1/d27/classsgns_1_1node__config" kindref="compound">sgns::node_config</ref></type>
+        <definition>sgns::node_config sgns::node::config</definition>
+        <argsstring></argsstring>
+        <name>config</name>
+        <qualifiedname>sgns::node::config</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="38" column="23" bodyfile="node/node.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/ddf/classsgns_1_1node_1a55cc9cbfcf4dbf3bafb03e618d15adb1" prot="public" static="no" mutable="no">
+        <type><ref refid="d0/d54/classsgns_1_1node__flags" kindref="compound">sgns::node_flags</ref></type>
+        <definition>sgns::node_flags sgns::node::flags</definition>
+        <argsstring></argsstring>
+        <name>flags</name>
+        <qualifiedname>sgns::node::flags</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="39" column="22" bodyfile="node/node.hpp" bodystart="39" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/ddf/classsgns_1_1node_1a500ee8c79da7c5c69b29d1d15583fae7" prot="public" static="no" mutable="no">
+        <type>sgns::alarm &amp;</type>
+        <definition>sgns::alarm&amp; sgns::node::alarm</definition>
+        <argsstring></argsstring>
+        <name>alarm</name>
+        <qualifiedname>sgns::node::alarm</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="40" column="18" bodyfile="node/node.hpp" bodystart="40" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/ddf/classsgns_1_1node_1a05232fcb0d0c4197b7f85514a33b7ae2" prot="public" static="no" mutable="no">
+        <type>std::atomic&lt; bool &gt;</type>
+        <definition>std::atomic&lt;bool&gt; sgns::node::stopped</definition>
+        <argsstring></argsstring>
+        <name>stopped</name>
+        <qualifiedname>sgns::node::stopped</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="41" column="17" bodyfile="node/node.hpp" bodystart="41" bodyend="41"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="de/ddf/classsgns_1_1node_1a87244c84b9637c2323a7aeb999327f37" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::node::node</definition>
+        <argsstring>(sgns::alarm &amp;alarm_a, sgns::node_config const &amp;config_a, sgns::node_flags flags_a)</argsstring>
+        <name>node</name>
+        <qualifiedname>sgns::node::node</qualifiedname>
+        <param>
+          <type>sgns::alarm &amp;</type>
+          <declname>alarm_a</declname>
+        </param>
+        <param>
+          <type><ref refid="d1/d27/classsgns_1_1node__config" kindref="compound">sgns::node_config</ref> const &amp;</type>
+          <declname>config_a</declname>
+        </param>
+        <param>
+          <type><ref refid="d0/d54/classsgns_1_1node__flags" kindref="compound">sgns::node_flags</ref></type>
+          <declname>flags_a</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="15" column="5" bodyfile="node/node.cpp" bodystart="4" bodyend="16"/>
+      </memberdef>
+      <memberdef kind="function" id="de/ddf/classsgns_1_1node_1a00c40b376e9c052d956eddc503770258" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::node::~node</definition>
+        <argsstring>()</argsstring>
+        <name>~node</name>
+        <qualifiedname>sgns::node::~node</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="16" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="de/ddf/classsgns_1_1node_1aa54ae330ce6ef7d18439640816949cf5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::node::keepalive</definition>
+        <argsstring>(std::string const &amp;, uint16_t)</argsstring>
+        <name>keepalive</name>
+        <qualifiedname>sgns::node::keepalive</qualifiedname>
+        <param>
+          <type>std::string const &amp;</type>
+        </param>
+        <param>
+          <type>uint16_t</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="17" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="de/ddf/classsgns_1_1node_1a245163520dc8a90386831bbe0b9960bc" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::node::start</definition>
+        <argsstring>()</argsstring>
+        <name>start</name>
+        <qualifiedname>sgns::node::start</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="18" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="de/ddf/classsgns_1_1node_1a80f3ec5523475efe74ee494b611fa06f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::node::stop</definition>
+        <argsstring>()</argsstring>
+        <name>stop</name>
+        <qualifiedname>sgns::node::stop</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="19" column="6" bodyfile="node/node.cpp" bodystart="236" bodyend="273"/>
+      </memberdef>
+      <memberdef kind="function" id="de/ddf/classsgns_1_1node_1abc9c0d6069d6686443c807cba6b147ad" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="de/ddf/classsgns_1_1node" kindref="compound">sgns::node</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; sgns::node &gt; sgns::node::shared</definition>
+        <argsstring>()</argsstring>
+        <name>shared</name>
+        <qualifiedname>sgns::node::shared</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="20" column="21" bodyfile="node/node.cpp" bodystart="18" bodyend="21"/>
+      </memberdef>
+      <memberdef kind="function" id="de/ddf/classsgns_1_1node_1a374889f4a2e4a6ed058f5abd79cf264f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>int</type>
+        <definition>int sgns::node::store_version</definition>
+        <argsstring>()</argsstring>
+        <name>store_version</name>
+        <qualifiedname>sgns::node::store_version</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="21" column="9" bodyfile="node/node.cpp" bodystart="22" bodyend="26"/>
+      </memberdef>
+      <memberdef kind="function" id="de/ddf/classsgns_1_1node_1ac47aa99983053f51017ea12fb01f6f17" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::node::receive_confirmed</definition>
+        <argsstring>(sgns::transaction const &amp;, std::shared_ptr&lt; sgns::block &gt;, sgns::block_hash const &amp;)</argsstring>
+        <name>receive_confirmed</name>
+        <qualifiedname>sgns::node::receive_confirmed</qualifiedname>
+        <param>
+          <type>sgns::transaction const &amp;</type>
+          <defname>transaction_a</defname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; sgns::block &gt;</type>
+          <defname>block_a</defname>
+        </param>
+        <param>
+          <type>sgns::block_hash const &amp;</type>
+          <defname>hash_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="22" column="10" bodyfile="node/node.cpp" bodystart="166" bodyend="170"/>
+      </memberdef>
+      <memberdef kind="function" id="de/ddf/classsgns_1_1node_1aa2285cdc3f9f25332061e61ee4b366f2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::node::process_confirmed_data</definition>
+        <argsstring>(sgns::transaction const &amp;, std::shared_ptr&lt; sgns::block &gt;, sgns::block_hash const &amp;, sgns::account &amp;, sgns::uint128_t &amp;, bool &amp;, sgns::account &amp;)</argsstring>
+        <name>process_confirmed_data</name>
+        <qualifiedname>sgns::node::process_confirmed_data</qualifiedname>
+        <param>
+          <type>sgns::transaction const &amp;</type>
+          <defname>transaction_a</defname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; sgns::block &gt;</type>
+          <defname>block_a</defname>
+        </param>
+        <param>
+          <type>sgns::block_hash const &amp;</type>
+          <defname>hash_a</defname>
+        </param>
+        <param>
+          <type>sgns::account &amp;</type>
+          <defname>account_a</defname>
+        </param>
+        <param>
+          <type>sgns::uint128_t &amp;</type>
+          <defname>amount_a</defname>
+        </param>
+        <param>
+          <type>bool &amp;</type>
+          <defname>is_state_send_a</defname>
+        </param>
+        <param>
+          <type>sgns::account &amp;</type>
+          <defname>pending_account_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="23" column="10" bodyfile="node/node.cpp" bodystart="172" bodyend="204"/>
+      </memberdef>
+      <memberdef kind="function" id="de/ddf/classsgns_1_1node_1ac41450d546677e8de7c035c23b4edbf7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::node::process_active</definition>
+        <argsstring>(std::shared_ptr&lt; sgns::block &gt;)</argsstring>
+        <name>process_active</name>
+        <qualifiedname>sgns::node::process_active</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; sgns::block &gt;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="25" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="de/ddf/classsgns_1_1node_1a777df0381db2d2c1e5bbc0c4c0b7bebe" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::process_return</type>
+        <definition>sgns::process_return sgns::node::process_local</definition>
+        <argsstring>(std::shared_ptr&lt; sgns::block &gt;, bool const =false)</argsstring>
+        <name>process_local</name>
+        <qualifiedname>sgns::node::process_local</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; sgns::block &gt;</type>
+        </param>
+        <param>
+          <type>bool const</type>
+          <defval>false</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="26" column="26"/>
+      </memberdef>
+      <memberdef kind="function" id="de/ddf/classsgns_1_1node_1a4215204490901a54959fa0c0727a9621" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::block_hash</type>
+        <definition>sgns::block_hash sgns::node::latest</definition>
+        <argsstring>(sgns::account const &amp;)</argsstring>
+        <name>latest</name>
+        <qualifiedname>sgns::node::latest</qualifiedname>
+        <param>
+          <type>sgns::account const &amp;</type>
+          <defname>account_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="27" column="22" bodyfile="node/node.cpp" bodystart="62" bodyend="66"/>
+      </memberdef>
+      <memberdef kind="function" id="de/ddf/classsgns_1_1node_1ae26abac5ffdedd93f6e4030554846daa" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::uint128_t</type>
+        <definition>sgns::uint128_t sgns::node::balance</definition>
+        <argsstring>(sgns::account const &amp;)</argsstring>
+        <name>balance</name>
+        <qualifiedname>sgns::node::balance</qualifiedname>
+        <param>
+          <type>sgns::account const &amp;</type>
+          <defname>account_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="28" column="17" bodyfile="node/node.cpp" bodystart="68" bodyend="72"/>
+      </memberdef>
+      <memberdef kind="function" id="de/ddf/classsgns_1_1node_1adbcac896f20143ac2171cf6e1b3e908b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::process_return</type>
+        <definition>sgns::process_return sgns::node::process</definition>
+        <argsstring>(sgns::block &amp;)</argsstring>
+        <name>process</name>
+        <qualifiedname>sgns::node::process</qualifiedname>
+        <param>
+          <type>sgns::block &amp;</type>
+          <defname>block_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="29" column="26" bodyfile="node/node.cpp" bodystart="89" bodyend="94"/>
+      </memberdef>
+      <memberdef kind="function" id="de/ddf/classsgns_1_1node_1a8528e366386e383adbcb445de4e019f4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; sgns::block &gt;</type>
+        <definition>std::shared_ptr&lt; sgns::block &gt; sgns::node::block</definition>
+        <argsstring>(sgns::block_hash const &amp;)</argsstring>
+        <name>block</name>
+        <qualifiedname>sgns::node::block</qualifiedname>
+        <param>
+          <type>sgns::block_hash const &amp;</type>
+          <defname>hash_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="30" column="21" bodyfile="node/node.cpp" bodystart="74" bodyend="78"/>
+      </memberdef>
+      <memberdef kind="function" id="de/ddf/classsgns_1_1node_1af6c2da6ed1aa43abeaca4c2bd35bb94a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::pair&lt; sgns::uint128_t, sgns::uint128_t &gt;</type>
+        <definition>std::pair&lt; sgns::uint128_t, sgns::uint128_t &gt; sgns::node::balance_pending</definition>
+        <argsstring>(sgns::account const &amp;)</argsstring>
+        <name>balance_pending</name>
+        <qualifiedname>sgns::node::balance_pending</qualifiedname>
+        <param>
+          <type>sgns::account const &amp;</type>
+          <defname>account_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="31" column="11" bodyfile="node/node.cpp" bodystart="80" bodyend="87"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="de/ddf/classsgns_1_1node_1aa7ee590d31cbe2a9f9a2454ac3f8b25f" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::node::check_genesis</definition>
+        <argsstring>()</argsstring>
+        <name>check_genesis</name>
+        <qualifiedname>sgns::node::check_genesis</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/node.hpp" line="46" column="10" bodyfile="node/node.cpp" bodystart="28" bodyend="60"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::node</label>
+        <link refid="de/ddf/classsgns_1_1node"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; sgns::node &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="5">
+        <label>T</label>
+      </node>
+      <node id="13">
+        <label>T1</label>
+      </node>
+      <node id="14">
+        <label>T2</label>
+      </node>
+      <node id="7">
+        <label>sgns::logging</label>
+        <link refid="dd/d29/classsgns_1_1logging"/>
+      </node>
+      <node id="1">
+        <label>sgns::node</label>
+        <link refid="de/ddf/classsgns_1_1node"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+store_impl</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+config</edgelabel>
+        </childnode>
+        <childnode refid="18" relation="usage">
+          <edgelabel>+flags</edgelabel>
+        </childnode>
+        <childnode refid="19" relation="usage">
+          <edgelabel>+stopped</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>sgns::node_config</label>
+        <link refid="d1/d27/classsgns_1_1node__config"/>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+logging</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+secondary_work_peers</edgelabel>
+          <edgelabel>+work_peers</edgelabel>
+        </childnode>
+        <childnode refid="16" relation="usage">
+          <edgelabel>+preconfigured_peers</edgelabel>
+        </childnode>
+        <childnode refid="17" relation="usage">
+          <edgelabel>+preconfigured_representatives</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>+callback_address</edgelabel>
+          <edgelabel>+callback_target</edgelabel>
+          <edgelabel>+external_address</edgelabel>
+        </childnode>
+      </node>
+      <node id="18">
+        <label>sgns::node_flags</label>
+        <link refid="d0/d54/classsgns_1_1node__flags"/>
+        <childnode refid="16" relation="usage">
+          <edgelabel>+config_overrides</edgelabel>
+        </childnode>
+      </node>
+      <node id="20">
+        <label>std::atomic&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="19">
+        <label>std::atomic&lt; bool &gt;</label>
+        <childnode refid="20" relation="template-instance">
+          <edgelabel>&lt; bool &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; sgns::node &gt;</label>
+      </node>
+      <node id="12">
+        <label>std::pair&lt; T1, T2 &gt;</label>
+        <childnode refid="13" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="usage">
+          <edgelabel>+second_type</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::pair&lt; std::string, uint16_t &gt;</label>
+        <childnode refid="10" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="template-instance">
+          <edgelabel>&lt; std::string, uint16_t &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::string</label>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::unique_ptr&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::unique_ptr&lt; sgns::block_store &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; sgns::block_store &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="15">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>std::vector&lt; sgns::account &gt;</label>
+        <childnode refid="15" relation="template-instance">
+          <edgelabel>&lt; sgns::account &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::vector&lt; std::pair&lt; std::string, uint16_t &gt; &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="15" relation="template-instance">
+          <edgelabel>&lt; std::pair&lt; std::string, uint16_t &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>std::vector&lt; std::string &gt;</label>
+        <childnode refid="10" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="15" relation="template-instance">
+          <edgelabel>&lt; std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="node/node.hpp" line="12" column="1" bodyfile="node/node.hpp" bodystart="13" bodyend="47"/>
+    <listofallmembers>
+      <member refid="de/ddf/classsgns_1_1node_1a500ee8c79da7c5c69b29d1d15583fae7" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>alarm</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1ae26abac5ffdedd93f6e4030554846daa" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>balance</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1af6c2da6ed1aa43abeaca4c2bd35bb94a" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>balance_pending</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1a8528e366386e383adbcb445de4e019f4" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>block</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1aa7ee590d31cbe2a9f9a2454ac3f8b25f" prot="private" virt="non-virtual"><scope>sgns::node</scope><name>check_genesis</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1a0fdbfc686514e947e1a6211db1182145" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>config</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1a55cc9cbfcf4dbf3bafb03e618d15adb1" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>flags</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1aa54ae330ce6ef7d18439640816949cf5" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>keepalive</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1a4215204490901a54959fa0c0727a9621" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>latest</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1a395981e446514b1a8703d07f929a5522" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>ledger</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1a3ea16dd3c3f5cf68c553a63136228684" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>network_params</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1a87244c84b9637c2323a7aeb999327f37" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>node</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1a4f266ce575b79282db6183d83315ba8a" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>node_id</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1adbcac896f20143ac2171cf6e1b3e908b" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>process</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1ac41450d546677e8de7c035c23b4edbf7" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>process_active</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1aa2285cdc3f9f25332061e61ee4b366f2" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>process_confirmed_data</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1a777df0381db2d2c1e5bbc0c4c0b7bebe" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>process_local</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1ac47aa99983053f51017ea12fb01f6f17" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>receive_confirmed</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1abc9c0d6069d6686443c807cba6b147ad" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>shared</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1a245163520dc8a90386831bbe0b9960bc" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>start</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1a63e53287055f835c62f24e0e4435e2ff" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>stats</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1a80f3ec5523475efe74ee494b611fa06f" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>stop</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1a05232fcb0d0c4197b7f85514a33b7ae2" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>stopped</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1a0b8e85ecf587a660c350046e89fa88f5" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>store</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1a07b017f9c17a3f96c80fef349d4f6b6c" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>store_impl</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1a374889f4a2e4a6ed058f5abd79cf264f" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>store_version</name></member>
+      <member refid="de/ddf/classsgns_1_1node_1a00c40b376e9c052d956eddc503770258" prot="public" virt="non-virtual"><scope>sgns::node</scope><name>~node</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

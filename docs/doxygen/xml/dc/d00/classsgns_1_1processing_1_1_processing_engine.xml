@@ -1,0 +1,412 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/d00/classsgns_1_1processing_1_1_processing_engine" kind="class" language="C++" prot="public">
+    <compoundname>sgns::processing::ProcessingEngine</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">std::enable_shared_from_this&lt; ProcessingEngine &gt;</basecompoundref>
+    <includes refid="d3/d33/processing__engine_8hpp" local="no">processing_engine.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="dc/d00/classsgns_1_1processing_1_1_processing_engine_1a74135c63ca3c55f96deae98f78ae77fc" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::processing::ProcessingEngine::m_nodeId</definition>
+        <argsstring></argsstring>
+        <name>m_nodeId</name>
+        <qualifiedname>sgns::processing::ProcessingEngine::m_nodeId</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_engine.hpp" line="51" column="52" bodyfile="src/processing/processing_engine.hpp" bodystart="51" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d00/classsgns_1_1processing_1_1_processing_engine_1a166189407acfdedf14221005fc93fab9" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d6/da7/classsgns_1_1processing_1_1_processing_core" kindref="compound">ProcessingCore</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;ProcessingCore&gt; sgns::processing::ProcessingEngine::m_processingCore</definition>
+        <argsstring></argsstring>
+        <name>m_processingCore</name>
+        <qualifiedname>sgns::processing::ProcessingEngine::m_processingCore</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_engine.hpp" line="52" column="36" bodyfile="src/processing/processing_engine.hpp" bodystart="52" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d00/classsgns_1_1processing_1_1_processing_engine_1ae6474104d5e580fe8c870d2709c06c19" prot="private" static="no" mutable="no">
+        <type>std::function&lt; void(const std::string &amp;)&gt;</type>
+        <definition>std::function&lt;void( const std::string &amp; )&gt; sgns::processing::ProcessingEngine::m_processingErrorSink</definition>
+        <argsstring></argsstring>
+        <name>m_processingErrorSink</name>
+        <qualifiedname>sgns::processing::ProcessingEngine::m_processingErrorSink</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_engine.hpp" line="53" column="23" bodyfile="src/processing/processing_engine.hpp" bodystart="53" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d00/classsgns_1_1processing_1_1_processing_engine_1ad5bdd0e4e53e67519dd7f3eb8303f845" prot="private" static="no" mutable="no">
+        <type>std::function&lt; void(void)&gt;</type>
+        <definition>std::function&lt;void( void )&gt; sgns::processing::ProcessingEngine::m_processingDoneSink</definition>
+        <argsstring></argsstring>
+        <name>m_processingDoneSink</name>
+        <qualifiedname>sgns::processing::ProcessingEngine::m_processingDoneSink</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_engine.hpp" line="54" column="38" bodyfile="src/processing/processing_engine.hpp" bodystart="54" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d00/classsgns_1_1processing_1_1_processing_engine_1ad2753b97b9e68d59c4cefbe7fe8595e2" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor" kindref="compound">SubTaskQueueAccessor</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;SubTaskQueueAccessor&gt; sgns::processing::ProcessingEngine::m_subTaskQueueAccessor</definition>
+        <argsstring></argsstring>
+        <name>m_subTaskQueueAccessor</name>
+        <qualifiedname>sgns::processing::ProcessingEngine::m_subTaskQueueAccessor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_engine.hpp" line="56" column="25" bodyfile="src/processing/processing_engine.hpp" bodystart="56" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d00/classsgns_1_1processing_1_1_processing_engine_1a1664ef10dd9c9ba9f3ba294705e8a8ee" prot="private" static="no" mutable="yes">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::processing::ProcessingEngine::m_mutexSubTaskQueue</definition>
+        <argsstring></argsstring>
+        <name>m_mutexSubTaskQueue</name>
+        <qualifiedname>sgns::processing::ProcessingEngine::m_mutexSubTaskQueue</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_engine.hpp" line="58" column="28" bodyfile="src/processing/processing_engine.hpp" bodystart="58" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/d00/classsgns_1_1processing_1_1_processing_engine_1ad765ab629676804a2c43ccdf2e948bc5" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::processing::ProcessingEngine::m_logger</definition>
+        <argsstring></argsstring>
+        <name>m_logger</name>
+        <qualifiedname>sgns::processing::ProcessingEngine::m_logger</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>( &quot;ProcessingEngine&quot; )</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_engine.hpp" line="60" column="22" bodyfile="src/processing/processing_engine.hpp" bodystart="60" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dc/d00/classsgns_1_1processing_1_1_processing_engine_1a02a55cc24d26782a718277f4ed406f9c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::processing::ProcessingEngine::ProcessingEngine</definition>
+        <argsstring>(std::string nodeId, std::shared_ptr&lt; ProcessingCore &gt; processingCore, std::function&lt; void(const std::string &amp;)&gt; processingErrorSink, std::function&lt; void(void)&gt; processingDoneSink)</argsstring>
+        <name>ProcessingEngine</name>
+        <qualifiedname>sgns::processing::ProcessingEngine::ProcessingEngine</qualifiedname>
+        <param>
+          <type>std::string</type>
+          <declname>nodeId</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d6/da7/classsgns_1_1processing_1_1_processing_core" kindref="compound">ProcessingCore</ref> &gt;</type>
+          <declname>processingCore</declname>
+        </param>
+        <param>
+          <type>std::function&lt; void(const std::string &amp;)&gt;</type>
+          <declname>processingErrorSink</declname>
+        </param>
+        <param>
+          <type>std::function&lt; void(void)&gt;</type>
+          <declname>processingDoneSink</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Create a processing engine object. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>nodeId</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- Current processing node ID. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>processingCore</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- Processing core used to execute subtasks. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>processingErrorSink</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- Callback for processing errors. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>processingDoneSink</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- Callback when processing finishes. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_engine.hpp" line="27" column="9" bodyfile="src/processing/processing_engine.cpp" bodystart="9" bodyend="18"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d00/classsgns_1_1processing_1_1_processing_engine_1a999c9567119c47029fb4a46d8afddbff" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::processing::ProcessingEngine::~ProcessingEngine</definition>
+        <argsstring>()</argsstring>
+        <name>~ProcessingEngine</name>
+        <qualifiedname>sgns::processing::ProcessingEngine::~ProcessingEngine</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_engine.hpp" line="31" column="9" bodyfile="src/processing/processing_engine.cpp" bodystart="20" bodyend="23"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d00/classsgns_1_1processing_1_1_processing_engine_1a7ff5bb881eb14b9f27d87ddb8fcd0779" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingEngine::StartQueueProcessing</definition>
+        <argsstring>(std::shared_ptr&lt; SubTaskQueueAccessor &gt; subTaskQueueAccessor)</argsstring>
+        <name>StartQueueProcessing</name>
+        <qualifiedname>sgns::processing::ProcessingEngine::StartQueueProcessing</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor" kindref="compound">SubTaskQueueAccessor</ref> &gt;</type>
+          <declname>subTaskQueueAccessor</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_engine.hpp" line="33" column="14" bodyfile="src/processing/processing_engine.cpp" bodystart="25" bodyend="41"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d00/classsgns_1_1processing_1_1_processing_engine_1ae94bb5ae98dc7676a00684bf2b7e8a92" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingEngine::StopQueueProcessing</definition>
+        <argsstring>()</argsstring>
+        <name>StopQueueProcessing</name>
+        <qualifiedname>sgns::processing::ProcessingEngine::StopQueueProcessing</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_engine.hpp" line="35" column="14" bodyfile="src/processing/processing_engine.cpp" bodystart="43" bodyend="48"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d00/classsgns_1_1processing_1_1_processing_engine_1aa71d1be21edfd02db4b53abc4e6456c8" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingEngine::IsQueueProcessingStarted</definition>
+        <argsstring>() const</argsstring>
+        <name>IsQueueProcessingStarted</name>
+        <qualifiedname>sgns::processing::ProcessingEngine::IsQueueProcessingStarted</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_engine.hpp" line="36" column="14" bodyfile="src/processing/processing_engine.cpp" bodystart="50" bodyend="54"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d00/classsgns_1_1processing_1_1_processing_engine_1a05f473f2e797fd0fa215f76506374f87" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>float</type>
+        <definition>float sgns::processing::ProcessingEngine::GetProgress</definition>
+        <argsstring>() const</argsstring>
+        <name>GetProgress</name>
+        <qualifiedname>sgns::processing::ProcessingEngine::GetProgress</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get current processing progress <simplesect kind="return"><para>Progress percentage (0.0 to 100.0) </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_engine.hpp" line="41" column="15" bodyfile="src/processing/processing_engine.cpp" bodystart="56" bodyend="62"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="dc/d00/classsgns_1_1processing_1_1_processing_engine_1ae90eb1ca8bf280cf9046baa84550ee1f" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingEngine::OnSubTaskGrabbed</definition>
+        <argsstring>(boost::optional&lt; const SGProcessing::SubTask &amp; &gt; subTask)</argsstring>
+        <name>OnSubTaskGrabbed</name>
+        <qualifiedname>sgns::processing::ProcessingEngine::OnSubTaskGrabbed</qualifiedname>
+        <param>
+          <type>boost::optional&lt; const SGProcessing::SubTask &amp; &gt;</type>
+          <declname>subTask</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_engine.hpp" line="44" column="14" bodyfile="src/processing/processing_engine.cpp" bodystart="64" bodyend="82"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d00/classsgns_1_1processing_1_1_processing_engine_1a988f2abaea89ee5f03ab6ae92cbde24d" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingEngine::ProcessSubTask</definition>
+        <argsstring>(SGProcessing::SubTask subTask)</argsstring>
+        <name>ProcessSubTask</name>
+        <qualifiedname>sgns::processing::ProcessingEngine::ProcessSubTask</qualifiedname>
+        <param>
+          <type>SGProcessing::SubTask</type>
+          <declname>subTask</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Processes a subtask and send the processing result to corresponding result channel <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>subTask</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- subtask that should be processed </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_engine.hpp" line="49" column="14" bodyfile="src/processing/processing_engine.cpp" bodystart="84" bodyend="160"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Handles subtask processing and result aggregation. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::processing::ProcessingEngine</label>
+        <link refid="dc/d00/classsgns_1_1processing_1_1_processing_engine"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; ProcessingEngine &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="8">
+        <label>T</label>
+      </node>
+      <node id="6">
+        <label>sgns::processing::ProcessingCore</label>
+        <link refid="d6/da7/classsgns_1_1processing_1_1_processing_core"/>
+      </node>
+      <node id="1">
+        <label>sgns::processing::ProcessingEngine</label>
+        <link refid="dc/d00/classsgns_1_1processing_1_1_processing_engine"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-m_nodeId</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-m_processingCore</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-m_subTaskQueueAccessor</edgelabel>
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>-m_mutexSubTaskQueue</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>-m_logger</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>sgns::processing::SubTaskQueueAccessor</label>
+        <link refid="dd/d1c/classsgns_1_1processing_1_1_sub_task_queue_accessor"/>
+      </node>
+      <node id="4">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; ProcessingEngine &gt;</label>
+      </node>
+      <node id="11">
+        <label>std::mutex</label>
+      </node>
+      <node id="7">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::shared_ptr&lt; sgns::processing::ProcessingCore &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; sgns::processing::ProcessingCore &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::shared_ptr&lt; sgns::processing::SubTaskQueueAccessor &gt;</label>
+        <childnode refid="10" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; sgns::processing::SubTaskQueueAccessor &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::string</label>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/processing/processing_engine.hpp" line="18" column="5" bodyfile="src/processing/processing_engine.hpp" bodystart="19" bodyend="61"/>
+    <listofallmembers>
+      <member refid="dc/d00/classsgns_1_1processing_1_1_processing_engine_1a05f473f2e797fd0fa215f76506374f87" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingEngine</scope><name>GetProgress</name></member>
+      <member refid="dc/d00/classsgns_1_1processing_1_1_processing_engine_1aa71d1be21edfd02db4b53abc4e6456c8" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingEngine</scope><name>IsQueueProcessingStarted</name></member>
+      <member refid="dc/d00/classsgns_1_1processing_1_1_processing_engine_1ad765ab629676804a2c43ccdf2e948bc5" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingEngine</scope><name>m_logger</name></member>
+      <member refid="dc/d00/classsgns_1_1processing_1_1_processing_engine_1a1664ef10dd9c9ba9f3ba294705e8a8ee" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingEngine</scope><name>m_mutexSubTaskQueue</name></member>
+      <member refid="dc/d00/classsgns_1_1processing_1_1_processing_engine_1a74135c63ca3c55f96deae98f78ae77fc" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingEngine</scope><name>m_nodeId</name></member>
+      <member refid="dc/d00/classsgns_1_1processing_1_1_processing_engine_1a166189407acfdedf14221005fc93fab9" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingEngine</scope><name>m_processingCore</name></member>
+      <member refid="dc/d00/classsgns_1_1processing_1_1_processing_engine_1ad5bdd0e4e53e67519dd7f3eb8303f845" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingEngine</scope><name>m_processingDoneSink</name></member>
+      <member refid="dc/d00/classsgns_1_1processing_1_1_processing_engine_1ae6474104d5e580fe8c870d2709c06c19" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingEngine</scope><name>m_processingErrorSink</name></member>
+      <member refid="dc/d00/classsgns_1_1processing_1_1_processing_engine_1ad2753b97b9e68d59c4cefbe7fe8595e2" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingEngine</scope><name>m_subTaskQueueAccessor</name></member>
+      <member refid="dc/d00/classsgns_1_1processing_1_1_processing_engine_1ae90eb1ca8bf280cf9046baa84550ee1f" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingEngine</scope><name>OnSubTaskGrabbed</name></member>
+      <member refid="dc/d00/classsgns_1_1processing_1_1_processing_engine_1a02a55cc24d26782a718277f4ed406f9c" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingEngine</scope><name>ProcessingEngine</name></member>
+      <member refid="dc/d00/classsgns_1_1processing_1_1_processing_engine_1a988f2abaea89ee5f03ab6ae92cbde24d" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingEngine</scope><name>ProcessSubTask</name></member>
+      <member refid="dc/d00/classsgns_1_1processing_1_1_processing_engine_1a7ff5bb881eb14b9f27d87ddb8fcd0779" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingEngine</scope><name>StartQueueProcessing</name></member>
+      <member refid="dc/d00/classsgns_1_1processing_1_1_processing_engine_1ae94bb5ae98dc7676a00684bf2b7e8a92" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingEngine</scope><name>StopQueueProcessing</name></member>
+      <member refid="dc/d00/classsgns_1_1processing_1_1_processing_engine_1a999c9567119c47029fb4a46d8afddbff" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingEngine</scope><name>~ProcessingEngine</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

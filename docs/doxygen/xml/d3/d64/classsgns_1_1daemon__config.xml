@@ -1,0 +1,288 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d3/d64/classsgns_1_1daemon__config" kind="class" language="C++" prot="public">
+    <compoundname>sgns::daemon_config</compoundname>
+    <includes refid="da/d4f/daemonconfig_8hpp" local="no">daemonconfig.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d3/d64/classsgns_1_1daemon__config_1a009a0276cce6bf36b561d9f67d96210d" prot="public" static="no" mutable="no">
+        <type><ref refid="d1/d27/classsgns_1_1node__config" kindref="compound">::sgns::node_config</ref></type>
+        <definition>::sgns::node_config sgns::daemon_config::node</definition>
+        <argsstring></argsstring>
+        <name>node</name>
+        <qualifiedname>sgns::daemon_config::node</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/daemonconfig.hpp" line="27" column="21" bodyfile="node/daemonconfig.hpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/d64/classsgns_1_1daemon__config_1a042d006024ba48a6b9ab468ab35c6d98" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::daemon_config::opencl_enable</definition>
+        <argsstring></argsstring>
+        <name>opencl_enable</name>
+        <qualifiedname>sgns::daemon_config::opencl_enable</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/daemonconfig.hpp" line="28" column="6" bodyfile="node/daemonconfig.hpp" bodystart="28" bodyend="28"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/d64/classsgns_1_1daemon__config_1a30697a805deb42a02fd17cee6ee825ec" prot="public" static="no" mutable="no">
+        <type>boost::filesystem::path</type>
+        <definition>boost::filesystem::path sgns::daemon_config::data_path</definition>
+        <argsstring></argsstring>
+        <name>data_path</name>
+        <qualifiedname>sgns::daemon_config::data_path</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/daemonconfig.hpp" line="31" column="25" bodyfile="node/daemonconfig.hpp" bodystart="31" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d3/d64/classsgns_1_1daemon__config_1ab117117b39490a4c54ab41acb733e6af" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::daemon_config::daemon_config</definition>
+        <argsstring>()=default</argsstring>
+        <name>daemon_config</name>
+        <qualifiedname>sgns::daemon_config::daemon_config</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/daemonconfig.hpp" line="19" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d64/classsgns_1_1daemon__config_1a876698a95d707d1793fe7957cb6fc71a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::daemon_config::daemon_config</definition>
+        <argsstring>(boost::filesystem::path const &amp;data_path)</argsstring>
+        <name>daemon_config</name>
+        <qualifiedname>sgns::daemon_config::daemon_config</qualifiedname>
+        <param>
+          <type>boost::filesystem::path const &amp;</type>
+          <declname>data_path</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/daemonconfig.hpp" line="20" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d64/classsgns_1_1daemon__config_1a1a1846bd22e89c0520af3103c063fe21" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>::sgns::error_</type>
+        <definition>::sgns::error_ sgns::daemon_config::deserialize_json</definition>
+        <argsstring>(bool &amp;, sgns::jsonconfig &amp;)</argsstring>
+        <name>deserialize_json</name>
+        <qualifiedname>sgns::daemon_config::deserialize_json</qualifiedname>
+        <param>
+          <type>bool &amp;</type>
+        </param>
+        <param>
+          <type>sgns::jsonconfig &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/daemonconfig.hpp" line="21" column="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d64/classsgns_1_1daemon__config_1a1e9139c1e2485682a60402e5571a4184" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>::sgns::error_</type>
+        <definition>::sgns::error_ sgns::daemon_config::serialize_json</definition>
+        <argsstring>(sgns::jsonconfig &amp;)</argsstring>
+        <name>serialize_json</name>
+        <qualifiedname>sgns::daemon_config::serialize_json</qualifiedname>
+        <param>
+          <type>sgns::jsonconfig &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/daemonconfig.hpp" line="22" column="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d64/classsgns_1_1daemon__config_1a69a58adbd75e6b89e2e843ade45551e0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>::sgns::error_</type>
+        <definition>::sgns::error_ sgns::daemon_config::deserialize_toml</definition>
+        <argsstring>(sgns::tomlconfig &amp;)</argsstring>
+        <name>deserialize_toml</name>
+        <qualifiedname>sgns::daemon_config::deserialize_toml</qualifiedname>
+        <param>
+          <type>sgns::tomlconfig &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/daemonconfig.hpp" line="23" column="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d64/classsgns_1_1daemon__config_1ab01f09f6ee86fd62321b1fcb45431560" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>::sgns::error_</type>
+        <definition>::sgns::error_ sgns::daemon_config::serialize_toml</definition>
+        <argsstring>(sgns::tomlconfig &amp;)</argsstring>
+        <name>serialize_toml</name>
+        <qualifiedname>sgns::daemon_config::serialize_toml</qualifiedname>
+        <param>
+          <type>sgns::tomlconfig &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/daemonconfig.hpp" line="24" column="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d64/classsgns_1_1daemon__config_1a7cf60d284c7da1ca1033ae5240bc7ef6" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>unsigned</type>
+        <definition>unsigned sgns::daemon_config::json_version</definition>
+        <argsstring>() const</argsstring>
+        <name>json_version</name>
+        <qualifiedname>sgns::daemon_config::json_version</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/daemonconfig.hpp" line="32" column="10" bodyfile="node/daemonconfig.hpp" bodystart="32" bodyend="35"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="12">
+        <label>T</label>
+      </node>
+      <node id="9">
+        <label>T1</label>
+      </node>
+      <node id="10">
+        <label>T2</label>
+      </node>
+      <node id="1">
+        <label>sgns::daemon_config</label>
+        <link refid="d3/d64/classsgns_1_1daemon__config"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+node</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::logging</label>
+        <link refid="dd/d29/classsgns_1_1logging"/>
+      </node>
+      <node id="2">
+        <label>sgns::node_config</label>
+        <link refid="d1/d27/classsgns_1_1node__config"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+logging</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+secondary_work_peers</edgelabel>
+          <edgelabel>+work_peers</edgelabel>
+        </childnode>
+        <childnode refid="13" relation="usage">
+          <edgelabel>+preconfigured_peers</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="usage">
+          <edgelabel>+preconfigured_representatives</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+callback_address</edgelabel>
+          <edgelabel>+callback_target</edgelabel>
+          <edgelabel>+external_address</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="8">
+        <label>std::pair&lt; T1, T2 &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>+second_type</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::pair&lt; std::string, uint16_t &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; std::string, uint16_t &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::string</label>
+        <childnode refid="7" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="14">
+        <label>std::vector&lt; sgns::account &gt;</label>
+        <childnode refid="11" relation="template-instance">
+          <edgelabel>&lt; sgns::account &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::vector&lt; std::pair&lt; std::string, uint16_t &gt; &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="11" relation="template-instance">
+          <edgelabel>&lt; std::pair&lt; std::string, uint16_t &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="13">
+        <label>std::vector&lt; std::string &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="11" relation="template-instance">
+          <edgelabel>&lt; std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="node/daemonconfig.hpp" line="16" column="1" bodyfile="node/daemonconfig.hpp" bodystart="17" bodyend="36"/>
+    <listofallmembers>
+      <member refid="d3/d64/classsgns_1_1daemon__config_1ab117117b39490a4c54ab41acb733e6af" prot="public" virt="non-virtual"><scope>sgns::daemon_config</scope><name>daemon_config</name></member>
+      <member refid="d3/d64/classsgns_1_1daemon__config_1a876698a95d707d1793fe7957cb6fc71a" prot="public" virt="non-virtual"><scope>sgns::daemon_config</scope><name>daemon_config</name></member>
+      <member refid="d3/d64/classsgns_1_1daemon__config_1a30697a805deb42a02fd17cee6ee825ec" prot="public" virt="non-virtual"><scope>sgns::daemon_config</scope><name>data_path</name></member>
+      <member refid="d3/d64/classsgns_1_1daemon__config_1a1a1846bd22e89c0520af3103c063fe21" prot="public" virt="non-virtual"><scope>sgns::daemon_config</scope><name>deserialize_json</name></member>
+      <member refid="d3/d64/classsgns_1_1daemon__config_1a69a58adbd75e6b89e2e843ade45551e0" prot="public" virt="non-virtual"><scope>sgns::daemon_config</scope><name>deserialize_toml</name></member>
+      <member refid="d3/d64/classsgns_1_1daemon__config_1a7cf60d284c7da1ca1033ae5240bc7ef6" prot="public" virt="non-virtual"><scope>sgns::daemon_config</scope><name>json_version</name></member>
+      <member refid="d3/d64/classsgns_1_1daemon__config_1a009a0276cce6bf36b561d9f67d96210d" prot="public" virt="non-virtual"><scope>sgns::daemon_config</scope><name>node</name></member>
+      <member refid="d3/d64/classsgns_1_1daemon__config_1a042d006024ba48a6b9ab468ab35c6d98" prot="public" virt="non-virtual"><scope>sgns::daemon_config</scope><name>opencl_enable</name></member>
+      <member refid="d3/d64/classsgns_1_1daemon__config_1a1e9139c1e2485682a60402e5571a4184" prot="public" virt="non-virtual"><scope>sgns::daemon_config</scope><name>serialize_json</name></member>
+      <member refid="d3/d64/classsgns_1_1daemon__config_1ab01f09f6ee86fd62321b1fcb45431560" prot="public" virt="non-virtual"><scope>sgns::daemon_config</scope><name>serialize_toml</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

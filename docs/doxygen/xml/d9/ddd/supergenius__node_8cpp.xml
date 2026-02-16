@@ -1,0 +1,115 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/ddd/supergenius__node_8cpp" kind="file" language="C++">
+    <compoundname>supergenius_node.cpp</compoundname>
+    <includes refid="d0/d2c/supergenius__node_8hpp" local="yes">storage/trie/supergenius_trie/supergenius_node.hpp</includes>
+    <incdepgraph>
+      <node id="4">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>storage/trie/node.hpp</label>
+        <link refid="df/dc8/src_2storage_2trie_2node_8hpp"/>
+      </node>
+      <node id="1">
+        <label>src/storage/trie/supergenius_trie/supergenius_node.cpp</label>
+        <link refid="d9/ddd/supergenius__node_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>storage/trie/supergenius_trie/supergenius_node.hpp</label>
+        <link refid="d0/d2c/supergenius__node_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="8">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="3">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="9">
+        <label>gsl/span</label>
+      </node>
+      <node id="11">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="5">
+        <label>string_view</label>
+      </node>
+      <node id="6">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d0/dbf/namespacesgns_1_1storage">sgns::storage</innernamespace>
+    <innernamespace refid="d2/db5/namespacesgns_1_1storage_1_1trie">sgns::storage::trie</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d0/d2c/supergenius__node_8hpp" kindref="compound">storage/trie/supergenius_trie/supergenius_node.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/db5/namespacesgns_1_1storage_1_1trie" kindref="compound">sgns::storage::trie</ref><sp/>{</highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7" refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1ae211e35cf0c6f9ffaea2da783e8c4d5d" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/><ref refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1ae211e35cf0c6f9ffaea2da783e8c4d5d" kindref="member">BranchNode::getType</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="keywordtype">int</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<ref refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1a41bf4761c1484cc298908486001d1de6" kindref="member">value</ref><sp/>?<sp/><ref refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1a8e6ad7aafff6f51af4b80b396d6c8c2aa7240f2da41849c88186568eb187da69a" kindref="member">SuperGeniusNode::Type::BranchWithValue</ref></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/><ref refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1a8e6ad7aafff6f51af4b80b396d6c8c2aa17b97eba46425b4035ae241d78e22b83" kindref="member">SuperGeniusNode::Type::BranchEmptyValue</ref>);</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12" refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1a0e2a90616678272fb525718153f01b83" refkind="member"><highlight class="normal"><sp/><sp/>uint16_t<sp/><ref refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1a0e2a90616678272fb525718153f01b83" kindref="member">BranchNode::childrenBitmap</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/>uint16_t<sp/>bitmap<sp/>=<sp/>0u;</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>i<sp/>=<sp/>0u;<sp/>i<sp/>&lt;<sp/><ref refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1a37e12a04c3e13cc36c011b4578d25f7f" kindref="member">kMaxChildren</ref>;<sp/>i++)<sp/>{</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1ae129c0e139900d21bb27bde0f9c007fc" kindref="member">children</ref>.at(i))<sp/>{</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>bitmap<sp/>=<sp/>bitmap<sp/>|<sp/>1u<sp/>&lt;&lt;<sp/>i;</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>bitmap;</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22" refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1aa4c1c75f6d0b2c6140e73a9b6e0de618" refkind="member"><highlight class="normal"><sp/><sp/>uint8_t<sp/><ref refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1aa4c1c75f6d0b2c6140e73a9b6e0de618" kindref="member">BranchNode::childrenNum</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::count_if(<ref refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1ae129c0e139900d21bb27bde0f9c007fc" kindref="member">children</ref>.begin(),</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1ae129c0e139900d21bb27bde0f9c007fc" kindref="member">children</ref>.end(),</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[](</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;child)<sp/>{<sp/>return<sp/>child;<sp/>});</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/>;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29" refid="dc/d4d/structsgns_1_1storage_1_1trie_1_1_leaf_node_1aa345a774ade820254a6a7f1f03f52e2d" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/><ref refid="dc/d4d/structsgns_1_1storage_1_1trie_1_1_leaf_node_1aa345a774ade820254a6a7f1f03f52e2d" kindref="member">LeafNode::getType</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="keywordtype">int</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<ref refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1a8e6ad7aafff6f51af4b80b396d6c8c2aac3b5e1f7de11d645fb1da6c5415b1fa5" kindref="member">SuperGeniusNode::Type::Leaf</ref>);</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::storage::trie</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/storage/trie/supergenius_trie/supergenius_node.cpp"/>
+  </compounddef>
+</doxygen>

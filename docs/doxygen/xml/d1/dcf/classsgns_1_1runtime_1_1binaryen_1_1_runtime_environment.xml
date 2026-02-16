@@ -1,0 +1,227 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment" kind="class" language="C++" prot="public">
+    <compoundname>sgns::runtime::binaryen::RuntimeEnvironment</compoundname>
+    <includes refid="d7/dac/runtime__environment_8hpp" local="no">runtime_environment.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a65311d178a8ebc4e35798402a5d4036c" prot="public" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="dc/dbb/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance" kindref="compound">WasmModuleInstance</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;WasmModuleInstance&gt; sgns::runtime::binaryen::RuntimeEnvironment::module_instance</definition>
+        <argsstring></argsstring>
+        <name>module_instance</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeEnvironment::module_instance</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_environment.hpp" line="48" column="21" bodyfile="src/runtime/binaryen/runtime_environment.hpp" bodystart="48" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1aee04cee27a7178f88c72aeb99c1fcae3" prot="public" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory" kindref="compound">WasmMemory</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;WasmMemory&gt; sgns::runtime::binaryen::RuntimeEnvironment::memory</definition>
+        <argsstring></argsstring>
+        <name>memory</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeEnvironment::memory</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_environment.hpp" line="49" column="21" bodyfile="src/runtime/binaryen/runtime_environment.hpp" bodystart="49" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1acec5d21ddec37aa3d1c7d78deca65991" prot="public" static="no" mutable="no">
+        <type>boost::optional&lt; std::shared_ptr&lt; <ref refid="d2/d7a/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch" kindref="compound">storage::trie::TopperTrieBatch</ref> &gt; &gt;</type>
+        <definition>boost::optional&lt;std::shared_ptr&lt;storage::trie::TopperTrieBatch&gt; &gt; sgns::runtime::binaryen::RuntimeEnvironment::batch</definition>
+        <argsstring></argsstring>
+        <name>batch</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeEnvironment::batch</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_environment.hpp" line="51" column="9" bodyfile="src/runtime/binaryen/runtime_environment.hpp" bodystart="51" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a7bf3a01fa7dd9cedbdb6a8572d966368" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a9127949c296d83217e6ed32d7e9847d4" kindref="member">RuntimeEnvironment</ref> &gt;</type>
+        <definition>outcome::result&lt; RuntimeEnvironment &gt; sgns::runtime::binaryen::RuntimeEnvironment::create</definition>
+        <argsstring>(const std::shared_ptr&lt; RuntimeExternalInterface &gt; &amp;rei, const std::shared_ptr&lt; WasmModule &gt; &amp;module, const base::Buffer &amp;state_code)</argsstring>
+        <name>create</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeEnvironment::create</qualifiedname>
+        <param>
+          <type>const std::shared_ptr&lt; <ref refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface" kindref="compound">RuntimeExternalInterface</ref> &gt; &amp;</type>
+          <declname>rei</declname>
+        </param>
+        <param>
+          <type>const std::shared_ptr&lt; <ref refid="d9/d10/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module" kindref="compound">WasmModule</ref> &gt; &amp;</type>
+          <declname>module</declname>
+        </param>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>state_code</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_environment.hpp" line="35" column="28" bodyfile="src/runtime/binaryen/runtime_environment.cpp" bodystart="9" bodyend="17"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a9127949c296d83217e6ed32d7e9847d4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::binaryen::RuntimeEnvironment::RuntimeEnvironment</definition>
+        <argsstring>(RuntimeEnvironment &amp;&amp;)=default</argsstring>
+        <name>RuntimeEnvironment</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeEnvironment::RuntimeEnvironment</qualifiedname>
+        <param>
+          <type>RuntimeEnvironment &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_environment.hpp" line="40" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a8572d7a173989adf1e79d54ab9e3a21a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a9127949c296d83217e6ed32d7e9847d4" kindref="member">RuntimeEnvironment</ref> &amp;</type>
+        <definition>RuntimeEnvironment &amp; sgns::runtime::binaryen::RuntimeEnvironment::operator=</definition>
+        <argsstring>(RuntimeEnvironment &amp;&amp;)=default</argsstring>
+        <name>operator=</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeEnvironment::operator=</qualifiedname>
+        <param>
+          <type><ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a9127949c296d83217e6ed32d7e9847d4" kindref="member">RuntimeEnvironment</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_environment.hpp" line="41" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a55c85241798c7610fe5861343a3d4513" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::binaryen::RuntimeEnvironment::RuntimeEnvironment</definition>
+        <argsstring>(const RuntimeEnvironment &amp;)=delete</argsstring>
+        <name>RuntimeEnvironment</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeEnvironment::RuntimeEnvironment</qualifiedname>
+        <param>
+          <type>const RuntimeEnvironment &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_environment.hpp" line="43" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a4df5ed0719284e9b4a4b48edc1afc51c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a9127949c296d83217e6ed32d7e9847d4" kindref="member">RuntimeEnvironment</ref> &amp;</type>
+        <definition>RuntimeEnvironment &amp; sgns::runtime::binaryen::RuntimeEnvironment::operator=</definition>
+        <argsstring>(const RuntimeEnvironment &amp;)=delete</argsstring>
+        <name>operator=</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeEnvironment::operator=</qualifiedname>
+        <param>
+          <type>const <ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a9127949c296d83217e6ed32d7e9847d4" kindref="member">RuntimeEnvironment</ref> &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_environment.hpp" line="44" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a6bc43ec638a4a8cb65ced774ec8e248c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::binaryen::RuntimeEnvironment::~RuntimeEnvironment</definition>
+        <argsstring>()=default</argsstring>
+        <name>~RuntimeEnvironment</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeEnvironment::~RuntimeEnvironment</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_environment.hpp" line="46" column="5"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Runtime environment is a structure that contains data necessary to operate with Runtime: memory, WASM module, storage batch </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="5">
+        <label>T</label>
+      </node>
+      <node id="7">
+        <label>sgns::runtime::WasmMemory</label>
+        <link refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory"/>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::binaryen::RuntimeEnvironment</label>
+        <link refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+module_instance</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+memory</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::runtime::binaryen::WasmModuleInstance</label>
+        <link refid="dc/dbb/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance"/>
+      </node>
+      <node id="4">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; sgns::runtime::WasmMemory &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::WasmMemory &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::WasmModuleInstance &gt;</label>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::WasmModuleInstance &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/binaryen/runtime_environment.hpp" line="33" column="3" bodyfile="src/runtime/binaryen/runtime_environment.hpp" bodystart="33" bodyend="53"/>
+    <listofallmembers>
+      <member refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1acec5d21ddec37aa3d1c7d78deca65991" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeEnvironment</scope><name>batch</name></member>
+      <member refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a7bf3a01fa7dd9cedbdb6a8572d966368" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeEnvironment</scope><name>create</name></member>
+      <member refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1aee04cee27a7178f88c72aeb99c1fcae3" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeEnvironment</scope><name>memory</name></member>
+      <member refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a65311d178a8ebc4e35798402a5d4036c" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeEnvironment</scope><name>module_instance</name></member>
+      <member refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a8572d7a173989adf1e79d54ab9e3a21a" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeEnvironment</scope><name>operator=</name></member>
+      <member refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a4df5ed0719284e9b4a4b48edc1afc51c" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeEnvironment</scope><name>operator=</name></member>
+      <member refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a9127949c296d83217e6ed32d7e9847d4" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeEnvironment</scope><name>RuntimeEnvironment</name></member>
+      <member refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a55c85241798c7610fe5861343a3d4513" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeEnvironment</scope><name>RuntimeEnvironment</name></member>
+      <member refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a6bc43ec638a4a8cb65ced774ec8e248c" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeEnvironment</scope><name>~RuntimeEnvironment</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

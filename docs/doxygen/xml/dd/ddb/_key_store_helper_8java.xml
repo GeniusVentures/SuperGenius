@@ -1,0 +1,277 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/ddb/_key_store_helper_8java" kind="file" language="Java">
+    <compoundname>KeyStoreHelper.java</compoundname>
+    <includes local="no">android.content.Context</includes>
+    <includes local="no">android.content.SharedPreferences</includes>
+    <includes local="no">android.security.keystore.KeyGenParameterSpec</includes>
+    <includes local="no">android.security.keystore.KeyProperties</includes>
+    <includes local="no">android.util.Base64</includes>
+    <includes local="no">android.util.Log</includes>
+    <includes local="no">java.nio.charset.StandardCharsets</includes>
+    <includes local="no">java.security.KeyStore</includes>
+    <includes local="no">javax.crypto.Cipher</includes>
+    <includes local="no">javax.crypto.KeyGenerator</includes>
+    <includes local="no">javax.crypto.SecretKey</includes>
+    <includes local="no">javax.crypto.spec.GCMParameterSpec</includes>
+    <incdepgraph>
+      <node id="1">
+        <label>src/local_secure_storage/impl/KeyStoreHelper.java</label>
+        <link refid="dd/ddb/_key_store_helper_8java"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>android.content.Context</label>
+      </node>
+      <node id="3">
+        <label>android.content.SharedPreferences</label>
+      </node>
+      <node id="4">
+        <label>android.security.keystore.KeyGenParameterSpec</label>
+      </node>
+      <node id="5">
+        <label>android.security.keystore.KeyProperties</label>
+      </node>
+      <node id="6">
+        <label>android.util.Base64</label>
+      </node>
+      <node id="7">
+        <label>android.util.Log</label>
+      </node>
+      <node id="8">
+        <label>java.nio.charset.StandardCharsets</label>
+      </node>
+      <node id="9">
+        <label>java.security.KeyStore</label>
+      </node>
+      <node id="10">
+        <label>javax.crypto.Cipher</label>
+      </node>
+      <node id="11">
+        <label>javax.crypto.KeyGenerator</label>
+      </node>
+      <node id="12">
+        <label>javax.crypto.SecretKey</label>
+      </node>
+      <node id="13">
+        <label>javax.crypto.spec.GCMParameterSpec</label>
+      </node>
+    </incdepgraph>
+    <innerclass refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper" prot="public">ai::gnus::sdk::KeyStoreHelper</innerclass>
+    <innernamespace refid="d4/dd9/namespaceai_1_1gnus_1_1sdk">ai::gnus::sdk</innernamespace>
+    <innernamespace refid="dd/d45/namespacejava_1_1lang">java::lang</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1" refid="d4/dd9/namespaceai_1_1gnus_1_1sdk" refkind="compound"><highlight class="keyword">package<sp/></highlight><highlight class="normal">ai.gnus.sdk;</highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="keyword">import</highlight><highlight class="normal"><sp/>android.content.Context;</highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="keyword">import</highlight><highlight class="normal"><sp/>android.content.SharedPreferences;</highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="keyword">import</highlight><highlight class="normal"><sp/>android.security.keystore.KeyGenParameterSpec;</highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="keyword">import</highlight><highlight class="normal"><sp/>android.security.keystore.KeyProperties;</highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">import</highlight><highlight class="normal"><sp/>android.util.Base64;</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="keyword">import</highlight><highlight class="normal"><sp/>android.util.Log;</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="keyword">import</highlight><highlight class="normal"><sp/>java.nio.charset.StandardCharsets;</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">import</highlight><highlight class="normal"><sp/>java.security.KeyStore;</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="keyword">import</highlight><highlight class="normal"><sp/>javax.crypto.Cipher;</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="keyword">import</highlight><highlight class="normal"><sp/>javax.crypto.KeyGenerator;</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="keyword">import</highlight><highlight class="normal"><sp/>javax.crypto.SecretKey;</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="keyword">import</highlight><highlight class="normal"><sp/>javax.crypto.spec.GCMParameterSpec;</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a107d99cd91c39d766dd2c68fb426e8f7" kindref="member">KeyStoreHelper</ref><sp/>{</highlight></codeline>
+<codeline lineno="19" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a9160b3eb04a0c413f26c9e2d186ded67" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">final</highlight><highlight class="normal"><sp/>String<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a9160b3eb04a0c413f26c9e2d186ded67" kindref="member">TAG</ref><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;KeyStoreHelper&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="20" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a871e8261e4b70ce98577b701d8b698ba" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">final</highlight><highlight class="normal"><sp/>String<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a871e8261e4b70ce98577b701d8b698ba" kindref="member">ANDROID_KEYSTORE</ref><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;AndroidKeyStore&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="21" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1af81dbf306d1cc2d814c350efa99860ab" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">final</highlight><highlight class="normal"><sp/>String<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1af81dbf306d1cc2d814c350efa99860ab" kindref="member">KEY_ALIAS</ref><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;SuperGeniusSecureStorage&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="22" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a1453d8bc14729600dd0c808d067de9e0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">final</highlight><highlight class="normal"><sp/>String<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a1453d8bc14729600dd0c808d067de9e0" kindref="member">TRANSFORMATION</ref><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;AES/GCM/NoPadding&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="23" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a18993de4a77993851225cbdc8702daf5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">final</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a18993de4a77993851225cbdc8702daf5" kindref="member">GCM_TAG_LENGTH</ref><sp/>=<sp/>128;</highlight></codeline>
+<codeline lineno="24" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1aac1bb07b9135c5929793539418ad0d12" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">final</highlight><highlight class="normal"><sp/>String<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1aac1bb07b9135c5929793539418ad0d12" kindref="member">PREFS_NAME</ref><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;SuperGeniusSecurePrefs&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="25" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a7b9b08c8febcc46f23af4a1858c4b443" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">final</highlight><highlight class="normal"><sp/>String<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a7b9b08c8febcc46f23af4a1858c4b443" kindref="member">PREFS_KEY</ref><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;encrypted_data&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Static<sp/>singleton<sp/>instance</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="28" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ad0f688008426f6693351fe0110080a7d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a107d99cd91c39d766dd2c68fb426e8f7" kindref="member">KeyStoreHelper</ref><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ad0f688008426f6693351fe0110080a7d" kindref="member">sInstance</ref><sp/>=<sp/></highlight><highlight class="keyword">null</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="29" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ae245507ec1dfe6185ccbcc63d53a4524" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">final</highlight><highlight class="normal"><sp/>Object<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ae245507ec1dfe6185ccbcc63d53a4524" kindref="member">sLock</ref><sp/>=<sp/></highlight><highlight class="keyword">new</highlight><highlight class="normal"><sp/>Object();</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="31" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a7e9499e35392ab776114224d70c2c91d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">final</highlight><highlight class="normal"><sp/>Context<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a7e9499e35392ab776114224d70c2c91d" kindref="member">context</ref>;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Private<sp/>constructor<sp/>for<sp/>singleton</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="34" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a107d99cd91c39d766dd2c68fb426e8f7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a107d99cd91c39d766dd2c68fb426e8f7" kindref="member">KeyStoreHelper</ref>(Context<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a7e9499e35392ab776114224d70c2c91d" kindref="member">context</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>this.context<sp/>=<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a7e9499e35392ab776114224d70c2c91d" kindref="member">context</ref>.getApplicationContext();</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ae63863c8bf969835342619e82659eff5" kindref="member">initializeKeyStore</ref>();</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="44" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a2a232a069ce43706233e07d5b7c7df41" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a2a232a069ce43706233e07d5b7c7df41" kindref="member">initialize</ref>(Context<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a7e9499e35392ab776114224d70c2c91d" kindref="member">context</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">synchronized</highlight><highlight class="normal"><sp/>(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ae245507ec1dfe6185ccbcc63d53a4524" kindref="member">sLock</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ad0f688008426f6693351fe0110080a7d" kindref="member">sInstance</ref><sp/>==<sp/></highlight><highlight class="keyword">null</highlight><highlight class="normal">)<sp/>{</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ad0f688008426f6693351fe0110080a7d" kindref="member">sInstance</ref><sp/>=<sp/></highlight><highlight class="keyword">new</highlight><highlight class="normal"><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a107d99cd91c39d766dd2c68fb426e8f7" kindref="member">KeyStoreHelper</ref>(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a7e9499e35392ab776114224d70c2c91d" kindref="member">context</ref>);</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Log.i(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a9160b3eb04a0c413f26c9e2d186ded67" kindref="member">TAG</ref>,<sp/></highlight><highlight class="stringliteral">&quot;KeyStoreHelper<sp/>initialized&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">else</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Log.w(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a9160b3eb04a0c413f26c9e2d186ded67" kindref="member">TAG</ref>,<sp/></highlight><highlight class="stringliteral">&quot;KeyStoreHelper<sp/>already<sp/>initialized&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="59" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ae4335e5192cd6b8517e9f982c4edaee0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a107d99cd91c39d766dd2c68fb426e8f7" kindref="member">KeyStoreHelper</ref><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ae4335e5192cd6b8517e9f982c4edaee0" kindref="member">getInstance</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">synchronized</highlight><highlight class="normal"><sp/>(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ae245507ec1dfe6185ccbcc63d53a4524" kindref="member">sLock</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ad0f688008426f6693351fe0110080a7d" kindref="member">sInstance</ref><sp/>==<sp/></highlight><highlight class="keyword">null</highlight><highlight class="normal">)<sp/>{</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">throw</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">new</highlight><highlight class="normal"><sp/>IllegalStateException(</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;KeyStoreHelper<sp/>not<sp/>initialized.<sp/>Call<sp/>KeyStoreHelper.initialize(context)<sp/>first.&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>);</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ad0f688008426f6693351fe0110080a7d" kindref="member">sInstance</ref>;</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="73" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a9c59b1ee3c01f74b44fc4708b3042821" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">boolean</highlight><highlight class="normal"><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a9c59b1ee3c01f74b44fc4708b3042821" kindref="member">isInitialized</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">synchronized</highlight><highlight class="normal"><sp/>(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ae245507ec1dfe6185ccbcc63d53a4524" kindref="member">sLock</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ad0f688008426f6693351fe0110080a7d" kindref="member">sInstance</ref><sp/>!=<sp/></highlight><highlight class="keyword">null</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"></highlight></codeline>
+<codeline lineno="79" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ae63863c8bf969835342619e82659eff5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ae63863c8bf969835342619e82659eff5" kindref="member">initializeKeyStore</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">try</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>KeyStore<sp/>keyStore<sp/>=<sp/>KeyStore.getInstance(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a871e8261e4b70ce98577b701d8b698ba" kindref="member">ANDROID_KEYSTORE</ref>);</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>keyStore.load(</highlight><highlight class="keyword">null</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"></highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!keyStore.containsAlias(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1af81dbf306d1cc2d814c350efa99860ab" kindref="member">KEY_ALIAS</ref>))<sp/>{</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>KeyGenerator<sp/>keyGenerator<sp/>=<sp/>KeyGenerator.getInstance(</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>KeyProperties.KEY_ALGORITHM_AES,<sp/></highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a871e8261e4b70ce98577b701d8b698ba" kindref="member">ANDROID_KEYSTORE</ref></highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>);</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"></highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>KeyGenParameterSpec<sp/>keyGenParameterSpec<sp/>=<sp/></highlight><highlight class="keyword">new</highlight><highlight class="normal"><sp/>KeyGenParameterSpec.Builder(</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1af81dbf306d1cc2d814c350efa99860ab" kindref="member">KEY_ALIAS</ref>,</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>KeyProperties.PURPOSE_ENCRYPT<sp/>|<sp/>KeyProperties.PURPOSE_DECRYPT</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>)</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.setBlockModes(KeyProperties.BLOCK_MODE_GCM)</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.setUserAuthenticationRequired(</highlight><highlight class="keyword">false</highlight><highlight class="normal">)</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.build();</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"></highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>keyGenerator.init(keyGenParameterSpec);</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>keyGenerator.generateKey();</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">catch</highlight><highlight class="normal"><sp/>(Exception<sp/>e)<sp/>{</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Log.e(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a9160b3eb04a0c413f26c9e2d186ded67" kindref="member">TAG</ref>,<sp/></highlight><highlight class="stringliteral">&quot;Failed<sp/>to<sp/>initialize<sp/>KeyStore&quot;</highlight><highlight class="normal">,<sp/>e);</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"></highlight></codeline>
+<codeline lineno="107" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1adac64ab03b9980aecb1d6c1f3818f082" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/>SecretKey<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1adac64ab03b9980aecb1d6c1f3818f082" kindref="member">getSecretKey</ref>()<sp/>throws<sp/>Exception<sp/>{</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>KeyStore<sp/>keyStore<sp/>=<sp/>KeyStore.getInstance(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a871e8261e4b70ce98577b701d8b698ba" kindref="member">ANDROID_KEYSTORE</ref>);</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>keyStore.load(</highlight><highlight class="keyword">null</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>(SecretKey)<sp/>keyStore.getKey(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1af81dbf306d1cc2d814c350efa99860ab" kindref="member">KEY_ALIAS</ref>,<sp/></highlight><highlight class="keyword">null</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"></highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Static<sp/>methods<sp/>that<sp/>delegate<sp/>to<sp/>singleton<sp/>instance</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="114" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a96988e4aa1d880c9de4b0bde1915874f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>String<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a96988e4aa1d880c9de4b0bde1915874f" kindref="member">load</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ae4335e5192cd6b8517e9f982c4edaee0" kindref="member">getInstance</ref>().<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a2d767a691229d96f427f9f9dd6d31627" kindref="member">loadInternal</ref>();</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="118" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1af13a6b5404967455e18507ae20118e80" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">boolean</highlight><highlight class="normal"><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1af13a6b5404967455e18507ae20118e80" kindref="member">save</ref>(String<sp/>data)<sp/>{</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ae4335e5192cd6b8517e9f982c4edaee0" kindref="member">getInstance</ref>().<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a611fd27fd90f5b0870ead8257e87d910" kindref="member">saveInternal</ref>(data);</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="122" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ab06fa63f3ecf689d9dc2bca5182c3fc9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">boolean</highlight><highlight class="normal"><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ab06fa63f3ecf689d9dc2bca5182c3fc9" kindref="member">delete</ref>(String<sp/>key)<sp/>{</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1ae4335e5192cd6b8517e9f982c4edaee0" kindref="member">getInstance</ref>().<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a20b1d3e8a0ffc314ba0d5746f266cc0a" kindref="member">deleteInternal</ref>(key);</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="126"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Internal<sp/>implementation<sp/>methods</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="127" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a2d767a691229d96f427f9f9dd6d31627" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/>String<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a2d767a691229d96f427f9f9dd6d31627" kindref="member">loadInternal</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">try</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SharedPreferences<sp/>prefs<sp/>=<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a7e9499e35392ab776114224d70c2c91d" kindref="member">context</ref>.getSharedPreferences(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1aac1bb07b9135c5929793539418ad0d12" kindref="member">PREFS_NAME</ref>,<sp/>Context.MODE_PRIVATE);</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>String<sp/>encryptedData<sp/>=<sp/>prefs.getString(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a7b9b08c8febcc46f23af4a1858c4b443" kindref="member">PREFS_KEY</ref>,<sp/></highlight><highlight class="keyword">null</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"></highlight></codeline>
+<codeline lineno="132"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(encryptedData<sp/>==<sp/></highlight><highlight class="keyword">null</highlight><highlight class="normal">)<sp/>{</highlight></codeline>
+<codeline lineno="133"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">null</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="134"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="135"><highlight class="normal"></highlight></codeline>
+<codeline lineno="136"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a96422bbf9a47a288c050a7dd3335082b" kindref="member">decrypt</ref>(encryptedData);</highlight></codeline>
+<codeline lineno="137"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">catch</highlight><highlight class="normal"><sp/>(Exception<sp/>e)<sp/>{</highlight></codeline>
+<codeline lineno="138"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Log.e(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a9160b3eb04a0c413f26c9e2d186ded67" kindref="member">TAG</ref>,<sp/></highlight><highlight class="stringliteral">&quot;Failed<sp/>to<sp/>load<sp/>data&quot;</highlight><highlight class="normal">,<sp/>e);</highlight></codeline>
+<codeline lineno="139"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">null</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="140"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="141"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="142"><highlight class="normal"></highlight></codeline>
+<codeline lineno="143" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a611fd27fd90f5b0870ead8257e87d910" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">boolean</highlight><highlight class="normal"><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a611fd27fd90f5b0870ead8257e87d910" kindref="member">saveInternal</ref>(String<sp/>data)<sp/>{</highlight></codeline>
+<codeline lineno="144"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">try</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="145"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>String<sp/>encryptedData<sp/>=<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a2615fc93ac5fc5b3ebf9be534ea1339b" kindref="member">encrypt</ref>(data);</highlight></codeline>
+<codeline lineno="146"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="147"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SharedPreferences<sp/>prefs<sp/>=<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a7e9499e35392ab776114224d70c2c91d" kindref="member">context</ref>.getSharedPreferences(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1aac1bb07b9135c5929793539418ad0d12" kindref="member">PREFS_NAME</ref>,<sp/>Context.MODE_PRIVATE);</highlight></codeline>
+<codeline lineno="148"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>prefs.edit().putString(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a7b9b08c8febcc46f23af4a1858c4b443" kindref="member">PREFS_KEY</ref>,<sp/>encryptedData).commit();</highlight></codeline>
+<codeline lineno="149"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">catch</highlight><highlight class="normal"><sp/>(Exception<sp/>e)<sp/>{</highlight></codeline>
+<codeline lineno="150"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Log.e(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a9160b3eb04a0c413f26c9e2d186ded67" kindref="member">TAG</ref>,<sp/></highlight><highlight class="stringliteral">&quot;Failed<sp/>to<sp/>save<sp/>data&quot;</highlight><highlight class="normal">,<sp/>e);</highlight></codeline>
+<codeline lineno="151"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="152"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="153"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="154"><highlight class="normal"></highlight></codeline>
+<codeline lineno="155" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a20b1d3e8a0ffc314ba0d5746f266cc0a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">boolean</highlight><highlight class="normal"><sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a20b1d3e8a0ffc314ba0d5746f266cc0a" kindref="member">deleteInternal</ref>(String<sp/>key)<sp/>{</highlight></codeline>
+<codeline lineno="156"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">try</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="157"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SharedPreferences<sp/>prefs<sp/>=<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a7e9499e35392ab776114224d70c2c91d" kindref="member">context</ref>.getSharedPreferences(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1aac1bb07b9135c5929793539418ad0d12" kindref="member">PREFS_NAME</ref>,<sp/>Context.MODE_PRIVATE);</highlight></codeline>
+<codeline lineno="158"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>prefs.edit().remove(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a7b9b08c8febcc46f23af4a1858c4b443" kindref="member">PREFS_KEY</ref>).commit();</highlight></codeline>
+<codeline lineno="159"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">catch</highlight><highlight class="normal"><sp/>(Exception<sp/>e)<sp/>{</highlight></codeline>
+<codeline lineno="160"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Log.e(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a9160b3eb04a0c413f26c9e2d186ded67" kindref="member">TAG</ref>,<sp/></highlight><highlight class="stringliteral">&quot;Failed<sp/>to<sp/>delete<sp/>data&quot;</highlight><highlight class="normal">,<sp/>e);</highlight></codeline>
+<codeline lineno="161"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="162"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="163"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="164"><highlight class="normal"></highlight></codeline>
+<codeline lineno="165" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a2615fc93ac5fc5b3ebf9be534ea1339b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/>String<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a2615fc93ac5fc5b3ebf9be534ea1339b" kindref="member">encrypt</ref>(String<sp/>data)<sp/></highlight><highlight class="keywordflow">throws</highlight><highlight class="normal"><sp/>Exception<sp/>{</highlight></codeline>
+<codeline lineno="166"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SecretKey<sp/>secretKey<sp/>=<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1adac64ab03b9980aecb1d6c1f3818f082" kindref="member">getSecretKey</ref>();</highlight></codeline>
+<codeline lineno="167"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Cipher<sp/>cipher<sp/>=<sp/>Cipher.getInstance(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a1453d8bc14729600dd0c808d067de9e0" kindref="member">TRANSFORMATION</ref>);</highlight></codeline>
+<codeline lineno="168"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>cipher.init(Cipher.ENCRYPT_MODE,<sp/>secretKey);</highlight></codeline>
+<codeline lineno="169"><highlight class="normal"></highlight></codeline>
+<codeline lineno="170"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">byte</highlight><highlight class="normal">[]<sp/>iv<sp/>=<sp/>cipher.getIV();</highlight></codeline>
+<codeline lineno="171"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">byte</highlight><highlight class="normal">[]<sp/>encrypted<sp/>=<sp/>cipher.doFinal(data.getBytes(StandardCharsets.UTF_8));</highlight></codeline>
+<codeline lineno="172"><highlight class="normal"></highlight></codeline>
+<codeline lineno="173"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">byte</highlight><highlight class="normal">[]<sp/>combined<sp/>=<sp/></highlight><highlight class="keyword">new</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">byte</highlight><highlight class="normal">[iv.length<sp/>+<sp/>encrypted.length];</highlight></codeline>
+<codeline lineno="174"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>System.arraycopy(iv,<sp/>0,<sp/>combined,<sp/>0,<sp/>iv.length);</highlight></codeline>
+<codeline lineno="175"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>System.arraycopy(encrypted,<sp/>0,<sp/>combined,<sp/>iv.length,<sp/>encrypted.length);</highlight></codeline>
+<codeline lineno="176"><highlight class="normal"></highlight></codeline>
+<codeline lineno="177"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Base64.encodeToString(combined,<sp/>Base64.DEFAULT);</highlight></codeline>
+<codeline lineno="178"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="179"><highlight class="normal"></highlight></codeline>
+<codeline lineno="180" refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a96422bbf9a47a288c050a7dd3335082b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/>String<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a96422bbf9a47a288c050a7dd3335082b" kindref="member">decrypt</ref>(String<sp/>encryptedData)<sp/></highlight><highlight class="keywordflow">throws</highlight><highlight class="normal"><sp/>Exception<sp/>{</highlight></codeline>
+<codeline lineno="181"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">byte</highlight><highlight class="normal">[]<sp/>combined<sp/>=<sp/>Base64.decode(encryptedData,<sp/>Base64.DEFAULT);</highlight></codeline>
+<codeline lineno="182"><highlight class="normal"></highlight></codeline>
+<codeline lineno="183"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">byte</highlight><highlight class="normal">[]<sp/>iv<sp/>=<sp/></highlight><highlight class="keyword">new</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">byte</highlight><highlight class="normal">[12];</highlight></codeline>
+<codeline lineno="184"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">byte</highlight><highlight class="normal">[]<sp/>encrypted<sp/>=<sp/></highlight><highlight class="keyword">new</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">byte</highlight><highlight class="normal">[combined.length<sp/>-<sp/>iv.length];</highlight></codeline>
+<codeline lineno="185"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>System.arraycopy(combined,<sp/>0,<sp/>iv,<sp/>0,<sp/>iv.length);</highlight></codeline>
+<codeline lineno="186"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>System.arraycopy(combined,<sp/>iv.length,<sp/>encrypted,<sp/>0,<sp/>encrypted.length);</highlight></codeline>
+<codeline lineno="187"><highlight class="normal"></highlight></codeline>
+<codeline lineno="188"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SecretKey<sp/>secretKey<sp/>=<sp/><ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1adac64ab03b9980aecb1d6c1f3818f082" kindref="member">getSecretKey</ref>();</highlight></codeline>
+<codeline lineno="189"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>Cipher<sp/>cipher<sp/>=<sp/>Cipher.getInstance(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a1453d8bc14729600dd0c808d067de9e0" kindref="member">TRANSFORMATION</ref>);</highlight></codeline>
+<codeline lineno="190"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>cipher.init(Cipher.DECRYPT_MODE,<sp/>secretKey,<sp/></highlight><highlight class="keyword">new</highlight><highlight class="normal"><sp/>GCMParameterSpec(<ref refid="d0/d1b/classai_1_1gnus_1_1sdk_1_1_key_store_helper_1a18993de4a77993851225cbdc8702daf5" kindref="member">GCM_TAG_LENGTH</ref>,<sp/>iv));</highlight></codeline>
+<codeline lineno="191"><highlight class="normal"></highlight></codeline>
+<codeline lineno="192"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">byte</highlight><highlight class="normal">[]<sp/>decrypted<sp/>=<sp/>cipher.doFinal(encrypted);</highlight></codeline>
+<codeline lineno="193"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">new</highlight><highlight class="normal"><sp/>String(decrypted,<sp/>StandardCharsets.UTF_8);</highlight></codeline>
+<codeline lineno="194"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="195"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="src/local_secure_storage/impl/KeyStoreHelper.java"/>
+  </compounddef>
+</doxygen>

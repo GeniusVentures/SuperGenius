@@ -1,0 +1,561 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue" kind="class" language="C++" prot="public">
+    <compoundname>sgns::processing::ProcessingSubTaskQueue</compoundname>
+    <includes refid="d7/d97/processing__subtask__queue_8hpp" local="no">processing_subtask_queue.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a6f4ac2f005be3047bd45476f12c37078" prot="public" static="no">
+        <type>std::function&lt; uint64_t()&gt;</type>
+        <definition>using sgns::processing::ProcessingSubTaskQueue::TimestampProvider = std::function&lt;uint64_t()&gt;</definition>
+        <argsstring></argsstring>
+        <name>TimestampProvider</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::TimestampProvider</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="21" column="5" bodyfile="src/processing/processing_subtask_queue.hpp" bodystart="21" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a9b63221e72e0ea041a13b52e69647e3d" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::processing::ProcessingSubTaskQueue::m_localNodeId</definition>
+        <argsstring></argsstring>
+        <name>m_localNodeId</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::m_localNodeId</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="93" column="17" bodyfile="src/processing/processing_subtask_queue.hpp" bodystart="93" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1ad44d13db9ec30002e257cfc7c47ad0f2" prot="private" static="no" mutable="no">
+        <type>SGProcessing::ProcessingQueue *</type>
+        <definition>SGProcessing::ProcessingQueue* sgns::processing::ProcessingSubTaskQueue::m_queue</definition>
+        <argsstring></argsstring>
+        <name>m_queue</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::m_queue</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="94" column="35" bodyfile="src/processing/processing_subtask_queue.hpp" bodystart="94" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a8d62a5291a50adb344763d4241b5cfae" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; int &gt;</type>
+        <definition>std::vector&lt;int&gt; sgns::processing::ProcessingSubTaskQueue::m_enabledItemIndices</definition>
+        <argsstring></argsstring>
+        <name>m_enabledItemIndices</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::m_enabledItemIndices</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="96" column="17" bodyfile="src/processing/processing_subtask_queue.hpp" bodystart="96" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a37f7f9b1bc6594f780eef4f76038c7eb" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::processing::ProcessingSubTaskQueue::m_logger</definition>
+        <argsstring></argsstring>
+        <name>m_logger</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::m_logger</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>(&quot;ProcessingSubTaskQueue&quot;)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="98" column="18" bodyfile="src/processing/processing_subtask_queue.hpp" bodystart="98" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a8972018bfc33c0e17679170508f2ae55" prot="private" static="no" mutable="no">
+        <type><ref refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a6f4ac2f005be3047bd45476f12c37078" kindref="member">TimestampProvider</ref></type>
+        <definition>TimestampProvider sgns::processing::ProcessingSubTaskQueue::m_timestampProvider</definition>
+        <argsstring></argsstring>
+        <name>m_timestampProvider</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::m_timestampProvider</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="100" column="23" bodyfile="src/processing/processing_subtask_queue.hpp" bodystart="100" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a99ada45108a43f426a70c4afae287738" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::processing::ProcessingSubTaskQueue::ProcessingSubTaskQueue</definition>
+        <argsstring>(std::string localNodeId, TimestampProvider timestampProvider=nullptr)</argsstring>
+        <name>ProcessingSubTaskQueue</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::ProcessingSubTaskQueue</qualifiedname>
+        <param>
+          <type>std::string</type>
+          <declname>localNodeId</declname>
+        </param>
+        <param>
+          <type><ref refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a6f4ac2f005be3047bd45476f12c37078" kindref="member">TimestampProvider</ref></type>
+          <declname>timestampProvider</declname>
+          <defval>nullptr</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Construct an empty queue <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>localNodeId</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>local processing node ID </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>timestampProvider</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>get the current timestamp from the manager function </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="27" column="5" bodyfile="src/processing/processing_subtask_queue.cpp" bodystart="9" bodyend="14"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a6ffc88ec367968ced24738ab55d33af8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueue::CreateQueue</definition>
+        <argsstring>(SGProcessing::ProcessingQueue *queue, const std::vector&lt; int &gt; &amp;enabledItemIndices)</argsstring>
+        <name>CreateQueue</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::CreateQueue</qualifiedname>
+        <param>
+          <type>SGProcessing::ProcessingQueue *</type>
+          <declname>queue</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; int &gt; &amp;</type>
+          <declname>enabledItemIndices</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Initialize a subtask queue snapshot. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>queue</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- Queue snapshot to initialize. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>enabledItemIndices</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- Indexes of enabled items; disabled items are treated as deleted. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="33" column="10" bodyfile="src/processing/processing_subtask_queue.cpp" bodystart="16" bodyend="22"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a141c8a07e0ee0b7e8269100cc49b0d32" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingSubTaskQueue::GrabItem</definition>
+        <argsstring>(size_t &amp;grabbedItemIndex, uint64_t timestamp)</argsstring>
+        <name>GrabItem</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::GrabItem</qualifiedname>
+        <param>
+          <type>size_t &amp;</type>
+          <declname>grabbedItemIndex</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>timestamp</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Attempts to grab a subtask from the queue. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>grabbedItemIndex</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- Index of the grabbed item if successful. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>timestamp</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- Current timestamp for the queue. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if an item was grabbed, false otherwise. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="40" column="10" bodyfile="src/processing/processing_subtask_queue.cpp" bodystart="60" bodyend="68"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a5cd301b7b9270d8d728cf37070b68c88" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingSubTaskQueue::MoveOwnershipTo</definition>
+        <argsstring>(const std::string &amp;nodeId)</argsstring>
+        <name>MoveOwnershipTo</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::MoveOwnershipTo</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>nodeId</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Transfer the queue ownership to another processing node <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>nodeId</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- processing node ID that the ownership should be transferred </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="45" column="10" bodyfile="src/processing/processing_subtask_queue.cpp" bodystart="70" bodyend="78"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a03bed1e6951cd56f96c3e2d15713ecab" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingSubTaskQueue::RollbackOwnership</definition>
+        <argsstring>()</argsstring>
+        <name>RollbackOwnership</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::RollbackOwnership</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Rollbacks the queue ownership to the previous state <simplesect kind="return"><para>true if the ownership is successfully rolled back </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="50" column="10" bodyfile="src/processing/processing_subtask_queue.cpp" bodystart="86" bodyend="159"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a3dc48a4269371f39171341bf097b3c57" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingSubTaskQueue::HasOwnership</definition>
+        <argsstring>() const</argsstring>
+        <name>HasOwnership</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::HasOwnership</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Checks id the local processing node owns the queue <simplesect kind="return"><para>true is the lolca node owns the queue </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="55" column="10" bodyfile="src/processing/processing_subtask_queue.cpp" bodystart="161" bodyend="164"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1aa3c80f7e263d5f74beda9e56a667bfc4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingSubTaskQueue::UpdateQueue</definition>
+        <argsstring>(SGProcessing::ProcessingQueue *queue, const std::vector&lt; int &gt; &amp;enabledItemIndices)</argsstring>
+        <name>UpdateQueue</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::UpdateQueue</qualifiedname>
+        <param>
+          <type>SGProcessing::ProcessingQueue *</type>
+          <declname>queue</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; int &gt; &amp;</type>
+          <declname>enabledItemIndices</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Updates the local queue with a snapshot that have the most recent timestamp <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>queue</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- the queue snapshot </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>enabledItemIndices</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- indexes of enabled items. Disabled items are considered as deleted. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="61" column="10" bodyfile="src/processing/processing_subtask_queue.cpp" bodystart="24" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1ad02c653e362cb3aff450c5b14dbcf9e5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingSubTaskQueue::UnlockExpiredItems</definition>
+        <argsstring>(uint64_t currentTime)</argsstring>
+        <name>UnlockExpiredItems</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::UnlockExpiredItems</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>currentTime</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Unlocks expired queue items <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>currentTime</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- the current queue time </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if at least one item was unlocked </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="67" column="10" bodyfile="src/processing/processing_subtask_queue.cpp" bodystart="166" bodyend="194"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a2bc9f1fd0477bcecbb09111456ef2cb3" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::processing::ProcessingSubTaskQueue::GetLastLockTimestamp</definition>
+        <argsstring>() const</argsstring>
+        <name>GetLastLockTimestamp</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::GetLastLockTimestamp</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Returns the most recent item lock timestamp </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="71" column="15" bodyfile="src/processing/processing_subtask_queue.cpp" bodystart="196" bodyend="206"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a48ce5f876ae55b981acb57472a6010ce" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingSubTaskQueue::AddOwnershipRequest</definition>
+        <argsstring>(const std::string &amp;nodeId, uint64_t timestamp)</argsstring>
+        <name>AddOwnershipRequest</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::AddOwnershipRequest</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>nodeId</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>timestamp</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Adds a new ownership request to the queue <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>nodeId</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- ID of the node requesting ownership </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>timestamp</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- timestamp when the request was created </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if the request was successfully added, false if it already exists </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="78" column="10" bodyfile="src/processing/processing_subtask_queue.cpp" bodystart="230" bodyend="246"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1ab659a6c6a18fcb756dfa5dfe30fb35b7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingSubTaskQueue::ProcessNextOwnershipRequest</definition>
+        <argsstring>()</argsstring>
+        <name>ProcessNextOwnershipRequest</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::ProcessNextOwnershipRequest</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Processes the next ownership request in the queue <simplesect kind="return"><para>true if an ownership request was processed, false if the queue is empty or the node doesn&apos;t have ownership </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="83" column="10" bodyfile="src/processing/processing_subtask_queue.cpp" bodystart="248" bodyend="269"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a8c71338ff005cd81769b0839a9a4de14" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueue::ChangeOwnershipTo</definition>
+        <argsstring>(const std::string &amp;nodeId)</argsstring>
+        <name>ChangeOwnershipTo</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::ChangeOwnershipTo</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>nodeId</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="87" column="10" bodyfile="src/processing/processing_subtask_queue.cpp" bodystart="80" bodyend="84"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a9abbee338c09e54eb01840ea2fe39ac3" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::processing::ProcessingSubTaskQueue::LockItem</definition>
+        <argsstring>(size_t &amp;lockedItemIndex, uint64_t timestamp)</argsstring>
+        <name>LockItem</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::LockItem</qualifiedname>
+        <param>
+          <type>size_t &amp;</type>
+          <declname>lockedItemIndex</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>timestamp</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="89" column="10" bodyfile="src/processing/processing_subtask_queue.cpp" bodystart="37" bodyend="58"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1ad77b62d9ab8dea131f1e2187b64f6ae5" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueue::LogQueue</definition>
+        <argsstring>() const</argsstring>
+        <name>LogQueue</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueue::LogQueue</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue.hpp" line="91" column="10" bodyfile="src/processing/processing_subtask_queue.cpp" bodystart="208" bodyend="229"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Distributed subtask queue implementation. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="6">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::processing::ProcessingSubTaskQueue</label>
+        <link refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-m_localNodeId</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-m_enabledItemIndices</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>-m_logger</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::string</label>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::vector&lt; int &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; int &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/processing/processing_subtask_queue.hpp" line="17" column="1" bodyfile="src/processing/processing_subtask_queue.hpp" bodystart="18" bodyend="101"/>
+    <listofallmembers>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a48ce5f876ae55b981acb57472a6010ce" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>AddOwnershipRequest</name></member>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a8c71338ff005cd81769b0839a9a4de14" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>ChangeOwnershipTo</name></member>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a6ffc88ec367968ced24738ab55d33af8" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>CreateQueue</name></member>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a2bc9f1fd0477bcecbb09111456ef2cb3" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>GetLastLockTimestamp</name></member>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a141c8a07e0ee0b7e8269100cc49b0d32" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>GrabItem</name></member>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a3dc48a4269371f39171341bf097b3c57" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>HasOwnership</name></member>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a9abbee338c09e54eb01840ea2fe39ac3" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>LockItem</name></member>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1ad77b62d9ab8dea131f1e2187b64f6ae5" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>LogQueue</name></member>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a8d62a5291a50adb344763d4241b5cfae" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>m_enabledItemIndices</name></member>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a9b63221e72e0ea041a13b52e69647e3d" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>m_localNodeId</name></member>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a37f7f9b1bc6594f780eef4f76038c7eb" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>m_logger</name></member>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1ad44d13db9ec30002e257cfc7c47ad0f2" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>m_queue</name></member>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a8972018bfc33c0e17679170508f2ae55" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>m_timestampProvider</name></member>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a5cd301b7b9270d8d728cf37070b68c88" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>MoveOwnershipTo</name></member>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a99ada45108a43f426a70c4afae287738" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>ProcessingSubTaskQueue</name></member>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1ab659a6c6a18fcb756dfa5dfe30fb35b7" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>ProcessNextOwnershipRequest</name></member>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a03bed1e6951cd56f96c3e2d15713ecab" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>RollbackOwnership</name></member>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1a6f4ac2f005be3047bd45476f12c37078" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>TimestampProvider</name></member>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1ad02c653e362cb3aff450c5b14dbcf9e5" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>UnlockExpiredItems</name></member>
+      <member refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue_1aa3c80f7e263d5f74beda9e56a667bfc4" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueue</scope><name>UpdateQueue</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

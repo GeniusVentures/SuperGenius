@@ -1,0 +1,261 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/dd5/classsgns_1_1application_1_1_bridging_node_application" kind="class" language="C++" prot="public">
+    <compoundname>sgns::application::BridgingNodeApplication</compoundname>
+    <basecompoundref refid="da/d1d/classsgns_1_1application_1_1_sgns_application" prot="public" virt="non-virtual">sgns::application::SgnsApplication</basecompoundref>
+    <includes refid="de/d54/bridging__node__application_8hpp" local="no">bridging_node_application.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a68a56980f0fa27dc566006bcfdafe266" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; EvmMessagingWatcher &gt;</type>
+        <definition>std::unique_ptr&lt;EvmMessagingWatcher&gt; sgns::application::BridgingNodeApplication::evmWatcher</definition>
+        <argsstring></argsstring>
+        <name>evmWatcher</name>
+        <qualifiedname>sgns::application::BridgingNodeApplication::evmWatcher</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/bridging_node_application.hpp" line="26" column="25" bodyfile="src/application/impl/bridging_node_application.hpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1acfbfb4084c4ac2780cca14e314cba804" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; WsContext &gt;</type>
+        <definition>std::shared_ptr&lt;WsContext&gt; sgns::application::BridgingNodeApplication::wsContext</definition>
+        <argsstring></argsstring>
+        <name>wsContext</name>
+        <qualifiedname>sgns::application::BridgingNodeApplication::wsContext</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/bridging_node_application.hpp" line="27" column="25" bodyfile="src/application/impl/bridging_node_application.hpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a2da039c265e6620fd0f1d4374b91d898" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; WsThreadPool &gt;</type>
+        <definition>std::shared_ptr&lt;WsThreadPool&gt; sgns::application::BridgingNodeApplication::wsThreadPool</definition>
+        <argsstring></argsstring>
+        <name>wsThreadPool</name>
+        <qualifiedname>sgns::application::BridgingNodeApplication::wsThreadPool</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/bridging_node_application.hpp" line="28" column="25" bodyfile="src/application/impl/bridging_node_application.hpp" bodystart="28" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1aa50f67f7ee586ec611e7d41e3e06e789" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; RpcService &gt;</type>
+        <definition>std::shared_ptr&lt;RpcService&gt; sgns::application::BridgingNodeApplication::rpcService</definition>
+        <argsstring></argsstring>
+        <name>rpcService</name>
+        <qualifiedname>sgns::application::BridgingNodeApplication::rpcService</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/bridging_node_application.hpp" line="29" column="25" bodyfile="src/application/impl/bridging_node_application.hpp" bodystart="29" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a2f15bed2868f186ecf3c0ca25122ae55" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::BridgingNodeApplication::BridgingNodeApplication</definition>
+        <argsstring>(const std::shared_ptr&lt; AppConfig &gt; &amp;config, const std::shared_ptr&lt; AppStateManager &gt; &amp;stateManager)</argsstring>
+        <name>BridgingNodeApplication</name>
+        <qualifiedname>sgns::application::BridgingNodeApplication::BridgingNodeApplication</qualifiedname>
+        <param>
+          <type>const std::shared_ptr&lt; AppConfig &gt; &amp;</type>
+          <declname>config</declname>
+        </param>
+        <param>
+          <type>const std::shared_ptr&lt; <ref refid="d2/d3c/class_app_state_manager" kindref="compound">AppStateManager</ref> &gt; &amp;</type>
+          <declname>stateManager</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/bridging_node_application.hpp" line="12" column="9" bodyfile="src/application/impl/bridging_node_application.cpp" bodystart="20" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="function" id="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1ab0849b1c3536f861b7dcb2ed9291fdca" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::application::BridgingNodeApplication::run</definition>
+        <argsstring>() override</argsstring>
+        <name>run</name>
+        <qualifiedname>sgns::application::BridgingNodeApplication::run</qualifiedname>
+        <reimplements refid="da/d1d/classsgns_1_1application_1_1_sgns_application_1a2314654dc1f566607845a8ab5f427329">run</reimplements>
+        <briefdescription>
+<para>runs application </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/bridging_node_application.hpp" line="15" column="14" bodyfile="src/application/impl/bridging_node_application.cpp" bodystart="37" bodyend="72"/>
+      </memberdef>
+      <memberdef kind="function" id="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a417f9b623dc5ebcf104f9d4d0a32a8c5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::application::BridgingNodeApplication::stop</definition>
+        <argsstring>() override</argsstring>
+        <name>stop</name>
+        <qualifiedname>sgns::application::BridgingNodeApplication::stop</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/bridging_node_application.hpp" line="17" column="14" bodyfile="src/application/impl/bridging_node_application.cpp" bodystart="74" bodyend="84"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1acff5269dda711e254512bf6ff3999015" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::application::BridgingNodeApplication::setupWebSocketService</definition>
+        <argsstring>()</argsstring>
+        <name>setupWebSocketService</name>
+        <qualifiedname>sgns::application::BridgingNodeApplication::setupWebSocketService</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/bridging_node_application.hpp" line="20" column="14" bodyfile="src/application/impl/bridging_node_application.cpp" bodystart="86" bodyend="96"/>
+      </memberdef>
+      <memberdef kind="function" id="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a808555ac994d602fb30ad65709253560" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::application::BridgingNodeApplication::setupRpcService</definition>
+        <argsstring>()</argsstring>
+        <name>setupRpcService</name>
+        <qualifiedname>sgns::application::BridgingNodeApplication::setupRpcService</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/bridging_node_application.hpp" line="22" column="14" bodyfile="src/application/impl/bridging_node_application.cpp" bodystart="98" bodyend="108"/>
+      </memberdef>
+      <memberdef kind="function" id="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a77bee7e80e92d15c1a5bcf4b1b39e329" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::application::BridgingNodeApplication::handleMessageArrival</definition>
+        <argsstring>(const std::string &amp;message)</argsstring>
+        <name>handleMessageArrival</name>
+        <qualifiedname>sgns::application::BridgingNodeApplication::handleMessageArrival</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>message</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/bridging_node_application.hpp" line="24" column="14" bodyfile="src/application/impl/bridging_node_application.cpp" bodystart="110" bodyend="113"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::application::BridgingNodeApplication</label>
+        <link refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::application::SgnsApplication</label>
+        <link refid="da/d1d/classsgns_1_1application_1_1_sgns_application"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="5">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::application::BridgingNodeApplication</label>
+        <link refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-evmWatcher</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>-wsContext</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-wsThreadPool</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-rpcService</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::application::SgnsApplication</label>
+        <link refid="da/d1d/classsgns_1_1application_1_1_sgns_application"/>
+      </node>
+      <node id="7">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::shared_ptr&lt; RpcService &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; RpcService &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; WsContext &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; WsContext &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; WsThreadPool &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; WsThreadPool &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::unique_ptr&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::unique_ptr&lt; EvmMessagingWatcher &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; EvmMessagingWatcher &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/application/impl/bridging_node_application.hpp" line="10" column="5" bodyfile="src/application/impl/bridging_node_application.hpp" bodystart="10" bodyend="30"/>
+    <listofallmembers>
+      <member refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a2f15bed2868f186ecf3c0ca25122ae55" prot="public" virt="non-virtual"><scope>sgns::application::BridgingNodeApplication</scope><name>BridgingNodeApplication</name></member>
+      <member refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a68a56980f0fa27dc566006bcfdafe266" prot="private" virt="non-virtual"><scope>sgns::application::BridgingNodeApplication</scope><name>evmWatcher</name></member>
+      <member refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a77bee7e80e92d15c1a5bcf4b1b39e329" prot="private" virt="non-virtual"><scope>sgns::application::BridgingNodeApplication</scope><name>handleMessageArrival</name></member>
+      <member refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1aa50f67f7ee586ec611e7d41e3e06e789" prot="private" virt="non-virtual"><scope>sgns::application::BridgingNodeApplication</scope><name>rpcService</name></member>
+      <member refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1ab0849b1c3536f861b7dcb2ed9291fdca" prot="public" virt="virtual"><scope>sgns::application::BridgingNodeApplication</scope><name>run</name></member>
+      <member refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a808555ac994d602fb30ad65709253560" prot="private" virt="non-virtual"><scope>sgns::application::BridgingNodeApplication</scope><name>setupRpcService</name></member>
+      <member refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1acff5269dda711e254512bf6ff3999015" prot="private" virt="non-virtual"><scope>sgns::application::BridgingNodeApplication</scope><name>setupWebSocketService</name></member>
+      <member refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a417f9b623dc5ebcf104f9d4d0a32a8c5" prot="public" virt="non-virtual"><scope>sgns::application::BridgingNodeApplication</scope><name>stop</name></member>
+      <member refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1acfbfb4084c4ac2780cca14e314cba804" prot="private" virt="non-virtual"><scope>sgns::application::BridgingNodeApplication</scope><name>wsContext</name></member>
+      <member refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a2da039c265e6620fd0f1d4374b91d898" prot="private" virt="non-virtual"><scope>sgns::application::BridgingNodeApplication</scope><name>wsThreadPool</name></member>
+      <member refid="da/d1d/classsgns_1_1application_1_1_sgns_application_1af6c814f3750d9dccbb78d2c653c3da36" prot="public" virt="virtual"><scope>sgns::application::BridgingNodeApplication</scope><name>~SgnsApplication</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

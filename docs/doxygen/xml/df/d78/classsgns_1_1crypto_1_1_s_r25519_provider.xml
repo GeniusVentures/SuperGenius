@@ -1,0 +1,205 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/d78/classsgns_1_1crypto_1_1_s_r25519_provider" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::crypto::SR25519Provider</compoundname>
+    <basecompoundref refid="d1/dbf/class_i_component" prot="public" virt="non-virtual">IComponent</basecompoundref>
+    <derivedcompoundref refid="d3/d11/classsgns_1_1crypto_1_1_s_r25519_provider_impl" prot="public" virt="non-virtual">sgns::crypto::SR25519ProviderImpl</derivedcompoundref>
+    <includes refid="d2/dbb/sr25519__provider_8hpp" local="no">sr25519_provider.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="df/d78/classsgns_1_1crypto_1_1_s_r25519_provider_1adecce535f21a28501e38b6828e5da651" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crypto::SR25519Provider::~SR25519Provider</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~SR25519Provider</name>
+        <qualifiedname>sgns::crypto::SR25519Provider::~SR25519Provider</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_provider.hpp" line="25" column="8"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d78/classsgns_1_1crypto_1_1_s_r25519_provider_1a589659915134c074d82dd803c0f11e51" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair" kindref="compound">SR25519Keypair</ref></type>
+        <definition>virtual SR25519Keypair sgns::crypto::SR25519Provider::generateKeypair</definition>
+        <argsstring>() const =0</argsstring>
+        <name>generateKeypair</name>
+        <qualifiedname>sgns::crypto::SR25519Provider::generateKeypair</qualifiedname>
+        <reimplementedby refid="d3/d11/classsgns_1_1crypto_1_1_s_r25519_provider_impl_1a1221d777d4d9ffeb31ae8731515e51d8">generateKeypair</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Generates random keypair for signing the message </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_provider.hpp" line="30" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d78/classsgns_1_1crypto_1_1_s_r25519_provider_1a178d130f251af160bc9f1370846856b2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair" kindref="compound">SR25519Keypair</ref></type>
+        <definition>virtual SR25519Keypair sgns::crypto::SR25519Provider::generateKeypair</definition>
+        <argsstring>(const SR25519Seed &amp;seed) const =0</argsstring>
+        <name>generateKeypair</name>
+        <qualifiedname>sgns::crypto::SR25519Provider::generateKeypair</qualifiedname>
+        <reimplementedby refid="d3/d11/classsgns_1_1crypto_1_1_s_r25519_provider_impl_1af64de499742ea486d6dedde39bed370a">generateKeypair</reimplementedby>
+        <param>
+          <type>const <ref refid="df/d6e/namespacesgns_1_1crypto_1ac4cbbe40768a209e8418d7f7ada91072" kindref="member">SR25519Seed</ref> &amp;</type>
+          <declname>seed</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Generate random keypair from seed </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_provider.hpp" line="35" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d78/classsgns_1_1crypto_1_1_s_r25519_provider_1a4068fa572fa3e487b8b4a86d131bc9aa" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="df/d6e/namespacesgns_1_1crypto_1a3c286bf798825fe50e04ccf0295a1932" kindref="member">SR25519Signature</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; SR25519Signature &gt; sgns::crypto::SR25519Provider::sign</definition>
+        <argsstring>(const SR25519Keypair &amp;keypair, gsl::span&lt; const uint8_t &gt; message) const =0</argsstring>
+        <name>sign</name>
+        <qualifiedname>sgns::crypto::SR25519Provider::sign</qualifiedname>
+        <reimplementedby refid="d3/d11/classsgns_1_1crypto_1_1_s_r25519_provider_impl_1a04eb27ac3b3ce8e62066e3a4aa2dda9d">sign</reimplementedby>
+        <param>
+          <type>const <ref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair" kindref="compound">SR25519Keypair</ref> &amp;</type>
+          <declname>keypair</declname>
+        </param>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>message</declname>
+        </param>
+        <briefdescription>
+<para>Sign a message using the given keypair. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>keypair</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pair of public and secret sr25519 keys. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Bytes to be signed. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Signature of the message. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_provider.hpp" line="43" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d78/classsgns_1_1crypto_1_1_s_r25519_provider_1ae1e0a214625a1dcedee99e7ba69c9499" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; bool &gt;</type>
+        <definition>virtual outcome::result&lt; bool &gt; sgns::crypto::SR25519Provider::verify</definition>
+        <argsstring>(const SR25519Signature &amp;signature, gsl::span&lt; const uint8_t &gt; message, const SR25519PublicKey &amp;public_key) const =0</argsstring>
+        <name>verify</name>
+        <qualifiedname>sgns::crypto::SR25519Provider::verify</qualifiedname>
+        <reimplementedby refid="d3/d11/classsgns_1_1crypto_1_1_s_r25519_provider_impl_1a83edc55fe8c39100e5a0f372754d1e5e">verify</reimplementedby>
+        <param>
+          <type>const <ref refid="df/d6e/namespacesgns_1_1crypto_1a3c286bf798825fe50e04ccf0295a1932" kindref="member">SR25519Signature</ref> &amp;</type>
+          <declname>signature</declname>
+        </param>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>message</declname>
+        </param>
+        <param>
+          <type>const <ref refid="df/d6e/namespacesgns_1_1crypto_1ac763dcc567072893f82795e8d546ba88" kindref="member">SR25519PublicKey</ref> &amp;</type>
+          <declname>public_key</declname>
+        </param>
+        <briefdescription>
+<para>Verifies that the message was signed by the given public key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>signature</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Signature to verify. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Message bytes. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>public_key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Public key to verify against. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if signature is valid, false otherwise. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_provider.hpp" line="53" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::crypto::SR25519Provider</label>
+        <link refid="df/d78/classsgns_1_1crypto_1_1_s_r25519_provider"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::crypto::SR25519ProviderImpl</label>
+        <link refid="d3/d11/classsgns_1_1crypto_1_1_s_r25519_provider_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::crypto::SR25519Provider</label>
+        <link refid="df/d78/classsgns_1_1crypto_1_1_s_r25519_provider"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crypto/sr25519_provider.hpp" line="23" column="3" bodyfile="src/crypto/sr25519_provider.hpp" bodystart="23" bodyend="57"/>
+    <listofallmembers>
+      <member refid="df/d78/classsgns_1_1crypto_1_1_s_r25519_provider_1a589659915134c074d82dd803c0f11e51" prot="public" virt="pure-virtual"><scope>sgns::crypto::SR25519Provider</scope><name>generateKeypair</name></member>
+      <member refid="df/d78/classsgns_1_1crypto_1_1_s_r25519_provider_1a178d130f251af160bc9f1370846856b2" prot="public" virt="pure-virtual"><scope>sgns::crypto::SR25519Provider</scope><name>generateKeypair</name></member>
+      <member refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7" prot="public" virt="pure-virtual"><scope>sgns::crypto::SR25519Provider</scope><name>GetName</name></member>
+      <member refid="df/d78/classsgns_1_1crypto_1_1_s_r25519_provider_1a4068fa572fa3e487b8b4a86d131bc9aa" prot="public" virt="pure-virtual"><scope>sgns::crypto::SR25519Provider</scope><name>sign</name></member>
+      <member refid="df/d78/classsgns_1_1crypto_1_1_s_r25519_provider_1ae1e0a214625a1dcedee99e7ba69c9499" prot="public" virt="pure-virtual"><scope>sgns::crypto::SR25519Provider</scope><name>verify</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::crypto::SR25519Provider</scope><name>~IComponent</name></member>
+      <member refid="df/d78/classsgns_1_1crypto_1_1_s_r25519_provider_1adecce535f21a28501e38b6828e5da651" prot="public" virt="non-virtual"><scope>sgns::crypto::SR25519Provider</scope><name>~SR25519Provider</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

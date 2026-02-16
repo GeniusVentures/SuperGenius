@@ -1,0 +1,37 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/d21/classsgns_1_1wallet" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::wallet</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">std::enable_shared_from_this&lt; sgns::wallet &gt;</basecompoundref>
+    <includes refid="d4/dc7/wallet_8hpp" local="no">wallet.hpp</includes>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::wallet</label>
+        <link refid="d2/d21/classsgns_1_1wallet"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; sgns::wallet &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::wallet</label>
+        <link refid="d2/d21/classsgns_1_1wallet"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; sgns::wallet &gt;</label>
+      </node>
+    </collaborationgraph>
+    <location file="node/wallet.hpp" line="12" column="1" bodyfile="node/wallet.hpp" bodystart="13" bodyend="16"/>
+    <listofallmembers>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

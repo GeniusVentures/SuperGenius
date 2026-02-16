@@ -1,0 +1,423 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/d7f/classsgns_1_1_processing_transaction" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::ProcessingTransaction</compoundname>
+    <basecompoundref refid="d1/d07/classsgns_1_1_i_genius_transactions" prot="public" virt="non-virtual">sgns::IGeniusTransactions</basecompoundref>
+    <includes refid="d4/dec/_processing_transaction_8hpp" local="no">ProcessingTransaction.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d6/d7f/classsgns_1_1_processing_transaction_1ae3eff3044e5e6675910f5fc3efcaae60" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::ProcessingTransaction::job_id_</definition>
+        <argsstring></argsstring>
+        <name>job_id_</name>
+        <qualifiedname>sgns::ProcessingTransaction::job_id_</qualifiedname>
+        <briefdescription>
+<para>Job ID. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/ProcessingTransaction.hpp" line="67" column="34" bodyfile="src/account/ProcessingTransaction.hpp" bodystart="67" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d7f/classsgns_1_1_processing_transaction_1a29e22d10a265078b05caf804680d54c1" prot="private" static="no" mutable="no">
+        <type>uint256_t</type>
+        <definition>uint256_t sgns::ProcessingTransaction::job_hash_</definition>
+        <argsstring></argsstring>
+        <name>job_hash_</name>
+        <qualifiedname>sgns::ProcessingTransaction::job_hash_</qualifiedname>
+        <briefdescription>
+<para>Job ID. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/ProcessingTransaction.hpp" line="68" column="34" bodyfile="src/account/ProcessingTransaction.hpp" bodystart="68" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d7f/classsgns_1_1_processing_transaction_1a75637886ebcf98d6f929b20f14f0569d" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; std::string &gt;</type>
+        <definition>std::vector&lt;std::string&gt; sgns::ProcessingTransaction::subtask_ids_</definition>
+        <argsstring></argsstring>
+        <name>subtask_ids_</name>
+        <qualifiedname>sgns::ProcessingTransaction::subtask_ids_</qualifiedname>
+        <briefdescription>
+<para>SubTask ID. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/ProcessingTransaction.hpp" line="69" column="21" bodyfile="src/account/ProcessingTransaction.hpp" bodystart="69" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d7f/classsgns_1_1_processing_transaction_1ac396de144e92f5a471001964c261268d" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; std::string &gt;</type>
+        <definition>std::vector&lt;std::string&gt; sgns::ProcessingTransaction::node_addresses_</definition>
+        <argsstring></argsstring>
+        <name>node_addresses_</name>
+        <qualifiedname>sgns::ProcessingTransaction::node_addresses_</qualifiedname>
+        <briefdescription>
+<para>Addresses/ID of processors. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/ProcessingTransaction.hpp" line="70" column="21" bodyfile="src/account/ProcessingTransaction.hpp" bodystart="70" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="d6/d7f/classsgns_1_1_processing_transaction_1a2371e589b6420f42d624b93e87523c47" prot="private" static="yes" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::ProcessingTransaction::registered</definition>
+        <argsstring></argsstring>
+        <name>registered</name>
+        <qualifiedname>sgns::ProcessingTransaction::registered</qualifiedname>
+        <initializer>= <ref refid="d6/d7f/classsgns_1_1_processing_transaction_1a7f732a499da1a873a3ec6732fc3a1a17" kindref="member">Register</ref>()</initializer>
+        <briefdescription>
+<para>Static variable to ensure registration happens on inclusion of header file. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/ProcessingTransaction.hpp" line="85" column="28" bodyfile="src/account/ProcessingTransaction.hpp" bodystart="85" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d6/d7f/classsgns_1_1_processing_transaction_1a0e4ce5626c8781d91dbe5dd04eb13065" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="d6/d7f/classsgns_1_1_processing_transaction_1a98454e6d475cc6e18b72f9fb08197d04" kindref="member">ProcessingTransaction</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; ProcessingTransaction &gt; sgns::ProcessingTransaction::DeSerializeByteVector</definition>
+        <argsstring>(const std::vector&lt; uint8_t &gt; &amp;data)</argsstring>
+        <name>DeSerializeByteVector</name>
+        <qualifiedname>sgns::ProcessingTransaction::DeSerializeByteVector</qualifiedname>
+        <param>
+          <type>const std::vector&lt; uint8_t &gt; &amp;</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/ProcessingTransaction.hpp" line="22" column="32" bodyfile="src/account/ProcessingTransaction.cpp" bodystart="66" bodyend="80"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d7f/classsgns_1_1_processing_transaction_1a8fc5e8e2f6dff62aeaaa097dbf73c9f0" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d6/d7f/classsgns_1_1_processing_transaction_1a98454e6d475cc6e18b72f9fb08197d04" kindref="member">ProcessingTransaction</ref></type>
+        <definition>ProcessingTransaction sgns::ProcessingTransaction::New</definition>
+        <argsstring>(std::string job_id, std::vector&lt; std::string &gt; subtask_ids, std::vector&lt; std::string &gt; node_addresses, SGTransaction::DAGStruct dag)</argsstring>
+        <name>New</name>
+        <qualifiedname>sgns::ProcessingTransaction::New</qualifiedname>
+        <param>
+          <type>std::string</type>
+          <declname>job_id</declname>
+        </param>
+        <param>
+          <type>std::vector&lt; std::string &gt;</type>
+          <declname>subtask_ids</declname>
+        </param>
+        <param>
+          <type>std::vector&lt; std::string &gt;</type>
+          <declname>node_addresses</declname>
+        </param>
+        <param>
+          <type>SGTransaction::DAGStruct</type>
+          <declname>dag</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/ProcessingTransaction.hpp" line="24" column="38" bodyfile="src/account/ProcessingTransaction.cpp" bodystart="32" bodyend="43"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d6/d7f/classsgns_1_1_processing_transaction_1a68e8c11f9eab257cbc2aa83fd43526ea" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::ProcessingTransaction::~ProcessingTransaction</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~ProcessingTransaction</name>
+        <qualifiedname>sgns::ProcessingTransaction::~ProcessingTransaction</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/ProcessingTransaction.hpp" line="29" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d7f/classsgns_1_1_processing_transaction_1a6e0b1db21341173ec251d09311ee5586" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>std::vector&lt; uint8_t &gt; sgns::ProcessingTransaction::SerializeByteVector</definition>
+        <argsstring>() override</argsstring>
+        <name>SerializeByteVector</name>
+        <qualifiedname>sgns::ProcessingTransaction::SerializeByteVector</qualifiedname>
+        <reimplements refid="d1/d07/classsgns_1_1_i_genius_transactions_1a13a85bfa2911ff2327ffcc81260a9fc4">SerializeByteVector</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/ProcessingTransaction.hpp" line="31" column="21" bodyfile="src/account/ProcessingTransaction.cpp" bodystart="45" bodyend="64"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d7f/classsgns_1_1_processing_transaction_1a8130bf50e90b66c5721ba6eb8f182713" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>uint256_t</type>
+        <definition>uint256_t sgns::ProcessingTransaction::GetJobHash</definition>
+        <argsstring>() const</argsstring>
+        <name>GetJobHash</name>
+        <qualifiedname>sgns::ProcessingTransaction::GetJobHash</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/ProcessingTransaction.hpp" line="33" column="19" bodyfile="src/account/ProcessingTransaction.hpp" bodystart="33" bodyend="36"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d7f/classsgns_1_1_processing_transaction_1acab9e5619bd8a6befacb52e39f1e0322" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::vector&lt; std::string &gt;</type>
+        <definition>std::vector&lt; std::string &gt; sgns::ProcessingTransaction::GetSubtaskIDs</definition>
+        <argsstring>() const</argsstring>
+        <name>GetSubtaskIDs</name>
+        <qualifiedname>sgns::ProcessingTransaction::GetSubtaskIDs</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/ProcessingTransaction.hpp" line="38" column="21" bodyfile="src/account/ProcessingTransaction.hpp" bodystart="38" bodyend="41"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d7f/classsgns_1_1_processing_transaction_1a011a5f12686841be37f88ec853c73710" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::vector&lt; std::string &gt;</type>
+        <definition>std::vector&lt; std::string &gt; sgns::ProcessingTransaction::GetNodeAddresses</definition>
+        <argsstring>() const</argsstring>
+        <name>GetNodeAddresses</name>
+        <qualifiedname>sgns::ProcessingTransaction::GetNodeAddresses</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/ProcessingTransaction.hpp" line="43" column="21" bodyfile="src/account/ProcessingTransaction.hpp" bodystart="43" bodyend="46"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d7f/classsgns_1_1_processing_transaction_1a118a453017fac54db3f75eb53755d889" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::ProcessingTransaction::GetTaskID</definition>
+        <argsstring>() const</argsstring>
+        <name>GetTaskID</name>
+        <qualifiedname>sgns::ProcessingTransaction::GetTaskID</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/ProcessingTransaction.hpp" line="48" column="21" bodyfile="src/account/ProcessingTransaction.hpp" bodystart="48" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d7f/classsgns_1_1_processing_transaction_1af822054aeffe43792a60b420dde04038" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::ProcessingTransaction::GetTransactionSpecificPath</definition>
+        <argsstring>() const override</argsstring>
+        <name>GetTransactionSpecificPath</name>
+        <qualifiedname>sgns::ProcessingTransaction::GetTransactionSpecificPath</qualifiedname>
+        <reimplements refid="d1/d07/classsgns_1_1_i_genius_transactions_1a53e60bc5badda3cc6df0c57561e14acb">GetTransactionSpecificPath</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/ProcessingTransaction.hpp" line="53" column="21" bodyfile="src/account/ProcessingTransaction.hpp" bodystart="53" bodyend="59"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d6/d7f/classsgns_1_1_processing_transaction_1a98454e6d475cc6e18b72f9fb08197d04" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::ProcessingTransaction::ProcessingTransaction</definition>
+        <argsstring>(std::string job_id, std::vector&lt; std::string &gt; subtask_ids, std::vector&lt; std::string &gt; node_addresses, SGTransaction::DAGStruct dag)</argsstring>
+        <name>ProcessingTransaction</name>
+        <qualifiedname>sgns::ProcessingTransaction::ProcessingTransaction</qualifiedname>
+        <param>
+          <type>std::string</type>
+          <declname>job_id</declname>
+        </param>
+        <param>
+          <type>std::vector&lt; std::string &gt;</type>
+          <declname>subtask_ids</declname>
+        </param>
+        <param>
+          <type>std::vector&lt; std::string &gt;</type>
+          <declname>node_addresses</declname>
+        </param>
+        <param>
+          <type>SGTransaction::DAGStruct</type>
+          <declname>dag</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/ProcessingTransaction.hpp" line="62" column="9" bodyfile="src/account/ProcessingTransaction.cpp" bodystart="15" bodyend="30"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="d6/d7f/classsgns_1_1_processing_transaction_1a7f732a499da1a873a3ec6732fc3a1a17" prot="private" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>static bool sgns::ProcessingTransaction::Register</definition>
+        <argsstring>()</argsstring>
+        <name>Register</name>
+        <qualifiedname>sgns::ProcessingTransaction::Register</qualifiedname>
+        <briefdescription>
+<para>Registers the deserializer for the transfer transaction type. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A boolean indicating successful registration. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/ProcessingTransaction.hpp" line="76" column="21" bodyfile="src/account/ProcessingTransaction.hpp" bodystart="76" bodyend="80"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::IGeniusTransactions</label>
+        <link refid="d1/d07/classsgns_1_1_i_genius_transactions"/>
+      </node>
+      <node id="1">
+        <label>sgns::ProcessingTransaction</label>
+        <link refid="d6/d7f/classsgns_1_1_processing_transaction"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="7">
+        <label>K</label>
+      </node>
+      <node id="8">
+        <label>T</label>
+      </node>
+      <node id="2">
+        <label>sgns::IGeniusTransactions</label>
+        <link refid="d1/d07/classsgns_1_1_i_genius_transactions"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+deserializers_map</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-transaction_type</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::ProcessingTransaction</label>
+        <link refid="d6/d7f/classsgns_1_1_processing_transaction"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-job_id_</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-node_addresses_</edgelabel>
+          <edgelabel>-subtask_ids_</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="4">
+        <label>std::string</label>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::unordered_map&lt; K, T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::unordered_map&lt; std::string, TransactionDeserializeFn &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; std::string, TransactionDeserializeFn &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::vector&lt; std::string &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/account/ProcessingTransaction.hpp" line="19" column="5" bodyfile="src/account/ProcessingTransaction.hpp" bodystart="20" bodyend="86"/>
+    <listofallmembers>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1acd74bf05f2e8b0123163806c90071c57" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>CheckDAGSignatureLegacy</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1ab13efbfe0444411e9d4e19725157de25" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>CheckHash</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1af5e62c217af069a76213a9b7812ab626" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>CheckSignature</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a3b9fef5951e36dc7f31128247fdbc59e" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>dag_st</name></member>
+      <member refid="d6/d7f/classsgns_1_1_processing_transaction_1a0e4ce5626c8781d91dbe5dd04eb13065" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>DeSerializeByteVector</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a7fc888000de3d0c758a125ca485ce4a1" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>DeSerializeDAGStruct</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a884eebd98dc345a622b165f9ce9b60e1" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>DeSerializeDAGStruct</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a82f860ff9ae3149788d7a31cffc82529" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>deserializers_map</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a61846445efa8aa09b7291655e981cf65" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>FillHash</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a9800478402d0ecbd38493d3b5789f9a9" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>GetDeSerializers</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1ab78d8716ceaf368ddd888e91ac84deb3" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>GetHash</name></member>
+      <member refid="d6/d7f/classsgns_1_1_processing_transaction_1a8130bf50e90b66c5721ba6eb8f182713" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>GetJobHash</name></member>
+      <member refid="d6/d7f/classsgns_1_1_processing_transaction_1a011a5f12686841be37f88ec853c73710" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>GetNodeAddresses</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1af8cd3ed709b329dfccd519d1bf178424" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>GetProofFullPath</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a3eaa922b6192d8342a08c7ea66cbafbc" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>GetSrcAddress</name></member>
+      <member refid="d6/d7f/classsgns_1_1_processing_transaction_1acab9e5619bd8a6befacb52e39f1e0322" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>GetSubtaskIDs</name></member>
+      <member refid="d6/d7f/classsgns_1_1_processing_transaction_1a118a453017fac54db3f75eb53755d889" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>GetTaskID</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1aead0ba189578cd0a323ba56b1367f470" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>GetTimestamp</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1aea8074c464dcd1e2e15ac9196a4c9e09" prot="public" virt="virtual"><scope>sgns::ProcessingTransaction</scope><name>GetTopics</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a0f2963348939f103af3404a653a9f91b" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>GetTransactionFullPath</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a47d69eafb82280cd7de3f2c268054494" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>GetTransactionFullPath</name></member>
+      <member refid="d6/d7f/classsgns_1_1_processing_transaction_1af822054aeffe43792a60b420dde04038" prot="public" virt="virtual"><scope>sgns::ProcessingTransaction</scope><name>GetTransactionSpecificPath</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a836b1a1080b24f6f9fd220332b3b5b24" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>GetType</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a75f5591823eb6eaaf612e6bdfb5aae94" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>IGeniusTransactions</name></member>
+      <member refid="d6/d7f/classsgns_1_1_processing_transaction_1a29e22d10a265078b05caf804680d54c1" prot="private" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>job_hash_</name></member>
+      <member refid="d6/d7f/classsgns_1_1_processing_transaction_1ae3eff3044e5e6675910f5fc3efcaae60" prot="private" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>job_id_</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a771a632131b46b4a001a5fe829607b18" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>MakeSignature</name></member>
+      <member refid="d6/d7f/classsgns_1_1_processing_transaction_1a8fc5e8e2f6dff62aeaaa097dbf73c9f0" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>New</name></member>
+      <member refid="d6/d7f/classsgns_1_1_processing_transaction_1ac396de144e92f5a471001964c261268d" prot="private" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>node_addresses_</name></member>
+      <member refid="d6/d7f/classsgns_1_1_processing_transaction_1a98454e6d475cc6e18b72f9fb08197d04" prot="private" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>ProcessingTransaction</name></member>
+      <member refid="d6/d7f/classsgns_1_1_processing_transaction_1a7f732a499da1a873a3ec6732fc3a1a17" prot="private" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>Register</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a773fcfb15ae0aebdf628f8603dc326e1" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>RegisterDeserializer</name></member>
+      <member refid="d6/d7f/classsgns_1_1_processing_transaction_1a2371e589b6420f42d624b93e87523c47" prot="private" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>registered</name></member>
+      <member refid="d6/d7f/classsgns_1_1_processing_transaction_1a6e0b1db21341173ec251d09311ee5586" prot="public" virt="virtual"><scope>sgns::ProcessingTransaction</scope><name>SerializeByteVector</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a543616dd7f86c5df91fa91716aca10b2" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>SetDAGWithType</name></member>
+      <member refid="d6/d7f/classsgns_1_1_processing_transaction_1a75637886ebcf98d6f929b20f14f0569d" prot="private" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>subtask_ids_</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1aeacfba89da66740c2b37b4bbf7110863" prot="private" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>transaction_type</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a320ffd126b7cd6483894894bf7147afb" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>TransactionDeserializeFn</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a99ca00e5f73c9ea483ebf83513bd8063" prot="public" virt="virtual"><scope>sgns::ProcessingTransaction</scope><name>~IGeniusTransactions</name></member>
+      <member refid="d6/d7f/classsgns_1_1_processing_transaction_1a68e8c11f9eab257cbc2aa83fd43526ea" prot="public" virt="non-virtual"><scope>sgns::ProcessingTransaction</scope><name>~ProcessingTransaction</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

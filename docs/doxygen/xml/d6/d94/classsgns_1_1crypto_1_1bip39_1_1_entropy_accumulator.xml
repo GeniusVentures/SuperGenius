@@ -1,0 +1,252 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator" kind="class" language="C++" prot="public">
+    <compoundname>sgns::crypto::bip39::EntropyAccumulator</compoundname>
+    <includes refid="d0/da6/entropy__accumulator_8hpp" local="no">entropy_accumulator.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1ad060f278b494864a4589b5828ffe7d00" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>std::vector&lt;uint8_t&gt; sgns::crypto::bip39::EntropyAccumulator::bits_</definition>
+        <argsstring></argsstring>
+        <name>bits_</name>
+        <qualifiedname>sgns::crypto::bip39::EntropyAccumulator::bits_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/entropy_accumulator.hpp" line="68" column="17" bodyfile="src/crypto/bip39/entropy_accumulator.hpp" bodystart="68" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1ad7cb93f812c60a69540704c8e9477a47" prot="private" static="no" mutable="no">
+        <type>const size_t</type>
+        <definition>const size_t sgns::crypto::bip39::EntropyAccumulator::total_bits_count_</definition>
+        <argsstring></argsstring>
+        <name>total_bits_count_</name>
+        <qualifiedname>sgns::crypto::bip39::EntropyAccumulator::total_bits_count_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/entropy_accumulator.hpp" line="69" column="18" bodyfile="src/crypto/bip39/entropy_accumulator.hpp" bodystart="69" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a61b33d87d6848279266c48f470500f14" prot="private" static="no" mutable="no">
+        <type>const size_t</type>
+        <definition>const size_t sgns::crypto::bip39::EntropyAccumulator::checksum_bits_count_</definition>
+        <argsstring></argsstring>
+        <name>checksum_bits_count_</name>
+        <qualifiedname>sgns::crypto::bip39::EntropyAccumulator::checksum_bits_count_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/entropy_accumulator.hpp" line="70" column="18" bodyfile="src/crypto/bip39/entropy_accumulator.hpp" bodystart="70" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a284bb6a832b699cde5ffcab272cc53d1" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1adff3c10a8eb22a135b29227ff29371ee" kindref="member">EntropyAccumulator</ref> &gt;</type>
+        <definition>outcome::result&lt; EntropyAccumulator &gt; sgns::crypto::bip39::EntropyAccumulator::create</definition>
+        <argsstring>(size_t words_count)</argsstring>
+        <name>create</name>
+        <qualifiedname>sgns::crypto::bip39::EntropyAccumulator::create</qualifiedname>
+        <param>
+          <type>size_t</type>
+          <declname>words_count</declname>
+        </param>
+        <briefdescription>
+<para>create class instance </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>words_count</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>number of words in mnemonic phrase </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/entropy_accumulator.hpp" line="35" column="28" bodyfile="src/crypto/bip39/entropy_accumulator.cpp" bodystart="8" bodyend="25"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a555aa509d8fba6b21c54fd3d4da4b9da" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crypto::bip39::EntropyAccumulator::append</definition>
+        <argsstring>(const EntropyToken &amp;value)</argsstring>
+        <name>append</name>
+        <qualifiedname>sgns::crypto::bip39::EntropyAccumulator::append</qualifiedname>
+        <param>
+          <type>const <ref refid="da/dc8/structsgns_1_1crypto_1_1bip39_1_1_entropy_token" kindref="compound">EntropyToken</ref> &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+<para>append a new entropy token </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>token </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>success or error if storage is full </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/entropy_accumulator.hpp" line="42" column="21" bodyfile="src/crypto/bip39/entropy_accumulator.cpp" bodystart="64" bodyend="77"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a45a7260069e68a6811973fc91cdcb2db" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::vector&lt; uint8_t &gt; &gt;</type>
+        <definition>outcome::result&lt; std::vector&lt; uint8_t &gt; &gt; sgns::crypto::bip39::EntropyAccumulator::getEntropy</definition>
+        <argsstring>() const</argsstring>
+        <name>getEntropy</name>
+        <qualifiedname>sgns::crypto::bip39::EntropyAccumulator::getEntropy</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>entropy as byte array </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/entropy_accumulator.hpp" line="47" column="21" bodyfile="src/crypto/bip39/entropy_accumulator.cpp" bodystart="27" bodyend="48"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1acc09ab0c65ef4959e50b372bd80d25f0" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; uint8_t &gt;</type>
+        <definition>outcome::result&lt; uint8_t &gt; sgns::crypto::bip39::EntropyAccumulator::getChecksum</definition>
+        <argsstring>() const</argsstring>
+        <name>getChecksum</name>
+        <qualifiedname>sgns::crypto::bip39::EntropyAccumulator::getChecksum</qualifiedname>
+        <briefdescription>
+<para>checksum is a part of last byte </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>checksum </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/entropy_accumulator.hpp" line="53" column="21" bodyfile="src/crypto/bip39/entropy_accumulator.cpp" bodystart="50" bodyend="62"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a04aad90c5d6630b4e6e961173c8489e8" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; uint8_t &gt;</type>
+        <definition>outcome::result&lt; uint8_t &gt; sgns::crypto::bip39::EntropyAccumulator::calculateChecksum</definition>
+        <argsstring>() const</argsstring>
+        <name>calculateChecksum</name>
+        <qualifiedname>sgns::crypto::bip39::EntropyAccumulator::calculateChecksum</qualifiedname>
+        <briefdescription>
+<para>calculates checksum of significant bits </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>checksum value </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/entropy_accumulator.hpp" line="59" column="21" bodyfile="src/crypto/bip39/entropy_accumulator.cpp" bodystart="79" bodyend="83"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1adff3c10a8eb22a135b29227ff29371ee" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crypto::bip39::EntropyAccumulator::EntropyAccumulator</definition>
+        <argsstring>(size_t bits_count, size_t checksum_bits_count)</argsstring>
+        <name>EntropyAccumulator</name>
+        <qualifiedname>sgns::crypto::bip39::EntropyAccumulator::EntropyAccumulator</qualifiedname>
+        <param>
+          <type>size_t</type>
+          <declname>bits_count</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>checksum_bits_count</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>bits_count</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>total bits count (depends on words count) </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>checksum_bits_count</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>number of bits in checksum byte </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/entropy_accumulator.hpp" line="66" column="5" bodyfile="src/crypto/bip39/entropy_accumulator.cpp" bodystart="85" bodyend="95"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Accumulates entropy tokens and exposes entropy + checksum. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Used to assemble mnemonic-derived entropy and validate its checksum. </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="4">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::crypto::bip39::EntropyAccumulator</label>
+        <link refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-bits_</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::vector&lt; uint8_t &gt;</label>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crypto/bip39/entropy_accumulator.hpp" line="29" column="3" bodyfile="src/crypto/bip39/entropy_accumulator.hpp" bodystart="29" bodyend="71"/>
+    <listofallmembers>
+      <member refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a555aa509d8fba6b21c54fd3d4da4b9da" prot="public" virt="non-virtual"><scope>sgns::crypto::bip39::EntropyAccumulator</scope><name>append</name></member>
+      <member refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1ad060f278b494864a4589b5828ffe7d00" prot="private" virt="non-virtual"><scope>sgns::crypto::bip39::EntropyAccumulator</scope><name>bits_</name></member>
+      <member refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a04aad90c5d6630b4e6e961173c8489e8" prot="public" virt="non-virtual"><scope>sgns::crypto::bip39::EntropyAccumulator</scope><name>calculateChecksum</name></member>
+      <member refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a61b33d87d6848279266c48f470500f14" prot="private" virt="non-virtual"><scope>sgns::crypto::bip39::EntropyAccumulator</scope><name>checksum_bits_count_</name></member>
+      <member refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a284bb6a832b699cde5ffcab272cc53d1" prot="public" virt="non-virtual"><scope>sgns::crypto::bip39::EntropyAccumulator</scope><name>create</name></member>
+      <member refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1adff3c10a8eb22a135b29227ff29371ee" prot="private" virt="non-virtual"><scope>sgns::crypto::bip39::EntropyAccumulator</scope><name>EntropyAccumulator</name></member>
+      <member refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1acc09ab0c65ef4959e50b372bd80d25f0" prot="public" virt="non-virtual"><scope>sgns::crypto::bip39::EntropyAccumulator</scope><name>getChecksum</name></member>
+      <member refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1a45a7260069e68a6811973fc91cdcb2db" prot="public" virt="non-virtual"><scope>sgns::crypto::bip39::EntropyAccumulator</scope><name>getEntropy</name></member>
+      <member refid="d6/d94/classsgns_1_1crypto_1_1bip39_1_1_entropy_accumulator_1ad7cb93f812c60a69540704c8e9477a47" prot="private" virt="non-virtual"><scope>sgns::crypto::bip39::EntropyAccumulator</scope><name>total_bits_count_</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

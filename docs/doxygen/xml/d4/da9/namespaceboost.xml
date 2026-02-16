@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/da9/namespaceboost" kind="namespace" language="C++">
+    <compoundname>boost</compoundname>
+    <innerclass refid="da/d96/structboost_1_1hash_3_1_1sgns_1_1endpoint_01_4" prot="public">boost::hash&lt;::sgns::endpoint &gt;</innerclass>
+    <innerclass refid="d2/d2a/structboost_1_1hash_3_1_1sgns_1_1tcp__endpoint_01_4" prot="public">boost::hash&lt;::sgns::tcp_endpoint &gt;</innerclass>
+    <innerclass refid="d7/d08/structboost_1_1hash_3_01boost_1_1asio_1_1ip_1_1address_01_4" prot="public">boost::hash&lt; boost::asio::ip::address &gt;</innerclass>
+    <innernamespace refid="d9/d75/namespaceboost_1_1filesystem">boost::filesystem</innernamespace>
+    <innernamespace refid="d8/d6b/namespaceboost_1_1sinks">boost::sinks</innernamespace>
+    <innernamespace refid="d2/d1e/namespaceboost_1_1asio">boost::asio</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="node/app_delegate.hpp" line="7" column="1"/>
+  </compounddef>
+</doxygen>

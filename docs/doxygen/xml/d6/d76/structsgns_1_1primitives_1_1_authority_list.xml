@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/d76/structsgns_1_1primitives_1_1_authority_list" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::primitives::AuthorityList</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">std::vector&lt; Authority &gt;</basecompoundref>
+    <includes refid="d2/d45/authority_8hpp" local="no">authority.hpp</includes>
+    <briefdescription>
+<para>Special type for vector of authorities. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::primitives::AuthorityList</label>
+        <link refid="d6/d76/structsgns_1_1primitives_1_1_authority_list"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::vector&lt; T &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="3">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::primitives::AuthorityList</label>
+        <link refid="d6/d76/structsgns_1_1primitives_1_1_authority_list"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/primitives/authority.hpp" line="117" column="3" bodyfile="src/primitives/authority.hpp" bodystart="117" bodyend="121"/>
+    <listofallmembers>
+      <member refid="dd/d4e/classstd_1_1vector_1a2396209900e8f592db1f0b2467f7d899" prot="public" virt="non-virtual"><scope>sgns::primitives::AuthorityList</scope><name>elements</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

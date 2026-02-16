@@ -1,0 +1,465 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec" kind="class" language="C++" prot="public">
+    <compoundname>sgns::storage::trie::SuperGeniusCodec</compoundname>
+    <basecompoundref refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec" prot="public" virt="non-virtual">sgns::storage::trie::Codec</basecompoundref>
+    <includes refid="d7/db4/supergenius__codec_8hpp" local="no">supergenius_codec.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a4345b8fb7fff01c57ebc4ce3752679d2" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>Error</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusCodec::Error</qualifiedname>
+        <enumvalue id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a4345b8fb7fff01c57ebc4ce3752679d2ad0749aaba8b833466dfcbb0428e4f89c" prot="public">
+          <name>SUCCESS</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a4345b8fb7fff01c57ebc4ce3752679d2a3e7e7c91fcf65003d456d40fed4ec179" prot="public">
+          <name>TOO_MANY_NIBBLES</name>
+          <briefdescription>
+<para>number of nibbles in key is &gt;= 2**16 </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a4345b8fb7fff01c57ebc4ce3752679d2a56df1ab5bd0d8264724ccc00cc7dd0c8" prot="public">
+          <name>UNKNOWN_NODE_TYPE</name>
+          <briefdescription>
+<para>node type is unknown </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a4345b8fb7fff01c57ebc4ce3752679d2ab1d8520c134f84dc9e6d86240f874ab6" prot="public">
+          <name>INPUT_TOO_SMALL</name>
+          <briefdescription>
+<para>cannot decode a node, not enough bytes on input </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a4345b8fb7fff01c57ebc4ce3752679d2a8a51d16477faa3209861ed04b2beea9d" prot="public">
+          <name>NO_NODE_VALUE</name>
+          <briefdescription>
+<para>leaf node without value </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/supergenius_codec.hpp" line="19" column="5" bodyfile="src/storage/trie/serialization/supergenius_codec.hpp" bodystart="19" bodyend="25"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a8597ede240a400bc63e03b2260d5f158" prot="public" static="no">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">sgns::base::Buffer</ref></type>
+        <definition>using sgns::storage::trie::SuperGeniusCodec::Buffer = sgns::base::Buffer</definition>
+        <argsstring></argsstring>
+        <name>Buffer</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusCodec::Buffer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/supergenius_codec.hpp" line="17" column="5" bodyfile="src/storage/trie/serialization/supergenius_codec.hpp" bodystart="17" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a8272341731bab3c3f6d9acf14fab8621" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::SuperGeniusCodec::~SuperGeniusCodec</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~SuperGeniusCodec</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusCodec::~SuperGeniusCodec</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/supergenius_codec.hpp" line="27" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1ac09653f49001069470548f98f9f35e99" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a8597ede240a400bc63e03b2260d5f158" kindref="member">Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; base::Buffer &gt; sgns::storage::trie::SuperGeniusCodec::encodeNode</definition>
+        <argsstring>(const Node &amp;node) const override</argsstring>
+        <name>encodeNode</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusCodec::encodeNode</qualifiedname>
+        <reimplements refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec_1ace5af34e24bffb4f41f6220bbc8e3f49">encodeNode</reimplements>
+        <param>
+          <type>const <ref refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node" kindref="compound">Node</ref> &amp;</type>
+          <declname>node</declname>
+        </param>
+        <briefdescription>
+<para>Encode node to byte representation. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername><ref refid="de/ddf/classsgns_1_1node" kindref="compound">node</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>node in the trie </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>encoded representation of the node </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/supergenius_codec.hpp" line="29" column="21" bodyfile="src/storage/trie/serialization/supergenius_codec.cpp" bodystart="100" bodyend="114"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a69e1cc116fe836842320b9dfd61ae512" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; <ref refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node" kindref="compound">Node</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; Node &gt; &gt; sgns::storage::trie::SuperGeniusCodec::decodeNode</definition>
+        <argsstring>(const base::Buffer &amp;encoded_data) const override</argsstring>
+        <name>decodeNode</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusCodec::decodeNode</qualifiedname>
+        <reimplements refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec_1a1fc94a87d2d7779a6efb36c583d3e244">decodeNode</reimplements>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>encoded_data</declname>
+        </param>
+        <briefdescription>
+<para>Decode node from bytes. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>encoded_data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>a buffer containing encoded representation of a node </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>a node in the trie </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/supergenius_codec.hpp" line="31" column="21" bodyfile="src/storage/trie/serialization/supergenius_codec.cpp" bodystart="212" bodyend="234"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a1e7229aabb71f9c7e29c2748097ba64d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>base::Buffer sgns::storage::trie::SuperGeniusCodec::merkleValue</definition>
+        <argsstring>(const Buffer &amp;buf) const override</argsstring>
+        <name>merkleValue</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusCodec::merkleValue</qualifiedname>
+        <reimplements refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec_1a3c48b13f7aa1c3bdb016118d3b83494c">merkleValue</reimplements>
+        <param>
+          <type>const <ref refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a8597ede240a400bc63e03b2260d5f158" kindref="member">Buffer</ref> &amp;</type>
+          <declname>buf</declname>
+        </param>
+        <briefdescription>
+<para>Get the merkle value of a node. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>buf</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>byte representation of the node </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>hash of the buffer, or the buffer itself if it is shorter than the hash </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/supergenius_codec.hpp" line="34" column="18" bodyfile="src/storage/trie/serialization/supergenius_codec.cpp" bodystart="78" bodyend="86"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a00e6e53e7fca6f8e46c5a498d80805bd" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+        <definition>base::Hash256 sgns::storage::trie::SuperGeniusCodec::hash256</definition>
+        <argsstring>(const Buffer &amp;buf) const override</argsstring>
+        <name>hash256</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusCodec::hash256</qualifiedname>
+        <reimplements refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec_1a978076661f4350489d21c0b000cab30e">hash256</reimplements>
+        <param>
+          <type>const <ref refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a8597ede240a400bc63e03b2260d5f158" kindref="member">Buffer</ref> &amp;</type>
+          <declname>buf</declname>
+        </param>
+        <briefdescription>
+<para>Get the hash of a node. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>buf</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>byte representation of the node </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>hash of the buffer </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/supergenius_codec.hpp" line="36" column="19" bodyfile="src/storage/trie/serialization/supergenius_codec.cpp" bodystart="88" bodyend="98"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a7b20cf61c8e8039cb18606f90e8d4ea8" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::storage::trie::SuperGeniusCodec::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusCodec::GetName</qualifiedname>
+        <reimplements refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/supergenius_codec.hpp" line="38" column="17" bodyfile="src/storage/trie/serialization/supergenius_codec.hpp" bodystart="38" bodyend="41"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a81b65fa4b086ce6f7a469e8049211f99" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a8597ede240a400bc63e03b2260d5f158" kindref="member">Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; base::Buffer &gt; sgns::storage::trie::SuperGeniusCodec::encodeHeader</definition>
+        <argsstring>(const SuperGeniusNode &amp;node) const</argsstring>
+        <name>encodeHeader</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusCodec::encodeHeader</qualifiedname>
+        <param>
+          <type>const <ref refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node" kindref="compound">SuperGeniusNode</ref> &amp;</type>
+          <declname>node</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Encodes a node header accroding to the specification <simplesect kind="see"><para>Algorithm 3: partial key length encoding </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+<para>1 byte head</para>
+<para>number of 255 in l</para>
+<para>for last byte</para>
+<para>fill array with 255</para>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/supergenius_codec.hpp" line="58" column="21" bodyfile="src/storage/trie/serialization/supergenius_codec.cpp" bodystart="116" bodyend="159"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a38a3c0ae9b428675789d11c7badc39d4" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles" kindref="compound">KeyNibbles</ref></type>
+        <definition>KeyNibbles sgns::storage::trie::SuperGeniusCodec::keyToNibbles</definition>
+        <argsstring>(const Buffer &amp;key)</argsstring>
+        <name>keyToNibbles</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusCodec::keyToNibbles</qualifiedname>
+        <param>
+          <type>const <ref refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a8597ede240a400bc63e03b2260d5f158" kindref="member">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Def. 14 KeyEncode Splits a key to an array of nibbles (a nibble is a half of a byte) </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/supergenius_codec.hpp" line="47" column="23" bodyfile="src/storage/trie/serialization/supergenius_codec.cpp" bodystart="60" bodyend="76"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a6c6e1a6f7e224383920923d5ec8913a7" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a8597ede240a400bc63e03b2260d5f158" kindref="member">Buffer</ref></type>
+        <definition>base::Buffer sgns::storage::trie::SuperGeniusCodec::nibblesToKey</definition>
+        <argsstring>(const KeyNibbles &amp;nibbles)</argsstring>
+        <name>nibblesToKey</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusCodec::nibblesToKey</qualifiedname>
+        <param>
+          <type>const <ref refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles" kindref="compound">KeyNibbles</ref> &amp;</type>
+          <declname>nibbles</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Collects an array of nibbles to a key </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/supergenius_codec.hpp" line="52" column="19" bodyfile="src/storage/trie/serialization/supergenius_codec.cpp" bodystart="43" bodyend="58"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1abbbafe780457b3783f8e63c6831f61cf" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a8597ede240a400bc63e03b2260d5f158" kindref="member">Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; base::Buffer &gt; sgns::storage::trie::SuperGeniusCodec::encodeBranch</definition>
+        <argsstring>(const BranchNode &amp;node) const</argsstring>
+        <name>encodeBranch</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusCodec::encodeBranch</qualifiedname>
+        <param>
+          <type>const <ref refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node" kindref="compound">BranchNode</ref> &amp;</type>
+          <declname>node</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/supergenius_codec.hpp" line="61" column="21" bodyfile="src/storage/trie/serialization/supergenius_codec.cpp" bodystart="161" bodyend="195"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1abf736a6cd84336acd9d4d5c5bcf16806" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a8597ede240a400bc63e03b2260d5f158" kindref="member">Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; base::Buffer &gt; sgns::storage::trie::SuperGeniusCodec::encodeLeaf</definition>
+        <argsstring>(const LeafNode &amp;node) const</argsstring>
+        <name>encodeLeaf</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusCodec::encodeLeaf</qualifiedname>
+        <param>
+          <type>const <ref refid="dc/d4d/structsgns_1_1storage_1_1trie_1_1_leaf_node" kindref="compound">LeafNode</ref> &amp;</type>
+          <declname>node</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/supergenius_codec.hpp" line="62" column="21" bodyfile="src/storage/trie/serialization/supergenius_codec.cpp" bodystart="197" bodyend="210"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a529e908b429d93577b4922a9a0aca46f" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::pair&lt; <ref refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1a8e6ad7aafff6f51af4b80b396d6c8c2a" kindref="member">SuperGeniusNode::Type</ref>, size_t &gt; &gt;</type>
+        <definition>outcome::result&lt; std::pair&lt; SuperGeniusNode::Type, size_t &gt; &gt; sgns::storage::trie::SuperGeniusCodec::decodeHeader</definition>
+        <argsstring>(BufferStream &amp;stream) const</argsstring>
+        <name>decodeHeader</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusCodec::decodeHeader</qualifiedname>
+        <param>
+          <type><ref refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream" kindref="compound">BufferStream</ref> &amp;</type>
+          <declname>stream</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/supergenius_codec.hpp" line="64" column="21" bodyfile="src/storage/trie/serialization/supergenius_codec.cpp" bodystart="237" bodyend="262"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a763a551fd4755a66b8342b1677da152c" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles" kindref="compound">KeyNibbles</ref> &gt;</type>
+        <definition>outcome::result&lt; KeyNibbles &gt; sgns::storage::trie::SuperGeniusCodec::decodePartialKey</definition>
+        <argsstring>(size_t nibbles_num, BufferStream &amp;stream) const</argsstring>
+        <name>decodePartialKey</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusCodec::decodePartialKey</qualifiedname>
+        <param>
+          <type>size_t</type>
+          <declname>nibbles_num</declname>
+        </param>
+        <param>
+          <type><ref refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream" kindref="compound">BufferStream</ref> &amp;</type>
+          <declname>stream</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/supergenius_codec.hpp" line="67" column="21" bodyfile="src/storage/trie/serialization/supergenius_codec.cpp" bodystart="264" bodyend="283"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1acca06fed719d72b26be5563eaef31d79" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; <ref refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node" kindref="compound">Node</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; Node &gt; &gt; sgns::storage::trie::SuperGeniusCodec::decodeBranch</definition>
+        <argsstring>(SuperGeniusNode::Type type, const KeyNibbles &amp;partial_key, BufferStream &amp;stream) const</argsstring>
+        <name>decodeBranch</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusCodec::decodeBranch</qualifiedname>
+        <param>
+          <type><ref refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1a8e6ad7aafff6f51af4b80b396d6c8c2a" kindref="member">SuperGeniusNode::Type</ref></type>
+          <declname>type</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles" kindref="compound">KeyNibbles</ref> &amp;</type>
+          <declname>partial_key</declname>
+        </param>
+        <param>
+          <type><ref refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream" kindref="compound">BufferStream</ref> &amp;</type>
+          <declname>stream</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/supergenius_codec.hpp" line="70" column="21" bodyfile="src/storage/trie/serialization/supergenius_codec.cpp" bodystart="285" bodyend="331"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="2">
+        <label>sgns::storage::trie::Codec</label>
+        <link refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::SuperGeniusCodec</label>
+        <link refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="2">
+        <label>sgns::storage::trie::Codec</label>
+        <link refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::SuperGeniusCodec</label>
+        <link refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/trie/serialization/supergenius_codec.hpp" line="15" column="3" bodyfile="src/storage/trie/serialization/supergenius_codec.hpp" bodystart="15" bodyend="74"/>
+    <listofallmembers>
+      <member refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a8597ede240a400bc63e03b2260d5f158" prot="public" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusCodec</scope><name>Buffer</name></member>
+      <member refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1acca06fed719d72b26be5563eaef31d79" prot="private" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusCodec</scope><name>decodeBranch</name></member>
+      <member refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a529e908b429d93577b4922a9a0aca46f" prot="private" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusCodec</scope><name>decodeHeader</name></member>
+      <member refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a69e1cc116fe836842320b9dfd61ae512" prot="public" virt="virtual"><scope>sgns::storage::trie::SuperGeniusCodec</scope><name>decodeNode</name></member>
+      <member refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a763a551fd4755a66b8342b1677da152c" prot="private" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusCodec</scope><name>decodePartialKey</name></member>
+      <member refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1abbbafe780457b3783f8e63c6831f61cf" prot="private" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusCodec</scope><name>encodeBranch</name></member>
+      <member refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a81b65fa4b086ce6f7a469e8049211f99" prot="public" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusCodec</scope><name>encodeHeader</name></member>
+      <member refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1abf736a6cd84336acd9d4d5c5bcf16806" prot="private" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusCodec</scope><name>encodeLeaf</name></member>
+      <member refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1ac09653f49001069470548f98f9f35e99" prot="public" virt="virtual"><scope>sgns::storage::trie::SuperGeniusCodec</scope><name>encodeNode</name></member>
+      <member refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a4345b8fb7fff01c57ebc4ce3752679d2" prot="public" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusCodec</scope><name>Error</name></member>
+      <member refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a7b20cf61c8e8039cb18606f90e8d4ea8" prot="public" virt="virtual"><scope>sgns::storage::trie::SuperGeniusCodec</scope><name>GetName</name></member>
+      <member refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a00e6e53e7fca6f8e46c5a498d80805bd" prot="public" virt="virtual"><scope>sgns::storage::trie::SuperGeniusCodec</scope><name>hash256</name></member>
+      <member refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a38a3c0ae9b428675789d11c7badc39d4" prot="public" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusCodec</scope><name>keyToNibbles</name></member>
+      <member refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a1e7229aabb71f9c7e29c2748097ba64d" prot="public" virt="virtual"><scope>sgns::storage::trie::SuperGeniusCodec</scope><name>merkleValue</name></member>
+      <member refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a6c6e1a6f7e224383920923d5ec8913a7" prot="public" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusCodec</scope><name>nibblesToKey</name></member>
+      <member refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec_1a743d07ee0214fb234f02860012b1fca4" prot="public" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusCodec</scope><name>~Codec</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::storage::trie::SuperGeniusCodec</scope><name>~IComponent</name></member>
+      <member refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a8272341731bab3c3f6d9acf14fab8621" prot="public" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusCodec</scope><name>~SuperGeniusCodec</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

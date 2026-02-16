@@ -1,0 +1,574 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/d07/classsgns_1_1_i_genius_transactions" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::IGeniusTransactions</compoundname>
+    <derivedcompoundref refid="d5/dd2/classsgns_1_1_escrow_release_transaction" prot="public" virt="non-virtual">sgns::EscrowReleaseTransaction</derivedcompoundref>
+    <derivedcompoundref refid="db/d70/classsgns_1_1_escrow_transaction" prot="public" virt="non-virtual">sgns::EscrowTransaction</derivedcompoundref>
+    <derivedcompoundref refid="d7/d9c/classsgns_1_1_mint_transaction" prot="public" virt="non-virtual">sgns::MintTransaction</derivedcompoundref>
+    <derivedcompoundref refid="d6/d7f/classsgns_1_1_processing_transaction" prot="public" virt="non-virtual">sgns::ProcessingTransaction</derivedcompoundref>
+    <derivedcompoundref refid="de/d98/classsgns_1_1_transfer_transaction" prot="public" virt="non-virtual">sgns::TransferTransaction</derivedcompoundref>
+    <includes refid="db/d3c/_i_genius_transactions_8hpp" local="no">IGeniusTransactions.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d1/d07/classsgns_1_1_i_genius_transactions_1a320ffd126b7cd6483894894bf7147afb" prot="public" static="no">
+        <type>std::function&lt; std::shared_ptr&lt; <ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a75f5591823eb6eaaf612e6bdfb5aae94" kindref="member">IGeniusTransactions</ref> &gt;(const std::vector&lt; uint8_t &gt; &amp;)&gt;</type>
+        <definition>using sgns::IGeniusTransactions::TransactionDeserializeFn = 
+std::function&lt;std::shared_ptr&lt;IGeniusTransactions&gt;( const std::vector&lt;uint8_t&gt; &amp; )&gt;</definition>
+        <argsstring></argsstring>
+        <name>TransactionDeserializeFn</name>
+        <qualifiedname>sgns::IGeniusTransactions::TransactionDeserializeFn</qualifiedname>
+        <briefdescription>
+<para>Alias for the de-serializer method type to be implemented in derived classes. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="34" column="9" bodyfile="src/account/IGeniusTransactions.hpp" bodystart="34" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d1/d07/classsgns_1_1_i_genius_transactions_1a3b9fef5951e36dc7f31128247fdbc59e" prot="public" static="no" mutable="no">
+        <type>SGTransaction::DAGStruct</type>
+        <definition>SGTransaction::DAGStruct sgns::IGeniusTransactions::dag_st</definition>
+        <argsstring></argsstring>
+        <name>dag_st</name>
+        <qualifiedname>sgns::IGeniusTransactions::dag_st</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="113" column="81" bodyfile="src/account/IGeniusTransactions.hpp" bodystart="113" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="d1/d07/classsgns_1_1_i_genius_transactions_1a82f860ff9ae3149788d7a31cffc82529" prot="public" static="yes" mutable="no">
+        <type>std::unordered_map&lt; std::string, <ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a320ffd126b7cd6483894894bf7147afb" kindref="member">TransactionDeserializeFn</ref> &gt;</type>
+        <definition>std::unordered_map&lt;std::string, TransactionDeserializeFn&gt; sgns::IGeniusTransactions::deserializers_map</definition>
+        <argsstring></argsstring>
+        <name>deserializers_map</name>
+        <qualifiedname>sgns::IGeniusTransactions::deserializers_map</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="114" column="42" bodyfile="src/account/IGeniusTransactions.hpp" bodystart="114" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d1/d07/classsgns_1_1_i_genius_transactions_1aeacfba89da66740c2b37b4bbf7110863" prot="private" static="no" mutable="no">
+        <type>const std::string</type>
+        <definition>const std::string sgns::IGeniusTransactions::transaction_type</definition>
+        <argsstring></argsstring>
+        <name>transaction_type</name>
+        <qualifiedname>sgns::IGeniusTransactions::transaction_type</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="117" column="27" bodyfile="src/account/IGeniusTransactions.hpp" bodystart="117" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1a75f5591823eb6eaaf612e6bdfb5aae94" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::IGeniusTransactions::IGeniusTransactions</definition>
+        <argsstring>(std::string type, SGTransaction::DAGStruct dag)</argsstring>
+        <name>IGeniusTransactions</name>
+        <qualifiedname>sgns::IGeniusTransactions::IGeniusTransactions</qualifiedname>
+        <param>
+          <type>std::string</type>
+          <declname>type</declname>
+        </param>
+        <param>
+          <type>SGTransaction::DAGStruct</type>
+          <declname>dag</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="37" column="9" bodyfile="src/account/IGeniusTransactions.hpp" bodystart="37" bodyend="40"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1a99ca00e5f73c9ea483ebf83513bd8063" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::IGeniusTransactions::~IGeniusTransactions</definition>
+        <argsstring>()=default</argsstring>
+        <name>~IGeniusTransactions</name>
+        <qualifiedname>sgns::IGeniusTransactions::~IGeniusTransactions</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="42" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1a836b1a1080b24f6f9fd220332b3b5b24" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::IGeniusTransactions::GetType</definition>
+        <argsstring>() const</argsstring>
+        <name>GetType</name>
+        <qualifiedname>sgns::IGeniusTransactions::GetType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="44" column="22" bodyfile="src/account/IGeniusTransactions.hpp" bodystart="44" bodyend="47"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1a13a85bfa2911ff2327ffcc81260a9fc4" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>virtual std::vector&lt; uint8_t &gt; sgns::IGeniusTransactions::SerializeByteVector</definition>
+        <argsstring>()=0</argsstring>
+        <name>SerializeByteVector</name>
+        <qualifiedname>sgns::IGeniusTransactions::SerializeByteVector</qualifiedname>
+        <reimplementedby refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1a0855709b5f3ae7932cc40890244df4bd">SerializeByteVector</reimplementedby>
+        <reimplementedby refid="db/d70/classsgns_1_1_escrow_transaction_1a465911b27388ec11d724a818c8467b19">SerializeByteVector</reimplementedby>
+        <reimplementedby refid="d7/d9c/classsgns_1_1_mint_transaction_1a986602fbeecaea3565c6734bdf92e721">SerializeByteVector</reimplementedby>
+        <reimplementedby refid="d6/d7f/classsgns_1_1_processing_transaction_1a6e0b1db21341173ec251d09311ee5586">SerializeByteVector</reimplementedby>
+        <reimplementedby refid="de/d98/classsgns_1_1_transfer_transaction_1a57a9f5aaba3b5cf5e718958f57adef16">SerializeByteVector</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="58" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1a53e60bc5badda3cc6df0c57561e14acb" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::string</type>
+        <definition>virtual std::string sgns::IGeniusTransactions::GetTransactionSpecificPath</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetTransactionSpecificPath</name>
+        <qualifiedname>sgns::IGeniusTransactions::GetTransactionSpecificPath</qualifiedname>
+        <reimplementedby refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1a941c391cf89861a26916c618a62fafa8">GetTransactionSpecificPath</reimplementedby>
+        <reimplementedby refid="db/d70/classsgns_1_1_escrow_transaction_1a5d40c2833a7ef282bb0b0d5f49261b25">GetTransactionSpecificPath</reimplementedby>
+        <reimplementedby refid="d7/d9c/classsgns_1_1_mint_transaction_1a691af11129334298a550c4ccf275f271">GetTransactionSpecificPath</reimplementedby>
+        <reimplementedby refid="d6/d7f/classsgns_1_1_processing_transaction_1af822054aeffe43792a60b420dde04038">GetTransactionSpecificPath</reimplementedby>
+        <reimplementedby refid="de/d98/classsgns_1_1_transfer_transaction_1a0f7ae365f5c2dde06cf59f6b6f7bc239">GetTransactionSpecificPath</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="60" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1a47d69eafb82280cd7de3f2c268054494" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::IGeniusTransactions::GetTransactionFullPath</definition>
+        <argsstring>() const</argsstring>
+        <name>GetTransactionFullPath</name>
+        <qualifiedname>sgns::IGeniusTransactions::GetTransactionFullPath</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="67" column="21" bodyfile="src/account/IGeniusTransactions.hpp" bodystart="67" bodyend="70"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1af8cd3ed709b329dfccd519d1bf178424" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::IGeniusTransactions::GetProofFullPath</definition>
+        <argsstring>() const</argsstring>
+        <name>GetProofFullPath</name>
+        <qualifiedname>sgns::IGeniusTransactions::GetProofFullPath</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="72" column="21" bodyfile="src/account/IGeniusTransactions.hpp" bodystart="72" bodyend="75"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1a3eaa922b6192d8342a08c7ea66cbafbc" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::IGeniusTransactions::GetSrcAddress</definition>
+        <argsstring>() const</argsstring>
+        <name>GetSrcAddress</name>
+        <qualifiedname>sgns::IGeniusTransactions::GetSrcAddress</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="77" column="21" bodyfile="src/account/IGeniusTransactions.hpp" bodystart="77" bodyend="80"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1ab78d8716ceaf368ddd888e91ac84deb3" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::IGeniusTransactions::GetHash</definition>
+        <argsstring>() const</argsstring>
+        <name>GetHash</name>
+        <qualifiedname>sgns::IGeniusTransactions::GetHash</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="82" column="21" bodyfile="src/account/IGeniusTransactions.cpp" bodystart="97" bodyend="100"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1aead0ba189578cd0a323ba56b1367f470" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::IGeniusTransactions::GetTimestamp</definition>
+        <argsstring>() const</argsstring>
+        <name>GetTimestamp</name>
+        <qualifiedname>sgns::IGeniusTransactions::GetTimestamp</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="84" column="18" bodyfile="src/account/IGeniusTransactions.hpp" bodystart="84" bodyend="87"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1aea8074c464dcd1e2e15ac9196a4c9e09" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>std::unordered_set&lt; std::string &gt;</type>
+        <definition>std::unordered_set&lt; std::string &gt; sgns::IGeniusTransactions::GetTopics</definition>
+        <argsstring>() const</argsstring>
+        <name>GetTopics</name>
+        <qualifiedname>sgns::IGeniusTransactions::GetTopics</qualifiedname>
+        <reimplementedby refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1aa4eefb3b3570603e804ac1b979e06729">GetTopics</reimplementedby>
+        <reimplementedby refid="de/d98/classsgns_1_1_transfer_transaction_1a447950042b66c64fa619de54e7b8707a">GetTopics</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="89" column="36" bodyfile="src/account/IGeniusTransactions.cpp" bodystart="102" bodyend="105"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1a61846445efa8aa09b7291655e981cf65" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::IGeniusTransactions::FillHash</definition>
+        <argsstring>()</argsstring>
+        <name>FillHash</name>
+        <qualifiedname>sgns::IGeniusTransactions::FillHash</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="106" column="14" bodyfile="src/account/IGeniusTransactions.cpp" bodystart="34" bodyend="45"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1ab13efbfe0444411e9d4e19725157de25" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::IGeniusTransactions::CheckHash</definition>
+        <argsstring>()</argsstring>
+        <name>CheckHash</name>
+        <qualifiedname>sgns::IGeniusTransactions::CheckHash</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="107" column="14" bodyfile="src/account/IGeniusTransactions.cpp" bodystart="47" bodyend="60"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1a771a632131b46b4a001a5fe829607b18" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>std::vector&lt; uint8_t &gt; sgns::IGeniusTransactions::MakeSignature</definition>
+        <argsstring>(GeniusAccount &amp;account)</argsstring>
+        <name>MakeSignature</name>
+        <qualifiedname>sgns::IGeniusTransactions::MakeSignature</qualifiedname>
+        <param>
+          <type><ref refid="dc/d64/classsgns_1_1_genius_account" kindref="compound">GeniusAccount</ref> &amp;</type>
+          <declname>account</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="109" column="21" bodyfile="src/account/IGeniusTransactions.cpp" bodystart="62" bodyend="73"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1af5e62c217af069a76213a9b7812ab626" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::IGeniusTransactions::CheckSignature</definition>
+        <argsstring>()</argsstring>
+        <name>CheckSignature</name>
+        <qualifiedname>sgns::IGeniusTransactions::CheckSignature</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="110" column="30" bodyfile="src/account/IGeniusTransactions.cpp" bodystart="75" bodyend="83"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1acd74bf05f2e8b0123163806c90071c57" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::IGeniusTransactions::CheckDAGSignatureLegacy</definition>
+        <argsstring>()</argsstring>
+        <name>CheckDAGSignatureLegacy</name>
+        <qualifiedname>sgns::IGeniusTransactions::CheckDAGSignatureLegacy</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="111" column="30" bodyfile="src/account/IGeniusTransactions.cpp" bodystart="85" bodyend="95"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1a7fc888000de3d0c758a125ca485ce4a1" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; SGTransaction::DAGStruct &gt;</type>
+        <definition>outcome::result&lt; SGTransaction::DAGStruct &gt; sgns::IGeniusTransactions::DeSerializeDAGStruct</definition>
+        <argsstring>(const std::vector&lt; uint8_t &gt; &amp;data)</argsstring>
+        <name>DeSerializeDAGStruct</name>
+        <qualifiedname>sgns::IGeniusTransactions::DeSerializeDAGStruct</qualifiedname>
+        <param>
+          <type>const std::vector&lt; uint8_t &gt; &amp;</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="49" column="32" bodyfile="src/account/IGeniusTransactions.cpp" bodystart="7" bodyend="19"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1a884eebd98dc345a622b165f9ce9b60e1" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; SGTransaction::DAGStruct &gt;</type>
+        <definition>outcome::result&lt; SGTransaction::DAGStruct &gt; sgns::IGeniusTransactions::DeSerializeDAGStruct</definition>
+        <argsstring>(const std::string &amp;data)</argsstring>
+        <name>DeSerializeDAGStruct</name>
+        <qualifiedname>sgns::IGeniusTransactions::DeSerializeDAGStruct</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="50" column="32" bodyfile="src/account/IGeniusTransactions.cpp" bodystart="21" bodyend="32"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1a543616dd7f86c5df91fa91716aca10b2" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>SGTransaction::DAGStruct</type>
+        <definition>static SGTransaction::DAGStruct sgns::IGeniusTransactions::SetDAGWithType</definition>
+        <argsstring>(SGTransaction::DAGStruct dag, const std::string &amp;type)</argsstring>
+        <name>SetDAGWithType</name>
+        <qualifiedname>sgns::IGeniusTransactions::SetDAGWithType</qualifiedname>
+        <param>
+          <type>SGTransaction::DAGStruct</type>
+          <declname>dag</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>type</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="52" column="41" bodyfile="src/account/IGeniusTransactions.hpp" bodystart="52" bodyend="56"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1a0f2963348939f103af3404a653a9f91b" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::string</type>
+        <definition>static std::string sgns::IGeniusTransactions::GetTransactionFullPath</definition>
+        <argsstring>(const std::string &amp;tx_hash)</argsstring>
+        <name>GetTransactionFullPath</name>
+        <qualifiedname>sgns::IGeniusTransactions::GetTransactionFullPath</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>tx_hash</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="62" column="28" bodyfile="src/account/IGeniusTransactions.hpp" bodystart="62" bodyend="65"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1a773fcfb15ae0aebdf628f8603dc326e1" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>static void sgns::IGeniusTransactions::RegisterDeserializer</definition>
+        <argsstring>(const std::string &amp;transaction_type, TransactionDeserializeFn fn)</argsstring>
+        <name>RegisterDeserializer</name>
+        <qualifiedname>sgns::IGeniusTransactions::RegisterDeserializer</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>transaction_type</declname>
+        </param>
+        <param>
+          <type><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a320ffd126b7cd6483894894bf7147afb" kindref="member">TransactionDeserializeFn</ref></type>
+          <declname>fn</declname>
+        </param>
+        <briefdescription>
+<para>Registers a deserializer function for a specific transaction type. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in"><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1aeacfba89da66740c2b37b4bbf7110863" kindref="member">transaction_type</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The transaction type for which the deserializer is registered. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">fn</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The deserializer function to be registered. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="96" column="21" bodyfile="src/account/IGeniusTransactions.hpp" bodystart="96" bodyend="99"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d07/classsgns_1_1_i_genius_transactions_1a9800478402d0ecbd38493d3b5789f9a9" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::unordered_map&lt; std::string, <ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a320ffd126b7cd6483894894bf7147afb" kindref="member">TransactionDeserializeFn</ref> &gt; &amp;</type>
+        <definition>static std::unordered_map&lt; std::string, TransactionDeserializeFn &gt; &amp; sgns::IGeniusTransactions::GetDeSerializers</definition>
+        <argsstring>()</argsstring>
+        <name>GetDeSerializers</name>
+        <qualifiedname>sgns::IGeniusTransactions::GetDeSerializers</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IGeniusTransactions.hpp" line="101" column="35" bodyfile="src/account/IGeniusTransactions.hpp" bodystart="101" bodyend="104"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::EscrowReleaseTransaction</label>
+        <link refid="d5/dd2/classsgns_1_1_escrow_release_transaction"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::EscrowTransaction</label>
+        <link refid="db/d70/classsgns_1_1_escrow_transaction"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::IGeniusTransactions</label>
+        <link refid="d1/d07/classsgns_1_1_i_genius_transactions"/>
+      </node>
+      <node id="4">
+        <label>sgns::MintTransaction</label>
+        <link refid="d7/d9c/classsgns_1_1_mint_transaction"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::ProcessingTransaction</label>
+        <link refid="d6/d7f/classsgns_1_1_processing_transaction"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>sgns::TransferTransaction</label>
+        <link refid="de/d98/classsgns_1_1_transfer_transaction"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="6">
+        <label>K</label>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::IGeniusTransactions</label>
+        <link refid="d1/d07/classsgns_1_1_i_genius_transactions"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+deserializers_map</edgelabel>
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-transaction_type</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="3">
+        <label>std::string</label>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::unordered_map&lt; K, T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::unordered_map&lt; std::string, TransactionDeserializeFn &gt;</label>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; std::string, TransactionDeserializeFn &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/account/IGeniusTransactions.hpp" line="28" column="5" bodyfile="src/account/IGeniusTransactions.hpp" bodystart="29" bodyend="118"/>
+    <listofallmembers>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1acd74bf05f2e8b0123163806c90071c57" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>CheckDAGSignatureLegacy</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1ab13efbfe0444411e9d4e19725157de25" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>CheckHash</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1af5e62c217af069a76213a9b7812ab626" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>CheckSignature</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a3b9fef5951e36dc7f31128247fdbc59e" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>dag_st</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a7fc888000de3d0c758a125ca485ce4a1" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>DeSerializeDAGStruct</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a884eebd98dc345a622b165f9ce9b60e1" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>DeSerializeDAGStruct</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a82f860ff9ae3149788d7a31cffc82529" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>deserializers_map</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a61846445efa8aa09b7291655e981cf65" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>FillHash</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a9800478402d0ecbd38493d3b5789f9a9" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>GetDeSerializers</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1ab78d8716ceaf368ddd888e91ac84deb3" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>GetHash</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1af8cd3ed709b329dfccd519d1bf178424" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>GetProofFullPath</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a3eaa922b6192d8342a08c7ea66cbafbc" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>GetSrcAddress</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1aead0ba189578cd0a323ba56b1367f470" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>GetTimestamp</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1aea8074c464dcd1e2e15ac9196a4c9e09" prot="public" virt="virtual"><scope>sgns::IGeniusTransactions</scope><name>GetTopics</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a0f2963348939f103af3404a653a9f91b" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>GetTransactionFullPath</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a47d69eafb82280cd7de3f2c268054494" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>GetTransactionFullPath</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a53e60bc5badda3cc6df0c57561e14acb" prot="public" virt="pure-virtual"><scope>sgns::IGeniusTransactions</scope><name>GetTransactionSpecificPath</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a836b1a1080b24f6f9fd220332b3b5b24" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>GetType</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a75f5591823eb6eaaf612e6bdfb5aae94" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>IGeniusTransactions</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a771a632131b46b4a001a5fe829607b18" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>MakeSignature</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a773fcfb15ae0aebdf628f8603dc326e1" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>RegisterDeserializer</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a13a85bfa2911ff2327ffcc81260a9fc4" prot="public" virt="pure-virtual"><scope>sgns::IGeniusTransactions</scope><name>SerializeByteVector</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a543616dd7f86c5df91fa91716aca10b2" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>SetDAGWithType</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1aeacfba89da66740c2b37b4bbf7110863" prot="private" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>transaction_type</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a320ffd126b7cd6483894894bf7147afb" prot="public" virt="non-virtual"><scope>sgns::IGeniusTransactions</scope><name>TransactionDeserializeFn</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a99ca00e5f73c9ea483ebf83513bd8063" prot="public" virt="virtual"><scope>sgns::IGeniusTransactions</scope><name>~IGeniusTransactions</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

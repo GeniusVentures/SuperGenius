@@ -1,0 +1,365 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/d70/_transfer_transaction_8hpp" kind="file" language="C++">
+    <compoundname>TransferTransaction.hpp</compoundname>
+    <includes refid="db/d3c/_i_genius_transactions_8hpp" local="yes">account/IGeniusTransactions.hpp</includes>
+    <includes refid="d1/dd1/_u_t_x_o_structs_8hpp" local="yes">UTXOStructs.hpp</includes>
+    <includes local="yes">account/proto/SGTransaction.pb.h</includes>
+    <includedby refid="dc/dfe/_migration0__2__0_to1__0__0_8cpp" local="yes">src/account/Migration0_2_0To1_0_0.cpp</includedby>
+    <includedby refid="d6/d71/_migration3__4__0_to3__5__0_8cpp" local="yes">src/account/Migration3_4_0To3_5_0.cpp</includedby>
+    <includedby refid="db/da7/_migration3__5__1_to3__6__0_8cpp" local="yes">src/account/Migration3_5_1To3_6_0.cpp</includedby>
+    <includedby refid="d0/dcc/_transaction_manager_8cpp" local="yes">src/account/TransactionManager.cpp</includedby>
+    <includedby refid="db/dbb/_transfer_transaction_8cpp" local="yes">src/account/TransferTransaction.cpp</includedby>
+    <incdepgraph>
+      <node id="10">
+        <label>GeniusAccount.hpp</label>
+        <link refid="d0/dad/_genius_account_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>account/IGeniusTransactions.hpp</label>
+        <link refid="db/d3c/_i_genius_transactions_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>account/TokenID.hpp</label>
+        <link refid="df/d5f/_token_i_d_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/account/TransferTransaction.hpp</label>
+        <link refid="dd/d70/_transfer_transaction_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="36">
+        <label>UTXOStructs.hpp</label>
+        <link refid="d1/dd1/_u_t_x_o_structs_8hpp"/>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="37">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+      </node>
+      <node id="40">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>local_secure_storage/ISecureStorage.hpp</label>
+        <link refid="dd/d1a/_i_secure_storage_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>ProofSystem/ElGamalKeyGenerator.hpp</label>
+      </node>
+      <node id="23">
+        <label>ProofSystem/EthereumKeyGenerator.hpp</label>
+      </node>
+      <node id="9">
+        <label>account/proto/SGTransaction.pb.h</label>
+      </node>
+      <node id="29">
+        <label>algorithm</label>
+      </node>
+      <node id="11">
+        <label>array</label>
+      </node>
+      <node id="34">
+        <label>boost/filesystem/operations.hpp</label>
+      </node>
+      <node id="33">
+        <label>boost/filesystem/path.hpp</label>
+      </node>
+      <node id="6">
+        <label>boost/format.hpp</label>
+      </node>
+      <node id="39">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="21">
+        <label>boost/multiprecision/cpp_int.hpp</label>
+      </node>
+      <node id="16">
+        <label>chrono</label>
+      </node>
+      <node id="15">
+        <label>condition_variable</label>
+      </node>
+      <node id="38">
+        <label>cstddef</label>
+      </node>
+      <node id="25">
+        <label>cstdint</label>
+      </node>
+      <node id="26">
+        <label>cstring</label>
+      </node>
+      <node id="17">
+        <label>filesystem</label>
+      </node>
+      <node id="18">
+        <label>functional</label>
+      </node>
+      <node id="35">
+        <label>gsl/span</label>
+      </node>
+      <node id="27">
+        <label>iomanip</label>
+      </node>
+      <node id="42">
+        <label>iostream</label>
+      </node>
+      <node id="8">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="12">
+        <label>memory</label>
+      </node>
+      <node id="14">
+        <label>mutex</label>
+      </node>
+      <node id="19">
+        <label>optional</label>
+      </node>
+      <node id="20">
+        <label>set</label>
+      </node>
+      <node id="13">
+        <label>shared_mutex</label>
+      </node>
+      <node id="28">
+        <label>sstream</label>
+      </node>
+      <node id="5">
+        <label>string</label>
+      </node>
+      <node id="41">
+        <label>string_view</label>
+      </node>
+      <node id="32">
+        <label>unordered_set</label>
+      </node>
+      <node id="3">
+        <label>utility</label>
+      </node>
+      <node id="4">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/account/Migration0_2_0To1_0_0.cpp</label>
+        <link refid="dc/dfe/_migration0__2__0_to1__0__0_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/account/Migration3_4_0To3_5_0.cpp</label>
+        <link refid="d6/d71/_migration3__4__0_to3__5__0_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/account/Migration3_5_1To3_6_0.cpp</label>
+        <link refid="db/da7/_migration3__5__1_to3__6__0_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/account/TransactionManager.cpp</label>
+        <link refid="d0/dcc/_transaction_manager_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/account/TransferTransaction.cpp</label>
+        <link refid="db/dbb/_transfer_transaction_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/account/TransferTransaction.hpp</label>
+        <link refid="dd/d70/_transfer_transaction_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="de/d98/classsgns_1_1_transfer_transaction" prot="public">sgns::TransferTransaction</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <briefdescription>
+<para>Transaction of currency transfer. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="date"><para>2024-03-11 </para>
+</simplesect>
+<simplesect kind="author"><para>Henrique A. Klein (<ulink url="mailto:hklein@gnus.ai">hklein@gnus.ai</ulink>) </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>_TRANSFER_TRANSACTION_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>_TRANSFER_TRANSACTION_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="db/d3c/_i_genius_transactions_8hpp" kindref="compound">account/IGeniusTransactions.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d1/dd1/_u_t_x_o_structs_8hpp" kindref="compound">UTXOStructs.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;account/proto/SGTransaction.pb.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="15"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="19" refid="de/d98/classsgns_1_1_transfer_transaction" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="de/d98/classsgns_1_1_transfer_transaction_1a6f631c989f19c826872bf1e7b96444fc" kindref="member">TransferTransaction</ref><sp/>final<sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a75f5591823eb6eaaf612e6bdfb5aae94" kindref="member">IGeniusTransactions</ref></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="de/d98/classsgns_1_1_transfer_transaction_1a6f631c989f19c826872bf1e7b96444fc" kindref="member">TransferTransaction</ref><sp/><ref refid="de/d98/classsgns_1_1_transfer_transaction_1afdd806e83919e2514491409d5dcfc03e" kindref="member">New</ref>(<sp/>std::vector&lt;InputUTXOInfo&gt;<sp/><sp/>inputs,</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;OutputDestInfo&gt;<sp/>destinations,</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SGTransaction::DAGStruct<sp/><sp/><sp/><sp/>dag<sp/>);</highlight></codeline>
+<codeline lineno="28" refid="de/d98/classsgns_1_1_transfer_transaction_1a715dbc326691f36bd09f2c4a4c95e682" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/d98/classsgns_1_1_transfer_transaction_1a715dbc326691f36bd09f2c4a4c95e682" kindref="member">~TransferTransaction</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;uint8_t&gt;<sp/><ref refid="de/d98/classsgns_1_1_transfer_transaction_1a57a9f5aaba3b5cf5e718958f57adef16" kindref="member">SerializeByteVector</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;TransferTransaction&gt;<sp/><ref refid="de/d98/classsgns_1_1_transfer_transaction_1a53efcda033a4da8db9d07d90bae8aacb" kindref="member">DeSerializeByteVector</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;uint8_t&gt;<sp/>&amp;data<sp/>);</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;OutputDestInfo&gt;<sp/><ref refid="de/d98/classsgns_1_1_transfer_transaction_1a48cbd23d1f74a38db63b6f32d60add57" kindref="member">GetDstInfos</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;InputUTXOInfo&gt;<sp/><sp/><ref refid="de/d98/classsgns_1_1_transfer_transaction_1a1a2873d2b3b5d8fd9e92e4be94ac034a" kindref="member">GetInputInfos</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46" refid="de/d98/classsgns_1_1_transfer_transaction_1a0f7ae365f5c2dde06cf59f6b6f7bc239" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="de/d98/classsgns_1_1_transfer_transaction_1a0f7ae365f5c2dde06cf59f6b6f7bc239" kindref="member">GetTransactionSpecificPath</ref>()</highlight><highlight class="keyword"><sp/>const<sp/>override</highlight></codeline>
+<codeline lineno="47"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a836b1a1080b24f6f9fd220332b3b5b24" kindref="member">GetType</ref>();</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"></highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::unordered_set&lt;std::string&gt;<sp/><ref refid="de/d98/classsgns_1_1_transfer_transaction_1a447950042b66c64fa619de54e7b8707a" kindref="member">GetTopics</ref>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"></highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/d98/classsgns_1_1_transfer_transaction_1a6f631c989f19c826872bf1e7b96444fc" kindref="member">TransferTransaction</ref>(<sp/>std::vector&lt;OutputDestInfo&gt;<sp/>destinations,</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;InputUTXOInfo&gt;<sp/><sp/>inputs,</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SGTransaction::DAGStruct<sp/><sp/><sp/><sp/>dag<sp/>);</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"></highlight></codeline>
+<codeline lineno="64" refid="de/d98/classsgns_1_1_transfer_transaction_1a4f9ea8a7d078e0b8ba912dadca53100a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;InputUTXOInfo&gt;<sp/><sp/><ref refid="de/d98/classsgns_1_1_transfer_transaction_1a4f9ea8a7d078e0b8ba912dadca53100a" kindref="member">input_tx_</ref>;</highlight></codeline>
+<codeline lineno="65" refid="de/d98/classsgns_1_1_transfer_transaction_1a478207c68f2a4607e7bec792f73c2757" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;OutputDestInfo&gt;<sp/><ref refid="de/d98/classsgns_1_1_transfer_transaction_1a478207c68f2a4607e7bec792f73c2757" kindref="member">outputs_</ref>;</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"></highlight></codeline>
+<codeline lineno="71" refid="de/d98/classsgns_1_1_transfer_transaction_1a13726a0911df4e0791cbcc136a8aac11" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="de/d98/classsgns_1_1_transfer_transaction_1a13726a0911df4e0791cbcc136a8aac11" kindref="member">Register</ref>()</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a773fcfb15ae0aebdf628f8603dc326e1" kindref="member">RegisterDeserializer</ref>(<sp/></highlight><highlight class="stringliteral">&quot;transfer&quot;</highlight><highlight class="normal">,<sp/>&amp;<ref refid="de/d98/classsgns_1_1_transfer_transaction_1a53efcda033a4da8db9d07d90bae8aacb" kindref="member">TransferTransaction::DeSerializeByteVector</ref><sp/>);</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"></highlight></codeline>
+<codeline lineno="80" refid="de/d98/classsgns_1_1_transfer_transaction_1ae4124e5c6840343410f74e9986f4a7cb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="de/d98/classsgns_1_1_transfer_transaction_1ae4124e5c6840343410f74e9986f4a7cb" kindref="member">registered</ref><sp/>=<sp/><ref refid="de/d98/classsgns_1_1_transfer_transaction_1a13726a0911df4e0791cbcc136a8aac11" kindref="member">Register</ref>();</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"></highlight></codeline>
+<codeline lineno="83"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"></highlight></codeline>
+<codeline lineno="85"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/account/TransferTransaction.hpp"/>
+  </compounddef>
+</doxygen>

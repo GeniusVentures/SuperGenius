@@ -1,0 +1,352 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/d49/secp256k1__types_8hpp" kind="file" language="C++">
+    <compoundname>secp256k1_types.hpp</compoundname>
+    <includes refid="d4/d16/blob_8hpp" local="yes">base/blob.hpp</includes>
+    <includedby refid="d2/d17/secp256k1__provider_8hpp" local="yes">src/crypto/secp256k1_provider.hpp</includedby>
+    <incdepgraph>
+      <node id="2">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crypto/secp256k1_types.hpp</label>
+        <link refid="d9/d49/secp256k1__types_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>array</label>
+      </node>
+      <node id="5">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="3">
+        <label>cstddef</label>
+      </node>
+      <node id="9">
+        <label>gsl/span</label>
+      </node>
+      <node id="12">
+        <label>iostream</label>
+      </node>
+      <node id="11">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="7">
+        <label>string_view</label>
+      </node>
+      <node id="8">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="4">
+        <label>src/crypto/crypto_store/crypto_store_impl.cpp</label>
+        <link refid="dd/d14/crypto__store__impl_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/crypto/crypto_store/crypto_store_impl.hpp</label>
+        <link refid="d4/d05/crypto__store__impl_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>src/crypto/secp256k1/secp256k1_provider_impl.cpp</label>
+        <link refid="d5/db3/secp256k1__provider__impl_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/crypto/secp256k1/secp256k1_provider_impl.hpp</label>
+        <link refid="d3/ddb/secp256k1__provider__impl_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>src/crypto/secp256k1_provider.hpp</label>
+        <link refid="d2/d17/secp256k1__provider_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crypto/secp256k1_types.hpp</label>
+        <link refid="d9/d49/secp256k1__types_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6e/namespacesgns_1_1crypto">sgns::crypto</innernamespace>
+    <innernamespace refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1">sgns::crypto::secp256k1</innernamespace>
+    <innernamespace refid="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants">sgns::crypto::secp256k1::constants</innernamespace>
+    <innernamespace refid="d4/d89/namespacesgns_1_1crypto_1_1secp256k1_1_1ecdsa__verify__error">sgns::crypto::secp256k1::ecdsa_verify_error</innernamespace>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a4252c878ff41e9a1875d0ac3bb5fa636" prot="public" static="no">
+        <type>uint8_t</type>
+        <definition>using sgns::crypto::secp256k1::EcdsaVerifyError = uint8_t</definition>
+        <argsstring></argsstring>
+        <name>EcdsaVerifyError</name>
+        <qualifiedname>sgns::crypto::secp256k1::EcdsaVerifyError</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="14" column="3" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="14" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a7df417d5845ce5b3004e8a1f47b7ef5f" prot="public" static="no">
+        <type>base::Blob&lt; constants::kCompressedPublicKeySize &gt;</type>
+        <definition>using sgns::crypto::secp256k1::CompressedPublicKey = base::Blob&lt;constants::kCompressedPublicKeySize&gt;</definition>
+        <argsstring></argsstring>
+        <name>CompressedPublicKey</name>
+        <qualifiedname>sgns::crypto::secp256k1::CompressedPublicKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>compressed form of public key </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="24" column="3" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a0a6a0bd1fd15b8244ca42c73aca20bb0" prot="public" static="no">
+        <type>base::Blob&lt; constants::kUncompressedPublicKeySize &gt;</type>
+        <definition>using sgns::crypto::secp256k1::UncompressedPublicKey = 
+base::Blob&lt;constants::kUncompressedPublicKeySize&gt;</definition>
+        <argsstring></argsstring>
+        <name>UncompressedPublicKey</name>
+        <qualifiedname>sgns::crypto::secp256k1::UncompressedPublicKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>uncompressed form of public key </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="29" column="3" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="29" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a64e1be0f423ce6f41330514d62eb15c7" prot="public" static="no">
+        <type>base::Blob&lt; constants::kGeneralPublicKeySize &gt;</type>
+        <definition>using sgns::crypto::secp256k1::PublicKey = base::Blob&lt;constants::kGeneralPublicKeySize&gt;</definition>
+        <argsstring></argsstring>
+        <name>PublicKey</name>
+        <qualifiedname>sgns::crypto::secp256k1::PublicKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>truncated form of uncompressed public key </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="35" column="3" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="35" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1aa7cc5a710dcf2a1256a753b9a5005f29" prot="public" static="no">
+        <type>base::Blob&lt; constants::kCompactSignatureSize &gt;</type>
+        <definition>using sgns::crypto::secp256k1::RSVSignature = base::Blob&lt;constants::kCompactSignatureSize&gt;</definition>
+        <argsstring></argsstring>
+        <name>RSVSignature</name>
+        <qualifiedname>sgns::crypto::secp256k1::RSVSignature</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1" kindref="compound">secp256k1</ref> RSV-signature </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="40" column="3" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="40" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1abcf0e108bd6f3bd69a355144a5111105" prot="public" static="no">
+        <type><ref refid="de/d1b/key__value__block__header__repository_8cpp_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+        <definition>using sgns::crypto::secp256k1::MessageHash = base::Hash256</definition>
+        <argsstring></argsstring>
+        <name>MessageHash</name>
+        <qualifiedname>sgns::crypto::secp256k1::MessageHash</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>32-byte sequence of bytes (presumably blake2s hash) </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="45" column="3" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="45" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="var">
+      <memberdef kind="variable" id="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants_1a605ae52cb1a9917fb6fffeb8e56770de" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::crypto::secp256k1::constants::kUncompressedPublicKeySize</definition>
+        <argsstring></argsstring>
+        <name>kUncompressedPublicKeySize</name>
+        <qualifiedname>sgns::crypto::secp256k1::constants::kUncompressedPublicKeySize</qualifiedname>
+        <initializer>= 65u</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="8" column="29" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="8" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants_1af42287bca52eb3f97351edc3d9e217d6" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::crypto::secp256k1::constants::kCompressedPublicKeySize</definition>
+        <argsstring></argsstring>
+        <name>kCompressedPublicKeySize</name>
+        <qualifiedname>sgns::crypto::secp256k1::constants::kCompressedPublicKeySize</qualifiedname>
+        <initializer>= 33u</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="9" column="29" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="9" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants_1a105c1359ef9038f5499909ade4814d1c" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::crypto::secp256k1::constants::kCompactSignatureSize</definition>
+        <argsstring></argsstring>
+        <name>kCompactSignatureSize</name>
+        <qualifiedname>sgns::crypto::secp256k1::constants::kCompactSignatureSize</qualifiedname>
+        <initializer>= 65u</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="10" column="29" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="10" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants_1a1492ff71d70b261e12192eced1b4839d" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::crypto::secp256k1::constants::kGeneralPublicKeySize</definition>
+        <argsstring></argsstring>
+        <name>kGeneralPublicKeySize</name>
+        <qualifiedname>sgns::crypto::secp256k1::constants::kGeneralPublicKeySize</qualifiedname>
+        <initializer>= 64u</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="11" column="29" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="11" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d89/namespacesgns_1_1crypto_1_1secp256k1_1_1ecdsa__verify__error_1ad67a357719c80b404d32a6baf4760442" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>EcdsaVerifyError</type>
+        <definition>EcdsaVerifyError sgns::crypto::secp256k1::ecdsa_verify_error::kInvalidRS</definition>
+        <argsstring></argsstring>
+        <name>kInvalidRS</name>
+        <qualifiedname>sgns::crypto::secp256k1::ecdsa_verify_error::kInvalidRS</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="16" column="39" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="16" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d89/namespacesgns_1_1crypto_1_1secp256k1_1_1ecdsa__verify__error_1a741b3d4ffcba3e2110df65e336fdaf8d" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>EcdsaVerifyError</type>
+        <definition>EcdsaVerifyError sgns::crypto::secp256k1::ecdsa_verify_error::kInvalidV</definition>
+        <argsstring></argsstring>
+        <name>kInvalidV</name>
+        <qualifiedname>sgns::crypto::secp256k1::ecdsa_verify_error::kInvalidV</qualifiedname>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="17" column="39" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="17" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d89/namespacesgns_1_1crypto_1_1secp256k1_1_1ecdsa__verify__error_1a401f941cbb85925f358d096f26fec52a" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>EcdsaVerifyError</type>
+        <definition>EcdsaVerifyError sgns::crypto::secp256k1::ecdsa_verify_error::kInvalidSignature</definition>
+        <argsstring></argsstring>
+        <name>kInvalidSignature</name>
+        <qualifiedname>sgns::crypto::secp256k1::ecdsa_verify_error::kInvalidSignature</qualifiedname>
+        <initializer>= 2</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="18" column="39" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="18" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_CRYPTO_SECP256K1_TYPES_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_CRYPTO_SECP256K1_TYPES_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d4/d16/blob_8hpp" kindref="compound">base/blob.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6" refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1" kindref="compound">sgns::crypto::secp256k1</ref><sp/>{</highlight></codeline>
+<codeline lineno="7" refid="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants" kindref="compound">constants</ref><sp/>{</highlight></codeline>
+<codeline lineno="8" refid="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants_1a605ae52cb1a9917fb6fffeb8e56770de" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/><ref refid="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants_1a605ae52cb1a9917fb6fffeb8e56770de" kindref="member">kUncompressedPublicKeySize</ref><sp/>=<sp/>65u;</highlight></codeline>
+<codeline lineno="9" refid="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants_1af42287bca52eb3f97351edc3d9e217d6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/><ref refid="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants_1af42287bca52eb3f97351edc3d9e217d6" kindref="member">kCompressedPublicKeySize</ref><sp/>=<sp/>33u;</highlight></codeline>
+<codeline lineno="10" refid="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants_1a105c1359ef9038f5499909ade4814d1c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/><ref refid="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants_1a105c1359ef9038f5499909ade4814d1c" kindref="member">kCompactSignatureSize</ref><sp/>=<sp/>65u;</highlight></codeline>
+<codeline lineno="11" refid="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants_1a1492ff71d70b261e12192eced1b4839d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/><ref refid="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants_1a1492ff71d70b261e12192eced1b4839d" kindref="member">kGeneralPublicKeySize</ref><sp/>=<sp/>64u;</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/>}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>constants</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14" refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a4252c878ff41e9a1875d0ac3bb5fa636" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a4252c878ff41e9a1875d0ac3bb5fa636" kindref="member">EcdsaVerifyError</ref><sp/>=<sp/>uint8_t;</highlight></codeline>
+<codeline lineno="15" refid="d4/d89/namespacesgns_1_1crypto_1_1secp256k1_1_1ecdsa__verify__error" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d4/d89/namespacesgns_1_1crypto_1_1secp256k1_1_1ecdsa__verify__error" kindref="compound">ecdsa_verify_error</ref><sp/>{</highlight></codeline>
+<codeline lineno="16" refid="d4/d89/namespacesgns_1_1crypto_1_1secp256k1_1_1ecdsa__verify__error_1ad67a357719c80b404d32a6baf4760442" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a4252c878ff41e9a1875d0ac3bb5fa636" kindref="member">EcdsaVerifyError</ref><sp/><ref refid="d4/d89/namespacesgns_1_1crypto_1_1secp256k1_1_1ecdsa__verify__error_1ad67a357719c80b404d32a6baf4760442" kindref="member">kInvalidRS</ref><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="17" refid="d4/d89/namespacesgns_1_1crypto_1_1secp256k1_1_1ecdsa__verify__error_1a741b3d4ffcba3e2110df65e336fdaf8d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a4252c878ff41e9a1875d0ac3bb5fa636" kindref="member">EcdsaVerifyError</ref><sp/><ref refid="d4/d89/namespacesgns_1_1crypto_1_1secp256k1_1_1ecdsa__verify__error_1a741b3d4ffcba3e2110df65e336fdaf8d" kindref="member">kInvalidV</ref><sp/>=<sp/>1;</highlight></codeline>
+<codeline lineno="18" refid="d4/d89/namespacesgns_1_1crypto_1_1secp256k1_1_1ecdsa__verify__error_1a401f941cbb85925f358d096f26fec52a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a4252c878ff41e9a1875d0ac3bb5fa636" kindref="member">EcdsaVerifyError</ref><sp/><ref refid="d4/d89/namespacesgns_1_1crypto_1_1secp256k1_1_1ecdsa__verify__error_1a401f941cbb85925f358d096f26fec52a" kindref="member">kInvalidSignature</ref><sp/>=<sp/>2;</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/>}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>ecdsa_verify_error</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24" refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a7df417d5845ce5b3004e8a1f47b7ef5f" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a7df417d5845ce5b3004e8a1f47b7ef5f" kindref="member">CompressedPublicKey</ref><sp/>=<sp/><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob&lt;constants::kCompressedPublicKeySize&gt;</ref>;</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29" refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a0a6a0bd1fd15b8244ca42c73aca20bb0" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a0a6a0bd1fd15b8244ca42c73aca20bb0" kindref="member">UncompressedPublicKey</ref><sp/>=</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob&lt;constants::kUncompressedPublicKeySize&gt;</ref>;</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="35" refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a64e1be0f423ce6f41330514d62eb15c7" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a64e1be0f423ce6f41330514d62eb15c7" kindref="member">PublicKey</ref><sp/>=<sp/><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob&lt;constants::kGeneralPublicKeySize&gt;</ref>;</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40" refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1aa7cc5a710dcf2a1256a753b9a5005f29" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1aa7cc5a710dcf2a1256a753b9a5005f29" kindref="member">RSVSignature</ref><sp/>=<sp/><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob&lt;constants::kCompactSignatureSize&gt;</ref>;</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45" refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1abcf0e108bd6f3bd69a355144a5111105" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1abcf0e108bd6f3bd69a355144a5111105" kindref="member">MessageHash</ref><sp/>=<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref>;</highlight></codeline>
+<codeline lineno="46"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="48"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/crypto/secp256k1_types.hpp"/>
+  </compounddef>
+</doxygen>

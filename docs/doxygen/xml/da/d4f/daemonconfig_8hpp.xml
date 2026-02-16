@@ -1,0 +1,199 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/d4f/daemonconfig_8hpp" kind="file" language="C++">
+    <compoundname>daemonconfig.hpp</compoundname>
+    <includes local="yes">lib/errors.hpp</includes>
+    <includes refid="d5/d60/node__config_8hpp" local="yes">node_config.hpp</includes>
+    <includes local="no">vector</includes>
+    <incdepgraph>
+      <node id="1">
+        <label>node/daemonconfig.hpp</label>
+        <link refid="da/d4f/daemonconfig_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>logging.hpp</label>
+        <link refid="d0/da9/logging_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>node_config.hpp</label>
+        <link refid="d5/d60/node__config_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>atomic</label>
+      </node>
+      <node id="9">
+        <label>boost/log/detail/config.hpp</label>
+      </node>
+      <node id="10">
+        <label>boost/shared_ptr.hpp</label>
+      </node>
+      <node id="12">
+        <label>chrono</label>
+      </node>
+      <node id="13">
+        <label>cstdint</label>
+      </node>
+      <node id="4">
+        <label>lib/config.hpp</label>
+      </node>
+      <node id="2">
+        <label>lib/errors.hpp</label>
+      </node>
+      <node id="5">
+        <label>lib/jsonconfig.hpp</label>
+      </node>
+      <node id="6">
+        <label>lib/numbers.hpp</label>
+      </node>
+      <node id="7">
+        <label>lib/stats.hpp</label>
+      </node>
+      <node id="14">
+        <label>secure/common.hpp</label>
+      </node>
+      <node id="15">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <innerclass refid="d3/d64/classsgns_1_1daemon__config" prot="public">sgns::daemon_config</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1ad25903d41aacc711376f15aee1b728a5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>::sgns::error_</type>
+        <definition>::sgns::error_ sgns::read_node_config_toml</definition>
+        <argsstring>(boost::filesystem::path const &amp;, sgns::daemon_config &amp;config_a, std::vector&lt; std::string &gt; const &amp;config_overrides=std::vector&lt; std::string &gt;())</argsstring>
+        <name>read_node_config_toml</name>
+        <qualifiedname>sgns::read_node_config_toml</qualifiedname>
+        <param>
+          <type>boost::filesystem::path const &amp;</type>
+        </param>
+        <param>
+          <type><ref refid="d3/d64/classsgns_1_1daemon__config" kindref="compound">sgns::daemon_config</ref> &amp;</type>
+          <declname>config_a</declname>
+        </param>
+        <param>
+          <type>std::vector&lt; std::string &gt; const &amp;</type>
+          <declname>config_overrides</declname>
+          <defval>std::vector&lt; std::string &gt;()</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/daemonconfig.hpp" line="38" column="16" declfile="node/daemonconfig.hpp" declline="38" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d2b/namespacesgns_1a456c8c0e2bd1fe37d886d53f73614fcc" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>::sgns::error_</type>
+        <definition>::sgns::error_ sgns::read_and_update_daemon_config</definition>
+        <argsstring>(boost::filesystem::path const &amp;, sgns::daemon_config &amp;config_a, sgns::jsonconfig &amp;json_a)</argsstring>
+        <name>read_and_update_daemon_config</name>
+        <qualifiedname>sgns::read_and_update_daemon_config</qualifiedname>
+        <param>
+          <type>boost::filesystem::path const &amp;</type>
+        </param>
+        <param>
+          <type><ref refid="d3/d64/classsgns_1_1daemon__config" kindref="compound">sgns::daemon_config</ref> &amp;</type>
+          <declname>config_a</declname>
+        </param>
+        <param>
+          <type>sgns::jsonconfig &amp;</type>
+          <declname>json_a</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/daemonconfig.hpp" line="39" column="16" declfile="node/daemonconfig.hpp" declline="39" declcolumn="16"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_NODE_DAEMON_CONFIG_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_NODE_DAEMON_CONFIG_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;lib/errors.hpp&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="comment">//<sp/>#include<sp/>&quot;node_pow_server_config.hpp&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="comment">//<sp/>#include<sp/>&quot;node_rpc_config.hpp&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/d60/node__config_8hpp" kindref="compound">node_config.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="comment">//<sp/>#include<sp/>&quot;openclconfig.hpp&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;vector&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="13"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">jsonconfig;</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">tomlconfig;</highlight></codeline>
+<codeline lineno="16" refid="d3/d64/classsgns_1_1daemon__config" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d3/d64/classsgns_1_1daemon__config_1ab117117b39490a4c54ab41acb733e6af" kindref="member">daemon_config</ref></highlight></codeline>
+<codeline lineno="17"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="19" refid="d3/d64/classsgns_1_1daemon__config_1ab117117b39490a4c54ab41acb733e6af" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d3/d64/classsgns_1_1daemon__config_1ab117117b39490a4c54ab41acb733e6af" kindref="member">daemon_config</ref><sp/>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="20" refid="d3/d64/classsgns_1_1daemon__config_1a876698a95d707d1793fe7957cb6fc71a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d3/d64/classsgns_1_1daemon__config_1a876698a95d707d1793fe7957cb6fc71a" kindref="member">daemon_config</ref><sp/>(boost::filesystem::path<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;<sp/><ref refid="d3/d64/classsgns_1_1daemon__config_1a30697a805deb42a02fd17cee6ee825ec" kindref="member">data_path</ref>);</highlight></codeline>
+<codeline lineno="21" refid="d3/d64/classsgns_1_1daemon__config_1a1a1846bd22e89c0520af3103c063fe21" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>::sgns::error_<sp/><ref refid="d3/d64/classsgns_1_1daemon__config_1a1a1846bd22e89c0520af3103c063fe21" kindref="member">deserialize_json</ref><sp/>(</highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>&amp;,<sp/>sgns::jsonconfig<sp/>&amp;);</highlight></codeline>
+<codeline lineno="22" refid="d3/d64/classsgns_1_1daemon__config_1a1e9139c1e2485682a60402e5571a4184" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>::sgns::error_<sp/><ref refid="d3/d64/classsgns_1_1daemon__config_1a1e9139c1e2485682a60402e5571a4184" kindref="member">serialize_json</ref><sp/>(sgns::jsonconfig<sp/>&amp;);</highlight></codeline>
+<codeline lineno="23" refid="d3/d64/classsgns_1_1daemon__config_1a69a58adbd75e6b89e2e843ade45551e0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>::sgns::error_<sp/><ref refid="d3/d64/classsgns_1_1daemon__config_1a69a58adbd75e6b89e2e843ade45551e0" kindref="member">deserialize_toml</ref><sp/>(sgns::tomlconfig<sp/>&amp;);</highlight></codeline>
+<codeline lineno="24" refid="d3/d64/classsgns_1_1daemon__config_1ab01f09f6ee86fd62321b1fcb45431560" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>::sgns::error_<sp/><ref refid="d3/d64/classsgns_1_1daemon__config_1ab01f09f6ee86fd62321b1fcb45431560" kindref="member">serialize_toml</ref><sp/>(sgns::tomlconfig<sp/>&amp;);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>bool<sp/>rpc_enable{<sp/>false<sp/>};</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>sgns::node_rpc_config<sp/>rpc;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="27" refid="d3/d64/classsgns_1_1daemon__config_1a009a0276cce6bf36b561d9f67d96210d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/d27/classsgns_1_1node__config" kindref="compound">::sgns::node_config</ref><sp/><ref refid="d3/d64/classsgns_1_1daemon__config_1a009a0276cce6bf36b561d9f67d96210d" kindref="member">node</ref>;</highlight></codeline>
+<codeline lineno="28" refid="d3/d64/classsgns_1_1daemon__config_1a042d006024ba48a6b9ab468ab35c6d98" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d3/d64/classsgns_1_1daemon__config_1a042d006024ba48a6b9ab468ab35c6d98" kindref="member">opencl_enable</ref>{<sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal"><sp/>};</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>sgns::opencl_config<sp/>opencl;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>sgns::node_pow_server_config<sp/>pow_server;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="31" refid="d3/d64/classsgns_1_1daemon__config_1a30697a805deb42a02fd17cee6ee825ec" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>boost::filesystem::path<sp/><ref refid="d3/d64/classsgns_1_1daemon__config_1a30697a805deb42a02fd17cee6ee825ec" kindref="member">data_path</ref>;</highlight></codeline>
+<codeline lineno="32" refid="d3/d64/classsgns_1_1daemon__config_1a7cf60d284c7da1ca1033ae5240bc7ef6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/><ref refid="d3/d64/classsgns_1_1daemon__config_1a7cf60d284c7da1ca1033ae5240bc7ef6" kindref="member">json_version</ref><sp/>()</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="33"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>2;</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="36"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight></codeline>
+<codeline lineno="38" refid="d2/d2b/namespacesgns_1ad25903d41aacc711376f15aee1b728a5" refkind="member"><highlight class="normal">::sgns::error_<sp/><ref refid="d2/d2b/namespacesgns_1ad25903d41aacc711376f15aee1b728a5" kindref="member">read_node_config_toml</ref><sp/>(boost::filesystem::path<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;,<sp/><ref refid="d3/d64/classsgns_1_1daemon__config" kindref="compound">sgns::daemon_config</ref><sp/>&amp;<sp/>config_a,<sp/>std::vector&lt;std::string&gt;<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;<sp/>config_overrides<sp/>=<sp/>std::vector&lt;std::string&gt;<sp/>());</highlight></codeline>
+<codeline lineno="39" refid="d2/d2b/namespacesgns_1a456c8c0e2bd1fe37d886d53f73614fcc" refkind="member"><highlight class="normal">::sgns::error_<sp/><ref refid="d2/d2b/namespacesgns_1a456c8c0e2bd1fe37d886d53f73614fcc" kindref="member">read_and_update_daemon_config</ref><sp/>(boost::filesystem::path<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>&amp;,<sp/><ref refid="d3/d64/classsgns_1_1daemon__config" kindref="compound">sgns::daemon_config</ref><sp/>&amp;<sp/>config_a,<sp/>sgns::jsonconfig<sp/>&amp;<sp/>json_a);</highlight></codeline>
+<codeline lineno="40"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="node/daemonconfig.hpp"/>
+  </compounddef>
+</doxygen>

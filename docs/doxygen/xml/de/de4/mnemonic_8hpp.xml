@@ -1,0 +1,142 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/de4/mnemonic_8hpp" kind="file" language="C++">
+    <compoundname>mnemonic.hpp</compoundname>
+    <includes local="no">string</includes>
+    <includes local="no">vector</includes>
+    <includes refid="d5/dda/outcome_8hpp" local="yes">outcome/outcome.hpp</includes>
+    <includedby refid="d4/d53/bip39__provider__impl_8cpp" local="yes">src/crypto/bip39/impl/bip39_provider_impl.cpp</includedby>
+    <includedby refid="d3/d73/mnemonic_8cpp" local="yes">src/crypto/bip39/mnemonic.cpp</includedby>
+    <includedby refid="dd/d14/crypto__store__impl_8cpp" local="yes">src/crypto/crypto_store/crypto_store_impl.cpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/crypto/bip39/mnemonic.hpp</label>
+        <link refid="de/de4/mnemonic_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="2">
+        <label>string</label>
+      </node>
+      <node id="3">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/crypto/bip39/impl/bip39_provider_impl.cpp</label>
+        <link refid="d4/d53/bip39__provider__impl_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/crypto/bip39/mnemonic.cpp</label>
+        <link refid="d3/d73/mnemonic_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/crypto/bip39/mnemonic.hpp</label>
+        <link refid="de/de4/mnemonic_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>src/crypto/crypto_store/crypto_store_impl.cpp</label>
+        <link refid="dd/d14/crypto__store__impl_8cpp"/>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="dc/d25/structsgns_1_1crypto_1_1bip39_1_1_mnemonic" prot="public">sgns::crypto::bip39::Mnemonic</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6e/namespacesgns_1_1crypto">sgns::crypto</innernamespace>
+    <innernamespace refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39">sgns::crypto::bip39</innernamespace>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="d3/d2f/namespacesgns_1_1crypto_1_1bip39_1a4df32edb3ccef5dcd9d90b971e1cbe4c" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>MnemonicError</name>
+        <qualifiedname>sgns::crypto::bip39::MnemonicError</qualifiedname>
+        <enumvalue id="d3/d2f/namespacesgns_1_1crypto_1_1bip39_1a4df32edb3ccef5dcd9d90b971e1cbe4ca3ae42c69e1d7b1a71047a0c5eaf8d679" prot="public">
+          <name>INVALID_MNEMONIC</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/mnemonic.hpp" line="12" column="3" bodyfile="src/crypto/bip39/mnemonic.hpp" bodystart="12" bodyend="14"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="de/de4/mnemonic_8hpp_1a09268b8e1056b40ba8c129a1bb4ec05f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>OUTCOME_HPP_DECLARE_ERROR_2</definition>
+        <argsstring>(sgns::crypto::bip39, MnemonicError)</argsstring>
+        <name>OUTCOME_HPP_DECLARE_ERROR_2</name>
+        <param>
+          <type><ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39" kindref="compound">sgns::crypto::bip39</ref></type>
+        </param>
+        <param>
+          <type>MnemonicError</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/mnemonic.hpp" line="28" column="1" declfile="src/crypto/bip39/mnemonic.hpp" declline="28" declcolumn="1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_CRYPTO_BIP39_MNEMONIC_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_CRYPTO_BIP39_MNEMONIC_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;vector&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/dda/outcome_8hpp" kindref="compound">outcome/outcome.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39" kindref="compound">sgns::crypto::bip39</ref><sp/>{</highlight></codeline>
+<codeline lineno="12" refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39_1a4df32edb3ccef5dcd9d90b971e1cbe4c" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">enum<sp/>class</highlight><highlight class="normal"><sp/><ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39_1a4df32edb3ccef5dcd9d90b971e1cbe4c" kindref="member">MnemonicError</ref><sp/>{</highlight></codeline>
+<codeline lineno="13" refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39_1a4df32edb3ccef5dcd9d90b971e1cbe4ca3ae42c69e1d7b1a71047a0c5eaf8d679" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39_1a4df32edb3ccef5dcd9d90b971e1cbe4ca3ae42c69e1d7b1a71047a0c5eaf8d679" kindref="member">INVALID_MNEMONIC</ref><sp/>=<sp/>1,</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16" refid="dc/d25/structsgns_1_1crypto_1_1bip39_1_1_mnemonic" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="dc/d25/structsgns_1_1crypto_1_1bip39_1_1_mnemonic" kindref="compound">Mnemonic</ref><sp/>{</highlight></codeline>
+<codeline lineno="17" refid="dc/d25/structsgns_1_1crypto_1_1bip39_1_1_mnemonic_1af8d683f3314fb593c03a285b7e4fe6df" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::vector&lt;std::string&gt;<sp/><ref refid="dc/d25/structsgns_1_1crypto_1_1bip39_1_1_mnemonic_1af8d683f3314fb593c03a285b7e4fe6df" kindref="member">words</ref>;</highlight></codeline>
+<codeline lineno="18" refid="dc/d25/structsgns_1_1crypto_1_1bip39_1_1_mnemonic_1a087a5c22a202fe8369681c08d7391b5b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="dc/d25/structsgns_1_1crypto_1_1bip39_1_1_mnemonic_1a087a5c22a202fe8369681c08d7391b5b" kindref="member">password</ref>;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>outcome::result&lt;Mnemonic&gt;<sp/><ref refid="dc/d25/structsgns_1_1crypto_1_1bip39_1_1_mnemonic_1a78542a5181e86cb8774d2a2901015c37" kindref="member">parse</ref>(std::string_view<sp/>phrase);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="26"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::crypto::bip39</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28" refid="de/de4/mnemonic_8hpp_1a09268b8e1056b40ba8c129a1bb4ec05f" refkind="member"><highlight class="normal"><ref refid="de/de4/mnemonic_8hpp_1a09268b8e1056b40ba8c129a1bb4ec05f" kindref="member">OUTCOME_HPP_DECLARE_ERROR_2</ref>(<ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39" kindref="compound">sgns::crypto::bip39</ref>,<sp/>MnemonicError);</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_CRYPTO_BIP39_MNEMONIC_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/crypto/bip39/mnemonic.hpp"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,459 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch" kind="class" language="C++" prot="public">
+    <compoundname>sgns::storage::rocksdb::Batch</compoundname>
+    <basecompoundref refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch" prot="public" virt="non-virtual">sgns::storage::face::WriteBatch&lt; Buffer, Buffer &gt;</basecompoundref>
+    <includes refid="dc/d5f/rocksdb__batch_8hpp" local="no">rocksdb_batch.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch_1aaacd1c93641e70a2603a8c0f7ec6ffbc" prot="private" static="no" mutable="no">
+        <type><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb" kindref="compound">rocksdb</ref> &amp;</type>
+        <definition>rocksdb&amp; sgns::storage::rocksdb::Batch::db_</definition>
+        <argsstring></argsstring>
+        <name>db_</name>
+        <qualifiedname>sgns::storage::rocksdb::Batch::db_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_batch.hpp" line="28" column="13" bodyfile="src/storage/rocksdb/rocksdb_batch.hpp" bodystart="28" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch_1a94c90a2d29b1f1681ac546d92a454cde" prot="private" static="no" mutable="no">
+        <type>::ROCKSDB_NAMESPACE::WriteBatch</type>
+        <definition>::ROCKSDB_NAMESPACE::WriteBatch sgns::storage::rocksdb::Batch::batch_</definition>
+        <argsstring></argsstring>
+        <name>batch_</name>
+        <qualifiedname>sgns::storage::rocksdb::Batch::batch_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_batch.hpp" line="29" column="37" bodyfile="src/storage/rocksdb/rocksdb_batch.hpp" bodystart="29" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch_1aaa21770ac26373b6fc158518989d23a7" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::rocksdb::Batch::Batch</definition>
+        <argsstring>(rocksdb &amp;db)</argsstring>
+        <name>Batch</name>
+        <qualifiedname>sgns::storage::rocksdb::Batch::Batch</qualifiedname>
+        <param>
+          <type><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb" kindref="compound">rocksdb</ref> &amp;</type>
+          <declname>db</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_batch.hpp" line="16" column="14" bodyfile="src/storage/rocksdb/rocksdb_batch.cpp" bodystart="8" bodyend="8"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch_1a54639f73c47619433b4befb29887700e" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::rocksdb::Batch::put</definition>
+        <argsstring>(const Buffer &amp;key, const Buffer &amp;value) override</argsstring>
+        <name>put</name>
+        <qualifiedname>sgns::storage::rocksdb::Batch::put</qualifiedname>
+        <reimplements refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a6c94f5ac466050295a32f93aeb5a0e8c">put</reimplements>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+<para>Store value by key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>result containing void if put successful, error otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_batch.hpp" line="18" column="21" bodyfile="src/storage/rocksdb/rocksdb_batch.cpp" bodystart="10" bodyend="15"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch_1a72c974c70b6b9fcaf63d018b9b656cf1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::rocksdb::Batch::put</definition>
+        <argsstring>(const Buffer &amp;key, Buffer &amp;&amp;value) override</argsstring>
+        <name>put</name>
+        <qualifiedname>sgns::storage::rocksdb::Batch::put</qualifiedname>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;&amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_batch.hpp" line="19" column="21" bodyfile="src/storage/rocksdb/rocksdb_batch.cpp" bodystart="17" bodyend="21"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch_1a8c8dfab0e7ea645b49d8d4b7e0d05fa7" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::rocksdb::Batch::remove</definition>
+        <argsstring>(const Buffer &amp;key) override</argsstring>
+        <name>remove</name>
+        <qualifiedname>sgns::storage::rocksdb::Batch::remove</qualifiedname>
+        <reimplements refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a13a83e4a2fa9540c366e277871701ac3">remove</reimplements>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Remove value by key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>K </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>error code if error happened </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_batch.hpp" line="21" column="21" bodyfile="src/storage/rocksdb/rocksdb_batch.cpp" bodystart="23" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch_1a1aea820028b78ef8142b786caeab3827" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::rocksdb::Batch::commit</definition>
+        <argsstring>() override</argsstring>
+        <name>commit</name>
+        <qualifiedname>sgns::storage::rocksdb::Batch::commit</qualifiedname>
+        <reimplements refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch_1a8a9fbf04d1bd815017af2582c512d3eb">commit</reimplements>
+        <briefdescription>
+<para>Writes batch. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>error code in case of error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_batch.hpp" line="23" column="21" bodyfile="src/storage/rocksdb/rocksdb_batch.cpp" bodystart="29" bodyend="38"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch_1acd26c6f32f56bce608f0ff3dea56c286" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::storage::rocksdb::Batch::clear</definition>
+        <argsstring>() override</argsstring>
+        <name>clear</name>
+        <qualifiedname>sgns::storage::rocksdb::Batch::clear</qualifiedname>
+        <reimplements refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch_1a918977d61ce1c5845ec4a159f5159af3">clear</reimplements>
+        <briefdescription>
+<para>Clear batch. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_batch.hpp" line="25" column="10" bodyfile="src/storage/rocksdb/rocksdb_batch.cpp" bodystart="40" bodyend="43"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Class that is used to implement efficient bulk (batch) modifications of the Map. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>BufferBatch</label>
+        <link refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::face::WriteBatch&lt; K, V &gt;</label>
+        <link refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="3">
+        <label>sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="1">
+        <label>sgns::storage::rocksdb::Batch</label>
+        <link refid="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>BufferBatch</label>
+        <link refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>BufferStorage</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+        <childnode refid="21" relation="public-inheritance">
+        </childnode>
+        <childnode refid="22" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="27">
+        <label>T</label>
+      </node>
+      <node id="19">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="20" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>sgns::storage::face::BatchWriteMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+        <childnode refid="19" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="24">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="20" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="20">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="22">
+        <label>sgns::storage::face::GenericStorage&lt; K, V &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="23" relation="public-inheritance">
+        </childnode>
+        <childnode refid="24" relation="public-inheritance">
+        </childnode>
+        <childnode refid="21" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="10">
+        <label>sgns::storage::face::Iterable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="11" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="15">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="14">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="15" relation="public-inheritance">
+        </childnode>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::storage::face::ReadOnlyMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="23">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="15" relation="public-inheritance">
+        </childnode>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="12">
+        <label>sgns::storage::face::Readable&lt; Buffer, Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="13" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="5">
+        <label>sgns::storage::face::WriteBatch&lt; K, V &gt;</label>
+        <link refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="3">
+        <label>sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="7">
+        <label>sgns::storage::rocksdb</label>
+        <link refid="d5/dbf/classsgns_1_1storage_1_1rocksdb"/>
+        <childnode refid="8" relation="public-inheritance">
+        </childnode>
+        <childnode refid="25" relation="usage">
+          <edgelabel>-db_</edgelabel>
+        </childnode>
+        <childnode refid="28" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="29" relation="usage">
+          <edgelabel>-options_</edgelabel>
+        </childnode>
+        <childnode refid="30" relation="usage">
+          <edgelabel>-path_</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::rocksdb::Batch</label>
+        <link refid="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>-db_</edgelabel>
+        </childnode>
+      </node>
+      <node id="31">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="26">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="27" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="25">
+        <label>std::shared_ptr&lt; DB &gt;</label>
+        <childnode refid="26" relation="template-instance">
+          <edgelabel>&lt; DB &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="29">
+        <label>std::shared_ptr&lt; Options &gt;</label>
+        <childnode refid="26" relation="template-instance">
+          <edgelabel>&lt; Options &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="28">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="26" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="30">
+        <label>std::string</label>
+        <childnode refid="31" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/rocksdb/rocksdb_batch.hpp" line="13" column="3" bodyfile="src/storage/rocksdb/rocksdb_batch.hpp" bodystart="14" bodyend="30"/>
+    <listofallmembers>
+      <member refid="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch_1aaa21770ac26373b6fc158518989d23a7" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb::Batch</scope><name>Batch</name></member>
+      <member refid="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch_1a94c90a2d29b1f1681ac546d92a454cde" prot="private" virt="non-virtual"><scope>sgns::storage::rocksdb::Batch</scope><name>batch_</name></member>
+      <member refid="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch_1acd26c6f32f56bce608f0ff3dea56c286" prot="public" virt="virtual"><scope>sgns::storage::rocksdb::Batch</scope><name>clear</name></member>
+      <member refid="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch_1a1aea820028b78ef8142b786caeab3827" prot="public" virt="virtual"><scope>sgns::storage::rocksdb::Batch</scope><name>commit</name></member>
+      <member refid="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch_1aaacd1c93641e70a2603a8c0f7ec6ffbc" prot="private" virt="non-virtual"><scope>sgns::storage::rocksdb::Batch</scope><name>db_</name></member>
+      <member refid="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch_1a54639f73c47619433b4befb29887700e" prot="public" virt="virtual"><scope>sgns::storage::rocksdb::Batch</scope><name>put</name></member>
+      <member refid="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch_1a72c974c70b6b9fcaf63d018b9b656cf1" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb::Batch</scope><name>put</name></member>
+      <member refid="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch_1a8c8dfab0e7ea645b49d8d4b7e0d05fa7" prot="public" virt="virtual"><scope>sgns::storage::rocksdb::Batch</scope><name>remove</name></member>
+      <member refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1adb986d79f420f5829cae3d6659430a00" prot="public" virt="virtual"><scope>sgns::storage::rocksdb::Batch</scope><name>~Writeable</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

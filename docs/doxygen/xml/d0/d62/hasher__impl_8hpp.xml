@@ -1,0 +1,230 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/d62/hasher__impl_8hpp" kind="file" language="C++">
+    <compoundname>hasher_impl.hpp</compoundname>
+    <includes refid="da/d6b/hasher_8hpp" local="yes">crypto/hasher.hpp</includes>
+    <includedby refid="d0/d58/_account_messenger_8cpp" local="yes">src/account/AccountMessenger.cpp</includedby>
+    <includedby refid="d5/dab/_escrow_release_transaction_8cpp" local="yes">src/account/EscrowReleaseTransaction.cpp</includedby>
+    <includedby refid="d7/d12/_escrow_transaction_8cpp" local="yes">src/account/EscrowTransaction.cpp</includedby>
+    <includedby refid="dd/dd9/_genius_account_8cpp" local="yes">src/account/GeniusAccount.cpp</includedby>
+    <includedby refid="d3/d63/_genius_node_8hpp" local="yes">src/account/GeniusNode.hpp</includedby>
+    <includedby refid="da/dcc/_i_genius_transactions_8cpp" local="yes">src/account/IGeniusTransactions.cpp</includedby>
+    <includedby refid="d8/d70/_mint_transaction_8cpp" local="yes">src/account/MintTransaction.cpp</includedby>
+    <includedby refid="d2/d15/_processing_transaction_8cpp" local="yes">src/account/ProcessingTransaction.cpp</includedby>
+    <includedby refid="db/dbb/_transfer_transaction_8cpp" local="yes">src/account/TransferTransaction.cpp</includedby>
+    <includedby refid="d3/d84/hasher__impl_8cpp" local="yes">src/crypto/hasher/hasher_impl.cpp</includedby>
+    <includedby refid="de/d39/_linux_8cpp" local="yes">src/local_secure_storage/impl/Linux.cpp</includedby>
+    <includedby refid="da/dc5/runtime__manager_8cpp" local="yes">src/runtime/binaryen/runtime_manager.cpp</includedby>
+    <incdepgraph>
+      <node id="3">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>crypto/hasher.hpp</label>
+        <link refid="da/d6b/hasher_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crypto/hasher/hasher_impl.hpp</label>
+        <link refid="d0/d62/hasher__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>array</label>
+      </node>
+      <node id="6">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="4">
+        <label>cstddef</label>
+      </node>
+      <node id="10">
+        <label>gsl/span</label>
+      </node>
+      <node id="13">
+        <label>iostream</label>
+      </node>
+      <node id="12">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="15">
+        <label>string</label>
+      </node>
+      <node id="8">
+        <label>string_view</label>
+      </node>
+      <node id="9">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/account/AccountMessenger.cpp</label>
+        <link refid="d0/d58/_account_messenger_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/account/EscrowReleaseTransaction.cpp</label>
+        <link refid="d5/dab/_escrow_release_transaction_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/account/EscrowTransaction.cpp</label>
+        <link refid="d7/d12/_escrow_transaction_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/account/GeniusAccount.cpp</label>
+        <link refid="dd/dd9/_genius_account_8cpp"/>
+      </node>
+      <node id="7">
+        <label>src/account/GeniusNode.cpp</label>
+        <link refid="df/de0/_genius_node_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/account/GeniusNode.hpp</label>
+        <link refid="d3/d63/_genius_node_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>src/account/IGeniusTransactions.cpp</label>
+        <link refid="da/dcc/_i_genius_transactions_8cpp"/>
+      </node>
+      <node id="9">
+        <label>src/account/MintTransaction.cpp</label>
+        <link refid="d8/d70/_mint_transaction_8cpp"/>
+      </node>
+      <node id="10">
+        <label>src/account/ProcessingTransaction.cpp</label>
+        <link refid="d2/d15/_processing_transaction_8cpp"/>
+      </node>
+      <node id="11">
+        <label>src/account/TransferTransaction.cpp</label>
+        <link refid="db/dbb/_transfer_transaction_8cpp"/>
+      </node>
+      <node id="12">
+        <label>src/crypto/hasher/hasher_impl.cpp</label>
+        <link refid="d3/d84/hasher__impl_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/crypto/hasher/hasher_impl.hpp</label>
+        <link refid="d0/d62/hasher__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>src/local_secure_storage/impl/Linux.cpp</label>
+        <link refid="de/d39/_linux_8cpp"/>
+      </node>
+      <node id="14">
+        <label>src/runtime/binaryen/runtime_manager.cpp</label>
+        <link refid="da/dc5/runtime__manager_8cpp"/>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl" prot="public">sgns::crypto::HasherImpl</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6e/namespacesgns_1_1crypto">sgns::crypto</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_CRYPTO_HASHER_HASHER_IMPL_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_CRYPTO_HASHER_HASHER_IMPL_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="da/d6b/hasher_8hpp" kindref="compound">crypto/hasher.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d6e/namespacesgns_1_1crypto" kindref="compound">sgns::crypto</ref></highlight></codeline>
+<codeline lineno="7"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="8" refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl" kindref="compound">HasherImpl</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher" kindref="compound">Hasher</ref></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="11" refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1af5349bbc60918bcfcefa7bb2f38a74d5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1af5349bbc60918bcfcefa7bb2f38a74d5" kindref="member">~HasherImpl</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a140a50019470b7f717657b8ab6590956" kindref="member">Hash64</ref><sp/><ref refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1a8aa7bde3df18bb5898d3f05c4e3445eb" kindref="member">twox_64</ref>(<sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/>buffer<sp/>)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a227db21449d9ce711fee9d152a600906" kindref="member">Hash128</ref><sp/><ref refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1acf6e94c2819447022dd14b7edfb21c97" kindref="member">twox_128</ref>(<sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/>buffer<sp/>)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1a227db21449d9ce711fee9d152a600906" kindref="member">Hash128</ref><sp/><ref refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1a83c88b3ec8d8786faf578342e573a286" kindref="member">blake2b_128</ref>(<sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/>buffer<sp/>)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ac18b1fe64670d4605b3537023088e101" kindref="member">Hash256</ref><sp/><ref refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1aff242979ffd701ea45146096b4baa486" kindref="member">twox_256</ref>(<sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/>buffer<sp/>)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ac18b1fe64670d4605b3537023088e101" kindref="member">Hash256</ref><sp/><ref refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1ada049d5830ba942ec672f26bfab32dc7" kindref="member">blake2b_256</ref>(<sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/>buffer<sp/>)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ac18b1fe64670d4605b3537023088e101" kindref="member">Hash256</ref><sp/><ref refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1aafeca768b3c7d118947e2284be4c099b" kindref="member">keccak_256</ref>(<sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/>buffer<sp/>)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ac18b1fe64670d4605b3537023088e101" kindref="member">Hash256</ref><sp/><ref refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1a829718432ae7dcfa8c114f7355d828f9" kindref="member">blake2s_256</ref>(<sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/>buffer<sp/>)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/><ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher_1ac18b1fe64670d4605b3537023088e101" kindref="member">Hash256</ref><sp/><ref refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1a5acd09393ceb741ce869fe80206d07be" kindref="member">sha2_256</ref>(<sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/>buffer<sp/>)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29" refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1a5ba45829906092da57f578c57c9d9213" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1a5ba45829906092da57f578c57c9d9213" kindref="member">GetName</ref>()</highlight><highlight class="keyword"><sp/>override</highlight></codeline>
+<codeline lineno="30"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;HasherImpl&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="34"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/crypto/hasher/hasher_impl.hpp"/>
+  </compounddef>
+</doxygen>

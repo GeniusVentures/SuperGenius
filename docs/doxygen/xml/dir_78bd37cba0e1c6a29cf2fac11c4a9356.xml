@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_78bd37cba0e1c6a29cf2fac11c4a9356" kind="dir">
+    <compoundname>src/api/grpc</compoundname>
+    <innerfile refid="d6/d79/grpc__server__impl_8cpp">grpc_server_impl.cpp</innerfile>
+    <innerfile refid="d3/d18/grpc__server__impl_8h">grpc_server_impl.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/api/grpc/"/>
+  </compounddef>
+</doxygen>

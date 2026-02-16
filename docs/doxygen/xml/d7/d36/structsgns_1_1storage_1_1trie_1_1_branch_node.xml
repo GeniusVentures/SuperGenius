@@ -1,0 +1,291 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::storage::trie::BranchNode</compoundname>
+    <basecompoundref refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node" prot="public" virt="non-virtual">sgns::storage::trie::SuperGeniusNode</basecompoundref>
+    <includes refid="d0/d2c/supergenius__node_8hpp" local="no">supergenius_node.hpp</includes>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1a37e12a04c3e13cc36c011b4578d25f7f" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>int</type>
+        <definition>int sgns::storage::trie::BranchNode::kMaxChildren</definition>
+        <argsstring></argsstring>
+        <name>kMaxChildren</name>
+        <qualifiedname>sgns::storage::trie::BranchNode::kMaxChildren</qualifiedname>
+        <initializer>= 16</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="63" column="26" bodyfile="src/storage/trie/supergenius_trie/supergenius_node.hpp" bodystart="63" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1ae129c0e139900d21bb27bde0f9c007fc" prot="public" static="no" mutable="no">
+        <type>std::array&lt; std::shared_ptr&lt; <ref refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1af162eb6a908e824066f31359882b6c9e" kindref="member">SuperGeniusNode</ref> &gt;, <ref refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1a37e12a04c3e13cc36c011b4578d25f7f" kindref="member">kMaxChildren</ref> &gt;</type>
+        <definition>std::array&lt;std::shared_ptr&lt;SuperGeniusNode&gt;, kMaxChildren&gt; sgns::storage::trie::BranchNode::children</definition>
+        <argsstring></argsstring>
+        <name>children</name>
+        <qualifiedname>sgns::storage::trie::BranchNode::children</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="83" column="16" bodyfile="src/storage/trie/supergenius_trie/supergenius_node.hpp" bodystart="83" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1a9cbdac8fcd5280019ae5b3ffb9e33a82" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::BranchNode::BranchNode</definition>
+        <argsstring>()=default</argsstring>
+        <name>BranchNode</name>
+        <qualifiedname>sgns::storage::trie::BranchNode::BranchNode</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="65" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1ac418cdfcec264552eab9de0af2992b7f" prot="public" static="no" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::BranchNode::BranchNode</definition>
+        <argsstring>(KeyNibbles key_nibbles, boost::optional&lt; base::Buffer &gt; value=boost::none)</argsstring>
+        <name>BranchNode</name>
+        <qualifiedname>sgns::storage::trie::BranchNode::BranchNode</qualifiedname>
+        <param>
+          <type><ref refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles" kindref="compound">KeyNibbles</ref></type>
+          <declname>key_nibbles</declname>
+        </param>
+        <param>
+          <type>boost::optional&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+          <declname>value</declname>
+          <defval>boost::none</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="66" column="14" bodyfile="src/storage/trie/supergenius_trie/supergenius_node.hpp" bodystart="66" bodyend="68"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1af86503fd31e5161b3de09c97782ed54c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::BranchNode::~BranchNode</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~BranchNode</name>
+        <qualifiedname>sgns::storage::trie::BranchNode::~BranchNode</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="70" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1a1aa7404d04e729bd3350c36c5c956d40" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="virtual">
+        <type>bool</type>
+        <definition>bool sgns::storage::trie::BranchNode::isDummy</definition>
+        <argsstring>() const override</argsstring>
+        <name>isDummy</name>
+        <qualifiedname>sgns::storage::trie::BranchNode::isDummy</qualifiedname>
+        <reimplements refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1a83e00d507d6b79a951726aa136d641e6">isDummy</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="72" column="10" bodyfile="src/storage/trie/supergenius_trie/supergenius_node.hpp" bodystart="72" bodyend="74"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1ae211e35cf0c6f9ffaea2da783e8c4d5d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>int</type>
+        <definition>int sgns::storage::trie::BranchNode::getType</definition>
+        <argsstring>() const override</argsstring>
+        <name>getType</name>
+        <qualifiedname>sgns::storage::trie::BranchNode::getType</qualifiedname>
+        <reimplements refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node_1ae74019c97c6effa927393afb2bd9a791">getType</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="75" column="9" bodyfile="src/storage/trie/supergenius_trie/supergenius_node.cpp" bodystart="7" bodyend="10"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1a0e2a90616678272fb525718153f01b83" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>uint16_t</type>
+        <definition>uint16_t sgns::storage::trie::BranchNode::childrenBitmap</definition>
+        <argsstring>() const</argsstring>
+        <name>childrenBitmap</name>
+        <qualifiedname>sgns::storage::trie::BranchNode::childrenBitmap</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="77" column="14" bodyfile="src/storage/trie/supergenius_trie/supergenius_node.cpp" bodystart="12" bodyend="20"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1aa4c1c75f6d0b2c6140e73a9b6e0de618" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>uint8_t</type>
+        <definition>uint8_t sgns::storage::trie::BranchNode::childrenNum</definition>
+        <argsstring>() const</argsstring>
+        <name>childrenNum</name>
+        <qualifiedname>sgns::storage::trie::BranchNode::childrenNum</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="78" column="13" bodyfile="src/storage/trie/supergenius_trie/supergenius_node.cpp" bodystart="22" bodyend="27"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::storage::trie::BranchNode</label>
+        <link refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::trie::Node</label>
+        <link refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node"/>
+      </node>
+      <node id="2">
+        <label>sgns::storage::trie::SuperGeniusNode</label>
+        <link refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="11">
+        <label>T</label>
+      </node>
+      <node id="6">
+        <label>boost::equality_comparable&lt; Buffer &gt;</label>
+      </node>
+      <node id="7">
+        <label>boost::equality_comparable&lt; gsl::span&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="8">
+        <label>boost::equality_comparable&lt; std::vector&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="5">
+        <label>sgns::base::Buffer</label>
+        <link refid="de/dd5/classsgns_1_1base_1_1_buffer"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="7" relation="public-inheritance">
+        </childnode>
+        <childnode refid="8" relation="public-inheritance">
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::BranchNode</label>
+        <link refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+children</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::storage::trie::KeyNibbles</label>
+        <link refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::trie::Node</label>
+        <link refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node"/>
+      </node>
+      <node id="2">
+        <label>sgns::storage::trie::SuperGeniusNode</label>
+        <link refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+key_nibbles</edgelabel>
+        </childnode>
+      </node>
+      <node id="15">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::array&lt; std::shared_ptr&lt; sgns::storage::trie::SuperGeniusNode &gt;, kMaxChildren &gt;</label>
+        <childnode refid="13" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="15" relation="template-instance">
+          <edgelabel>&lt; std::shared_ptr&lt; sgns::storage::trie::SuperGeniusNode &gt;, kMaxChildren &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="14">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="13">
+        <label>std::shared_ptr&lt; sgns::storage::trie::SuperGeniusNode &gt;</label>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::trie::SuperGeniusNode &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::vector&lt; uint8_t &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="62" column="3" bodyfile="src/storage/trie/supergenius_trie/supergenius_node.hpp" bodystart="62" bodyend="84"/>
+    <listofallmembers>
+      <member refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1a9cbdac8fcd5280019ae5b3ffb9e33a82" prot="public" virt="non-virtual"><scope>sgns::storage::trie::BranchNode</scope><name>BranchNode</name></member>
+      <member refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1ac418cdfcec264552eab9de0af2992b7f" prot="public" virt="non-virtual"><scope>sgns::storage::trie::BranchNode</scope><name>BranchNode</name></member>
+      <member refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1ae129c0e139900d21bb27bde0f9c007fc" prot="public" virt="non-virtual"><scope>sgns::storage::trie::BranchNode</scope><name>children</name></member>
+      <member refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1a0e2a90616678272fb525718153f01b83" prot="public" virt="non-virtual"><scope>sgns::storage::trie::BranchNode</scope><name>childrenBitmap</name></member>
+      <member refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1aa4c1c75f6d0b2c6140e73a9b6e0de618" prot="public" virt="non-virtual"><scope>sgns::storage::trie::BranchNode</scope><name>childrenNum</name></member>
+      <member refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1a6e3f5c53d8253f1124a2eb9863a0d784" prot="public" virt="non-virtual"><scope>sgns::storage::trie::BranchNode</scope><name>getTrieType</name></member>
+      <member refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1ae211e35cf0c6f9ffaea2da783e8c4d5d" prot="public" virt="virtual"><scope>sgns::storage::trie::BranchNode</scope><name>getType</name></member>
+      <member refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1a1aa7404d04e729bd3350c36c5c956d40" prot="public" virt="virtual"><scope>sgns::storage::trie::BranchNode</scope><name>isDummy</name></member>
+      <member refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1a3ea64df6e0051cfd7fef6b22189736c4" prot="public" virt="non-virtual"><scope>sgns::storage::trie::BranchNode</scope><name>key_nibbles</name></member>
+      <member refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1a37e12a04c3e13cc36c011b4578d25f7f" prot="public" virt="non-virtual"><scope>sgns::storage::trie::BranchNode</scope><name>kMaxChildren</name></member>
+      <member refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1af162eb6a908e824066f31359882b6c9e" prot="public" virt="non-virtual"><scope>sgns::storage::trie::BranchNode</scope><name>SuperGeniusNode</name></member>
+      <member refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1ace5a7020367e21a3159fa99e6daa73d1" prot="public" virt="non-virtual"><scope>sgns::storage::trie::BranchNode</scope><name>SuperGeniusNode</name></member>
+      <member refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1a8e6ad7aafff6f51af4b80b396d6c8c2a" prot="public" virt="non-virtual"><scope>sgns::storage::trie::BranchNode</scope><name>Type</name></member>
+      <member refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1a41bf4761c1484cc298908486001d1de6" prot="public" virt="non-virtual"><scope>sgns::storage::trie::BranchNode</scope><name>value</name></member>
+      <member refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1af86503fd31e5161b3de09c97782ed54c" prot="public" virt="non-virtual"><scope>sgns::storage::trie::BranchNode</scope><name>~BranchNode</name></member>
+      <member refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node_1aa43d0f34895a260aaf3f0156896c44f0" prot="public" virt="virtual"><scope>sgns::storage::trie::BranchNode</scope><name>~Node</name></member>
+      <member refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1a0cde10bcb3dca33813a23b36d5338be9" prot="public" virt="non-virtual"><scope>sgns::storage::trie::BranchNode</scope><name>~SuperGeniusNode</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,898 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream" kind="class" language="C++" prot="public">
+    <compoundname>sgns::scale::ScaleDecoderStream</compoundname>
+    <includes refid="de/dab/scale__decoder__stream_8hpp" local="no">scale_decoder_stream.hpp</includes>
+    <sectiondef kind="private-type">
+      <memberdef kind="typedef" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a3f04953dfeecb55a3fc013acc2f296c0" prot="private" static="no">
+        <type>gsl::span&lt; const uint8_t &gt;</type>
+        <definition>using sgns::scale::ScaleDecoderStream::ByteSpan = gsl::span&lt;const uint8_t&gt;</definition>
+        <argsstring></argsstring>
+        <name>ByteSpan</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::ByteSpan</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="313" column="5" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="313" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1afaf2670c206d35064b5444ba7ac883a6" prot="private" static="no">
+        <type>ByteSpan::const_iterator</type>
+        <definition>using sgns::scale::ScaleDecoderStream::SpanIterator = ByteSpan::const_iterator</definition>
+        <argsstring></argsstring>
+        <name>SpanIterator</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::SpanIterator</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="314" column="5" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="314" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a1ee8cbf4ba09cac31ae220386500a31b" prot="private" static="no">
+        <type>ByteSpan::size_type</type>
+        <definition>using sgns::scale::ScaleDecoderStream::SizeType = ByteSpan::size_type</definition>
+        <argsstring></argsstring>
+        <name>SizeType</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::SizeType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="315" column="5" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="315" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1af4e9e4ef5fc5053dcbd32c01dc4262b7" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>auto</type>
+        <definition>auto sgns::scale::ScaleDecoderStream::is_decoder_stream</definition>
+        <argsstring></argsstring>
+        <name>is_decoder_stream</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::is_decoder_stream</qualifiedname>
+        <initializer>= true</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="22" column="27" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a89aaab8667c2d050b308aeffb8ef9d72" prot="private" static="no" mutable="no">
+        <type><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a3f04953dfeecb55a3fc013acc2f296c0" kindref="member">ByteSpan</ref></type>
+        <definition>ByteSpan sgns::scale::ScaleDecoderStream::span_</definition>
+        <argsstring></argsstring>
+        <name>span_</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::span_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="317" column="14" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="317" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1ac6bfff793eb12f7d22a299dd208e52ae" prot="private" static="no" mutable="no">
+        <type><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1afaf2670c206d35064b5444ba7ac883a6" kindref="member">SpanIterator</ref></type>
+        <definition>SpanIterator sgns::scale::ScaleDecoderStream::current_iterator_</definition>
+        <argsstring></argsstring>
+        <name>current_iterator_</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::current_iterator_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="318" column="18" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="318" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1af9cf04cd7f058bcdcf1d50e1f376bf7e" prot="private" static="no" mutable="no">
+        <type><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a1ee8cbf4ba09cac31ae220386500a31b" kindref="member">SizeType</ref></type>
+        <definition>SizeType sgns::scale::ScaleDecoderStream::current_index_</definition>
+        <argsstring></argsstring>
+        <name>current_index_</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::current_index_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="319" column="14" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="319" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::scale::ScaleDecoderStream::ScaleDecoderStream</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; span)</argsstring>
+        <name>ScaleDecoderStream</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::ScaleDecoderStream</qualifiedname>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>span</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="24" column="14" bodyfile="src/scale/scale_decoder_stream.cpp" bodystart="79" bodyend="80"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a013ae42ddc8f7b20e6e45e0cd20e9735" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class F</type>
+          </param>
+          <param>
+            <type>class S</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref> &amp;</type>
+        <definition>ScaleDecoderStream &amp; sgns::scale::ScaleDecoderStream::operator&gt;&gt;</definition>
+        <argsstring>(std::pair&lt; F, S &gt; &amp;p)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>std::pair&lt; F, S &gt; &amp;</type>
+          <declname>p</declname>
+        </param>
+        <briefdescription>
+<para>scale-decodes pair of values </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>F</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>first value type </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>S</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>second value type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>p</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>pair of values to decode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="34" column="24" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="34" bodyend="38"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1ae0f4987a8b8a34032764c749357024cd" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class...</type>
+            <declname>T</declname>
+            <defname>T</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref> &amp;</type>
+        <definition>ScaleDecoderStream &amp; sgns::scale::ScaleDecoderStream::operator&gt;&gt;</definition>
+        <argsstring>(std::tuple&lt; T... &gt; &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>std::tuple&lt; T... &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>scale-decoding of tuple </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>enumeration of tuples types </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>reference to tuple </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="47" column="24" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="47" bodyend="52"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a3fca5617cc5e13ba1eb8b5ec9594bebf" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class...</type>
+            <declname>Ts</declname>
+            <defname>Ts</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref> &amp;</type>
+        <definition>ScaleDecoderStream &amp; sgns::scale::ScaleDecoderStream::operator&gt;&gt;</definition>
+        <argsstring>(boost::variant&lt; Ts... &gt; &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>boost::variant&lt; Ts... &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>scale-decoding of variant </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>enumeration of various types </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>reference to variant </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="61" column="24" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="61" bodyend="73"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a2e010c505123dfe7ff36b533b0e28680" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref> &amp;</type>
+        <definition>ScaleDecoderStream &amp; sgns::scale::ScaleDecoderStream::operator&gt;&gt;</definition>
+        <argsstring>(std::shared_ptr&lt; T &gt; &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; T &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>scale-decodes shared_ptr value </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to decode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="82" column="24" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="82" bodyend="89"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1ab1cdba176324f204ae800f7f01c13c5d" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref> &amp;</type>
+        <definition>ScaleDecoderStream &amp; sgns::scale::ScaleDecoderStream::operator&gt;&gt;</definition>
+        <argsstring>(std::unique_ptr&lt; T &gt; &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>std::unique_ptr&lt; T &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>scale-decodes unique_ptr value </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to decode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="98" column="24" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="98" bodyend="105"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a5aa17e57726bc916f93423490c14ce04" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+          <param>
+            <type>typename I</type>
+            <defval>std::decay_t&lt;T&gt;</defval>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;std::is_integral_v&lt;I&gt;&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref> &amp;</type>
+        <definition>ScaleDecoderStream &amp; sgns::scale::ScaleDecoderStream::operator&gt;&gt;</definition>
+        <argsstring>(T &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>T &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>scale-encodes any integral type including bool </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>integral type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value of integral type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="114" column="24" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="114" bodyend="131"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a23512f82e5f169d1327fed8306ec8cb9" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref> &amp;</type>
+        <definition>ScaleDecoderStream &amp; sgns::scale::ScaleDecoderStream::operator&gt;&gt;</definition>
+        <argsstring>(boost::optional&lt; T &gt; &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>boost::optional&lt; T &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>scale-decodes any optional value </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>type of optional value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>optional value reference </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="140" column="24" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="140" bodyend="162"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a28b3ebb10c6ce1c43ff1d00e9189f722" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref> &amp;</type>
+        <definition>ScaleDecoderStream &amp; sgns::scale::ScaleDecoderStream::operator&gt;&gt;</definition>
+        <argsstring>(CompactInteger &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type><ref refid="d1/d56/namespacesgns_1_1scale_1ac1997d51bb44310de23a0fd42d42aac0" kindref="member">CompactInteger</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>scale-decodes compact integer value </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>compact integer reference </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para></para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="169" column="24" bodyfile="src/scale/scale_decoder_stream.cpp" bodystart="111" bodyend="114"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1aea26badd8e2fefb812ebc9f9f5d5ddf0" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref> &amp;</type>
+        <definition>ScaleDecoderStream &amp; sgns::scale::ScaleDecoderStream::operator&gt;&gt;</definition>
+        <argsstring>(std::vector&lt; T &gt; &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>std::vector&lt; T &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>decodes vector of items </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>item type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>reference to vector </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="178" column="24" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="178" bodyend="201"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1aa01976a6ebaf3049f0a37460aca5f65d" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref> &amp;</type>
+        <definition>ScaleDecoderStream &amp; sgns::scale::ScaleDecoderStream::operator&gt;&gt;</definition>
+        <argsstring>(std::list&lt; T &gt; &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>std::list&lt; T &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>decodes collection of items </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>item type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>reference to collection </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="210" column="24" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="210" bodyend="232"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1af458fc505fbc7a961522af040d040dfc" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+          <param>
+            <type>size_t</type>
+            <declname>size</declname>
+            <defname>size</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref> &amp;</type>
+        <definition>ScaleDecoderStream &amp; sgns::scale::ScaleDecoderStream::operator&gt;&gt;</definition>
+        <argsstring>(std::array&lt; T, size &gt; &amp;a)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>std::array&lt; T, size &gt; &amp;</type>
+          <declname>a</declname>
+        </param>
+        <briefdescription>
+<para>decodes array of items </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>item type </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>of the array </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>a</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>reference to the array </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="242" column="24" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="242" bodyend="248"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1aac901134647abe33ee11e722d51b1d50" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref> &amp;</type>
+        <definition>ScaleDecoderStream &amp; sgns::scale::ScaleDecoderStream::operator&gt;&gt;</definition>
+        <argsstring>(boost::multiprecision::uint256_t &amp;i)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>boost::multiprecision::uint256_t &amp;</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+<para>decodes uint256_t from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>i</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to decode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="255" column="24" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="255" bodyend="258"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a75cf6dff26832786ea4fc136b5302e69" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" kindref="member">ScaleDecoderStream</ref> &amp;</type>
+        <definition>ScaleDecoderStream &amp; sgns::scale::ScaleDecoderStream::operator&gt;&gt;</definition>
+        <argsstring>(std::string &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>std::string &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>decodes string from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to decode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="265" column="24" bodyfile="src/scale/scale_decoder_stream.cpp" bodystart="116" bodyend="122"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1ad1ca65c5464e444aa3cddfd7bc1385e2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::scale::ScaleDecoderStream::hasMore</definition>
+        <argsstring>(uint64_t n) const</argsstring>
+        <name>hasMore</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::hasMore</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>n</declname>
+        </param>
+        <briefdescription>
+<para>hasMore Checks whether n more bytes are available </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>n</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of bytes to check </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>True if n more bytes are available and false otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="272" column="10" bodyfile="src/scale/scale_decoder_stream.cpp" bodystart="124" bodyend="126"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a6855dfa577f7689c03cfd29d14d6474a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>uint8_t</type>
+        <definition>uint8_t sgns::scale::ScaleDecoderStream::nextByte</definition>
+        <argsstring>()</argsstring>
+        <name>nextByte</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::nextByte</qualifiedname>
+        <briefdescription>
+<para>takes one byte from stream and advances current byte iterator by one </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>current byte </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="279" column="13" bodyfile="src/scale/scale_decoder_stream.cpp" bodystart="128" bodyend="135"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a89ff2fd2acea34ffdf23780972586299" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::scale::ScaleDecoderStream::decodeBool</definition>
+        <argsstring>()</argsstring>
+        <name>decodeBool</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::decodeBool</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="282" column="10" bodyfile="src/scale/scale_decoder_stream.cpp" bodystart="98" bodyend="109"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a0a883ac9f9709af2001de5f5c5cf0c9b" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>boost::optional&lt; bool &gt;</type>
+        <definition>boost::optional&lt; bool &gt; sgns::scale::ScaleDecoderStream::decodeOptionalBool</definition>
+        <argsstring>()</argsstring>
+        <name>decodeOptionalBool</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::decodeOptionalBool</qualifiedname>
+        <briefdescription>
+<para>special case of optional values as described in specification </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>boost::optional&lt;bool&gt; value </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="287" column="21" bodyfile="src/scale/scale_decoder_stream.cpp" bodystart="82" bodyend="96"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a02c6f9e4d03c3d2d24602bdb4ecef85c" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>size_t</type>
+            <declname>I</declname>
+            <defname>I</defname>
+          </param>
+          <param>
+            <type>class...</type>
+            <declname>Ts</declname>
+            <defname>Ts</defname>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::scale::ScaleDecoderStream::decodeElementOfTuple</definition>
+        <argsstring>(std::tuple&lt; Ts... &gt; &amp;v)</argsstring>
+        <name>decodeElementOfTuple</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::decodeElementOfTuple</qualifiedname>
+        <param>
+          <type>std::tuple&lt; Ts... &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="290" column="10" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="290" bodyend="296"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1aadba68b37081c7d309a4dc499dc3ac30" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>size_t</type>
+            <declname>I</declname>
+            <defname>I</defname>
+          </param>
+          <param>
+            <type>class...</type>
+            <declname>Ts</declname>
+            <defname>Ts</defname>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::scale::ScaleDecoderStream::tryDecodeAsOneOfVariant</definition>
+        <argsstring>(boost::variant&lt; Ts... &gt; &amp;v, size_t i)</argsstring>
+        <name>tryDecodeAsOneOfVariant</name>
+        <qualifiedname>sgns::scale::ScaleDecoderStream::tryDecodeAsOneOfVariant</qualifiedname>
+        <param>
+          <type>boost::variant&lt; Ts... &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/scale_decoder_stream.hpp" line="299" column="10" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="299" bodyend="311"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::scale::ScaleDecoderStream</label>
+        <link refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/scale/scale_decoder_stream.hpp" line="19" column="3" bodyfile="src/scale/scale_decoder_stream.hpp" bodystart="19" bodyend="320"/>
+    <listofallmembers>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a3f04953dfeecb55a3fc013acc2f296c0" prot="private" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>ByteSpan</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1af9cf04cd7f058bcdcf1d50e1f376bf7e" prot="private" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>current_index_</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1ac6bfff793eb12f7d22a299dd208e52ae" prot="private" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>current_iterator_</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a89ff2fd2acea34ffdf23780972586299" prot="private" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>decodeBool</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a02c6f9e4d03c3d2d24602bdb4ecef85c" prot="private" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>decodeElementOfTuple</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a0a883ac9f9709af2001de5f5c5cf0c9b" prot="private" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>decodeOptionalBool</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1ad1ca65c5464e444aa3cddfd7bc1385e2" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>hasMore</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1af4e9e4ef5fc5053dcbd32c01dc4262b7" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>is_decoder_stream</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a6855dfa577f7689c03cfd29d14d6474a" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>nextByte</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a013ae42ddc8f7b20e6e45e0cd20e9735" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>operator&gt;&gt;</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1ae0f4987a8b8a34032764c749357024cd" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>operator&gt;&gt;</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a3fca5617cc5e13ba1eb8b5ec9594bebf" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>operator&gt;&gt;</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a2e010c505123dfe7ff36b533b0e28680" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>operator&gt;&gt;</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1ab1cdba176324f204ae800f7f01c13c5d" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>operator&gt;&gt;</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a5aa17e57726bc916f93423490c14ce04" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>operator&gt;&gt;</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a23512f82e5f169d1327fed8306ec8cb9" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>operator&gt;&gt;</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a28b3ebb10c6ce1c43ff1d00e9189f722" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>operator&gt;&gt;</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1aea26badd8e2fefb812ebc9f9f5d5ddf0" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>operator&gt;&gt;</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1aa01976a6ebaf3049f0a37460aca5f65d" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>operator&gt;&gt;</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1af458fc505fbc7a961522af040d040dfc" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>operator&gt;&gt;</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1aac901134647abe33ee11e722d51b1d50" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>operator&gt;&gt;</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a75cf6dff26832786ea4fc136b5302e69" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>operator&gt;&gt;</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a27daa227cc5e3c654148d1dd9ea6a637" prot="public" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>ScaleDecoderStream</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a1ee8cbf4ba09cac31ae220386500a31b" prot="private" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>SizeType</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1a89aaab8667c2d050b308aeffb8ef9d72" prot="private" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>span_</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1afaf2670c206d35064b5444ba7ac883a6" prot="private" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>SpanIterator</name></member>
+      <member refid="d1/d39/classsgns_1_1scale_1_1_scale_decoder_stream_1aadba68b37081c7d309a4dc499dc3ac30" prot="private" virt="non-virtual"><scope>sgns::scale::ScaleDecoderStream</scope><name>tryDecodeAsOneOfVariant</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

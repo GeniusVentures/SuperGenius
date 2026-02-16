@@ -1,0 +1,62 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/d9a/structsgns_1_1processing_1_1_processing_sub_task_queue_manager_1_1_ownership_request" kind="struct" language="C++" prot="private">
+    <compoundname>sgns::processing::ProcessingSubTaskQueueManager::OwnershipRequest</compoundname>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="da/d9a/structsgns_1_1processing_1_1_processing_sub_task_queue_manager_1_1_ownership_request_1a2f617b349fa5939b836d7e0608e2413d" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::processing::ProcessingSubTaskQueueManager::OwnershipRequest::node_id</definition>
+        <argsstring></argsstring>
+        <name>node_id</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::OwnershipRequest::node_id</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="198" column="25" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="198" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/d9a/structsgns_1_1processing_1_1_processing_sub_task_queue_manager_1_1_ownership_request_1aa42d7d1d384ecbb793035899d0fa1aab" prot="public" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::processing::ProcessingSubTaskQueueManager::OwnershipRequest::timestamp</definition>
+        <argsstring></argsstring>
+        <name>timestamp</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueManager::OwnershipRequest::timestamp</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_manager.hpp" line="199" column="25" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="199" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::processing::ProcessingSubTaskQueueManager::OwnershipRequest</label>
+        <link refid="da/d9a/structsgns_1_1processing_1_1_processing_sub_task_queue_manager_1_1_ownership_request"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+node_id</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="2">
+        <label>std::string</label>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/processing/processing_subtask_queue_manager.hpp" line="196" column="9" bodyfile="src/processing/processing_subtask_queue_manager.hpp" bodystart="197" bodyend="200"/>
+    <listofallmembers>
+      <member refid="da/d9a/structsgns_1_1processing_1_1_processing_sub_task_queue_manager_1_1_ownership_request_1a2f617b349fa5939b836d7e0608e2413d" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager::OwnershipRequest</scope><name>node_id</name></member>
+      <member refid="da/d9a/structsgns_1_1processing_1_1_processing_sub_task_queue_manager_1_1_ownership_request_1aa42d7d1d384ecbb793035899d0fa1aab" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueManager::OwnershipRequest</scope><name>timestamp</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

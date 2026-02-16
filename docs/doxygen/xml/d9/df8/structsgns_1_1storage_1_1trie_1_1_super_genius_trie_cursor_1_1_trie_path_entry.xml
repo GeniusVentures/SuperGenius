@@ -1,0 +1,95 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/df8/structsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1_1_trie_path_entry" kind="struct" language="C++" prot="private">
+    <compoundname>sgns::storage::trie::SuperGeniusTrieCursor::TriePathEntry</compoundname>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d9/df8/structsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1_1_trie_path_entry_1a0ff77575a2edd0fb3e3bcd53f3084396" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a4b0ba6d8aeb9ba827c05c9bff906f200" kindref="member">BranchPtr</ref></type>
+        <definition>BranchPtr sgns::storage::trie::SuperGeniusTrieCursor::TriePathEntry::parent</definition>
+        <argsstring></argsstring>
+        <name>parent</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::TriePathEntry::parent</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="64" column="17" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" bodystart="64" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d9/df8/structsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1_1_trie_path_entry_1a9ebbc52e6d2ae6520a786e8ec3576c7b" prot="public" static="no" mutable="no">
+        <type>int8_t</type>
+        <definition>int8_t sgns::storage::trie::SuperGeniusTrieCursor::TriePathEntry::child_idx</definition>
+        <argsstring></argsstring>
+        <name>child_idx</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::TriePathEntry::child_idx</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="65" column="14" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" bodystart="65" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d9/df8/structsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1_1_trie_path_entry_1a42fd9b90d868894fe94168cf4b77e61f" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::SuperGeniusTrieCursor::TriePathEntry::TriePathEntry</definition>
+        <argsstring>(BranchPtr parent, int8_t child_idx)</argsstring>
+        <name>TriePathEntry</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieCursor::TriePathEntry::TriePathEntry</qualifiedname>
+        <param>
+          <type><ref refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a4b0ba6d8aeb9ba827c05c9bff906f200" kindref="member">BranchPtr</ref></type>
+          <declname>parent</declname>
+        </param>
+        <param>
+          <type>int8_t</type>
+          <declname>child_idx</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="62" column="7" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" bodystart="62" bodyend="63"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>An element of a path in trie. A node that is a part of the path and the index of its child which is the next node in the path </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="4">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::SuperGeniusTrieCursor::TriePathEntry</label>
+        <link refid="d9/df8/structsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1_1_trie_path_entry"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+parent</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::shared_ptr&lt; BranchNode &gt;</label>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; BranchNode &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" line="61" column="5" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_cursor.hpp" bodystart="61" bodyend="66"/>
+    <listofallmembers>
+      <member refid="d9/df8/structsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1_1_trie_path_entry_1a9ebbc52e6d2ae6520a786e8ec3576c7b" prot="public" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor::TriePathEntry</scope><name>child_idx</name></member>
+      <member refid="d9/df8/structsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1_1_trie_path_entry_1a0ff77575a2edd0fb3e3bcd53f3084396" prot="public" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor::TriePathEntry</scope><name>parent</name></member>
+      <member refid="d9/df8/structsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1_1_trie_path_entry_1a42fd9b90d868894fe94168cf4b77e61f" prot="public" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieCursor::TriePathEntry</scope><name>TriePathEntry</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

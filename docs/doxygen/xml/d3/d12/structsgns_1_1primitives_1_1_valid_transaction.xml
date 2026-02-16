@@ -1,0 +1,183 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d3/d12/structsgns_1_1primitives_1_1_valid_transaction" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::primitives::ValidTransaction</compoundname>
+    <includes refid="d0/d4b/transaction__validity_8hpp" local="no">transaction_validity.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d3/d12/structsgns_1_1primitives_1_1_valid_transaction_1a74e65d294b970a2589c48334d946ad1d" prot="public" static="no" mutable="no">
+        <type><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a54e96843477ce579ab65cb653e19cc9c" kindref="member">Transaction::Priority</ref></type>
+        <definition>Transaction::Priority sgns::primitives::ValidTransaction::priority</definition>
+        <argsstring></argsstring>
+        <name>priority</name>
+        <qualifiedname>sgns::primitives::ValidTransaction::priority</qualifiedname>
+        <initializer>{}</initializer>
+        <briefdescription>
+<para>Priority of the transaction. Priority determines the ordering of two transactions that have all their dependencies (required tags) satisfied. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/transaction_validity.hpp" line="26" column="27" bodyfile="src/primitives/transaction_validity.hpp" bodystart="26" bodyend="26"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/d12/structsgns_1_1primitives_1_1_valid_transaction_1a65b93aa3da77779441d1fc4f22753b5b" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; <ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a80d2067e3e6f7aafe2f6bb869682672c" kindref="member">Transaction::Tag</ref> &gt;</type>
+        <definition>std::vector&lt;Transaction::Tag&gt; sgns::primitives::ValidTransaction::provides</definition>
+        <argsstring></argsstring>
+        <name>provides</name>
+        <qualifiedname>sgns::primitives::ValidTransaction::provides</qualifiedname>
+        <briefdescription>
+<para>Provided tags A list of tags this transaction provides. Successfuly importing the transaction will enable other transactions that depend on (require) those tags to be included as well. Provided and requried tags allow Substrate to build a dependency graph of transactions and import them in the right (linear) order. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/transaction_validity.hpp" line="43" column="17" bodyfile="src/primitives/transaction_validity.hpp" bodystart="43" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/d12/structsgns_1_1primitives_1_1_valid_transaction_1a526065a050b3fe0a95edb3a67de4bec9" prot="public" static="no" mutable="no">
+        <type><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction_1a40bf45f7bcb79bffcbecdca3b935a747" kindref="member">Transaction::Longevity</ref></type>
+        <definition>Transaction::Longevity sgns::primitives::ValidTransaction::longevity</definition>
+        <argsstring></argsstring>
+        <name>longevity</name>
+        <qualifiedname>sgns::primitives::ValidTransaction::longevity</qualifiedname>
+        <initializer>{}</initializer>
+        <briefdescription>
+<para><ref refid="d6/d60/structsgns_1_1primitives_1_1_transaction" kindref="compound">Transaction</ref> longevity Longevity describes minimum number of blocks the validity is correct. After this period transaction should be removed from the pool or revalidated. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/transaction_validity.hpp" line="51" column="28" bodyfile="src/primitives/transaction_validity.hpp" bodystart="51" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/d12/structsgns_1_1primitives_1_1_valid_transaction_1a8f9689a5e657128b098f33b1a07eb9e2" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::primitives::ValidTransaction::propagate</definition>
+        <argsstring></argsstring>
+        <name>propagate</name>
+        <qualifiedname>sgns::primitives::ValidTransaction::propagate</qualifiedname>
+        <initializer>{}</initializer>
+        <briefdescription>
+<para>A flag indicating if the transaction should be propagated to other peers. By setting <computeroutput>false</computeroutput> here the transaction will still be considered for including in blocks that are authored on the current node, but will never be sent to other peers. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/transaction_validity.hpp" line="59" column="10" bodyfile="src/primitives/transaction_validity.hpp" bodystart="59" bodyend="59"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d3/d12/structsgns_1_1primitives_1_1_valid_transaction_1aa3f88fe761c99938be13c5b89724a297" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::primitives::ValidTransaction::operator==</definition>
+        <argsstring>(const ValidTransaction &amp;rhs) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::primitives::ValidTransaction::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="d3/d12/structsgns_1_1primitives_1_1_valid_transaction" kindref="compound">ValidTransaction</ref> &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/transaction_validity.hpp" line="61" column="10" bodyfile="src/primitives/transaction_validity.hpp" bodystart="61" bodyend="65"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d12/structsgns_1_1primitives_1_1_valid_transaction_1a3759ffbef28fd75f703ac8652bbbdbba" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::primitives::ValidTransaction::operator!=</definition>
+        <argsstring>(const ValidTransaction &amp;rhs) const</argsstring>
+        <name>operator!=</name>
+        <qualifiedname>sgns::primitives::ValidTransaction::operator!=</qualifiedname>
+        <param>
+          <type>const <ref refid="d3/d12/structsgns_1_1primitives_1_1_valid_transaction" kindref="compound">ValidTransaction</ref> &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/transaction_validity.hpp" line="67" column="10" bodyfile="src/primitives/transaction_validity.hpp" bodystart="67" bodyend="69"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="friend">
+      <memberdef kind="friend" id="d3/d12/structsgns_1_1primitives_1_1_valid_transaction_1acb8bf0549e81d82a45e829077cc3d8da" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::ostream &amp;</type>
+        <definition>std::ostream &amp; operator&lt;&lt;</definition>
+        <argsstring>(std::ostream &amp;out, const ValidTransaction &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::ValidTransaction::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>std::ostream &amp;</type>
+          <declname>out</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d3/d12/structsgns_1_1primitives_1_1_valid_transaction" kindref="compound">ValidTransaction</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/transaction_validity.hpp" line="71" column="12" bodyfile="src/primitives/transaction_validity.hpp" bodystart="71" bodyend="87"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Information concerning a valid transaction. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>This is the same structure as in </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="5">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::primitives::ValidTransaction</label>
+        <link refid="d3/d12/structsgns_1_1primitives_1_1_valid_transaction"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+provides</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::vector&lt; Transaction::Tag &gt;</label>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; Transaction::Tag &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::vector&lt; uint8_t &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/primitives/transaction_validity.hpp" line="20" column="3" bodyfile="src/primitives/transaction_validity.hpp" bodystart="20" bodyend="89"/>
+    <listofallmembers>
+      <member refid="d3/d12/structsgns_1_1primitives_1_1_valid_transaction_1a526065a050b3fe0a95edb3a67de4bec9" prot="public" virt="non-virtual"><scope>sgns::primitives::ValidTransaction</scope><name>longevity</name></member>
+      <member refid="d3/d12/structsgns_1_1primitives_1_1_valid_transaction_1a3759ffbef28fd75f703ac8652bbbdbba" prot="public" virt="non-virtual"><scope>sgns::primitives::ValidTransaction</scope><name>operator!=</name></member>
+      <member refid="d3/d12/structsgns_1_1primitives_1_1_valid_transaction_1acb8bf0549e81d82a45e829077cc3d8da" prot="public" virt="non-virtual"><scope>sgns::primitives::ValidTransaction</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d3/d12/structsgns_1_1primitives_1_1_valid_transaction_1aa3f88fe761c99938be13c5b89724a297" prot="public" virt="non-virtual"><scope>sgns::primitives::ValidTransaction</scope><name>operator==</name></member>
+      <member refid="d3/d12/structsgns_1_1primitives_1_1_valid_transaction_1a74e65d294b970a2589c48334d946ad1d" prot="public" virt="non-virtual"><scope>sgns::primitives::ValidTransaction</scope><name>priority</name></member>
+      <member refid="d3/d12/structsgns_1_1primitives_1_1_valid_transaction_1a8f9689a5e657128b098f33b1a07eb9e2" prot="public" virt="non-virtual"><scope>sgns::primitives::ValidTransaction</scope><name>propagate</name></member>
+      <member refid="d3/d12/structsgns_1_1primitives_1_1_valid_transaction_1a65b93aa3da77779441d1fc4f22753b5b" prot="public" virt="non-virtual"><scope>sgns::primitives::ValidTransaction</scope><name>provides</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

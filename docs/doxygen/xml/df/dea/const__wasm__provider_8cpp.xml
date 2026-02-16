@@ -1,0 +1,89 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/dea/const__wasm__provider_8cpp" kind="file" language="C++">
+    <compoundname>const_wasm_provider.cpp</compoundname>
+    <includes refid="d0/dc8/const__wasm__provider_8hpp" local="yes">runtime/common/const_wasm_provider.hpp</includes>
+    <incdepgraph>
+      <node id="4">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/runtime/common/const_wasm_provider.cpp</label>
+        <link refid="df/dea/const__wasm__provider_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>runtime/common/const_wasm_provider.hpp</label>
+        <link refid="d0/dc8/const__wasm__provider_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>runtime/wasm_provider.hpp</label>
+        <link refid="d5/d32/wasm__provider_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="8">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="9">
+        <label>gsl/span</label>
+      </node>
+      <node id="11">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="5">
+        <label>string_view</label>
+      </node>
+      <node id="6">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="dd/da6/namespacesgns_1_1runtime">sgns::runtime</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d0/dc8/const__wasm__provider_8hpp" kindref="compound">runtime/common/const_wasm_provider.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="dd/da6/namespacesgns_1_1runtime" kindref="compound">sgns::runtime</ref><sp/>{</highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6" refid="dc/d5f/classsgns_1_1runtime_1_1_const_wasm_provider_1a8bf9ea5a84dc4e4d42f4057015bdc801" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="dc/d5f/classsgns_1_1runtime_1_1_const_wasm_provider_1a8bf9ea5a84dc4e4d42f4057015bdc801" kindref="member">ConstWasmProvider::ConstWasmProvider</ref>(<ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>code)</highlight></codeline>
+<codeline lineno="7"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/><ref refid="dc/d5f/classsgns_1_1runtime_1_1_const_wasm_provider_1ab1687e9298d7222234174924f75eeb1c" kindref="member">code_</ref>{<ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(code)}<sp/>{}</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9" refid="dc/d5f/classsgns_1_1runtime_1_1_const_wasm_provider_1af625c00d4f8348678dd9c73e8e99f967" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;<ref refid="dc/d5f/classsgns_1_1runtime_1_1_const_wasm_provider_1af625c00d4f8348678dd9c73e8e99f967" kindref="member">ConstWasmProvider::getStateCode</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="dc/d5f/classsgns_1_1runtime_1_1_const_wasm_provider_1ab1687e9298d7222234174924f75eeb1c" kindref="member">code_</ref>;</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::runtime</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/runtime/common/const_wasm_provider.cpp"/>
+  </compounddef>
+</doxygen>

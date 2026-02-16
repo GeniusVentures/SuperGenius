@@ -1,0 +1,102 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/d47/class_i_component_factory" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>IComponentFactory</compoundname>
+    <derivedcompoundref refid="df/d07/class_c_component_factory" prot="public" virt="non-virtual">CComponentFactory</derivedcompoundref>
+    <includes refid="d3/d4b/_i_component_factory_8hpp" local="no">IComponentFactory.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d0/d47/class_i_component_factory_1a3a1f0852dc2cb3faada797df5e7123db" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual IComponentFactory::~IComponentFactory</definition>
+        <argsstring>()=default</argsstring>
+        <name>~IComponentFactory</name>
+        <qualifiedname>IComponentFactory::~IComponentFactory</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/singleton/IComponentFactory.hpp" line="15" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d47/class_i_component_factory_1a4d5503839211e0705144838e4c255f11" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void IComponentFactory::Register</definition>
+        <argsstring>(std::shared_ptr&lt; IComponent &gt; component, const std::string &amp;type, const boost::optional&lt; std::string &gt; &amp;variant)=0</argsstring>
+        <name>Register</name>
+        <qualifiedname>IComponentFactory::Register</qualifiedname>
+        <reimplementedby refid="df/d07/class_c_component_factory_1a271de54756a5a68b276568d3c2ae8f10">Register</reimplementedby>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d1/dbf/class_i_component" kindref="compound">IComponent</ref> &gt;</type>
+          <declname>component</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>type</declname>
+        </param>
+        <param>
+          <type>const boost::optional&lt; std::string &gt; &amp;</type>
+          <declname>variant</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/singleton/IComponentFactory.hpp" line="17" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d47/class_i_component_factory_1a76a5b78e02974e8460e8c9f1b78e7547" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; <ref refid="d1/dbf/class_i_component" kindref="compound">IComponent</ref> &gt; &gt;</type>
+        <definition>virtual outcome::result&lt; std::shared_ptr&lt; IComponent &gt; &gt; IComponentFactory::GetComponent</definition>
+        <argsstring>(const std::string &amp;type, const boost::optional&lt; std::string &gt; &amp;variant)=0</argsstring>
+        <name>GetComponent</name>
+        <qualifiedname>IComponentFactory::GetComponent</qualifiedname>
+        <reimplementedby refid="df/d07/class_c_component_factory_1a813c77f491916e3344885cb2c0b06250">GetComponent</reimplementedby>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>type</declname>
+        </param>
+        <param>
+          <type>const boost::optional&lt; std::string &gt; &amp;</type>
+          <declname>variant</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/singleton/IComponentFactory.hpp" line="21" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>CComponentFactory</label>
+        <link refid="df/d07/class_c_component_factory"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>IComponentFactory</label>
+        <link refid="d0/d47/class_i_component_factory"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>IComponentFactory</label>
+        <link refid="d0/d47/class_i_component_factory"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/singleton/IComponentFactory.hpp" line="12" column="1" bodyfile="src/singleton/IComponentFactory.hpp" bodystart="13" bodyend="23"/>
+    <listofallmembers>
+      <member refid="d0/d47/class_i_component_factory_1a76a5b78e02974e8460e8c9f1b78e7547" prot="public" virt="pure-virtual"><scope>IComponentFactory</scope><name>GetComponent</name></member>
+      <member refid="d0/d47/class_i_component_factory_1a4d5503839211e0705144838e4c255f11" prot="public" virt="pure-virtual"><scope>IComponentFactory</scope><name>Register</name></member>
+      <member refid="d0/d47/class_i_component_factory_1a3a1f0852dc2cb3faada797df5e7123db" prot="public" virt="virtual"><scope>IComponentFactory</scope><name>~IComponentFactory</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,392 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/d4f/_scaled_integer_8cpp" kind="file" language="C++">
+    <compoundname>ScaledInteger.cpp</compoundname>
+    <includes refid="d5/daa/_scaled_integer_8hpp" local="yes">ScaledInteger.hpp</includes>
+    <includes local="no">charconv</includes>
+    <includes local="no">cmath</includes>
+    <includes local="no">limits</includes>
+    <includes local="no">system_error</includes>
+    <includes local="no">memory</includes>
+    <includes local="no">boost/multiprecision/cpp_int.hpp</includes>
+    <incdepgraph>
+      <node id="1">
+        <label>src/base/ScaledInteger.cpp</label>
+        <link refid="dc/d4f/_scaled_integer_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>ScaledInteger.hpp</label>
+        <link refid="d5/daa/_scaled_integer_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>boost/multiprecision/cpp_int.hpp</label>
+      </node>
+      <node id="8">
+        <label>charconv</label>
+      </node>
+      <node id="9">
+        <label>cmath</label>
+      </node>
+      <node id="7">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="10">
+        <label>limits</label>
+      </node>
+      <node id="4">
+        <label>memory</label>
+      </node>
+      <node id="3">
+        <label>string</label>
+      </node>
+      <node id="11">
+        <label>system_error</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <briefdescription>
+<para>Fixed-point arithmetic utilities (Implementation file). </para>
+    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="author"><para>Luiz Guilherme Rizzatto Zucchi (<ulink url="mailto:luizgrz@gmail.com">luizgrz@gmail.com</ulink>) </para>
+</simplesect>
+<simplesect kind="version"><para>1.1 </para>
+</simplesect>
+<simplesect kind="date"><para>2025-06-10 </para>
+</simplesect>
+<simplesect kind="copyright"><para>Copyright (c) 2025 </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/daa/_scaled_integer_8hpp" kindref="compound">ScaledInteger.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;charconv&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cmath&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;limits&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;system_error&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;memory&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/multiprecision/cpp_int.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="19"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21" refid="d3/d10/classsgns_1_1_scaled_integer_1af6b748a88a9481d289882e872033d343" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;std::shared_ptr&lt;ScaledInteger&gt;&gt;<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1af6b748a88a9481d289882e872033d343" kindref="member">ScaledInteger::New</ref>(<sp/>uint64_t<sp/>raw_value,<sp/>uint64_t<sp/>precision<sp/>)</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>ptr<sp/>=<sp/>std::shared_ptr&lt;ScaledInteger&gt;(<sp/></highlight><highlight class="keyword">new</highlight><highlight class="normal"><sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref>(<sp/>raw_value,<sp/>precision<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success(<sp/>ptr<sp/>);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27" refid="d3/d10/classsgns_1_1_scaled_integer_1afd17fb43521765a5757d6cd9d8f030e1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;std::shared_ptr&lt;ScaledInteger&gt;&gt;<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1af6b748a88a9481d289882e872033d343" kindref="member">ScaledInteger::New</ref>(<sp/></highlight><highlight class="keywordtype">double</highlight><highlight class="normal"><sp/>raw_value,<sp/>uint64_t<sp/>precision<sp/>)</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>OUTCOME_TRY(<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;from_dbl_value,<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a199b0954d15b2476297738e9b7036b71" kindref="member">FromDouble</ref>(<sp/>raw_value,<sp/>precision<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>ptr<sp/>=<sp/>std::shared_ptr&lt;ScaledInteger&gt;(<sp/></highlight><highlight class="keyword">new</highlight><highlight class="normal"><sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref>(<sp/>from_dbl_value,<sp/>precision<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success(<sp/>ptr<sp/>);</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight></codeline>
+<codeline lineno="34" refid="d3/d10/classsgns_1_1_scaled_integer_1af778ceca4d2675e9cbe69882cc96f2b2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;std::shared_ptr&lt;ScaledInteger&gt;&gt;<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1af6b748a88a9481d289882e872033d343" kindref="member">ScaledInteger::New</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;str_value,</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>precision,</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a0d82dad5d8f9d11a58dec5ae6edbe9b6" kindref="member">ParseMode</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>mode<sp/>)</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>OUTCOME_TRY(<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;from_str_value,<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1af1b23d9d69aa5728fb00b0627a59ab68" kindref="member">FromString</ref>(<sp/>str_value,<sp/>precision,<sp/>mode<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>ptr<sp/>=<sp/>std::shared_ptr&lt;ScaledInteger&gt;(<sp/></highlight><highlight class="keyword">new</highlight><highlight class="normal"><sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref>(<sp/>from_str_value,<sp/>precision<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success(<sp/>ptr<sp/>);</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight></codeline>
+<codeline lineno="43" refid="d3/d10/classsgns_1_1_scaled_integer_1a09de90f5d865cb2e0b670fae59bd83cc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;std::shared_ptr&lt;ScaledInteger&gt;&gt;<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1af6b748a88a9481d289882e872033d343" kindref="member">ScaledInteger::New</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;str_value<sp/>)</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/><sp/><sp/>dot_pos<sp/>=<sp/>str_value.find(<sp/></highlight><highlight class="charliteral">&apos;.&apos;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/>precision_calc;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>dot_pos<sp/>==<sp/>std::string::npos<sp/>)</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>precision_calc<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">else</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>precision_calc<sp/>=<sp/>str_value.size()<sp/>-<sp/>dot_pos<sp/>-<sp/>1;</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>OUTCOME_TRY(<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;raw_value,<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1af1b23d9d69aa5728fb00b0627a59ab68" kindref="member">FromString</ref>(<sp/>str_value,<sp/>precision_calc<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>ptr<sp/>=<sp/>std::shared_ptr&lt;ScaledInteger&gt;(<sp/></highlight><highlight class="keyword">new</highlight><highlight class="normal"><sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref>(<sp/>raw_value,<sp/>precision_calc<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success(<sp/>ptr<sp/>);</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight></codeline>
+<codeline lineno="60" refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger::ScaledInteger</ref>(<sp/>uint64_t<sp/>value,<sp/>uint64_t<sp/>precision<sp/>)<sp/>:<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a75b855116d74d3d8842686fcb0a79ce9" kindref="member">value_</ref>(<sp/>value<sp/>),<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" kindref="member">precision_</ref>(<sp/>precision<sp/>)<sp/>{}</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"></highlight></codeline>
+<codeline lineno="62" refid="d3/d10/classsgns_1_1_scaled_integer_1a048343c2f6eee11bb38610e8df179084" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>uint64_t<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a048343c2f6eee11bb38610e8df179084" kindref="member">ScaledInteger::ScaleFactor</ref>(<sp/>uint64_t<sp/>precision<sp/>)</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/>result<sp/>=<sp/>1;</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(<sp/>uint64_t<sp/>i<sp/>=<sp/>0;<sp/>i<sp/>&lt;<sp/>precision;<sp/>++i<sp/>)</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>result<sp/>*=<sp/>10;</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>result;</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"></highlight></codeline>
+<codeline lineno="72" refid="d3/d10/classsgns_1_1_scaled_integer_1af1b23d9d69aa5728fb00b0627a59ab68" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;uint64_t&gt;<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1af1b23d9d69aa5728fb00b0627a59ab68" kindref="member">ScaledInteger::FromString</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;str_value,</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>precision,</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a0d82dad5d8f9d11a58dec5ae6edbe9b6" kindref="member">ParseMode</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>mode<sp/>)<sp/></highlight><highlight class="comment">//<sp/>←<sp/>added<sp/>ParseMode<sp/>parameter</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>str_value.empty()<sp/>)</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>std::make_error_code(<sp/>std::errc::invalid_argument<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"></highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>dot_pos<sp/>=<sp/>str_value.find(<sp/></highlight><highlight class="charliteral">&apos;.&apos;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string_view<sp/>integer_str,<sp/>fractional_str;</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"></highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>dot_pos<sp/>!=<sp/>std::string::npos<sp/>)</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>integer_str<sp/><sp/><sp/><sp/>=<sp/>std::string_view(<sp/>str_value<sp/>).substr(<sp/>0,<sp/>dot_pos<sp/>);</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>fractional_str<sp/>=<sp/>std::string_view(<sp/>str_value<sp/>).substr(<sp/>dot_pos<sp/>+<sp/>1<sp/>);</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">else</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>integer_str<sp/>=<sp/>str_value;</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"></highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/>integer_part<sp/><sp/><sp/><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/>fractional_part<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"></highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>[ptr_int,</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ec_int]<sp/>=<sp/>std::from_chars(<sp/>integer_str.data(),<sp/>integer_str.data()<sp/>+<sp/>integer_str.size(),<sp/>integer_part<sp/>);</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>ec_int<sp/>!=<sp/>std::errc()<sp/>||<sp/>ptr_int<sp/>!=<sp/>integer_str.data()<sp/>+<sp/>integer_str.size()<sp/>)</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>std::make_error_code(<sp/>std::errc::invalid_argument<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"></highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>!fractional_str.empty()<sp/>)</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>fractional_str.length()<sp/>&gt;<sp/>precision<sp/>)</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>mode<sp/>==<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a0d82dad5d8f9d11a58dec5ae6edbe9b6a2e979835dd62324f5bfe217449ba4974" kindref="member">ParseMode::Strict</ref><sp/>)</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>std::make_error_code(<sp/>std::errc::value_too_large<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>fractional_str<sp/>=<sp/>fractional_str.substr(<sp/>0,<sp/>precision<sp/>);</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"></highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>[ptr_frac,<sp/>ec_frac]<sp/>=<sp/>std::from_chars(<sp/>fractional_str.data(),</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>fractional_str.data()<sp/>+<sp/>fractional_str.size(),</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>fractional_part<sp/>);</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>ec_frac<sp/>!=<sp/>std::errc()<sp/>||<sp/>ptr_frac<sp/>!=<sp/>fractional_str.data()<sp/>+<sp/>fractional_str.size()<sp/>)</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>std::make_error_code(<sp/>std::errc::invalid_argument<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="122"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"></highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(<sp/>uint64_t<sp/>i<sp/>=<sp/>fractional_str.length();<sp/>i<sp/>&lt;<sp/>precision;<sp/>++i<sp/>)</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>fractional_part<sp/>*=<sp/>10;</highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"></highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success(<sp/>(<sp/>integer_part<sp/>*<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a048343c2f6eee11bb38610e8df179084" kindref="member">ScaleFactor</ref>(<sp/>precision<sp/>)<sp/>)<sp/>+<sp/>fractional_part<sp/>);</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"></highlight></codeline>
+<codeline lineno="132" refid="d3/d10/classsgns_1_1_scaled_integer_1af90822d03d552dec3cdb7c9a4c843116" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1af90822d03d552dec3cdb7c9a4c843116" kindref="member">ScaledInteger::ToString</ref>(<sp/>uint64_t<sp/>value,<sp/>uint64_t<sp/>precision<sp/>)</highlight></codeline>
+<codeline lineno="133"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="134"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/>integer_part<sp/><sp/><sp/><sp/>=<sp/>value<sp/>/<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a048343c2f6eee11bb38610e8df179084" kindref="member">ScaleFactor</ref>(<sp/>precision<sp/>);</highlight></codeline>
+<codeline lineno="135"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/>fractional_part<sp/>=<sp/>value<sp/>%<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a048343c2f6eee11bb38610e8df179084" kindref="member">ScaleFactor</ref>(<sp/>precision<sp/>);</highlight></codeline>
+<codeline lineno="136"><highlight class="normal"></highlight></codeline>
+<codeline lineno="137"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>precision<sp/>==<sp/>0<sp/>)</highlight></codeline>
+<codeline lineno="138"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="139"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::to_string(<sp/>integer_part<sp/>);</highlight></codeline>
+<codeline lineno="140"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="141"><highlight class="normal"></highlight></codeline>
+<codeline lineno="142"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/>fractional_str<sp/>=<sp/>std::to_string(<sp/>fractional_part<sp/>);</highlight></codeline>
+<codeline lineno="143"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>fractional_str.size()<sp/>&lt;<sp/>precision<sp/>)</highlight></codeline>
+<codeline lineno="144"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="145"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>fractional_str.insert(<sp/>0,<sp/>precision<sp/>-<sp/>fractional_str.size(),<sp/></highlight><highlight class="charliteral">&apos;0&apos;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="146"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="147"><highlight class="normal"></highlight></codeline>
+<codeline lineno="148"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::to_string(<sp/>integer_part<sp/>)<sp/>+<sp/></highlight><highlight class="stringliteral">&quot;.&quot;</highlight><highlight class="normal"><sp/>+<sp/>fractional_str;</highlight></codeline>
+<codeline lineno="149"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="150"><highlight class="normal"></highlight></codeline>
+<codeline lineno="151" refid="d3/d10/classsgns_1_1_scaled_integer_1a199b0954d15b2476297738e9b7036b71" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;uint64_t&gt;<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a199b0954d15b2476297738e9b7036b71" kindref="member">ScaledInteger::FromDouble</ref>(<sp/></highlight><highlight class="keywordtype">double</highlight><highlight class="normal"><sp/>raw_value,<sp/>uint64_t<sp/>precision<sp/>)</highlight></codeline>
+<codeline lineno="152"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="153"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">double</highlight><highlight class="normal"><sp/>factor<sp/><sp/>=<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="keywordtype">double</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a048343c2f6eee11bb38610e8df179084" kindref="member">ScaleFactor</ref>(<sp/>precision<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="154"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">double</highlight><highlight class="normal"><sp/>scaled<sp/><sp/>=<sp/>raw_value<sp/>*<sp/>factor;</highlight></codeline>
+<codeline lineno="155"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">double</highlight><highlight class="normal"><sp/>rounded<sp/>=<sp/>std::round(<sp/>scaled<sp/>);</highlight></codeline>
+<codeline lineno="156"><highlight class="normal"></highlight></codeline>
+<codeline lineno="157"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>rounded<sp/>&lt;<sp/>0.0<sp/>||<sp/>rounded<sp/>&gt;<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="keywordtype">double</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<sp/>std::numeric_limits&lt;uint64_t&gt;::max()<sp/>)<sp/>)</highlight></codeline>
+<codeline lineno="158"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="159"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>std::make_error_code(<sp/>std::errc::value_too_large<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="160"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="161"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success(<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint64_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<sp/>rounded<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="162"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="163"><highlight class="normal"></highlight></codeline>
+<codeline lineno="164" refid="d3/d10/classsgns_1_1_scaled_integer_1a45e15dfc6f54b9354cb417ea43b7c296" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;uint64_t&gt;<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a45e15dfc6f54b9354cb417ea43b7c296" kindref="member">ScaledInteger::Multiply</ref>(<sp/>uint64_t<sp/>a,<sp/>uint64_t<sp/>b,<sp/>uint64_t<sp/>precision<sp/>)</highlight></codeline>
+<codeline lineno="165"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="166"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">boost::multiprecision;</highlight></codeline>
+<codeline lineno="167"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint128_t<sp/>result<sp/>=<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint128_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<sp/>a<sp/>)<sp/>*<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint128_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<sp/>b<sp/>);</highlight></codeline>
+<codeline lineno="168"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>result<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>result<sp/>/<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint128_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a048343c2f6eee11bb38610e8df179084" kindref="member">ScaleFactor</ref>(<sp/>precision<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="169"><highlight class="normal"></highlight></codeline>
+<codeline lineno="170"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>result<sp/>&gt;<sp/>std::numeric_limits&lt;uint64_t&gt;::max()<sp/>)</highlight></codeline>
+<codeline lineno="171"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="172"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>std::make_error_code(<sp/>std::errc::value_too_large<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="173"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="174"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success(<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint64_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<sp/>result<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="175"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="176"><highlight class="normal"></highlight></codeline>
+<codeline lineno="177" refid="d3/d10/classsgns_1_1_scaled_integer_1a4ce4ba9c6fae092905ac7179ff830558" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;uint64_t&gt;<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a4ce4ba9c6fae092905ac7179ff830558" kindref="member">ScaledInteger::Divide</ref>(<sp/>uint64_t<sp/>a,<sp/>uint64_t<sp/>b,<sp/>uint64_t<sp/>precision<sp/>)</highlight></codeline>
+<codeline lineno="178"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="179"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">boost::multiprecision;</highlight></codeline>
+<codeline lineno="180"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>b<sp/>==<sp/>0<sp/>)</highlight></codeline>
+<codeline lineno="181"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="182"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>std::make_error_code(<sp/>std::errc::result_out_of_range<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="183"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="184"><highlight class="normal"></highlight></codeline>
+<codeline lineno="185"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint128_t<sp/>result<sp/>=<sp/>(<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint128_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<sp/>a<sp/>)<sp/>*<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint128_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a048343c2f6eee11bb38610e8df179084" kindref="member">ScaleFactor</ref>(<sp/>precision<sp/>)<sp/>)<sp/>)<sp/>/</highlight></codeline>
+<codeline lineno="186"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint128_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<sp/>b<sp/>);</highlight></codeline>
+<codeline lineno="187"><highlight class="normal"></highlight></codeline>
+<codeline lineno="188"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>result<sp/>&gt;<sp/>std::numeric_limits&lt;uint64_t&gt;::max()<sp/>)</highlight></codeline>
+<codeline lineno="189"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="190"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>std::make_error_code(<sp/>std::errc::value_too_large<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="191"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="192"><highlight class="normal"></highlight></codeline>
+<codeline lineno="193"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success(<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint64_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<sp/>result<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="194"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="195"><highlight class="normal"></highlight></codeline>
+<codeline lineno="196" refid="d3/d10/classsgns_1_1_scaled_integer_1a37e1fab2465ed9e5836d1730d6e0c015" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;uint64_t&gt;<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a37e1fab2465ed9e5836d1730d6e0c015" kindref="member">ScaledInteger::ConvertPrecision</ref>(<sp/>uint64_t<sp/>value,<sp/>uint64_t<sp/>from,<sp/>uint64_t<sp/>to<sp/>)</highlight></codeline>
+<codeline lineno="197"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="198"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">boost::multiprecision;</highlight></codeline>
+<codeline lineno="199"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>from<sp/>==<sp/>to<sp/>)</highlight></codeline>
+<codeline lineno="200"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="201"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success(<sp/>value<sp/>);</highlight></codeline>
+<codeline lineno="202"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="203"><highlight class="normal"></highlight></codeline>
+<codeline lineno="204"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>to<sp/>&gt;<sp/>from<sp/>)</highlight></codeline>
+<codeline lineno="205"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="206"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><sp/>delta<sp/><sp/>=<sp/>to<sp/>-<sp/>from;</highlight></codeline>
+<codeline lineno="207"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint128_t<sp/>result<sp/>=<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint128_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<sp/>value<sp/>)<sp/>*<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint128_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a048343c2f6eee11bb38610e8df179084" kindref="member">ScaleFactor</ref>(<sp/>delta<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="208"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>result<sp/>&gt;<sp/>std::numeric_limits&lt;uint64_t&gt;::max()<sp/>)</highlight></codeline>
+<codeline lineno="209"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="210"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>std::make_error_code(<sp/>std::errc::value_too_large<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="211"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="212"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success(<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint64_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<sp/>result<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="213"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="214"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/>delta<sp/><sp/><sp/><sp/><sp/>=<sp/>from<sp/>-<sp/>to;</highlight></codeline>
+<codeline lineno="215"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/>converted<sp/>=<sp/>value<sp/>/<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a048343c2f6eee11bb38610e8df179084" kindref="member">ScaleFactor</ref>(<sp/>delta<sp/>);</highlight></codeline>
+<codeline lineno="216"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success(<sp/>converted<sp/>);</highlight></codeline>
+<codeline lineno="217"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="218"><highlight class="normal"></highlight></codeline>
+<codeline lineno="219" refid="d3/d10/classsgns_1_1_scaled_integer_1a15c7a2c670a3fd35601c2fb8b25a2131" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a15c7a2c670a3fd35601c2fb8b25a2131" kindref="member">ScaledInteger::Value</ref>()<sp/>const<sp/>noexcept</highlight></codeline>
+<codeline lineno="220"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="221"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a75b855116d74d3d8842686fcb0a79ce9" kindref="member">value_</ref>;</highlight></codeline>
+<codeline lineno="222"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="223"><highlight class="normal"></highlight></codeline>
+<codeline lineno="224" refid="d3/d10/classsgns_1_1_scaled_integer_1a75b3fe47571907f1bece3a0b5ba3f360" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a75b3fe47571907f1bece3a0b5ba3f360" kindref="member">ScaledInteger::Precision</ref>()<sp/>const<sp/>noexcept</highlight></codeline>
+<codeline lineno="225"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="226"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" kindref="member">precision_</ref>;</highlight></codeline>
+<codeline lineno="227"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="228"><highlight class="normal"></highlight></codeline>
+<codeline lineno="229" refid="d3/d10/classsgns_1_1_scaled_integer_1a89f3583be187aabb5c80d562b878c016" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1af90822d03d552dec3cdb7c9a4c843116" kindref="member">ScaledInteger::ToString</ref>(<sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>fixedDecimals<sp/>)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="230"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="231"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/>s<sp/>=<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1af90822d03d552dec3cdb7c9a4c843116" kindref="member">ToString</ref>(<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a75b855116d74d3d8842686fcb0a79ce9" kindref="member">value_</ref>,<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" kindref="member">precision_</ref><sp/>);</highlight></codeline>
+<codeline lineno="232"><highlight class="normal"></highlight></codeline>
+<codeline lineno="233"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>!fixedDecimals<sp/>)</highlight></codeline>
+<codeline lineno="234"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="235"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>dotPos<sp/>=<sp/>s.find(<sp/></highlight><highlight class="charliteral">&apos;.&apos;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="236"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>dotPos<sp/>!=<sp/>std::string::npos<sp/>)</highlight></codeline>
+<codeline lineno="237"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="238"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>lastNonZero<sp/>=<sp/>s.find_last_not_of(<sp/></highlight><highlight class="charliteral">&apos;0&apos;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="239"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>lastNonZero<sp/>!=<sp/>std::string::npos<sp/>)</highlight></codeline>
+<codeline lineno="240"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="241"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>s.erase(<sp/>lastNonZero<sp/>+<sp/>1<sp/>);</highlight></codeline>
+<codeline lineno="242"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="243"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>!s.empty()<sp/>&amp;&amp;<sp/>s.back()<sp/>==<sp/></highlight><highlight class="charliteral">&apos;.&apos;</highlight><highlight class="normal"><sp/>)</highlight></codeline>
+<codeline lineno="244"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="245"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>s.pop_back();</highlight></codeline>
+<codeline lineno="246"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="247"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="248"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="249"><highlight class="normal"></highlight></codeline>
+<codeline lineno="250"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>s;</highlight></codeline>
+<codeline lineno="251"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="252"><highlight class="normal"></highlight></codeline>
+<codeline lineno="253" refid="d3/d10/classsgns_1_1_scaled_integer_1ab2a4c352c1dcb76a1aada254323f371e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;ScaledInteger&gt;<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1ab2a4c352c1dcb76a1aada254323f371e" kindref="member">ScaledInteger::Add</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref><sp/>&amp;other<sp/>)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="254"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="255"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" kindref="member">precision_</ref><sp/>!=<sp/>other.<ref refid="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" kindref="member">precision_</ref><sp/>)</highlight></codeline>
+<codeline lineno="256"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="257"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>std::make_error_code(<sp/>std::errc::invalid_argument<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="258"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="259"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">boost::multiprecision;</highlight></codeline>
+<codeline lineno="260"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint128_t<sp/>sum<sp/>=<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint128_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a75b855116d74d3d8842686fcb0a79ce9" kindref="member">value_</ref><sp/>)<sp/>+<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint128_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<sp/>other.<ref refid="d3/d10/classsgns_1_1_scaled_integer_1a75b855116d74d3d8842686fcb0a79ce9" kindref="member">value_</ref><sp/>);</highlight></codeline>
+<codeline lineno="261"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>sum<sp/>&gt;<sp/>std::numeric_limits&lt;uint64_t&gt;::max()<sp/>)</highlight></codeline>
+<codeline lineno="262"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="263"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>std::make_error_code(<sp/>std::errc::value_too_large<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="264"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="265"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success(<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref>(<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint64_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(<sp/>sum<sp/>),<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" kindref="member">precision_</ref><sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="266"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="267"><highlight class="normal"></highlight></codeline>
+<codeline lineno="268" refid="d3/d10/classsgns_1_1_scaled_integer_1a5ea98e649e0ca99e20eadccecc0a3b8e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;ScaledInteger&gt;<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a5ea98e649e0ca99e20eadccecc0a3b8e" kindref="member">ScaledInteger::Subtract</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref><sp/>&amp;other<sp/>)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="269"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="270"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" kindref="member">precision_</ref><sp/>!=<sp/>other.<ref refid="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" kindref="member">precision_</ref><sp/>)</highlight></codeline>
+<codeline lineno="271"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="272"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>std::make_error_code(<sp/>std::errc::invalid_argument<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="273"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="274"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>other.<ref refid="d3/d10/classsgns_1_1_scaled_integer_1a75b855116d74d3d8842686fcb0a79ce9" kindref="member">value_</ref><sp/>&gt;<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a75b855116d74d3d8842686fcb0a79ce9" kindref="member">value_</ref><sp/>)</highlight></codeline>
+<codeline lineno="275"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="276"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>std::make_error_code(<sp/>std::errc::result_out_of_range<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="277"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="278"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success(<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref>(<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a75b855116d74d3d8842686fcb0a79ce9" kindref="member">value_</ref><sp/>-<sp/>other.<ref refid="d3/d10/classsgns_1_1_scaled_integer_1a75b855116d74d3d8842686fcb0a79ce9" kindref="member">value_</ref>,<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" kindref="member">precision_</ref><sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="279"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="280"><highlight class="normal"></highlight></codeline>
+<codeline lineno="281" refid="d3/d10/classsgns_1_1_scaled_integer_1a66237e6a6100febca811dda5d2a133d3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;ScaledInteger&gt;<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a45e15dfc6f54b9354cb417ea43b7c296" kindref="member">ScaledInteger::Multiply</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref><sp/>&amp;other<sp/>)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="282"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="283"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" kindref="member">precision_</ref><sp/>!=<sp/>other.<ref refid="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" kindref="member">precision_</ref><sp/>)</highlight></codeline>
+<codeline lineno="284"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="285"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>std::make_error_code(<sp/>std::errc::invalid_argument<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="286"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="287"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>OUTCOME_TRY(<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;multiply_res,<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a45e15dfc6f54b9354cb417ea43b7c296" kindref="member">ScaledInteger::Multiply</ref>(<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a75b855116d74d3d8842686fcb0a79ce9" kindref="member">value_</ref>,<sp/>other.<ref refid="d3/d10/classsgns_1_1_scaled_integer_1a75b855116d74d3d8842686fcb0a79ce9" kindref="member">value_</ref>,<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" kindref="member">precision_</ref><sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="288"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success(<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref>(<sp/>multiply_res,<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" kindref="member">precision_</ref><sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="289"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="290"><highlight class="normal"></highlight></codeline>
+<codeline lineno="291" refid="d3/d10/classsgns_1_1_scaled_integer_1ad84592e2e5f226e195e06958bffdc164" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;ScaledInteger&gt;<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a4ce4ba9c6fae092905ac7179ff830558" kindref="member">ScaledInteger::Divide</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref><sp/>&amp;other<sp/>)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="292"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="293"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" kindref="member">precision_</ref><sp/>!=<sp/>other.<ref refid="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" kindref="member">precision_</ref><sp/>)</highlight></codeline>
+<codeline lineno="294"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="295"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>std::make_error_code(<sp/>std::errc::invalid_argument<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="296"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="297"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>OUTCOME_TRY(<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;divide_res,<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a4ce4ba9c6fae092905ac7179ff830558" kindref="member">ScaledInteger::Divide</ref>(<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a75b855116d74d3d8842686fcb0a79ce9" kindref="member">value_</ref>,<sp/>other.<ref refid="d3/d10/classsgns_1_1_scaled_integer_1a75b855116d74d3d8842686fcb0a79ce9" kindref="member">value_</ref>,<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" kindref="member">precision_</ref><sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="298"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success(<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref>(<sp/>divide_res,<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" kindref="member">precision_</ref><sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="299"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="300"><highlight class="normal"></highlight></codeline>
+<codeline lineno="301" refid="d3/d10/classsgns_1_1_scaled_integer_1a5ad0d30aa62440e664e2e75543da5238" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;ScaledInteger&gt;<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a37e1fab2465ed9e5836d1730d6e0c015" kindref="member">ScaledInteger::ConvertPrecision</ref>(<sp/>uint64_t<sp/>to<sp/>)</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="302"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="303"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>OUTCOME_TRY(<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;convert_res,<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a37e1fab2465ed9e5836d1730d6e0c015" kindref="member">ScaledInteger::ConvertPrecision</ref>(<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a75b855116d74d3d8842686fcb0a79ce9" kindref="member">value_</ref>,<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" kindref="member">precision_</ref>,<sp/>to<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="304"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success(<sp/><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref>(<sp/>convert_res,<sp/>to<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="305"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="306"><highlight class="normal">}<sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/base/ScaledInteger.cpp"/>
+  </compounddef>
+</doxygen>

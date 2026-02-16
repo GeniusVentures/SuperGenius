@@ -1,0 +1,153 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="db/dff/structsgns_1_1primitives_1_1_authority" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::primitives::Authority</compoundname>
+    <includes refid="d2/d45/authority_8hpp" local="no">authority.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="db/dff/structsgns_1_1primitives_1_1_authority_1a53f1faca5b041167a39f04c85178f971" prot="public" static="no" mutable="no">
+        <type><ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">AuthorityId</ref></type>
+        <definition>AuthorityId sgns::primitives::Authority::id</definition>
+        <argsstring></argsstring>
+        <name>id</name>
+        <qualifiedname>sgns::primitives::Authority::id</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/authority.hpp" line="47" column="17" bodyfile="src/primitives/authority.hpp" bodystart="47" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="db/dff/structsgns_1_1primitives_1_1_authority_1a0a6bbe7baef69791f3dccd0d17d47f94" prot="public" static="no" mutable="no">
+        <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a76ed3e049cb541757b4d386684854111" kindref="member">AuthorityWeight</ref></type>
+        <definition>AuthorityWeight sgns::primitives::Authority::weight</definition>
+        <argsstring></argsstring>
+        <name>weight</name>
+        <qualifiedname>sgns::primitives::Authority::weight</qualifiedname>
+        <initializer>{}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/authority.hpp" line="48" column="21" bodyfile="src/primitives/authority.hpp" bodystart="48" bodyend="48"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="db/dff/structsgns_1_1primitives_1_1_authority_1a9ee4ae662872d2a330df945b9d54cd66" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::primitives::Authority::operator==</definition>
+        <argsstring>(const Authority &amp;other) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::primitives::Authority::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">Authority</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/authority.hpp" line="50" column="10" bodyfile="src/primitives/authority.hpp" bodystart="50" bodyend="52"/>
+      </memberdef>
+      <memberdef kind="function" id="db/dff/structsgns_1_1primitives_1_1_authority_1ac12df1b4c1998d83bfa251947f2719df" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::primitives::Authority::operator!=</definition>
+        <argsstring>(const Authority &amp;other) const</argsstring>
+        <name>operator!=</name>
+        <qualifiedname>sgns::primitives::Authority::operator!=</qualifiedname>
+        <param>
+          <type>const <ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">Authority</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/authority.hpp" line="53" column="10" bodyfile="src/primitives/authority.hpp" bodystart="53" bodyend="55"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="friend">
+      <memberdef kind="friend" id="db/dff/structsgns_1_1primitives_1_1_authority_1adcc981b058cdefcbc70fa443c16bb8cc" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::ostream &amp;</type>
+        <definition>std::ostream &amp; operator&lt;&lt;</definition>
+        <argsstring>(std::ostream &amp;out, const Authority &amp;test_struct)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::Authority::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>std::ostream &amp;</type>
+          <declname>out</declname>
+        </param>
+        <param>
+          <type>const <ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">Authority</ref> &amp;</type>
+          <declname>test_struct</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/authority.hpp" line="57" column="12" bodyfile="src/primitives/authority.hpp" bodystart="57" bodyend="60"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para><ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">Authority</ref>, which participate in block production and finalization </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="5">
+        <label>T</label>
+      </node>
+      <node id="6">
+        <label>sgns::base::Blob&lt; size_ &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::base::Blob&lt; 32 &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; 32 &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::primitives::Authority</label>
+        <link refid="db/dff/structsgns_1_1primitives_1_1_authority"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+id</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::primitives::AuthorityId</label>
+        <link refid="db/d9a/structsgns_1_1primitives_1_1_authority_id"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+id</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/primitives/authority.hpp" line="46" column="3" bodyfile="src/primitives/authority.hpp" bodystart="46" bodyend="62"/>
+    <listofallmembers>
+      <member refid="db/dff/structsgns_1_1primitives_1_1_authority_1a53f1faca5b041167a39f04c85178f971" prot="public" virt="non-virtual"><scope>sgns::primitives::Authority</scope><name>id</name></member>
+      <member refid="db/dff/structsgns_1_1primitives_1_1_authority_1ac12df1b4c1998d83bfa251947f2719df" prot="public" virt="non-virtual"><scope>sgns::primitives::Authority</scope><name>operator!=</name></member>
+      <member refid="db/dff/structsgns_1_1primitives_1_1_authority_1adcc981b058cdefcbc70fa443c16bb8cc" prot="public" virt="non-virtual"><scope>sgns::primitives::Authority</scope><name>operator&lt;&lt;</name></member>
+      <member refid="db/dff/structsgns_1_1primitives_1_1_authority_1a9ee4ae662872d2a330df945b9d54cd66" prot="public" virt="non-virtual"><scope>sgns::primitives::Authority</scope><name>operator==</name></member>
+      <member refid="db/dff/structsgns_1_1primitives_1_1_authority_1a0a6bbe7baef69791f3dccd0d17d47f94" prot="public" virt="non-virtual"><scope>sgns::primitives::Authority</scope><name>weight</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

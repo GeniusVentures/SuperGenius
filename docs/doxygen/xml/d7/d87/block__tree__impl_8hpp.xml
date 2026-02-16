@@ -1,0 +1,559 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/d87/block__tree__impl_8hpp" kind="file" language="C++">
+    <compoundname>block_tree_impl.hpp</compoundname>
+    <includes refid="d2/d0a/block__tree_8hpp" local="yes">blockchain/block_tree.hpp</includes>
+    <includes local="no">boost/optional.hpp</includes>
+    <includes local="no">functional</includes>
+    <includes local="no">memory</includes>
+    <includes local="no">unordered_set</includes>
+    <includes refid="d6/d4c/block__header__repository_8hpp" local="yes">blockchain/block_header_repository.hpp</includes>
+    <includes refid="d4/d5d/block__storage_8hpp" local="yes">blockchain/block_storage.hpp</includes>
+    <includes refid="d6/da3/logger_8hpp" local="yes">base/logger.hpp</includes>
+    <includes refid="da/d6b/hasher_8hpp" local="yes">crypto/hasher.hpp</includes>
+    <includes local="yes">network/extrinsic_observer.hpp</includes>
+    <includedby refid="d5/df4/block__tree__impl_8cpp" local="yes">src/blockchain/impl/block_tree_impl.cpp</includedby>
+    <incdepgraph>
+      <node id="12">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="43">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="44" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>base/unused.hpp</label>
+        <link refid="dd/d26/unused_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="40">
+        <label>blockchain/block_header_repository.hpp</label>
+        <link refid="d6/d4c/block__header__repository_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+      </node>
+      <node id="41">
+        <label>blockchain/block_storage.hpp</label>
+        <link refid="d4/d5d/block__storage_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>blockchain/block_tree.hpp</label>
+        <link refid="d2/d0a/block__tree_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/blockchain/impl/block_tree_impl.hpp</label>
+        <link refid="d7/d87/block__tree__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="46" relation="include">
+        </childnode>
+        <childnode refid="47" relation="include">
+        </childnode>
+      </node>
+      <node id="46">
+        <label>crypto/hasher.hpp</label>
+        <link refid="da/d6b/hasher_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>primitives/authority.hpp</label>
+        <link refid="d2/d45/authority_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>primitives/block.hpp</label>
+        <link refid="d9/db2/block_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+      </node>
+      <node id="42">
+        <label>primitives/block_data.hpp</label>
+        <link refid="d1/dce/block__data_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>primitives/block_header.hpp</label>
+        <link refid="d7/d72/block__header_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>primitives/block_id.hpp</label>
+        <link refid="d9/da1/block__id_8hpp"/>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>primitives/common.hpp</label>
+        <link refid="d4/d26/src_2primitives_2common_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>primitives/compact_integer.hpp</label>
+        <link refid="d9/df3/compact__integer_8hpp"/>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>primitives/digest.hpp</label>
+        <link refid="df/dbf/digest_8hpp"/>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>primitives/extrinsic.hpp</label>
+        <link refid="db/dd3/extrinsic_8hpp"/>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="34">
+        <label>primitives/justification.hpp</label>
+        <link refid="d6/ddd/justification_8hpp"/>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>primitives/scheduled_change.hpp</label>
+        <link refid="d7/d5f/scheduled__change_8hpp"/>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>primitives/session_key.hpp</label>
+        <link refid="d4/de0/session__key_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>scale/types.hpp</label>
+        <link refid="dd/d27/scale_2types_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="35">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="36" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>array</label>
+      </node>
+      <node id="27">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="15">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="11">
+        <label>boost/multiprecision/cpp_int.hpp</label>
+      </node>
+      <node id="21">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="5">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="25">
+        <label>boost/variant.hpp</label>
+      </node>
+      <node id="13">
+        <label>cstddef</label>
+      </node>
+      <node id="3">
+        <label>cstdint</label>
+      </node>
+      <node id="37">
+        <label>functional</label>
+      </node>
+      <node id="18">
+        <label>gsl/span</label>
+      </node>
+      <node id="19">
+        <label>iostream</label>
+      </node>
+      <node id="7">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="38">
+        <label>memory</label>
+      </node>
+      <node id="47">
+        <label>network/extrinsic_observer.hpp</label>
+      </node>
+      <node id="44">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="45">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="36">
+        <label>string</label>
+      </node>
+      <node id="17">
+        <label>string_view</label>
+      </node>
+      <node id="10">
+        <label>type_traits</label>
+      </node>
+      <node id="39">
+        <label>unordered_set</label>
+      </node>
+      <node id="4">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/blockchain/impl/block_tree_impl.cpp</label>
+        <link refid="d5/df4/block__tree__impl_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/blockchain/impl/block_tree_impl.hpp</label>
+        <link refid="d7/d87/block__tree__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl" prot="public">sgns::blockchain::BlockTreeImpl</innerclass>
+    <innerclass refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node" prot="private">sgns::blockchain::BlockTreeImpl::TreeNode</innerclass>
+    <innerclass refid="d8/d08/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_meta" prot="private">sgns::blockchain::BlockTreeImpl::TreeMeta</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d9/df6/namespacesgns_1_1blockchain">sgns::blockchain</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d7/d87/block__tree__impl_8hpp_1acbd0407543ab288ae2c86c23b547e63e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>OUTCOME_HPP_DECLARE_ERROR_2</definition>
+        <argsstring>(sgns::blockchain, BlockTreeImpl::Error)</argsstring>
+        <name>OUTCOME_HPP_DECLARE_ERROR_2</name>
+        <param>
+          <type><ref refid="d9/df6/namespacesgns_1_1blockchain" kindref="compound">sgns::blockchain</ref></type>
+        </param>
+        <param>
+          <type>BlockTreeImpl::Error</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="200" column="1" declfile="src/blockchain/impl/block_tree_impl.hpp" declline="200" declcolumn="1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_BLOCK_TREE_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_BLOCK_TREE_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d2/d0a/block__tree_8hpp" kindref="compound">blockchain/block_tree.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/optional.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;functional&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;memory&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;unordered_set&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/d4c/block__header__repository_8hpp" kindref="compound">blockchain/block_header_repository.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d4/d5d/block__storage_8hpp" kindref="compound">blockchain/block_storage.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/da3/logger_8hpp" kindref="compound">base/logger.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="da/d6b/hasher_8hpp" kindref="compound">crypto/hasher.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;network/extrinsic_observer.hpp&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d9/df6/namespacesgns_1_1blockchain" kindref="compound">sgns::blockchain</ref><sp/>{</highlight></codeline>
+<codeline lineno="21" refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a130c11f60a0cdf566599eb603528d83b" kindref="member">BlockTreeImpl</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree" kindref="compound">BlockTree</ref><sp/>{</highlight></codeline>
+<codeline lineno="27" refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a33199e545e18bcf622de32ed7540fbb6" kindref="member">TreeNode</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>std::enable_shared_from_this&lt;TreeNode&gt;<sp/>{</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a33199e545e18bcf622de32ed7540fbb6" kindref="member">TreeNode</ref>(<sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref><sp/><sp/><sp/><sp/><sp/>hash,</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref><sp/><sp/><sp/><ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1ac002839359517f80c473bec24b8162e1" kindref="member">depth</ref>,</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;TreeNode&gt;<sp/><ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a6ba20f1cf4dfc1bc49043b87fbb12c2c" kindref="member">parent</ref>,</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1ab92277165a37db80222b6801a81ce640" kindref="member">finalized</ref><sp/>=<sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33" refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1acee135330858b247d627d140066cba91" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref><sp/><sp/><sp/><ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1acee135330858b247d627d140066cba91" kindref="member">block_hash</ref>;</highlight></codeline>
+<codeline lineno="34" refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1ac002839359517f80c473bec24b8162e1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref><sp/><ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1ac002839359517f80c473bec24b8162e1" kindref="member">depth</ref>;</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36" refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a6ba20f1cf4dfc1bc49043b87fbb12c2c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::weak_ptr&lt;TreeNode&gt;<sp/><ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a6ba20f1cf4dfc1bc49043b87fbb12c2c" kindref="member">parent</ref>;</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight></codeline>
+<codeline lineno="38" refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1ab92277165a37db80222b6801a81ce640" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1ab92277165a37db80222b6801a81ce640" kindref="member">finalized</ref>;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40" refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1af6dc458362efbfb92d21f0de7841b840" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;std::shared_ptr&lt;TreeNode&gt;&gt;<sp/><ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1af6dc458362efbfb92d21f0de7841b840" kindref="member">children</ref>;</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;TreeNode&gt;<sp/><ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1aadf1db744dc68b5141bd6f891e62e737" kindref="member">getByHash</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref><sp/>&amp;hash<sp/>);</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a9c2b9fabce40016c55706782075396d0" kindref="member">operator==</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a33199e545e18bcf622de32ed7540fbb6" kindref="member">TreeNode</ref><sp/>&amp;other<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a8ff1aa3b1d15c03dcdfd4011378669c5" kindref="member">operator!=</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node_1a33199e545e18bcf622de32ed7540fbb6" kindref="member">TreeNode</ref><sp/>&amp;other<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"></highlight></codeline>
+<codeline lineno="56" refid="d8/d08/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_meta" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="d8/d08/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_meta_1aa93bbf3d243abed13722466de851134b" kindref="member">TreeMeta</ref><sp/>{</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">explicit</highlight><highlight class="normal"><sp/><ref refid="d8/d08/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_meta_1aa93bbf3d243abed13722466de851134b" kindref="member">TreeMeta</ref>(<ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node" kindref="compound">TreeNode</ref><sp/>&amp;subtree_root_node);</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"></highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d8/d08/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_meta_1aa93bbf3d243abed13722466de851134b" kindref="member">TreeMeta</ref>(std::unordered_set&lt;primitives::BlockHash&gt;<sp/><ref refid="d8/d08/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_meta_1ae5f7787d61bcdb4357e6241b2373dcdb" kindref="member">leaves</ref>,</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node" kindref="compound">TreeNode</ref><sp/>&amp;<ref refid="d8/d08/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_meta_1af64f4e17c47c9a2e16a37e9480512baa" kindref="member">deepest_leaf</ref>,</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node" kindref="compound">TreeNode</ref><sp/>&amp;<ref refid="d8/d08/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_meta_1acb35ea6b27363417c6f6441a666e35c4" kindref="member">last_finalized</ref>);</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"></highlight></codeline>
+<codeline lineno="63" refid="d8/d08/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_meta_1ae5f7787d61bcdb4357e6241b2373dcdb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::unordered_set&lt;primitives::BlockHash&gt;<sp/><ref refid="d8/d08/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_meta_1ae5f7787d61bcdb4357e6241b2373dcdb" kindref="member">leaves</ref>;</highlight></codeline>
+<codeline lineno="64" refid="d8/d08/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_meta_1af64f4e17c47c9a2e16a37e9480512baa" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::reference_wrapper&lt;TreeNode&gt;<sp/><ref refid="d8/d08/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_meta_1af64f4e17c47c9a2e16a37e9480512baa" kindref="member">deepest_leaf</ref>;</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"></highlight></codeline>
+<codeline lineno="66" refid="d8/d08/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_meta_1acb35ea6b27363417c6f6441a666e35c4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::reference_wrapper&lt;TreeNode&gt;<sp/><ref refid="d8/d08/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_meta_1acb35ea6b27363417c6f6441a666e35c4" kindref="member">last_finalized</ref>;</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"></highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="70" refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8ba1c02537df0d489c703d99b591540d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">enum<sp/>class</highlight><highlight class="normal"><sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8ba1c02537df0d489c703d99b591540d" kindref="member">Error</ref><sp/>{</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>target<sp/>block<sp/>number<sp/>is<sp/>past<sp/>the<sp/>given<sp/>maximum<sp/>number</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="72" refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8ba1c02537df0d489c703d99b591540dafc9480def2755cc1e63fc4d473955f4f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8ba1c02537df0d489c703d99b591540dafc9480def2755cc1e63fc4d473955f4f" kindref="member">TARGET_IS_PAST_MAX</ref><sp/>=<sp/>1,</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>block<sp/>resides<sp/>on<sp/>a<sp/>dead<sp/>fork</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="74" refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8ba1c02537df0d489c703d99b591540dad2a3108c04ca166ca6dc4e34b35bbafc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8ba1c02537df0d489c703d99b591540dad2a3108c04ca166ca6dc4e34b35bbafc" kindref="member">BLOCK_ON_DEAD_END</ref>,</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>block<sp/>exists<sp/>in<sp/>chain<sp/>but<sp/>not<sp/>found<sp/>when<sp/>following<sp/>all</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>leaves<sp/>backwards.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="77" refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8ba1c02537df0d489c703d99b591540da138f3bbfa4e3fae296375dd0c1e837c2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8ba1c02537df0d489c703d99b591540da138f3bbfa4e3fae296375dd0c1e837c2" kindref="member">BLOCK_NOT_FOUND</ref></highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"></highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>outcome::result&lt;std::shared_ptr&lt;BlockTreeImpl&gt;&gt;<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ab4ccd8c906458cf70057d85a4369275e" kindref="member">create</ref>(</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;BlockHeaderRepository&gt;<sp/>header_repo,</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;BlockStorage&gt;<sp/><ref refid="d0/dbf/namespacesgns_1_1storage" kindref="compound">storage</ref>,</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref><sp/>&amp;last_finalized_block,</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;network::ExtrinsicObserver&gt;<sp/>extrinsic_observer,</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;crypto::Hasher&gt;<sp/>hasher);</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"></highlight></codeline>
+<codeline lineno="97" refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a62962015fbc4601258a2515cd00b93d2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a62962015fbc4601258a2515cd00b93d2" kindref="member">~BlockTreeImpl</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"></highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/>outcome::result&lt;primitives::BlockHeader&gt;<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a68055b7ff5a02eb1f0f59ff2a21a4394" kindref="member">getBlockHeader</ref>(</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref><sp/>&amp;block<sp/>)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"></highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/>outcome::result&lt;primitives::BlockBody&gt;<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a5f601ee0894453e0c9731e61569ae98e" kindref="member">getBlockBody</ref>(</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref><sp/>&amp;block<sp/>)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"></highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/>outcome::result&lt;primitives::Justification&gt;<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a598c61a39e7ad54d3c0360d28082728a" kindref="member">getBlockJustification</ref>(</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref><sp/>&amp;block<sp/>)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"></highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a5a4371df62d1c733f0af98a07a4bc73f" kindref="member">addBlockHeader</ref>(</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">primitives::BlockHeader</ref><sp/>&amp;header)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"></highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a5b66330ea7c74df660ce8c2049a91c94" kindref="member">addBlock</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="da/dcc/structsgns_1_1primitives_1_1_block" kindref="compound">primitives::Block</ref><sp/>&amp;block)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"></highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a65c2869d8af2327e0ac560ad07e62744" kindref="member">addBlockBody</ref>(</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref><sp/>block_number,</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref><sp/>&amp;block_hash,</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a016631413654509e31b54b0d3ac7f865" kindref="member">primitives::BlockBody</ref><sp/>&amp;body)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"></highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a428e55f848151e6388f7059a9e14bc46" kindref="member">finalize</ref>(</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref><sp/>&amp;block,</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/d97/structsgns_1_1primitives_1_1_justification" kindref="compound">primitives::Justification</ref><sp/>&amp;justification)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"></highlight></codeline>
+<codeline lineno="122"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a765cf26a45f6e35ae89433ec03950598" kindref="member">BlockHashVecRes</ref><sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1aa3ed4914e2bdad991421f883eacf16d6" kindref="member">getChainByBlock</ref>(</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref><sp/>&amp;block)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"></highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a765cf26a45f6e35ae89433ec03950598" kindref="member">BlockHashVecRes</ref><sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1aa3ed4914e2bdad991421f883eacf16d6" kindref="member">getChainByBlock</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref><sp/>&amp;block,</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>ascending,</highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/>maximum)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a765cf26a45f6e35ae89433ec03950598" kindref="member">BlockHashVecRes</ref><sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a78448c2f4d9377dbdcad1f7ba7e16369" kindref="member">getChainByBlocks</ref>(</highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref><sp/>&amp;top_block,</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref><sp/>&amp;bottom_block)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"></highlight></codeline>
+<codeline lineno="132"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8cc8665f7cda769b42b7cff134e49969" kindref="member">hasDirectChain</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref><sp/>&amp;ancestor,</highlight></codeline>
+<codeline lineno="133"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref><sp/>&amp;descendant)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="134"><highlight class="normal"></highlight></codeline>
+<codeline lineno="135"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a765cf26a45f6e35ae89433ec03950598" kindref="member">BlockHashVecRes</ref><sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ac731650c2ca641c5dca55875a8f08ec8" kindref="member">longestPath</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="136"><highlight class="normal"></highlight></codeline>
+<codeline lineno="137"><highlight class="normal"><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a49e00cc8ea1725af2bb470e0eee60109" kindref="member">primitives::BlockInfo</ref><sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ac9dcc6ddf01fc4d2c1e3f1db05732206" kindref="member">deepestLeaf</ref>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="138"><highlight class="normal"></highlight></codeline>
+<codeline lineno="139"><highlight class="normal"><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/>outcome::result&lt;primitives::BlockInfo&gt;<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a81e8f51be0a2e106f763190802799856" kindref="member">getBestContaining</ref>(</highlight></codeline>
+<codeline lineno="140"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;target_hash,</highlight></codeline>
+<codeline lineno="141"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::optional&lt;primitives::BlockNumber&gt;<sp/>&amp;max_number<sp/>)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="142"><highlight class="normal"></highlight></codeline>
+<codeline lineno="143"><highlight class="normal"><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/>std::vector&lt;primitives::BlockHash&gt;<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1aa2646adb223b5f66921908d15a9279f1" kindref="member">getLeaves</ref>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="144"><highlight class="normal"></highlight></codeline>
+<codeline lineno="145"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a765cf26a45f6e35ae89433ec03950598" kindref="member">BlockHashVecRes</ref><sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a5fbed4ef10d612419e8f7b21ca0ef78c" kindref="member">getChildren</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref><sp/>&amp;block)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="146"><highlight class="normal"></highlight></codeline>
+<codeline lineno="147"><highlight class="normal"><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a49e00cc8ea1725af2bb470e0eee60109" kindref="member">primitives::BlockInfo</ref><sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ae0ea178c9da34930aa3f87da11a93454" kindref="member">getLastFinalized</ref>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="148"><highlight class="normal"></highlight></codeline>
+<codeline lineno="149" refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ab82d0c098bb2fc25db7786428c0bd206" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ab82d0c098bb2fc25db7786428c0bd206" kindref="member">GetName</ref>()</highlight><highlight class="keyword"><sp/>override</highlight></codeline>
+<codeline lineno="150"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="151"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;BlockTreeImpl&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="152"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="153"><highlight class="normal"></highlight></codeline>
+<codeline lineno="154"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="159"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a130c11f60a0cdf566599eb603528d83b" kindref="member">BlockTreeImpl</ref>(</highlight></codeline>
+<codeline lineno="160"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;BlockHeaderRepository&gt;<sp/>header_repo,</highlight></codeline>
+<codeline lineno="161"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;BlockStorage&gt;<sp/><ref refid="d0/dbf/namespacesgns_1_1storage" kindref="compound">storage</ref>,</highlight></codeline>
+<codeline lineno="162"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;TreeNode&gt;<sp/>tree,</highlight></codeline>
+<codeline lineno="163"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;TreeMeta&gt;<sp/>meta,</highlight></codeline>
+<codeline lineno="164"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;network::ExtrinsicObserver&gt;<sp/>extrinsic_observer,</highlight></codeline>
+<codeline lineno="165"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;crypto::Hasher&gt;<sp/>hasher);</highlight></codeline>
+<codeline lineno="166"><highlight class="normal"></highlight></codeline>
+<codeline lineno="171"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;primitives::BlockHash&gt;<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a994f36ca459de5cf48666914407d1ff9" kindref="member">walkBackUntilLess</ref>(</highlight></codeline>
+<codeline lineno="172"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref><sp/>&amp;start,</highlight></codeline>
+<codeline lineno="173"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref><sp/>&amp;limit)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="174"><highlight class="normal"></highlight></codeline>
+<codeline lineno="178"><highlight class="normal"><sp/><sp/><sp/><sp/>std::vector&lt;primitives::BlockHash&gt;<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a59f9dfbe13ddcaa26d1ba8f51c5baa2a" kindref="member">getLeavesSorted</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="179"><highlight class="normal"></highlight></codeline>
+<codeline lineno="180"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a748c34b3450ba1632913d8ca40dd4aed" kindref="member">collectDescendants</ref>(</highlight></codeline>
+<codeline lineno="181"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;TreeNode&gt;<sp/><ref refid="de/ddf/classsgns_1_1node" kindref="compound">node</ref>,</highlight></codeline>
+<codeline lineno="182"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;std::pair&lt;primitives::BlockHash,<sp/>primitives::BlockNumber&gt;&gt;</highlight></codeline>
+<codeline lineno="183"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;container);</highlight></codeline>
+<codeline lineno="184"><highlight class="normal"></highlight></codeline>
+<codeline lineno="185"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a946ebe3f1c5ee2778305945cd9a4e72c" kindref="member">prune</ref>(<sp/>std::shared_ptr&lt;TreeNode&gt;<sp/>lastFinalizedNode<sp/>);</highlight></codeline>
+<codeline lineno="186"><highlight class="normal"></highlight></codeline>
+<codeline lineno="187" refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1af00c1a9d4d2fa2daae5e099869b4f76a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;BlockHeaderRepository&gt;<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1af00c1a9d4d2fa2daae5e099869b4f76a" kindref="member">header_repo_</ref>;</highlight></codeline>
+<codeline lineno="188" refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a71d688c45a8d8b1d15722c54695e74f4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;BlockStorage&gt;<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a71d688c45a8d8b1d15722c54695e74f4" kindref="member">storage_</ref>;</highlight></codeline>
+<codeline lineno="189"><highlight class="normal"></highlight></codeline>
+<codeline lineno="190" refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ae341f4ab784051033113919797d3da78" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;TreeNode&gt;<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ae341f4ab784051033113919797d3da78" kindref="member">tree_</ref>;</highlight></codeline>
+<codeline lineno="191" refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a90c5232c60f48c41c9bb552c6fad5042" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;TreeMeta&gt;<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a90c5232c60f48c41c9bb552c6fad5042" kindref="member">tree_meta_</ref>;</highlight></codeline>
+<codeline lineno="192"><highlight class="normal"></highlight></codeline>
+<codeline lineno="193" refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8b335c4e7db9284cbeb7178973ada372" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;network::ExtrinsicObserver&gt;<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8b335c4e7db9284cbeb7178973ada372" kindref="member">extrinsic_observer_</ref>;</highlight></codeline>
+<codeline lineno="194"><highlight class="normal"></highlight></codeline>
+<codeline lineno="195" refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1af5233012d9d66515c80de263ed407e60" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;crypto::Hasher&gt;<sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1af5233012d9d66515c80de263ed407e60" kindref="member">hasher_</ref>;</highlight></codeline>
+<codeline lineno="196" refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ac01762f2f08ae227b22c9153417473c5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref><sp/><ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ac01762f2f08ae227b22c9153417473c5" kindref="member">log_</ref><sp/>=<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>(</highlight><highlight class="stringliteral">&quot;BlockTreeImpl&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="197"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="198"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::blockchain</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="199"><highlight class="normal"></highlight></codeline>
+<codeline lineno="200" refid="d7/d87/block__tree__impl_8hpp_1acbd0407543ab288ae2c86c23b547e63e" refkind="member"><highlight class="normal"><ref refid="d7/d87/block__tree__impl_8hpp_1acbd0407543ab288ae2c86c23b547e63e" kindref="member">OUTCOME_HPP_DECLARE_ERROR_2</ref>(<ref refid="d9/df6/namespacesgns_1_1blockchain" kindref="compound">sgns::blockchain</ref>,<sp/>BlockTreeImpl::Error);</highlight></codeline>
+<codeline lineno="201"><highlight class="normal"></highlight></codeline>
+<codeline lineno="202"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_SRC_BLOCK_TREE_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/blockchain/impl/block_tree_impl.hpp"/>
+  </compounddef>
+</doxygen>

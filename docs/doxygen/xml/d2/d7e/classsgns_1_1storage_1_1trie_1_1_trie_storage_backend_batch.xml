@@ -1,0 +1,400 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch" kind="class" language="C++" prot="public">
+    <compoundname>sgns::storage::trie::TrieStorageBackendBatch</compoundname>
+    <basecompoundref refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch" prot="public" virt="non-virtual">sgns::storage::face::WriteBatch&lt; base::Buffer, base::Buffer &gt;</basecompoundref>
+    <includes refid="dc/d83/trie__storage__backend__batch_8hpp" local="no">trie_storage_backend_batch.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1a1703c1dc1e3916c432bad5ba72bb6c00" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; <ref refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch" kindref="compound">face::WriteBatch</ref>&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref>, <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt; &gt;</type>
+        <definition>std::unique_ptr&lt;face::WriteBatch&lt;base::Buffer, base::Buffer&gt; &gt; sgns::storage::trie::TrieStorageBackendBatch::storage_batch_</definition>
+        <argsstring></argsstring>
+        <name>storage_batch_</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendBatch::storage_batch_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_batch.hpp" line="39" column="9" bodyfile="src/storage/trie/impl/trie_storage_backend_batch.hpp" bodystart="39" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1abfd52bebb11f4111e26b1c472d33e876" prot="private" static="no" mutable="no">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>base::Buffer sgns::storage::trie::TrieStorageBackendBatch::node_prefix_</definition>
+        <argsstring></argsstring>
+        <name>node_prefix_</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendBatch::node_prefix_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_batch.hpp" line="40" column="18" bodyfile="src/storage/trie/impl/trie_storage_backend_batch.hpp" bodystart="40" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1a66a6cdbc350fe39861a441ae2656dbda" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::TrieStorageBackendBatch::TrieStorageBackendBatch</definition>
+        <argsstring>(std::unique_ptr&lt; face::WriteBatch&lt; base::Buffer, base::Buffer &gt; &gt; storage_batch, base::Buffer node_prefix)</argsstring>
+        <name>TrieStorageBackendBatch</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendBatch::TrieStorageBackendBatch</qualifiedname>
+        <param>
+          <type>std::unique_ptr&lt; <ref refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch" kindref="compound">face::WriteBatch</ref>&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref>, <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt; &gt;</type>
+          <declname>storage_batch</declname>
+        </param>
+        <param>
+          <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+          <declname>node_prefix</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_batch.hpp" line="18" column="5" bodyfile="src/storage/trie/impl/trie_storage_backend_batch.cpp" bodystart="7" bodyend="14"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1acb638835ab1218d038dc36355523f0bb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::TrieStorageBackendBatch::~TrieStorageBackendBatch</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~TrieStorageBackendBatch</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendBatch::~TrieStorageBackendBatch</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_batch.hpp" line="22" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1a8d4c00a992d65c07cfd16607b1168bd5" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::trie::TrieStorageBackendBatch::commit</definition>
+        <argsstring>() override</argsstring>
+        <name>commit</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendBatch::commit</qualifiedname>
+        <reimplements refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch_1a8a9fbf04d1bd815017af2582c512d3eb">commit</reimplements>
+        <briefdescription>
+<para>Writes batch. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>error code in case of error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_batch.hpp" line="24" column="21" bodyfile="src/storage/trie/impl/trie_storage_backend_batch.cpp" bodystart="16" bodyend="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1a93c6dc3f7c6c52a719e4d525a0a5661c" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::trie::TrieStorageBackendBatch::put</definition>
+        <argsstring>(const base::Buffer &amp;key, const base::Buffer &amp;value) override</argsstring>
+        <name>put</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendBatch::put</qualifiedname>
+        <reimplements refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a6c94f5ac466050295a32f93aeb5a0e8c">put</reimplements>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+<para>Store value by key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>result containing void if put successful, error otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_batch.hpp" line="26" column="21" bodyfile="src/storage/trie/impl/trie_storage_backend_batch.cpp" bodystart="24" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1a0a5cb9064aa11a053dafb44adbdcb503" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::trie::TrieStorageBackendBatch::put</definition>
+        <argsstring>(const base::Buffer &amp;key, base::Buffer &amp;&amp;value) override</argsstring>
+        <name>put</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendBatch::put</qualifiedname>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;&amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_batch.hpp" line="29" column="21" bodyfile="src/storage/trie/impl/trie_storage_backend_batch.cpp" bodystart="29" bodyend="32"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1a389c22117802828f9394858803033e21" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::trie::TrieStorageBackendBatch::remove</definition>
+        <argsstring>(const base::Buffer &amp;key) override</argsstring>
+        <name>remove</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendBatch::remove</qualifiedname>
+        <reimplements refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a13a83e4a2fa9540c366e277871701ac3">remove</reimplements>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Remove value by key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>K </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>error code if error happened </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_batch.hpp" line="32" column="21" bodyfile="src/storage/trie/impl/trie_storage_backend_batch.cpp" bodystart="34" bodyend="37"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1a7e17495230bd0158f581d0dcf0350405" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::storage::trie::TrieStorageBackendBatch::clear</definition>
+        <argsstring>() override</argsstring>
+        <name>clear</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendBatch::clear</qualifiedname>
+        <reimplements refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch_1a918977d61ce1c5845ec4a159f5159af3">clear</reimplements>
+        <briefdescription>
+<para>Clear batch. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_batch.hpp" line="33" column="10" bodyfile="src/storage/trie/impl/trie_storage_backend_batch.cpp" bodystart="20" bodyend="22"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1a9fed8932f1329dc14f606890b2d3f7ab" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>base::Buffer sgns::storage::trie::TrieStorageBackendBatch::prefixKey</definition>
+        <argsstring>(const base::Buffer &amp;key) const</argsstring>
+        <name>prefixKey</name>
+        <qualifiedname>sgns::storage::trie::TrieStorageBackendBatch::prefixKey</qualifiedname>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/trie_storage_backend_batch.hpp" line="36" column="18" bodyfile="src/storage/trie/impl/trie_storage_backend_batch.cpp" bodystart="39" bodyend="44"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Batch implementation for <ref refid="dd/d95/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend" kindref="compound">TrieStorageBackend</ref> <simplesect kind="see"><para><ref refid="dd/d95/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend" kindref="compound">TrieStorageBackend</ref> </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="5">
+        <label>sgns::storage::face::WriteBatch&lt; K, V &gt;</label>
+        <link refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::storage::face::WriteBatch&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="6">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="3">
+        <label>sgns::storage::face::Writeable&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::TrieStorageBackendBatch</label>
+        <link refid="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="11">
+        <label>T</label>
+      </node>
+      <node id="13">
+        <label>boost::equality_comparable&lt; Buffer &gt;</label>
+      </node>
+      <node id="14">
+        <label>boost::equality_comparable&lt; gsl::span&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="15">
+        <label>boost::equality_comparable&lt; std::vector&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="12">
+        <label>sgns::base::Buffer</label>
+        <link refid="de/dd5/classsgns_1_1base_1_1_buffer"/>
+        <childnode refid="13" relation="public-inheritance">
+        </childnode>
+        <childnode refid="14" relation="public-inheritance">
+        </childnode>
+        <childnode refid="15" relation="public-inheritance">
+        </childnode>
+        <childnode refid="16" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::face::WriteBatch&lt; K, V &gt;</label>
+        <link refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::storage::face::WriteBatch&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>sgns::storage::face::WriteBatch&lt; sgns::base::Buffer, sgns::base::Buffer &gt;</label>
+        <link refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; sgns::base::Buffer, sgns::base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="6">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="3">
+        <label>sgns::storage::face::Writeable&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::storage::face::Writeable&lt; sgns::base::Buffer, sgns::base::Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; sgns::base::Buffer, sgns::base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::TrieStorageBackendBatch</label>
+        <link refid="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>-storage_batch_</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>-node_prefix_</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::unique_ptr&lt; T &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::unique_ptr&lt; sgns::storage::face::WriteBatch&lt; sgns::base::Buffer, sgns::base::Buffer &gt; &gt;</label>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::face::WriteBatch&lt; sgns::base::Buffer, sgns::base::Buffer &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>std::vector&lt; uint8_t &gt;</label>
+        <childnode refid="17" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/trie/impl/trie_storage_backend_batch.hpp" line="15" column="3" bodyfile="src/storage/trie/impl/trie_storage_backend_batch.hpp" bodystart="16" bodyend="41"/>
+    <listofallmembers>
+      <member refid="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1a7e17495230bd0158f581d0dcf0350405" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieStorageBackendBatch</scope><name>clear</name></member>
+      <member refid="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1a8d4c00a992d65c07cfd16607b1168bd5" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieStorageBackendBatch</scope><name>commit</name></member>
+      <member refid="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1abfd52bebb11f4111e26b1c472d33e876" prot="private" virt="non-virtual"><scope>sgns::storage::trie::TrieStorageBackendBatch</scope><name>node_prefix_</name></member>
+      <member refid="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1a9fed8932f1329dc14f606890b2d3f7ab" prot="private" virt="non-virtual"><scope>sgns::storage::trie::TrieStorageBackendBatch</scope><name>prefixKey</name></member>
+      <member refid="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1a93c6dc3f7c6c52a719e4d525a0a5661c" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieStorageBackendBatch</scope><name>put</name></member>
+      <member refid="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1a0a5cb9064aa11a053dafb44adbdcb503" prot="public" virt="non-virtual"><scope>sgns::storage::trie::TrieStorageBackendBatch</scope><name>put</name></member>
+      <member refid="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1a389c22117802828f9394858803033e21" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieStorageBackendBatch</scope><name>remove</name></member>
+      <member refid="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1a1703c1dc1e3916c432bad5ba72bb6c00" prot="private" virt="non-virtual"><scope>sgns::storage::trie::TrieStorageBackendBatch</scope><name>storage_batch_</name></member>
+      <member refid="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1a66a6cdbc350fe39861a441ae2656dbda" prot="public" virt="non-virtual"><scope>sgns::storage::trie::TrieStorageBackendBatch</scope><name>TrieStorageBackendBatch</name></member>
+      <member refid="d2/d7e/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_batch_1acb638835ab1218d038dc36355523f0bb" prot="public" virt="non-virtual"><scope>sgns::storage::trie::TrieStorageBackendBatch</scope><name>~TrieStorageBackendBatch</name></member>
+      <member refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1adb986d79f420f5829cae3d6659430a00" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieStorageBackendBatch</scope><name>~Writeable</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

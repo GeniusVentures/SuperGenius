@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/daf/namespace_0d177336360231346211236111243303361070075232152273" kind="namespace" language="C++">
+    <compoundname>@177336360231346211236111243303361070075232152273</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/local_secure_storage/impl/Android.cpp" line="16" column="1"/>
+  </compounddef>
+</doxygen>

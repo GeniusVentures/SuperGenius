@@ -1,0 +1,265 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/deb/class_processing_task_queue" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>ProcessingTaskQueue</compoundname>
+    <derivedcompoundref refid="d6/d4e/classsgns_1_1processing_1_1_processing_task_queue_impl" prot="public" virt="non-virtual">sgns::processing::ProcessingTaskQueueImpl</derivedcompoundref>
+    <includes refid="d1/d7c/processing__task__queue_8hpp" local="no">processing_task_queue.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d0/deb/class_processing_task_queue_1a3e295c6fb7574268a36bd544fae5e118" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual ProcessingTaskQueue::~ProcessingTaskQueue</definition>
+        <argsstring>()=default</argsstring>
+        <name>~ProcessingTaskQueue</name>
+        <qualifiedname>ProcessingTaskQueue::~ProcessingTaskQueue</qualifiedname>
+        <briefdescription>
+<para>Distributed task queue interface. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Provides enqueue, retrieval, and completion tracking for tasks and their subtasks. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_task_queue.hpp" line="25" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/deb/class_processing_task_queue_1ab6ed80e82f657bc5056496ce066c5ec5" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; ProcessingTaskQueue::EnqueueTask</definition>
+        <argsstring>(const SGProcessing::Task &amp;task, const std::list&lt; SGProcessing::SubTask &gt; &amp;subTasks)=0</argsstring>
+        <name>EnqueueTask</name>
+        <qualifiedname>ProcessingTaskQueue::EnqueueTask</qualifiedname>
+        <reimplementedby refid="d6/d4e/classsgns_1_1processing_1_1_processing_task_queue_impl_1ab7cf436ff078371335ec7ca20cc289d9">EnqueueTask</reimplementedby>
+        <param>
+          <type>const SGProcessing::Task &amp;</type>
+          <declname>task</declname>
+        </param>
+        <param>
+          <type>const std::list&lt; SGProcessing::SubTask &gt; &amp;</type>
+          <declname>subTasks</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Enqueues a task with subtasks that the task has been split to <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>task</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- task to enqueue </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>subTasks</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- list of subtasks that the task has been split to </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_task_queue.hpp" line="31" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/deb/class_processing_task_queue_1abbab6e0729a9b310e2c544d74f610ab8" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>bool</type>
+        <definition>virtual bool ProcessingTaskQueue::GetSubTasks</definition>
+        <argsstring>(const std::string &amp;taskId, std::list&lt; SGProcessing::SubTask &gt; &amp;subTasks)=0</argsstring>
+        <name>GetSubTasks</name>
+        <qualifiedname>ProcessingTaskQueue::GetSubTasks</qualifiedname>
+        <reimplementedby refid="d6/d4e/classsgns_1_1processing_1_1_processing_task_queue_impl_1adfc42c2f0decd7c74f564ebc08b33c9c">GetSubTasks</reimplementedby>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>taskId</declname>
+        </param>
+        <param>
+          <type>std::list&lt; SGProcessing::SubTask &gt; &amp;</type>
+          <declname>subTasks</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Returns a list of subtasks linked to taskId <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>taskId</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- task id </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>subTasks</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- list of found subtasks </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>false if task not found </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_task_queue.hpp" line="39" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/deb/class_processing_task_queue_1a02f7563a47b7b32dfe918a4c6c4f1d62" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; std::pair&lt; std::string, SGProcessing::Task &gt; &gt;</type>
+        <definition>virtual outcome::result&lt; std::pair&lt; std::string, SGProcessing::Task &gt; &gt; ProcessingTaskQueue::GrabTask</definition>
+        <argsstring>()=0</argsstring>
+        <name>GrabTask</name>
+        <qualifiedname>ProcessingTaskQueue::GrabTask</qualifiedname>
+        <reimplementedby refid="d6/d4e/classsgns_1_1processing_1_1_processing_task_queue_impl_1ae4b7e0d5a326bdeee7c391d89a07a17f">GrabTask</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Grabs a task from task queue <simplesect kind="return"><para>taskId - task id </para>
+</simplesect>
+<simplesect kind="return"><para>task </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_task_queue.hpp" line="45" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/deb/class_processing_task_queue_1a1421f5e33d485bf04be37280d9ab5383" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; <ref refid="d8/da6/classsgns_1_1crdt_1_1_atomic_transaction" kindref="compound">crdt::AtomicTransaction</ref> &gt; &gt;</type>
+        <definition>virtual outcome::result&lt; std::shared_ptr&lt; crdt::AtomicTransaction &gt; &gt; ProcessingTaskQueue::CompleteTask</definition>
+        <argsstring>(const std::string &amp;taskId, const SGProcessing::TaskResult &amp;result)=0</argsstring>
+        <name>CompleteTask</name>
+        <qualifiedname>ProcessingTaskQueue::CompleteTask</qualifiedname>
+        <reimplementedby refid="d6/d4e/classsgns_1_1processing_1_1_processing_task_queue_impl_1a090045bb8d71c60a939889ff0ee0100e">CompleteTask</reimplementedby>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>taskId</declname>
+        </param>
+        <param>
+          <type>const SGProcessing::TaskResult &amp;</type>
+          <declname>result</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Handles task completion <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>taskId</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- task id </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>result</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- task result </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_task_queue.hpp" line="51" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/deb/class_processing_task_queue_1a53397c9602c4e978fb28c4e9dccea0ee" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>bool</type>
+        <definition>virtual bool ProcessingTaskQueue::IsTaskCompleted</definition>
+        <argsstring>(const std::string &amp;taskId)=0</argsstring>
+        <name>IsTaskCompleted</name>
+        <qualifiedname>ProcessingTaskQueue::IsTaskCompleted</qualifiedname>
+        <reimplementedby refid="d6/d4e/classsgns_1_1processing_1_1_processing_task_queue_impl_1a5d602759423dab524aa76723dac04663">IsTaskCompleted</reimplementedby>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>taskId</declname>
+        </param>
+        <briefdescription>
+<para>Checks if the task is completed. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">taskId</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Task id. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if the task is completed, false otherwise. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_task_queue.hpp" line="60" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/deb/class_processing_task_queue_1adb98d9742bd595d5f3ae76977591dfe4" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void ProcessingTaskQueue::MarkTaskBad</definition>
+        <argsstring>(const std::string &amp;taskKey)=0</argsstring>
+        <name>MarkTaskBad</name>
+        <qualifiedname>ProcessingTaskQueue::MarkTaskBad</qualifiedname>
+        <reimplementedby refid="d6/d4e/classsgns_1_1processing_1_1_processing_task_queue_impl_1aa3e81f081163a51c5bd592fce8e3e5a9">MarkTaskBad</reimplementedby>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>taskKey</declname>
+        </param>
+        <briefdescription>
+<para>Mark a task key as bad to be skipped. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">taskKey</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Task key to mark as bad. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_task_queue.hpp" line="66" column="18"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>ProcessingTaskQueue</label>
+        <link refid="d0/deb/class_processing_task_queue"/>
+      </node>
+      <node id="2">
+        <label>sgns::processing::ProcessingTaskQueueImpl</label>
+        <link refid="d6/d4e/classsgns_1_1processing_1_1_processing_task_queue_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>ProcessingTaskQueue</label>
+        <link refid="d0/deb/class_processing_task_queue"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/processing/processing_task_queue.hpp" line="16" column="1" bodyfile="src/processing/processing_task_queue.hpp" bodystart="17" bodyend="67"/>
+    <listofallmembers>
+      <member refid="d0/deb/class_processing_task_queue_1a1421f5e33d485bf04be37280d9ab5383" prot="public" virt="pure-virtual"><scope>ProcessingTaskQueue</scope><name>CompleteTask</name></member>
+      <member refid="d0/deb/class_processing_task_queue_1ab6ed80e82f657bc5056496ce066c5ec5" prot="public" virt="pure-virtual"><scope>ProcessingTaskQueue</scope><name>EnqueueTask</name></member>
+      <member refid="d0/deb/class_processing_task_queue_1abbab6e0729a9b310e2c544d74f610ab8" prot="public" virt="pure-virtual"><scope>ProcessingTaskQueue</scope><name>GetSubTasks</name></member>
+      <member refid="d0/deb/class_processing_task_queue_1a02f7563a47b7b32dfe918a4c6c4f1d62" prot="public" virt="pure-virtual"><scope>ProcessingTaskQueue</scope><name>GrabTask</name></member>
+      <member refid="d0/deb/class_processing_task_queue_1a53397c9602c4e978fb28c4e9dccea0ee" prot="public" virt="pure-virtual"><scope>ProcessingTaskQueue</scope><name>IsTaskCompleted</name></member>
+      <member refid="d0/deb/class_processing_task_queue_1adb98d9742bd595d5f3ae76977591dfe4" prot="public" virt="pure-virtual"><scope>ProcessingTaskQueue</scope><name>MarkTaskBad</name></member>
+      <member refid="d0/deb/class_processing_task_queue_1a3e295c6fb7574268a36bd544fae5e118" prot="public" virt="virtual"><scope>ProcessingTaskQueue</scope><name>~ProcessingTaskQueue</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

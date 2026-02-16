@@ -1,0 +1,1253 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl" kind="class" language="C++" prot="public">
+    <compoundname>sgns::blockchain::BlockTreeImpl</compoundname>
+    <basecompoundref refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree" prot="public" virt="non-virtual">sgns::blockchain::BlockTree</basecompoundref>
+    <includes refid="d7/d87/block__tree__impl_8hpp" local="no">block_tree_impl.hpp</includes>
+    <innerclass refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node" prot="private">sgns::blockchain::BlockTreeImpl::TreeNode</innerclass>
+    <innerclass refid="d8/d08/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_meta" prot="private">sgns::blockchain::BlockTreeImpl::TreeMeta</innerclass>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8ba1c02537df0d489c703d99b591540d" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>Error</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::Error</qualifiedname>
+        <enumvalue id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8ba1c02537df0d489c703d99b591540dafc9480def2755cc1e63fc4d473955f4f" prot="public">
+          <name>TARGET_IS_PAST_MAX</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8ba1c02537df0d489c703d99b591540dad2a3108c04ca166ca6dc4e34b35bbafc" prot="public">
+          <name>BLOCK_ON_DEAD_END</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8ba1c02537df0d489c703d99b591540da138f3bbfa4e3fae296375dd0c1e837c2" prot="public">
+          <name>BLOCK_NOT_FOUND</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="70" column="5" bodyfile="src/blockchain/impl/block_tree_impl.hpp" bodystart="70" bodyend="78"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1af00c1a9d4d2fa2daae5e099869b4f76a" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository" kindref="compound">BlockHeaderRepository</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;BlockHeaderRepository&gt; sgns::blockchain::BlockTreeImpl::header_repo_</definition>
+        <argsstring></argsstring>
+        <name>header_repo_</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::header_repo_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="187" column="21" bodyfile="src/blockchain/impl/block_tree_impl.hpp" bodystart="187" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a71d688c45a8d8b1d15722c54695e74f4" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="de/de8/classsgns_1_1blockchain_1_1_block_storage" kindref="compound">BlockStorage</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;BlockStorage&gt; sgns::blockchain::BlockTreeImpl::storage_</definition>
+        <argsstring></argsstring>
+        <name>storage_</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::storage_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="188" column="21" bodyfile="src/blockchain/impl/block_tree_impl.hpp" bodystart="188" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ae341f4ab784051033113919797d3da78" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node" kindref="compound">TreeNode</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;TreeNode&gt; sgns::blockchain::BlockTreeImpl::tree_</definition>
+        <argsstring></argsstring>
+        <name>tree_</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::tree_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="190" column="21" bodyfile="src/blockchain/impl/block_tree_impl.hpp" bodystart="190" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a90c5232c60f48c41c9bb552c6fad5042" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d8/d08/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_meta" kindref="compound">TreeMeta</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;TreeMeta&gt; sgns::blockchain::BlockTreeImpl::tree_meta_</definition>
+        <argsstring></argsstring>
+        <name>tree_meta_</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::tree_meta_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="191" column="21" bodyfile="src/blockchain/impl/block_tree_impl.hpp" bodystart="191" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8b335c4e7db9284cbeb7178973ada372" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; network::ExtrinsicObserver &gt;</type>
+        <definition>std::shared_ptr&lt;network::ExtrinsicObserver&gt; sgns::blockchain::BlockTreeImpl::extrinsic_observer_</definition>
+        <argsstring></argsstring>
+        <name>extrinsic_observer_</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::extrinsic_observer_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="193" column="21" bodyfile="src/blockchain/impl/block_tree_impl.hpp" bodystart="193" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1af5233012d9d66515c80de263ed407e60" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher" kindref="compound">crypto::Hasher</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;crypto::Hasher&gt; sgns::blockchain::BlockTreeImpl::hasher_</definition>
+        <argsstring></argsstring>
+        <name>hasher_</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::hasher_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="195" column="21" bodyfile="src/blockchain/impl/block_tree_impl.hpp" bodystart="195" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ac01762f2f08ae227b22c9153417473c5" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::blockchain::BlockTreeImpl::log_</definition>
+        <argsstring></argsstring>
+        <name>log_</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::log_</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>(&quot;BlockTreeImpl&quot;)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="196" column="18" bodyfile="src/blockchain/impl/block_tree_impl.hpp" bodystart="196" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ab4ccd8c906458cf70057d85a4369275e" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; <ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a130c11f60a0cdf566599eb603528d83b" kindref="member">BlockTreeImpl</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; BlockTreeImpl &gt; &gt; sgns::blockchain::BlockTreeImpl::create</definition>
+        <argsstring>(std::shared_ptr&lt; BlockHeaderRepository &gt; header_repo, std::shared_ptr&lt; BlockStorage &gt; storage, const primitives::BlockId &amp;last_finalized_block, std::shared_ptr&lt; network::ExtrinsicObserver &gt; extrinsic_observer, std::shared_ptr&lt; crypto::Hasher &gt; hasher)</argsstring>
+        <name>create</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::create</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository" kindref="compound">BlockHeaderRepository</ref> &gt;</type>
+          <declname>header_repo</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="de/de8/classsgns_1_1blockchain_1_1_block_storage" kindref="compound">BlockStorage</ref> &gt;</type>
+          <declname>storage</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>last_finalized_block</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; network::ExtrinsicObserver &gt;</type>
+          <declname>extrinsic_observer</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher" kindref="compound">crypto::Hasher</ref> &gt;</type>
+          <declname>hasher</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Create an instance of block tree <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>header_repo</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- block headers repository </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername><ref refid="d0/dbf/namespacesgns_1_1storage" kindref="compound">storage</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- block storage for the tree to be put in </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>last_finalized_block</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- last finalized block, from which the tree is going to grow </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>extrinsic_observer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- extrinsic observer </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>hasher</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- pointer to the hasher </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>ptr to the created instance or error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="90" column="28" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="105" bodyend="127"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a62962015fbc4601258a2515cd00b93d2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::blockchain::BlockTreeImpl::~BlockTreeImpl</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~BlockTreeImpl</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::~BlockTreeImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="97" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a68055b7ff5a02eb1f0f59ff2a21a4394" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">primitives::BlockHeader</ref> &gt;</type>
+        <definition>outcome::result&lt; primitives::BlockHeader &gt; sgns::blockchain::BlockTreeImpl::getBlockHeader</definition>
+        <argsstring>(const primitives::BlockId &amp;block) const override</argsstring>
+        <name>getBlockHeader</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::getBlockHeader</qualifiedname>
+        <reimplements refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a3ce94bb5faf32441e58c74e532e94f08">getBlockHeader</reimplements>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>block</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get block header by provided block id <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>block</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>id of the block header we are looking for </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>result containing block header if it exists, error otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="99" column="22" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="231" bodyend="234"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a5f601ee0894453e0c9731e61569ae98e" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1a016631413654509e31b54b0d3ac7f865" kindref="member">primitives::BlockBody</ref> &gt;</type>
+        <definition>outcome::result&lt; primitives::BlockBody &gt; sgns::blockchain::BlockTreeImpl::getBlockBody</definition>
+        <argsstring>(const primitives::BlockId &amp;block) const override</argsstring>
+        <name>getBlockBody</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::getBlockBody</qualifiedname>
+        <reimplements refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a5e428bb2c748009ce32c719e109a7410">getBlockBody</reimplements>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>block</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get a body (extrinsics) of the block (if present) <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>block</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- id of the block to get body for </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>body, if the block exists in our storage, error in case it does not exist in our storage, or actual error happens </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="102" column="22" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="236" bodyend="239"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a598c61a39e7ad54d3c0360d28082728a" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="de/d97/structsgns_1_1primitives_1_1_justification" kindref="compound">primitives::Justification</ref> &gt;</type>
+        <definition>outcome::result&lt; primitives::Justification &gt; sgns::blockchain::BlockTreeImpl::getBlockJustification</definition>
+        <argsstring>(const primitives::BlockId &amp;block) const override</argsstring>
+        <name>getBlockJustification</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::getBlockJustification</qualifiedname>
+        <reimplements refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a2a7a3817e0d2382374a02f278d7fd871">getBlockJustification</reimplements>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>block</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get a justification of the block (if present) <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>block</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- id of the block to get justification for </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>body, if the block exists in our storage, error in case it does not exist in our storage, or actual error happens </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="105" column="22" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="242" bodyend="244"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a5a4371df62d1c733f0af98a07a4bc73f" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::blockchain::BlockTreeImpl::addBlockHeader</definition>
+        <argsstring>(const primitives::BlockHeader &amp;header) override</argsstring>
+        <name>addBlockHeader</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::addBlockHeader</qualifiedname>
+        <reimplements refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a367b3db96c099c35cb7395c0316909c6">addBlockHeader</reimplements>
+        <param>
+          <type>const <ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">primitives::BlockHeader</ref> &amp;</type>
+          <declname>header</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Adds header to the storage <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>header</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>that we are adding </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>result with success if header&apos;s parent exists on storage and new header was added. <ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8ba1c02537df0d489c703d99b591540d" kindref="member">Error</ref> otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="108" column="21" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="143" bodyend="162"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a5b66330ea7c74df660ce8c2049a91c94" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::blockchain::BlockTreeImpl::addBlock</definition>
+        <argsstring>(const primitives::Block &amp;block) override</argsstring>
+        <name>addBlock</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::addBlock</qualifiedname>
+        <reimplements refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a745f301d2561c257921b669f7cf3a4ec">addBlock</reimplements>
+        <param>
+          <type>const <ref refid="da/dcc/structsgns_1_1primitives_1_1_block" kindref="compound">primitives::Block</ref> &amp;</type>
+          <declname>block</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Add a new block to the tree <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>block</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>to be added </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>nothing or error; if error happens, no changes in the tree are made</para>
+</simplesect>
+<simplesect kind="note"><para>if block, which is specified in PARENT_HASH field of (block) is not in our local storage, corresponding error is returned. It is suggested that after getting that error, the caller would ask another peer for the parent block and try to insert it; this operation is to be repeated until a successful insertion happens </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="111" column="21" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="164" bodyend="185"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a65c2869d8af2327e0ac560ad07e62744" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::blockchain::BlockTreeImpl::addBlockBody</definition>
+        <argsstring>(primitives::BlockNumber block_number, const primitives::BlockHash &amp;block_hash, const primitives::BlockBody &amp;body) override</argsstring>
+        <name>addBlockBody</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::addBlockBody</qualifiedname>
+        <reimplements refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1acf7dae4e465102c3522d85a95c4870d0">addBlockBody</reimplements>
+        <param>
+          <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref></type>
+          <declname>block_number</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &amp;</type>
+          <declname>block_hash</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a016631413654509e31b54b0d3ac7f865" kindref="member">primitives::BlockBody</ref> &amp;</type>
+          <declname>block_body</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Adds block body to the storage <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>block_number</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>that corresponds to the block which body we are adding </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>block_hash</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>that corresponds to the block which body we are adding </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>block_body</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>that we are adding </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>result with success if block body was inserted. <ref refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8ba1c02537df0d489c703d99b591540d" kindref="member">Error</ref> otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="113" column="21" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="187" bodyend="196"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a428e55f848151e6388f7059a9e14bc46" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::blockchain::BlockTreeImpl::finalize</definition>
+        <argsstring>(const primitives::BlockHash &amp;block, const primitives::Justification &amp;justification) override</argsstring>
+        <name>finalize</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::finalize</qualifiedname>
+        <reimplements refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a237964af14b91811d5b0d49f295de56e">finalize</reimplements>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &amp;</type>
+          <declname>block</declname>
+        </param>
+        <param>
+          <type>const <ref refid="de/d97/structsgns_1_1primitives_1_1_justification" kindref="compound">primitives::Justification</ref> &amp;</type>
+          <declname>justification</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Mark the block as finalized and store a finalization justification <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>block</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>to be finalized </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>justification</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>of the finalization </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>nothing or error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="118" column="21" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="198" bodyend="229"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1aa3ed4914e2bdad991421f883eacf16d6" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a765cf26a45f6e35ae89433ec03950598" kindref="member">BlockHashVecRes</ref></type>
+        <definition>BlockTreeImpl::BlockHashVecRes sgns::blockchain::BlockTreeImpl::getChainByBlock</definition>
+        <argsstring>(const primitives::BlockHash &amp;block) override</argsstring>
+        <name>getChainByBlock</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::getChainByBlock</qualifiedname>
+        <reimplements refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a6a3abba94982a25cad68623e4f811fac">getChainByBlock</reimplements>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &amp;</type>
+          <declname>block</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get a chain of blocks from the specified block up to the closest finalized one <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>block</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>to get a chain from </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>chain of blocks in top-to-bottom order (from the last finalized block to the provided one) or error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="122" column="21" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="246" bodyend="249"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a2592b54b6d9f3e36694d8cfb4b22ab50" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a765cf26a45f6e35ae89433ec03950598" kindref="member">BlockHashVecRes</ref></type>
+        <definition>BlockTreeImpl::BlockHashVecRes sgns::blockchain::BlockTreeImpl::getChainByBlock</definition>
+        <argsstring>(const primitives::BlockHash &amp;block, bool ascending, uint64_t maximum) override</argsstring>
+        <name>getChainByBlock</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::getChainByBlock</qualifiedname>
+        <reimplements refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1afe782df06f99e5a4f3750e599eb5774a">getChainByBlock</reimplements>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &amp;</type>
+          <declname>block</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>ascending</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>maximum</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get a chain of blocks from the block <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>block</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>block from which the chain is started </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>ascending</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- if true, the chain will grow up from the provided block (it is the lowest one); if false, down </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>maximum</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>number of blocks to be retrieved </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>chain or blocks or error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="125" column="21" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="251" bodyend="298"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a78448c2f4d9377dbdcad1f7ba7e16369" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a765cf26a45f6e35ae89433ec03950598" kindref="member">BlockHashVecRes</ref></type>
+        <definition>BlockTreeImpl::BlockHashVecRes sgns::blockchain::BlockTreeImpl::getChainByBlocks</definition>
+        <argsstring>(const primitives::BlockHash &amp;top_block, const primitives::BlockHash &amp;bottom_block) override</argsstring>
+        <name>getChainByBlocks</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::getChainByBlocks</qualifiedname>
+        <reimplements refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a22687d29b1107f1d38156d2214fafe12">getChainByBlocks</reimplements>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &amp;</type>
+          <declname>top_block</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &amp;</type>
+          <declname>bottom_block</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get a chain of blocks <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>top_block</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- block, which is at the top of the chain </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>bottom_block</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- block, which is the bottom of the chain </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>chain of blocks in top-to-bottom order or error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="128" column="21" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="300" bodyend="342"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8cc8665f7cda769b42b7cff134e49969" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>bool</type>
+        <definition>bool sgns::blockchain::BlockTreeImpl::hasDirectChain</definition>
+        <argsstring>(const primitives::BlockHash &amp;ancestor, const primitives::BlockHash &amp;descendant) override</argsstring>
+        <name>hasDirectChain</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::hasDirectChain</qualifiedname>
+        <reimplements refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a5289974fb8a15175cf3ebbaff784d14c">hasDirectChain</reimplements>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &amp;</type>
+          <declname>ancestor</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &amp;</type>
+          <declname>descendant</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Check if one block is ancestor of second one (direct chain exists) <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>ancestor</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- block, which is at the top of the chain </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>descendant</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- block, which is the bottom of the chain </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if ancestor is ancestor of descendant </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="132" column="10" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="344" bodyend="372"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ac731650c2ca641c5dca55875a8f08ec8" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a765cf26a45f6e35ae89433ec03950598" kindref="member">BlockHashVecRes</ref></type>
+        <definition>BlockTreeImpl::BlockHashVecRes sgns::blockchain::BlockTreeImpl::longestPath</definition>
+        <argsstring>() override</argsstring>
+        <name>longestPath</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::longestPath</qualifiedname>
+        <reimplements refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a68715d231fd59710c4a3a67523962751">longestPath</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get a longest path (chain of blocks) from the last finalized block down to the deepest leaf <simplesect kind="return"><para>chain of blocks or error</para>
+</simplesect>
+<simplesect kind="note"><para>this function is equivalent to &quot;getChainByBlock(deepestLeaf())&quot; </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="135" column="21" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="374" bodyend="377"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ac9dcc6ddf01fc4d2c1e3f1db05732206" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a49e00cc8ea1725af2bb470e0eee60109" kindref="member">primitives::BlockInfo</ref></type>
+        <definition>primitives::BlockInfo sgns::blockchain::BlockTreeImpl::deepestLeaf</definition>
+        <argsstring>() const override</argsstring>
+        <name>deepestLeaf</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::deepestLeaf</qualifiedname>
+        <reimplements refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a66fc4f51e098b10526cb93ce5ca4e50a">deepestLeaf</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get a deepest leaf of the tree <simplesect kind="return"><para>deepest leaf</para>
+</simplesect>
+<simplesect kind="note"><para>deepest leaf is also a result of &quot;SelectBestChain&quot;: if we are the leader, we connect a block, which we constructed, to that deepest leaf </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="137" column="28" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="379" bodyend="382"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a81e8f51be0a2e106f763190802799856" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1a49e00cc8ea1725af2bb470e0eee60109" kindref="member">primitives::BlockInfo</ref> &gt;</type>
+        <definition>outcome::result&lt; primitives::BlockInfo &gt; sgns::blockchain::BlockTreeImpl::getBestContaining</definition>
+        <argsstring>(const primitives::BlockHash &amp;target_hash, const boost::optional&lt; primitives::BlockNumber &gt; &amp;max_number) const override</argsstring>
+        <name>getBestContaining</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::getBestContaining</qualifiedname>
+        <reimplements refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a22f5e369e9f08307b3f457a2758f7bfe">getBestContaining</reimplements>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &amp;</type>
+          <declname>target_hash</declname>
+        </param>
+        <param>
+          <type>const boost::optional&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref> &gt; &amp;</type>
+          <declname>max_number</declname>
+        </param>
+        <briefdescription>
+<para>Get the most recent block of the best (longest) chain among those that contain a block with target_hash. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>target_hash</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>is a hash of a block that the chosen chain must contain </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>max_number</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>is the max block number that the resulting block (and the target one) may possess </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="139" column="22" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="384" bodyend="439"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1aa2646adb223b5f66921908d15a9279f1" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>std::vector&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &gt;</type>
+        <definition>std::vector&lt; primitives::BlockHash &gt; sgns::blockchain::BlockTreeImpl::getLeaves</definition>
+        <argsstring>() const override</argsstring>
+        <name>getLeaves</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::getLeaves</qualifiedname>
+        <reimplements refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a51881c6ac57a89b61b65421eff6f4b24">getLeaves</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get all leaves of our tree <simplesect kind="return"><para>collection of the leaves </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="143" column="18" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="441" bodyend="449"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a5fbed4ef10d612419e8f7b21ca0ef78c" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a765cf26a45f6e35ae89433ec03950598" kindref="member">BlockHashVecRes</ref></type>
+        <definition>BlockTreeImpl::BlockHashVecRes sgns::blockchain::BlockTreeImpl::getChildren</definition>
+        <argsstring>(const primitives::BlockHash &amp;block) override</argsstring>
+        <name>getChildren</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::getChildren</qualifiedname>
+        <reimplements refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a31b54b2ed2a71783dea2438c07c9b5d3">getChildren</reimplements>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &amp;</type>
+          <declname>block</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get children of the block with specified hash <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>block</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>to get children of </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>collection of children hashes or error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="145" column="21" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="451" bodyend="465"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ae0ea178c9da34930aa3f87da11a93454" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a49e00cc8ea1725af2bb470e0eee60109" kindref="member">primitives::BlockInfo</ref></type>
+        <definition>primitives::BlockInfo sgns::blockchain::BlockTreeImpl::getLastFinalized</definition>
+        <argsstring>() const override</argsstring>
+        <name>getLastFinalized</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::getLastFinalized</qualifiedname>
+        <reimplements refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1af4c8dd033bb37d32c7e4582541248818">getLastFinalized</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get the last finalized block <simplesect kind="return"><para>hash of the block </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="147" column="28" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="467" bodyend="470"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ab82d0c098bb2fc25db7786428c0bd206" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::blockchain::BlockTreeImpl::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::GetName</qualifiedname>
+        <reimplements refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="149" column="17" bodyfile="src/blockchain/impl/block_tree_impl.hpp" bodystart="149" bodyend="152"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a130c11f60a0cdf566599eb603528d83b" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::blockchain::BlockTreeImpl::BlockTreeImpl</definition>
+        <argsstring>(std::shared_ptr&lt; BlockHeaderRepository &gt; header_repo, std::shared_ptr&lt; BlockStorage &gt; storage, std::shared_ptr&lt; TreeNode &gt; tree, std::shared_ptr&lt; TreeMeta &gt; meta, std::shared_ptr&lt; network::ExtrinsicObserver &gt; extrinsic_observer, std::shared_ptr&lt; crypto::Hasher &gt; hasher)</argsstring>
+        <name>BlockTreeImpl</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::BlockTreeImpl</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository" kindref="compound">BlockHeaderRepository</ref> &gt;</type>
+          <declname>header_repo</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="de/de8/classsgns_1_1blockchain_1_1_block_storage" kindref="compound">BlockStorage</ref> &gt;</type>
+          <declname>storage</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node" kindref="compound">TreeNode</ref> &gt;</type>
+          <declname>tree</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d8/d08/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_meta" kindref="compound">TreeMeta</ref> &gt;</type>
+          <declname>meta</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; network::ExtrinsicObserver &gt;</type>
+          <declname>extrinsic_observer</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher" kindref="compound">crypto::Hasher</ref> &gt;</type>
+          <declname>hasher</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Private constructor, so that instances are created only through the factory method </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="159" column="5" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="129" bodyend="141"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a994f36ca459de5cf48666914407d1ff9" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &gt;</type>
+        <definition>outcome::result&lt; primitives::BlockHash &gt; sgns::blockchain::BlockTreeImpl::walkBackUntilLess</definition>
+        <argsstring>(const primitives::BlockHash &amp;start, const primitives::BlockNumber &amp;limit) const</argsstring>
+        <name>walkBackUntilLess</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::walkBackUntilLess</qualifiedname>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &amp;</type>
+          <declname>start</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref> &amp;</type>
+          <declname>limit</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Walks the chain backwards starting from<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>start</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>until the current block number is less or equal than</para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>limit</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="171" column="21" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="494" bodyend="505"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a59f9dfbe13ddcaa26d1ba8f51c5baa2a" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &gt;</type>
+        <definition>std::vector&lt; primitives::BlockHash &gt; sgns::blockchain::BlockTreeImpl::getLeavesSorted</definition>
+        <argsstring>() const</argsstring>
+        <name>getLeavesSorted</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::getLeavesSorted</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>the tree leaves sorted by their depth </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="178" column="17" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="472" bodyend="492"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a946ebe3f1c5ee2778305945cd9a4e72c" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::blockchain::BlockTreeImpl::prune</definition>
+        <argsstring>(std::shared_ptr&lt; TreeNode &gt; lastFinalizedNode)</argsstring>
+        <name>prune</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::prune</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node" kindref="compound">TreeNode</ref> &gt;</type>
+          <declname>lastFinalizedNode</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="185" column="21" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="507" bodyend="571"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a748c34b3450ba1632913d8ca40dd4aed" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::blockchain::BlockTreeImpl::collectDescendants</definition>
+        <argsstring>(std::shared_ptr&lt; TreeNode &gt; node, std::vector&lt; std::pair&lt; primitives::BlockHash, primitives::BlockNumber &gt; &gt; &amp;container)</argsstring>
+        <name>collectDescendants</name>
+        <qualifiedname>sgns::blockchain::BlockTreeImpl::collectDescendants</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node" kindref="compound">TreeNode</ref> &gt;</type>
+          <declname>node</declname>
+        </param>
+        <param>
+          <type>std::vector&lt; std::pair&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref>, <ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref> &gt; &gt; &amp;</type>
+          <declname>container</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/block_tree_impl.hpp" line="180" column="17" bodyfile="src/blockchain/impl/block_tree_impl.cpp" bodystart="573" bodyend="588"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Block tree implementation </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="2">
+        <label>sgns::blockchain::BlockTree</label>
+        <link refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::blockchain::BlockTreeImpl</label>
+        <link refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="24">
+        <label>K</label>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="15">
+        <label>sgns::base::Blob&lt; size_ &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="14" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>sgns::base::Blob&lt; 32 &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="14" relation="public-inheritance">
+        </childnode>
+        <childnode refid="15" relation="template-instance">
+          <edgelabel>&lt; 32 &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::blockchain::BlockHeaderRepository</label>
+        <link refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::blockchain::BlockStorage</label>
+        <link refid="de/de8/classsgns_1_1blockchain_1_1_block_storage"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::blockchain::BlockTree</label>
+        <link refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::blockchain::BlockTreeImpl</label>
+        <link refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-header_repo_</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-storage_</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>-tree_</edgelabel>
+        </childnode>
+        <childnode refid="20" relation="usage">
+          <edgelabel>-tree_meta_</edgelabel>
+        </childnode>
+        <childnode refid="25" relation="usage">
+          <edgelabel>-extrinsic_observer_</edgelabel>
+        </childnode>
+        <childnode refid="26" relation="usage">
+          <edgelabel>-hasher_</edgelabel>
+        </childnode>
+        <childnode refid="28" relation="usage">
+          <edgelabel>-log_</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>sgns::blockchain::BlockTreeImpl::TreeMeta</label>
+        <link refid="d8/d08/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_meta"/>
+        <childnode refid="22" relation="usage">
+          <edgelabel>+leaves</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::blockchain::BlockTreeImpl::TreeNode</label>
+        <link refid="da/db0/structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node"/>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+        <childnode refid="13" relation="usage">
+          <edgelabel>+block_hash</edgelabel>
+        </childnode>
+        <childnode refid="16" relation="usage">
+          <edgelabel>+parent</edgelabel>
+        </childnode>
+        <childnode refid="18" relation="usage">
+          <edgelabel>+children</edgelabel>
+        </childnode>
+      </node>
+      <node id="27">
+        <label>sgns::crypto::Hasher</label>
+        <link refid="dd/d14/classsgns_1_1crypto_1_1_hasher"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::enable_shared_from_this&lt; TreeNode &gt;</label>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="25">
+        <label>std::shared_ptr&lt; network::ExtrinsicObserver &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; network::ExtrinsicObserver &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::shared_ptr&lt; sgns::blockchain::BlockHeaderRepository &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::blockchain::BlockHeaderRepository &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; sgns::blockchain::BlockStorage &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::blockchain::BlockStorage &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="20">
+        <label>std::shared_ptr&lt; sgns::blockchain::BlockTreeImpl::TreeMeta &gt;</label>
+        <childnode refid="21" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::blockchain::BlockTreeImpl::TreeMeta &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::shared_ptr&lt; sgns::blockchain::BlockTreeImpl::TreeNode &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::blockchain::BlockTreeImpl::TreeNode &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="26">
+        <label>std::shared_ptr&lt; sgns::crypto::Hasher &gt;</label>
+        <childnode refid="27" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::crypto::Hasher &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="28">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="23">
+        <label>std::unordered_set&lt; K &gt;</label>
+        <childnode refid="24" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+      </node>
+      <node id="22">
+        <label>std::unordered_set&lt; sgns::base::Blob&lt; 32 &gt; &gt;</label>
+        <childnode refid="13" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="23" relation="template-instance">
+          <edgelabel>&lt; sgns::base::Blob&lt; 32 &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="19">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="18">
+        <label>std::vector&lt; std::shared_ptr&lt; sgns::blockchain::BlockTreeImpl::TreeNode &gt; &gt;</label>
+        <childnode refid="10" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="19" relation="template-instance">
+          <edgelabel>&lt; std::shared_ptr&lt; sgns::blockchain::BlockTreeImpl::TreeNode &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>std::weak_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>std::weak_ptr&lt; sgns::blockchain::BlockTreeImpl::TreeNode &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="17" relation="template-instance">
+          <edgelabel>&lt; sgns::blockchain::BlockTreeImpl::TreeNode &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/blockchain/impl/block_tree_impl.hpp" line="21" column="3" bodyfile="src/blockchain/impl/block_tree_impl.hpp" bodystart="21" bodyend="197"/>
+    <listofallmembers>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a5b66330ea7c74df660ce8c2049a91c94" prot="public" virt="virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>addBlock</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a65c2869d8af2327e0ac560ad07e62744" prot="public" virt="virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>addBlockBody</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a5a4371df62d1c733f0af98a07a4bc73f" prot="public" virt="virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>addBlockHeader</name></member>
+      <member refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a765cf26a45f6e35ae89433ec03950598" prot="public" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>BlockHashVecRes</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a130c11f60a0cdf566599eb603528d83b" prot="private" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>BlockTreeImpl</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a748c34b3450ba1632913d8ca40dd4aed" prot="private" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>collectDescendants</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ab4ccd8c906458cf70057d85a4369275e" prot="public" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>create</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ac9dcc6ddf01fc4d2c1e3f1db05732206" prot="public" virt="virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>deepestLeaf</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8ba1c02537df0d489c703d99b591540d" prot="public" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>Error</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8b335c4e7db9284cbeb7178973ada372" prot="private" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>extrinsic_observer_</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a428e55f848151e6388f7059a9e14bc46" prot="public" virt="virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>finalize</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a81e8f51be0a2e106f763190802799856" prot="public" virt="virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>getBestContaining</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a5f601ee0894453e0c9731e61569ae98e" prot="public" virt="virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>getBlockBody</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a68055b7ff5a02eb1f0f59ff2a21a4394" prot="public" virt="virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>getBlockHeader</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a598c61a39e7ad54d3c0360d28082728a" prot="public" virt="virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>getBlockJustification</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1aa3ed4914e2bdad991421f883eacf16d6" prot="public" virt="virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>getChainByBlock</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a2592b54b6d9f3e36694d8cfb4b22ab50" prot="public" virt="virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>getChainByBlock</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a78448c2f4d9377dbdcad1f7ba7e16369" prot="public" virt="virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>getChainByBlocks</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a5fbed4ef10d612419e8f7b21ca0ef78c" prot="public" virt="virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>getChildren</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ae0ea178c9da34930aa3f87da11a93454" prot="public" virt="virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>getLastFinalized</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1aa2646adb223b5f66921908d15a9279f1" prot="public" virt="virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>getLeaves</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a59f9dfbe13ddcaa26d1ba8f51c5baa2a" prot="private" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>getLeavesSorted</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ab82d0c098bb2fc25db7786428c0bd206" prot="public" virt="virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>GetName</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a8cc8665f7cda769b42b7cff134e49969" prot="public" virt="virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>hasDirectChain</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1af5233012d9d66515c80de263ed407e60" prot="private" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>hasher_</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1af00c1a9d4d2fa2daae5e099869b4f76a" prot="private" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>header_repo_</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ac01762f2f08ae227b22c9153417473c5" prot="private" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>log_</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ac731650c2ca641c5dca55875a8f08ec8" prot="public" virt="virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>longestPath</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a946ebe3f1c5ee2778305945cd9a4e72c" prot="private" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>prune</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a71d688c45a8d8b1d15722c54695e74f4" prot="private" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>storage_</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ae341f4ab784051033113919797d3da78" prot="private" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>tree_</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a90c5232c60f48c41c9bb552c6fad5042" prot="private" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>tree_meta_</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a994f36ca459de5cf48666914407d1ff9" prot="private" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>walkBackUntilLess</name></member>
+      <member refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree_1a6af0e544b742376fdced5bfc0fcb16d1" prot="public" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>~BlockTree</name></member>
+      <member refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1a62962015fbc4601258a2515cd00b93d2" prot="public" virt="non-virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>~BlockTreeImpl</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::blockchain::BlockTreeImpl</scope><name>~IComponent</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

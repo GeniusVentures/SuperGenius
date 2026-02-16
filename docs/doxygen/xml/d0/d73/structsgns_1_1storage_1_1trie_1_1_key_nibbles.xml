@@ -1,0 +1,242 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::storage::trie::KeyNibbles</compoundname>
+    <basecompoundref refid="de/dd5/classsgns_1_1base_1_1_buffer" prot="public" virt="non-virtual">sgns::base::Buffer</basecompoundref>
+    <includes refid="d0/d2c/supergenius__node_8hpp" local="no">supergenius_node.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles_1a5548e35fc3c9c4381c952ff830bc1c69" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::KeyNibbles::KeyNibbles</definition>
+        <argsstring>()=default</argsstring>
+        <name>KeyNibbles</name>
+        <qualifiedname>sgns::storage::trie::KeyNibbles::KeyNibbles</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="14" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles_1ac30be697784f462e6dc5e85133b5f4dd" prot="public" static="no" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::KeyNibbles::KeyNibbles</definition>
+        <argsstring>(base::Buffer b)</argsstring>
+        <name>KeyNibbles</name>
+        <qualifiedname>sgns::storage::trie::KeyNibbles::KeyNibbles</qualifiedname>
+        <param>
+          <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="16" column="14" bodyfile="src/storage/trie/supergenius_trie/supergenius_node.hpp" bodystart="16" bodyend="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles_1a9d16339695fcbdac3f2025623d38e633" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::KeyNibbles::KeyNibbles</definition>
+        <argsstring>(std::initializer_list&lt; uint8_t &gt; b)</argsstring>
+        <name>KeyNibbles</name>
+        <qualifiedname>sgns::storage::trie::KeyNibbles::KeyNibbles</qualifiedname>
+        <param>
+          <type>std::initializer_list&lt; uint8_t &gt;</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="17" column="5" bodyfile="src/storage/trie/supergenius_trie/supergenius_node.hpp" bodystart="17" bodyend="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles_1a8cdeaff28e4a0235fc323bfa3bdfbcf3" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles_1a5548e35fc3c9c4381c952ff830bc1c69" kindref="member">KeyNibbles</ref> &amp;</type>
+        <definition>KeyNibbles &amp; sgns::storage::trie::KeyNibbles::operator=</definition>
+        <argsstring>(base::Buffer b)</argsstring>
+        <name>operator=</name>
+        <qualifiedname>sgns::storage::trie::KeyNibbles::operator=</qualifiedname>
+        <param>
+          <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="20" column="16" bodyfile="src/storage/trie/supergenius_trie/supergenius_node.hpp" bodystart="20" bodyend="23"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles_1ad28aef1606e1af1b7724959dc8f4202f" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles_1a5548e35fc3c9c4381c952ff830bc1c69" kindref="member">KeyNibbles</ref></type>
+        <definition>KeyNibbles sgns::storage::trie::KeyNibbles::subspan</definition>
+        <argsstring>(size_t offset=0, size_t length=-1) const</argsstring>
+        <name>subspan</name>
+        <qualifiedname>sgns::storage::trie::KeyNibbles::subspan</qualifiedname>
+        <param>
+          <type>size_t</type>
+          <declname>offset</declname>
+          <defval>0</defval>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>length</declname>
+          <defval>-1</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="25" column="16" bodyfile="src/storage/trie/supergenius_trie/supergenius_node.hpp" bodystart="25" bodyend="27"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>boost::equality_comparable&lt; Buffer &gt;</label>
+      </node>
+      <node id="4">
+        <label>boost::equality_comparable&lt; gsl::span&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="5">
+        <label>boost::equality_comparable&lt; std::vector&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="2">
+        <label>sgns::base::Buffer</label>
+        <link refid="de/dd5/classsgns_1_1base_1_1_buffer"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::KeyNibbles</label>
+        <link refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="8">
+        <label>T</label>
+      </node>
+      <node id="3">
+        <label>boost::equality_comparable&lt; Buffer &gt;</label>
+      </node>
+      <node id="4">
+        <label>boost::equality_comparable&lt; gsl::span&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="5">
+        <label>boost::equality_comparable&lt; std::vector&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="2">
+        <label>sgns::base::Buffer</label>
+        <link refid="de/dd5/classsgns_1_1base_1_1_buffer"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::KeyNibbles</label>
+        <link refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::vector&lt; uint8_t &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="13" column="3" bodyfile="src/storage/trie/supergenius_trie/supergenius_node.hpp" bodystart="13" bodyend="28"/>
+    <listofallmembers>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a698c67bc1af015482347122655533d89" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>begin</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1ac696beb6c3a9034631df622a7b5a275d" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>begin</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a5879783576320423620c7bc68c1fe673" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>Buffer</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1aeff4c03269381af4bc2cccdf32a1efe8" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>Buffer</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1ae619f12af508d462aeec54d64658dc93" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>Buffer</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a0edbf565537295e2851187e52a25cf96" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>Buffer</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a28845bbd6344d554b42c2141105f8f6c" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>Buffer</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1aa6b57d73af242ec79a8d8faae7649961" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>Buffer</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a362aea48a03704c868cf80fc4d9f3ff7" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>Buffer</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a16cb37d2e6ef1747d98fd11b4be563ca" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>Buffer</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1ac87efbe0dbdfb2c14a0ed84703f5606e" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>clear</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a09d46fccb30e35520c42851347396fb3" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>const_iterator</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1ade53b18a14b9f9ff66b8165cc46831ac" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>const_pointer</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a145be12c21a8988be5aebedc341d38a1" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>const_reverse_iterator</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1abfeab78c054d64ddbddb3a991f71cbb4" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>data</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a3ba5454a85a24714ecb718a0bf069210" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>data</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a75f31579631c16fee86ce6b3ad228fca" prot="private" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>data_</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a96181fe5cdc82b680a02eac9a8267673" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>empty</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a933c2c5fb7c727505051cc58bd9c3561" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>end</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a1b4131ee05e3ec5c2bf14c35b6759e30" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>end</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1abf03ac74ff0c37968afc5d40493f8f28" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>fromHex</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1afb1a0d71cf9b90993db927ccdd0566a5" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>iterator</name></member>
+      <member refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles_1a5548e35fc3c9c4381c952ff830bc1c69" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>KeyNibbles</name></member>
+      <member refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles_1ac30be697784f462e6dc5e85133b5f4dd" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>KeyNibbles</name></member>
+      <member refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles_1a9d16339695fcbdac3f2025623d38e633" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>KeyNibbles</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a38c4f8ad8ca09da2974e3635092c9fca" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>operator+=</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a160f6ad39a55b7ae37b2f195a51774db" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>operator&lt;</name></member>
+      <member refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles_1a8cdeaff28e4a0235fc323bfa3bdfbcf3" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>operator=</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a8058d1947a52d3ed0e9570034f7279f1" prot="public" virt="non-virtual" ambiguityscope="sgns::base::Buffer::"><scope>sgns::storage::trie::KeyNibbles</scope><name>operator=</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a45781954a20af7acb475c60850b36a0a" prot="public" virt="non-virtual" ambiguityscope="sgns::base::Buffer::"><scope>sgns::storage::trie::KeyNibbles</scope><name>operator=</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a5991be8b16e06483d0aa5dc26699d6ce" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>operator==</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a9c5398431ade7505db11ad777760a25d" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>operator==</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a905612a1ebd279f0147e12fc1031cc53" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>operator==</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a7f1cf80e32f5d48d339a69e021d85fa1" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>operator[]</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1aca89d603be6b9c0056a4db5dd099e090" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>operator[]</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a5c90b67809719fc9320dd701f5949661" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>pointer</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1aa14bc6509f455ff998bf71083e665b01" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>put</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a73bb9783143f9398b9a7610606022c92" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>put</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a4ee57ff9166bac5be93e2a7973fac541" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>put</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a2c65acb58c6971bc199593ab9a15c37c" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>putBuffer</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1aaa4fb1728868056092e3d31e16eef821" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>putBytes</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1ac9a2f10803816cbd3899fccabaf65a81" prot="private" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>putRange</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1ad988ec8c0af7e2d107306cee2a8660df" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>putUint32</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a7490684f4416b9c4eac63351efd66013" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>putUint64</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a53abe391128d07bdf53fbe8ecfa2667a" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>putUint8</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a71acf960b59bf5c5bfc9b153f67fbe32" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>rbegin</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a24865e1b81c2d4f04d8b2dd67d6c88f6" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>rbegin</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a79250cf4f52e249b55113b7c08c61c6c" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>rend</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a230801c18496a5646ec16dfd1b703e47" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>rend</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1ad2afa1f5006c6d5b25f61df0b4632b83" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>reserve</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a20478514f0aa87bed284a9d02bee612c" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>resize</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a3b38a736efcc3324631393249ef54ffb" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>reverse_iterator</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a77edb688fb1bff45a612ee6f03c6bda8" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>size</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1ae18f000222d470ca6ec9872f11f9b7ef" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>subbuffer</name></member>
+      <member refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles_1ad28aef1606e1af1b7724959dc8f4202f" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>subspan</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1aaa5a478465865d5711b3a3789daabd33" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>toHex</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a88a9d3022f2578e23b964711077641ef" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>toString</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a90e41ce39977903170d693c11a56ac12" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>toVector</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1acddcfd4c4de0c7464318120a4c8ec24a" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>toVector</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1ad6e7e712590184dd552b0086baab94ce" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>value_type</name></member>
+      <member refid="de/dd5/classsgns_1_1base_1_1_buffer_1a16879f0879897879a3f74de6eeb284b7" prot="public" virt="non-virtual"><scope>sgns::storage::trie::KeyNibbles</scope><name>~Buffer</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

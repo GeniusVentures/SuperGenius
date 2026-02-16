@@ -1,0 +1,711 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/d45/authority_8hpp" kind="file" language="C++">
+    <compoundname>authority.hpp</compoundname>
+    <includes local="no">cstdint</includes>
+    <includes refid="d4/de0/session__key_8hpp" local="yes">primitives/session_key.hpp</includes>
+    <includedby refid="d6/d2c/production__configuration_8hpp" local="yes">src/primitives/production_configuration.hpp</includedby>
+    <includedby refid="d7/d5f/scheduled__change_8hpp" local="yes">src/primitives/scheduled_change.hpp</includedby>
+    <includedby refid="dc/def/finality__api__impl_8cpp" local="yes">src/runtime/binaryen/runtime_api/finality_api_impl.cpp</includedby>
+    <includedby refid="da/d47/core_8hpp" local="yes">src/runtime/core.hpp</includedby>
+    <includedby refid="d7/d22/finality__api_8hpp" local="yes">src/runtime/finality_api.hpp</includedby>
+    <incdepgraph>
+      <node id="4">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/primitives/authority.hpp</label>
+        <link refid="d2/d45/authority_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>primitives/session_key.hpp</label>
+        <link refid="d4/de0/session__key_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>array</label>
+      </node>
+      <node id="7">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="5">
+        <label>cstddef</label>
+      </node>
+      <node id="2">
+        <label>cstdint</label>
+      </node>
+      <node id="11">
+        <label>gsl/span</label>
+      </node>
+      <node id="14">
+        <label>iostream</label>
+      </node>
+      <node id="13">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="9">
+        <label>string_view</label>
+      </node>
+      <node id="10">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="9">
+        <label>src/blockchain/block_header_repository.hpp</label>
+        <link refid="d6/d4c/block__header__repository_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>src/blockchain/block_storage.hpp</label>
+        <link refid="d4/d5d/block__storage_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>src/blockchain/block_tree.hpp</label>
+        <link refid="d2/d0a/block__tree_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>src/blockchain/impl/block_header_repository.cpp</label>
+        <link refid="df/d2c/block__header__repository_8cpp"/>
+      </node>
+      <node id="12">
+        <label>src/blockchain/impl/block_tree_impl.cpp</label>
+        <link refid="d5/df4/block__tree__impl_8cpp"/>
+      </node>
+      <node id="11">
+        <label>src/blockchain/impl/block_tree_impl.hpp</label>
+        <link refid="d7/d87/block__tree__impl_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>src/blockchain/impl/key_value_block_header_repository.cpp</label>
+        <link refid="de/d1b/key__value__block__header__repository_8cpp"/>
+      </node>
+      <node id="13">
+        <label>src/blockchain/impl/key_value_block_header_repository.hpp</label>
+        <link refid="dd/dc6/key__value__block__header__repository_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>src/blockchain/impl/key_value_block_storage.cpp</label>
+        <link refid="de/de9/key__value__block__storage_8cpp"/>
+      </node>
+      <node id="15">
+        <label>src/blockchain/impl/key_value_block_storage.hpp</label>
+        <link refid="d4/d6b/key__value__block__storage_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/primitives/authority.hpp</label>
+        <link refid="d2/d45/authority_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>src/primitives/block.hpp</label>
+        <link refid="d9/db2/block_8hpp"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>src/primitives/block_data.hpp</label>
+        <link refid="d1/dce/block__data_8hpp"/>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>src/primitives/block_header.hpp</label>
+        <link refid="d7/d72/block__header_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>src/primitives/digest.hpp</label>
+        <link refid="df/dbf/digest_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>src/primitives/production_configuration.hpp</label>
+        <link refid="d6/d2c/production__configuration_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>src/primitives/scheduled_change.hpp</label>
+        <link refid="d7/d5f/scheduled__change_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.cpp</label>
+        <link refid="d7/d6b/block__builder__impl_8cpp"/>
+      </node>
+      <node id="25">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.hpp</label>
+        <link refid="d3/d95/block__builder__impl_8hpp"/>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.cpp</label>
+        <link refid="de/d5e/core__factory__impl_8cpp"/>
+      </node>
+      <node id="29">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.hpp</label>
+        <link refid="d7/de4/core__factory__impl_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>src/runtime/binaryen/runtime_api/core_impl.cpp</label>
+        <link refid="dc/d7c/core__impl_8cpp"/>
+      </node>
+      <node id="17">
+        <label>src/runtime/binaryen/runtime_api/core_impl.hpp</label>
+        <link refid="d7/dbc/core__impl_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.cpp</label>
+        <link refid="dc/def/finality__api__impl_8cpp"/>
+      </node>
+      <node id="31">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.hpp</label>
+        <link refid="db/dad/finality__api__impl_8hpp"/>
+        <childnode refid="32" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.cpp</label>
+        <link refid="d3/d02/production__api__impl_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.hpp</label>
+        <link refid="d1/d6a/production__api__impl_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>src/runtime/block_builder.hpp</label>
+        <link refid="d7/d89/block__builder_8hpp"/>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>src/runtime/core.hpp</label>
+        <link refid="da/d47/core_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>src/runtime/core_factory.hpp</label>
+        <link refid="da/d13/core__factory_8hpp"/>
+        <childnode refid="29" relation="include">
+        </childnode>
+      </node>
+      <node id="34">
+        <label>src/runtime/dummy/finality_api_dummy.cpp</label>
+        <link refid="d0/d07/finality__api__dummy_8cpp"/>
+      </node>
+      <node id="33">
+        <label>src/runtime/dummy/finality_api_dummy.hpp</label>
+        <link refid="d5/d14/finality__api__dummy_8hpp"/>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>src/runtime/finality_api.hpp</label>
+        <link refid="d7/d22/finality__api_8hpp"/>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>src/runtime/production_api.hpp</label>
+        <link refid="d8/dec/production__api_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" prot="public">sgns::primitives::AuthorityId</innerclass>
+    <innerclass refid="db/dff/structsgns_1_1primitives_1_1_authority" prot="public">sgns::primitives::Authority</innerclass>
+    <innerclass refid="d6/d76/structsgns_1_1primitives_1_1_authority_list" prot="public">sgns::primitives::AuthorityList</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="dd/dc5/namespacesgns_1_1primitives">sgns::primitives</innernamespace>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a76ed3e049cb541757b4d386684854111" prot="public" static="no">
+        <type>uint64_t</type>
+        <definition>using sgns::primitives::AuthorityWeight = uint64_t</definition>
+        <argsstring></argsstring>
+        <name>AuthorityWeight</name>
+        <qualifiedname>sgns::primitives::AuthorityWeight</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/authority.hpp" line="10" column="3" bodyfile="src/primitives/authority.hpp" bodystart="10" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc5/namespacesgns_1_1primitives_1a2b73f06e6dcbc9302a94f7a9c6ed58e5" prot="public" static="no">
+        <type>uint64_t</type>
+        <definition>using sgns::primitives::AuthorityIndex = uint64_t</definition>
+        <argsstring></argsstring>
+        <name>AuthorityIndex</name>
+        <qualifiedname>sgns::primitives::AuthorityIndex</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">Authority</ref> index </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/authority.hpp" line="41" column="3" bodyfile="src/primitives/authority.hpp" bodystart="41" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a415abc2388c20aa55f43d96cd3166d0e" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::primitives::operator&lt;</definition>
+        <argsstring>(const AuthorityId &amp;lhs, const AuthorityId &amp;rhs)</argsstring>
+        <name>operator&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;</qualifiedname>
+        <param>
+          <type>const AuthorityId &amp;</type>
+          <declname>lhs</declname>
+        </param>
+        <param>
+          <type>const AuthorityId &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/authority.hpp" line="34" column="10" bodyfile="src/primitives/authority.hpp" bodystart="34" bodyend="36"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1aadff018f17528e172827ed318122ce9b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const AuthorityId &amp;a)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const AuthorityId &amp;</type>
+          <declname>a</declname>
+        </param>
+        <briefdescription>
+<para>outputs object of type <ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">AuthorityId</ref> to stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>a</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to output </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/authority.hpp" line="73" column="3" bodyfile="src/primitives/authority.hpp" bodystart="73" bodyend="75"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1ac0030967cb04c52a721dac1c191a8916" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, AuthorityId &amp;a)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>AuthorityId &amp;</type>
+          <declname>a</declname>
+        </param>
+        <briefdescription>
+<para>decodes object of type <ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">AuthorityId</ref> from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>a</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to decode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/authority.hpp" line="86" column="10" bodyfile="src/primitives/authority.hpp" bodystart="86" bodyend="88"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a1f8f4f588dfbacafee3722ec9859515d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const Authority &amp;a)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const Authority &amp;</type>
+          <declname>a</declname>
+        </param>
+        <briefdescription>
+<para>outputs object of type <ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">Authority</ref> to stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>a</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to output </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/authority.hpp" line="99" column="3" bodyfile="src/primitives/authority.hpp" bodystart="99" bodyend="101"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/dc5/namespacesgns_1_1primitives_1a9f8331b1e0fb54631d5e6e71cf6159a0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, Authority &amp;a)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>Authority &amp;</type>
+          <declname>a</declname>
+        </param>
+        <briefdescription>
+<para>decodes object of type <ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">Authority</ref> from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>a</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to decode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/authority.hpp" line="112" column="10" bodyfile="src/primitives/authority.hpp" bodystart="112" bodyend="114"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_AUTHORITY_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_AUTHORITY_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstdint&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d4/de0/session__key_8hpp" kindref="compound">primitives/session_key.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="dd/dc5/namespacesgns_1_1primitives" kindref="compound">sgns::primitives</ref><sp/>{</highlight></codeline>
+<codeline lineno="10" refid="dd/dc5/namespacesgns_1_1primitives_1a76ed3e049cb541757b4d386684854111" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/dc5/namespacesgns_1_1primitives_1a76ed3e049cb541757b4d386684854111" kindref="member">AuthorityWeight</ref><sp/>=<sp/>uint64_t;</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="15" refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">AuthorityId</ref><sp/>{</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>TODO(kamilsa):<sp/>id<sp/>types<sp/>should<sp/>be<sp/>different<sp/>for<sp/>Production<sp/>and<sp/>Finality</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Authority<sp/>Ids</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18" refid="db/d9a/structsgns_1_1primitives_1_1_authority_id_1a143d23a6b511f85a8fc3cb8b6b19d491" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1ad392b4e4cac3ce9aea0bd7386ed8d7d9" kindref="member">SessionKey</ref><sp/><ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id_1a143d23a6b511f85a8fc3cb8b6b19d491" kindref="member">id</ref>;</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20" refid="db/d9a/structsgns_1_1primitives_1_1_authority_id_1af16f1ef173c84e859318410ec1a16481" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id_1af16f1ef173c84e859318410ec1a16481" kindref="member">operator==</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">AuthorityId</ref><sp/>&amp;other)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">id</highlight><highlight class="normal"><sp/>==<sp/>other.<ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id_1a143d23a6b511f85a8fc3cb8b6b19d491" kindref="member">id</ref>;</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="23" refid="db/d9a/structsgns_1_1primitives_1_1_authority_id_1a4294115f79d3dd5fb14921f00da18e7b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id_1a4294115f79d3dd5fb14921f00da18e7b" kindref="member">operator!=</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">AuthorityId</ref><sp/>&amp;other)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>!(*</highlight><highlight class="keyword">this</highlight><highlight class="normal"><sp/>==<sp/>other);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//added<sp/>by<sp/>Jin<sp/>to<sp/>fix<sp/>link<sp/>error<sp/>in<sp/>test</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="27" refid="db/d9a/structsgns_1_1primitives_1_1_authority_id_1a64f4623cd321eaf254ea58b258ed7c4b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">friend</highlight><highlight class="normal"><sp/>std::ostream<sp/>&amp;<ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id_1a64f4623cd321eaf254ea58b258ed7c4b" kindref="member">operator&lt;&lt;</ref>(std::ostream<sp/>&amp;out,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">AuthorityId</ref><sp/>&amp;a)</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>out<sp/>&lt;&lt;<sp/>a.<ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id_1a143d23a6b511f85a8fc3cb8b6b19d491" kindref="member">id</ref>;<sp/></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//end</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight></codeline>
+<codeline lineno="34" refid="dd/dc5/namespacesgns_1_1primitives_1a415abc2388c20aa55f43d96cd3166d0e" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a415abc2388c20aa55f43d96cd3166d0e" kindref="member">operator&lt;</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">AuthorityId</ref><sp/>&amp;lhs,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">AuthorityId</ref><sp/>&amp;rhs)<sp/>{</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>lhs.<ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id_1a143d23a6b511f85a8fc3cb8b6b19d491" kindref="member">id</ref><sp/>&lt;<sp/>rhs.<ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id_1a143d23a6b511f85a8fc3cb8b6b19d491" kindref="member">id</ref>;</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41" refid="dd/dc5/namespacesgns_1_1primitives_1a2b73f06e6dcbc9302a94f7a9c6ed58e5" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/dc5/namespacesgns_1_1primitives_1a2b73f06e6dcbc9302a94f7a9c6ed58e5" kindref="member">AuthorityIndex</ref><sp/>=<sp/>uint64_t;</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46" refid="db/dff/structsgns_1_1primitives_1_1_authority" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">Authority</ref><sp/>{</highlight></codeline>
+<codeline lineno="47" refid="db/dff/structsgns_1_1primitives_1_1_authority_1a53f1faca5b041167a39f04c85178f971" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">AuthorityId</ref><sp/><ref refid="db/dff/structsgns_1_1primitives_1_1_authority_1a53f1faca5b041167a39f04c85178f971" kindref="member">id</ref>;</highlight></codeline>
+<codeline lineno="48" refid="db/dff/structsgns_1_1primitives_1_1_authority_1a0a6bbe7baef69791f3dccd0d17d47f94" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a76ed3e049cb541757b4d386684854111" kindref="member">AuthorityWeight</ref><sp/><ref refid="db/dff/structsgns_1_1primitives_1_1_authority_1a0a6bbe7baef69791f3dccd0d17d47f94" kindref="member">weight</ref>{};</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight></codeline>
+<codeline lineno="50" refid="db/dff/structsgns_1_1primitives_1_1_authority_1a9ee4ae662872d2a330df945b9d54cd66" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="db/dff/structsgns_1_1primitives_1_1_authority_1a9ee4ae662872d2a330df945b9d54cd66" kindref="member">operator==</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">Authority</ref><sp/>&amp;other)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">id</highlight><highlight class="normal"><sp/>==<sp/>other.<ref refid="db/dff/structsgns_1_1primitives_1_1_authority_1a53f1faca5b041167a39f04c85178f971" kindref="member">id</ref><sp/>&amp;&amp;<sp/><ref refid="db/dff/structsgns_1_1primitives_1_1_authority_1a0a6bbe7baef69791f3dccd0d17d47f94" kindref="member">weight</ref><sp/>==<sp/>other.<ref refid="db/dff/structsgns_1_1primitives_1_1_authority_1a0a6bbe7baef69791f3dccd0d17d47f94" kindref="member">weight</ref>;</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="53" refid="db/dff/structsgns_1_1primitives_1_1_authority_1ac12df1b4c1998d83bfa251947f2719df" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="db/dff/structsgns_1_1primitives_1_1_authority_1ac12df1b4c1998d83bfa251947f2719df" kindref="member">operator!=</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">Authority</ref><sp/>&amp;other)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>!(*</highlight><highlight class="keyword">this</highlight><highlight class="normal"><sp/>==<sp/>other);</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//added<sp/>to<sp/>fix<sp/>link<sp/>errors</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="57" refid="db/dff/structsgns_1_1primitives_1_1_authority_1adcc981b058cdefcbc70fa443c16bb8cc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">friend</highlight><highlight class="normal"><sp/>std::ostream<sp/>&amp;<ref refid="db/dff/structsgns_1_1primitives_1_1_authority_1adcc981b058cdefcbc70fa443c16bb8cc" kindref="member">operator&lt;&lt;</ref>(std::ostream<sp/>&amp;out,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">Authority</ref><sp/>&amp;test_struct)</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>out<sp/>&lt;&lt;<sp/>test_struct.<ref refid="db/dff/structsgns_1_1primitives_1_1_authority_1a53f1faca5b041167a39f04c85178f971" kindref="member">id</ref>;</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//end</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"></highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">Stream,</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>=<sp/>std::enable_if_t&lt;Stream::is_encoder_stream&gt;&gt;</highlight></codeline>
+<codeline lineno="73" refid="dd/dc5/namespacesgns_1_1primitives_1aadff018f17528e172827ed318122ce9b" refkind="member"><highlight class="normal"><sp/><sp/>Stream<sp/>&amp;<ref refid="dd/dc5/namespacesgns_1_1primitives_1a60571c20c9fe5915a01bdc54c907fb2a" kindref="member">operator&lt;&lt;</ref>(Stream<sp/>&amp;s,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">AuthorityId</ref><sp/>&amp;a)<sp/>{</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>s<sp/>&lt;&lt;<sp/>a.<ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id_1a143d23a6b511f85a8fc3cb8b6b19d491" kindref="member">id</ref>;</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"></highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">Stream,</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>=<sp/>std::enable_if_t&lt;Stream::is_decoder_stream&gt;&gt;</highlight></codeline>
+<codeline lineno="86" refid="dd/dc5/namespacesgns_1_1primitives_1ac0030967cb04c52a721dac1c191a8916" refkind="member"><highlight class="normal"><sp/><sp/>Stream<sp/>&amp;<ref refid="dd/dc5/namespacesgns_1_1primitives_1ad81f5c71cc280996afab56bb8b0a452c" kindref="member">operator&gt;&gt;</ref>(Stream<sp/>&amp;s,<sp/><ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id" kindref="compound">AuthorityId</ref><sp/>&amp;a)<sp/>{</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>s<sp/>&gt;&gt;<sp/>a.<ref refid="db/d9a/structsgns_1_1primitives_1_1_authority_id_1a143d23a6b511f85a8fc3cb8b6b19d491" kindref="member">id</ref>;</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"></highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">Stream,</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>=<sp/>std::enable_if_t&lt;Stream::is_encoder_stream&gt;&gt;</highlight></codeline>
+<codeline lineno="99" refid="dd/dc5/namespacesgns_1_1primitives_1a1f8f4f588dfbacafee3722ec9859515d" refkind="member"><highlight class="normal"><sp/><sp/>Stream<sp/>&amp;<ref refid="dd/dc5/namespacesgns_1_1primitives_1a60571c20c9fe5915a01bdc54c907fb2a" kindref="member">operator&lt;&lt;</ref>(Stream<sp/>&amp;s,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">Authority</ref><sp/>&amp;a)<sp/>{</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>s<sp/>&lt;&lt;<sp/>a.<ref refid="db/dff/structsgns_1_1primitives_1_1_authority_1a53f1faca5b041167a39f04c85178f971" kindref="member">id</ref><sp/>&lt;&lt;<sp/>a.<ref refid="db/dff/structsgns_1_1primitives_1_1_authority_1a0a6bbe7baef69791f3dccd0d17d47f94" kindref="member">weight</ref>;</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"></highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">Stream,</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>=<sp/>std::enable_if_t&lt;Stream::is_decoder_stream&gt;&gt;</highlight></codeline>
+<codeline lineno="112" refid="dd/dc5/namespacesgns_1_1primitives_1a9f8331b1e0fb54631d5e6e71cf6159a0" refkind="member"><highlight class="normal"><sp/><sp/>Stream<sp/>&amp;<ref refid="dd/dc5/namespacesgns_1_1primitives_1ad81f5c71cc280996afab56bb8b0a452c" kindref="member">operator&gt;&gt;</ref>(Stream<sp/>&amp;s,<sp/><ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">Authority</ref><sp/>&amp;a)<sp/>{</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>s<sp/>&gt;&gt;<sp/>a.<ref refid="db/dff/structsgns_1_1primitives_1_1_authority_1a53f1faca5b041167a39f04c85178f971" kindref="member">id</ref><sp/>&gt;&gt;<sp/>a.<ref refid="db/dff/structsgns_1_1primitives_1_1_authority_1a0a6bbe7baef69791f3dccd0d17d47f94" kindref="member">weight</ref>;</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"></highlight></codeline>
+<codeline lineno="117" refid="d6/d76/structsgns_1_1primitives_1_1_authority_list" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="d6/d76/structsgns_1_1primitives_1_1_authority_list" kindref="compound">AuthorityList</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>std::vector&lt;Authority&gt;<sp/>{</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Attention:<sp/>When<sp/>adding<sp/>a<sp/>member,<sp/>we<sp/>need<sp/>to<sp/>ensure<sp/>correct</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>destruction<sp/>to<sp/>avoid<sp/>memory<sp/>leaks<sp/>or<sp/>any<sp/>other<sp/>problem</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">std::vector&lt;<ref refid="db/dff/structsgns_1_1primitives_1_1_authority" kindref="compound">Authority</ref>&gt;::vector;</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="122"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::primitives</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="123"><highlight class="normal"></highlight></codeline>
+<codeline lineno="124"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_AUTHORITY_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/primitives/authority.hpp"/>
+  </compounddef>
+</doxygen>

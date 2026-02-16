@@ -1,0 +1,83 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/dec/classsgns_1_1runtime_1_1_tagged_transaction_queue" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::runtime::TaggedTransactionQueue</compoundname>
+    <derivedcompoundref refid="d6/de7/classsgns_1_1runtime_1_1binaryen_1_1_tagged_transaction_queue_impl" prot="public" virt="non-virtual">sgns::runtime::binaryen::TaggedTransactionQueueImpl</derivedcompoundref>
+    <includes refid="d9/dcb/tagged__transaction__queue_8hpp" local="no">tagged_transaction_queue.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d2/dec/classsgns_1_1runtime_1_1_tagged_transaction_queue_1a340ea2c96e83fe4d49c43bfa97fe2716" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::runtime::TaggedTransactionQueue::~TaggedTransactionQueue</definition>
+        <argsstring>()=default</argsstring>
+        <name>~TaggedTransactionQueue</name>
+        <qualifiedname>sgns::runtime::TaggedTransactionQueue::~TaggedTransactionQueue</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/tagged_transaction_queue.hpp" line="17" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/dec/classsgns_1_1runtime_1_1_tagged_transaction_queue_1ad5d1711ba3a887eb90ee5b5577fea692" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1a9bb55b15560eee3089114cc1b52b30c6" kindref="member">primitives::TransactionValidity</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; primitives::TransactionValidity &gt; sgns::runtime::TaggedTransactionQueue::validate_transaction</definition>
+        <argsstring>(const primitives::Extrinsic &amp;ext)=0</argsstring>
+        <name>validate_transaction</name>
+        <qualifiedname>sgns::runtime::TaggedTransactionQueue::validate_transaction</qualifiedname>
+        <reimplementedby refid="d6/de7/classsgns_1_1runtime_1_1binaryen_1_1_tagged_transaction_queue_impl_1a00c95220296f065ad3fdc88e5741a377">validate_transaction</reimplementedby>
+        <param>
+          <type>const <ref refid="d2/d62/structsgns_1_1primitives_1_1_extrinsic" kindref="compound">primitives::Extrinsic</ref> &amp;</type>
+          <declname>ext</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Calls the TaggedTransactionQueue_validate_transaction function from wasm code <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>ext</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>extrinsic containing transaction to be validated </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>structure with information about transaction validity </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/tagged_transaction_queue.hpp" line="26" column="5"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Part of runtime API responsible for transaction validation </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::runtime::TaggedTransactionQueue</label>
+        <link refid="d2/dec/classsgns_1_1runtime_1_1_tagged_transaction_queue"/>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::binaryen::TaggedTransactionQueueImpl</label>
+        <link refid="d6/de7/classsgns_1_1runtime_1_1binaryen_1_1_tagged_transaction_queue_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::runtime::TaggedTransactionQueue</label>
+        <link refid="d2/dec/classsgns_1_1runtime_1_1_tagged_transaction_queue"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/tagged_transaction_queue.hpp" line="15" column="3" bodyfile="src/runtime/tagged_transaction_queue.hpp" bodystart="15" bodyend="27"/>
+    <listofallmembers>
+      <member refid="d2/dec/classsgns_1_1runtime_1_1_tagged_transaction_queue_1ad5d1711ba3a887eb90ee5b5577fea692" prot="public" virt="pure-virtual"><scope>sgns::runtime::TaggedTransactionQueue</scope><name>validate_transaction</name></member>
+      <member refid="d2/dec/classsgns_1_1runtime_1_1_tagged_transaction_queue_1a340ea2c96e83fe4d49c43bfa97fe2716" prot="public" virt="virtual"><scope>sgns::runtime::TaggedTransactionQueue</scope><name>~TaggedTransactionQueue</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,30 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_2b85916d314e49a6760a923b752c9952" kind="dir">
+    <compoundname>src/runtime/binaryen/runtime_api</compoundname>
+    <innerfile refid="d7/d6b/block__builder__impl_8cpp">block_builder_impl.cpp</innerfile>
+    <innerfile refid="d3/d95/block__builder__impl_8hpp">block_builder_impl.hpp</innerfile>
+    <innerfile refid="de/d5e/core__factory__impl_8cpp">core_factory_impl.cpp</innerfile>
+    <innerfile refid="d7/de4/core__factory__impl_8hpp">core_factory_impl.hpp</innerfile>
+    <innerfile refid="dc/d7c/core__impl_8cpp">core_impl.cpp</innerfile>
+    <innerfile refid="d7/dbc/core__impl_8hpp">core_impl.hpp</innerfile>
+    <innerfile refid="dc/def/finality__api__impl_8cpp">finality_api_impl.cpp</innerfile>
+    <innerfile refid="db/dad/finality__api__impl_8hpp">finality_api_impl.hpp</innerfile>
+    <innerfile refid="d0/dfc/metadata__impl_8cpp">metadata_impl.cpp</innerfile>
+    <innerfile refid="dc/dcf/metadata__impl_8hpp">metadata_impl.hpp</innerfile>
+    <innerfile refid="d3/d58/offchain__worker__impl_8cpp">offchain_worker_impl.cpp</innerfile>
+    <innerfile refid="dd/d03/offchain__worker__impl_8hpp">offchain_worker_impl.hpp</innerfile>
+    <innerfile refid="db/dae/parachain__host__impl_8cpp">parachain_host_impl.cpp</innerfile>
+    <innerfile refid="d6/d15/parachain__host__impl_8hpp">parachain_host_impl.hpp</innerfile>
+    <innerfile refid="d3/d02/production__api__impl_8cpp">production_api_impl.cpp</innerfile>
+    <innerfile refid="d1/d6a/production__api__impl_8hpp">production_api_impl.hpp</innerfile>
+    <innerfile refid="dd/d87/runtime__api_8hpp">runtime_api.hpp</innerfile>
+    <innerfile refid="db/d63/tagged__transaction__queue__impl_8cpp">tagged_transaction_queue_impl.cpp</innerfile>
+    <innerfile refid="d4/d66/tagged__transaction__queue__impl_8hpp">tagged_transaction_queue_impl.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/runtime/binaryen/runtime_api/"/>
+  </compounddef>
+</doxygen>

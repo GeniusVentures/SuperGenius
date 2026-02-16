@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_ed1257bb0a434f54075cc5c1cfe1a20f" kind="dir">
+    <compoundname>node</compoundname>
+    <innerfile refid="d5/df0/app__delegate_8cpp">app_delegate.cpp</innerfile>
+    <innerfile refid="d7/d49/app__delegate_8hpp">app_delegate.hpp</innerfile>
+    <innerfile refid="dd/d48/cli_8cpp">cli.cpp</innerfile>
+    <innerfile refid="d3/db5/cli_8hpp">cli.hpp</innerfile>
+    <innerfile refid="d9/df9/common_8cpp">common.cpp</innerfile>
+    <innerfile refid="da/d8d/node_2common_8hpp">common.hpp</innerfile>
+    <innerfile refid="da/d6c/daemonconfig_8cpp">daemonconfig.cpp</innerfile>
+    <innerfile refid="da/d4f/daemonconfig_8hpp">daemonconfig.hpp</innerfile>
+    <innerfile refid="d2/dd2/entry_8cpp">entry.cpp</innerfile>
+    <innerfile refid="da/d3b/ipfs__lite__store_8cpp">ipfs_lite_store.cpp</innerfile>
+    <innerfile refid="de/dc1/ipfs__lite__store_8h">ipfs_lite_store.h</innerfile>
+    <innerfile refid="de/d32/ipfs__lite__store_8hpp">ipfs_lite_store.hpp</innerfile>
+    <innerfile refid="dd/daf/logging_8cpp">logging.cpp</innerfile>
+    <innerfile refid="d0/da9/logging_8hpp">logging.hpp</innerfile>
+    <innerfile refid="dc/d8a/network_8cpp">network.cpp</innerfile>
+    <innerfile refid="d6/d67/network_8hpp">network.hpp</innerfile>
+    <innerfile refid="d7/d70/node_8cpp">node.cpp</innerfile>
+    <innerfile refid="dc/d78/node_2node_8hpp">node.hpp</innerfile>
+    <innerfile refid="d6/d64/node__config_8cpp">node_config.cpp</innerfile>
+    <innerfile refid="d5/d60/node__config_8hpp">node_config.hpp</innerfile>
+    <innerfile refid="da/d23/node__rpc__config_8cpp">node_rpc_config.cpp</innerfile>
+    <innerfile refid="d4/d08/node__rpc__config_8hpp">node_rpc_config.hpp</innerfile>
+    <innerfile refid="d7/de1/wallet_8cpp">wallet.cpp</innerfile>
+    <innerfile refid="d4/dc7/wallet_8hpp">wallet.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="node/"/>
+  </compounddef>
+</doxygen>

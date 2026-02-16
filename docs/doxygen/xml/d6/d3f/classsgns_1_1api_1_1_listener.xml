@@ -1,0 +1,244 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/d3f/classsgns_1_1api_1_1_listener" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::api::Listener</compoundname>
+    <basecompoundref refid="d1/dbf/class_i_component" prot="public" virt="non-virtual">IComponent</basecompoundref>
+    <derivedcompoundref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl" prot="public" virt="non-virtual">sgns::api::HttpListenerImpl</derivedcompoundref>
+    <derivedcompoundref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl" prot="public" virt="non-virtual">sgns::api::WsListenerImpl</derivedcompoundref>
+    <includes refid="df/d31/listener_8hpp" local="no">listener.hpp</includes>
+    <innerclass refid="d5/d93/structsgns_1_1api_1_1_listener_1_1_configuration" prot="public">sgns::api::Listener::Configuration</innerclass>
+    <sectiondef kind="protected-type">
+      <memberdef kind="typedef" id="d6/d3f/classsgns_1_1api_1_1_listener_1afe8587bdb42a214eb13ca6a0c4f7cb66" prot="protected" static="no">
+        <type>boost::asio::ip::tcp::acceptor</type>
+        <definition>using sgns::api::Listener::Acceptor = boost::asio::ip::tcp::acceptor</definition>
+        <argsstring></argsstring>
+        <name>Acceptor</name>
+        <qualifiedname>sgns::api::Listener::Acceptor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/listener.hpp" line="18" column="5" bodyfile="src/api/transport/listener.hpp" bodystart="18" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d6/d3f/classsgns_1_1api_1_1_listener_1a7e388013a06677841216e4f837a2345b" prot="protected" static="no">
+        <type>boost::asio::ip::tcp::endpoint</type>
+        <definition>using sgns::api::Listener::Endpoint = boost::asio::ip::tcp::endpoint</definition>
+        <argsstring></argsstring>
+        <name>Endpoint</name>
+        <qualifiedname>sgns::api::Listener::Endpoint</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/listener.hpp" line="19" column="5" bodyfile="src/api/transport/listener.hpp" bodystart="19" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d6/d3f/classsgns_1_1api_1_1_listener_1a46eee029b2ad2b539a0a22182adf9370" prot="protected" static="no">
+        <type>std::function&lt; void(const std::shared_ptr&lt; <ref refid="db/d02/classsgns_1_1api_1_1_session" kindref="compound">Session</ref> &gt; &amp;)&gt;</type>
+        <definition>using sgns::api::Listener::NewSessionHandler = 
+std::function&lt;void(const std::shared_ptr&lt;Session&gt; &amp;)&gt;</definition>
+        <argsstring></argsstring>
+        <name>NewSessionHandler</name>
+        <qualifiedname>sgns::api::Listener::NewSessionHandler</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/listener.hpp" line="20" column="5" bodyfile="src/api/transport/listener.hpp" bodystart="20" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d6/d3f/classsgns_1_1api_1_1_listener_1a392bda7a9c584023241233eaebabb4db" prot="public" static="no">
+        <type><ref refid="dd/d46/classsgns_1_1api_1_1_rpc_context" kindref="compound">RpcContext</ref></type>
+        <definition>using sgns::api::Listener::Context = RpcContext</definition>
+        <argsstring></argsstring>
+        <name>Context</name>
+        <qualifiedname>sgns::api::Listener::Context</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/listener.hpp" line="24" column="5" bodyfile="src/api/transport/listener.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d6/d3f/classsgns_1_1api_1_1_listener_1aa8805fec5cda361850084ebabdbda679" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::api::Listener::~Listener</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~Listener</name>
+        <qualifiedname>sgns::api::Listener::~Listener</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/listener.hpp" line="34" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d3f/classsgns_1_1api_1_1_listener_1a1d47e7a8d44c673ed0e47d9e09a742d0" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>bool</type>
+        <definition>virtual bool sgns::api::Listener::prepare</definition>
+        <argsstring>()=0</argsstring>
+        <name>prepare</name>
+        <qualifiedname>sgns::api::Listener::prepare</qualifiedname>
+        <reimplementedby refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1afc307e9b19004373dbd39a4ab2639383">prepare</reimplementedby>
+        <reimplementedby refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a567d0f4d15a9369ee07a4a7ddb25c5c4">prepare</reimplementedby>
+        <briefdescription>
+<para>Bind endpoint. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="see"><para><ref refid="d2/d3c/class_app_state_manager_1a8f1d6ffdb29ae915f1165e7da81ae739" kindref="member">AppStateManager::takeControl</ref> </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/listener.hpp" line="40" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d3f/classsgns_1_1api_1_1_listener_1a430c88059890b2e419fd3b422015a0d0" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>bool</type>
+        <definition>virtual bool sgns::api::Listener::start</definition>
+        <argsstring>()=0</argsstring>
+        <name>start</name>
+        <qualifiedname>sgns::api::Listener::start</qualifiedname>
+        <reimplementedby refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1ae1d9e53281a0b38d2143f103d457b560">start</reimplementedby>
+        <reimplementedby refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1ad977149f983f4c1cf17cdc8cd6eadad5">start</reimplementedby>
+        <briefdescription>
+<para>Start handling inner connection. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="see"><para><ref refid="d2/d3c/class_app_state_manager_1a8f1d6ffdb29ae915f1165e7da81ae739" kindref="member">AppStateManager::takeControl</ref> </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/listener.hpp" line="46" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d3f/classsgns_1_1api_1_1_listener_1a7298bee38d86730d76a47eb10cab6d8c" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::api::Listener::stop</definition>
+        <argsstring>()=0</argsstring>
+        <name>stop</name>
+        <qualifiedname>sgns::api::Listener::stop</qualifiedname>
+        <reimplementedby refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1adae52440a8b3cdd330faafbdd1fb6f56">stop</reimplementedby>
+        <reimplementedby refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1ae4c802a834827b66b78b096856034c74">stop</reimplementedby>
+        <briefdescription>
+<para>Stop working. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="see"><para><ref refid="d2/d3c/class_app_state_manager_1a8f1d6ffdb29ae915f1165e7da81ae739" kindref="member">AppStateManager::takeControl</ref> </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/listener.hpp" line="52" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d3f/classsgns_1_1api_1_1_listener_1a2c447262ee5e172d5f2df0a21fde29e3" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::api::Listener::setHandlerForNewSession</definition>
+        <argsstring>(NewSessionHandler &amp;&amp;on_new_session)=0</argsstring>
+        <name>setHandlerForNewSession</name>
+        <qualifiedname>sgns::api::Listener::setHandlerForNewSession</qualifiedname>
+        <reimplementedby refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a1201c469d6d9d2085faf68db581db007">setHandlerForNewSession</reimplementedby>
+        <reimplementedby refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a4a5f6fe68a3fdb050104ef6140021206">setHandlerForNewSession</reimplementedby>
+        <param>
+          <type><ref refid="d6/d3f/classsgns_1_1api_1_1_listener_1a46eee029b2ad2b539a0a22182adf9370" kindref="member">NewSessionHandler</ref> &amp;&amp;</type>
+          <declname>on_new_session</declname>
+        </param>
+        <briefdescription>
+<para>Set handler for working new session. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/listener.hpp" line="55" column="18"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="protected-func">
+      <memberdef kind="function" id="d6/d3f/classsgns_1_1api_1_1_listener_1af52c93d1a241869ee003044a786b5eda" prot="protected" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::api::Listener::acceptOnce</definition>
+        <argsstring>()=0</argsstring>
+        <name>acceptOnce</name>
+        <qualifiedname>sgns::api::Listener::acceptOnce</qualifiedname>
+        <reimplementedby refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1aba60643f18547ae6148bc93d8fe123ba">acceptOnce</reimplementedby>
+        <reimplementedby refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a18c5a5e3b3ce401be88e163cd68b8bb3">acceptOnce</reimplementedby>
+        <briefdescription>
+<para>Accept incoming connection. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/listener.hpp" line="60" column="18"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>server which listens for incoming connection, accepts connections making session from socket </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="3">
+        <label>sgns::api::HttpListenerImpl</label>
+        <link refid="db/de6/classsgns_1_1api_1_1_http_listener_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::api::Listener</label>
+        <link refid="d6/d3f/classsgns_1_1api_1_1_listener"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::api::WsListenerImpl</label>
+        <link refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::api::Listener</label>
+        <link refid="d6/d3f/classsgns_1_1api_1_1_listener"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/api/transport/listener.hpp" line="16" column="3" bodyfile="src/api/transport/listener.hpp" bodystart="16" bodyend="61"/>
+    <listofallmembers>
+      <member refid="d6/d3f/classsgns_1_1api_1_1_listener_1af52c93d1a241869ee003044a786b5eda" prot="protected" virt="pure-virtual"><scope>sgns::api::Listener</scope><name>acceptOnce</name></member>
+      <member refid="d6/d3f/classsgns_1_1api_1_1_listener_1afe8587bdb42a214eb13ca6a0c4f7cb66" prot="protected" virt="non-virtual"><scope>sgns::api::Listener</scope><name>Acceptor</name></member>
+      <member refid="d6/d3f/classsgns_1_1api_1_1_listener_1a392bda7a9c584023241233eaebabb4db" prot="public" virt="non-virtual"><scope>sgns::api::Listener</scope><name>Context</name></member>
+      <member refid="d6/d3f/classsgns_1_1api_1_1_listener_1a7e388013a06677841216e4f837a2345b" prot="protected" virt="non-virtual"><scope>sgns::api::Listener</scope><name>Endpoint</name></member>
+      <member refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7" prot="public" virt="pure-virtual"><scope>sgns::api::Listener</scope><name>GetName</name></member>
+      <member refid="d6/d3f/classsgns_1_1api_1_1_listener_1a46eee029b2ad2b539a0a22182adf9370" prot="protected" virt="non-virtual"><scope>sgns::api::Listener</scope><name>NewSessionHandler</name></member>
+      <member refid="d6/d3f/classsgns_1_1api_1_1_listener_1a1d47e7a8d44c673ed0e47d9e09a742d0" prot="public" virt="pure-virtual"><scope>sgns::api::Listener</scope><name>prepare</name></member>
+      <member refid="d6/d3f/classsgns_1_1api_1_1_listener_1a2c447262ee5e172d5f2df0a21fde29e3" prot="public" virt="pure-virtual"><scope>sgns::api::Listener</scope><name>setHandlerForNewSession</name></member>
+      <member refid="d6/d3f/classsgns_1_1api_1_1_listener_1a430c88059890b2e419fd3b422015a0d0" prot="public" virt="pure-virtual"><scope>sgns::api::Listener</scope><name>start</name></member>
+      <member refid="d6/d3f/classsgns_1_1api_1_1_listener_1a7298bee38d86730d76a47eb10cab6d8c" prot="public" virt="pure-virtual"><scope>sgns::api::Listener</scope><name>stop</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::api::Listener</scope><name>~IComponent</name></member>
+      <member refid="d6/d3f/classsgns_1_1api_1_1_listener_1aa8805fec5cda361850084ebabdbda679" prot="public" virt="non-virtual"><scope>sgns::api::Listener</scope><name>~Listener</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

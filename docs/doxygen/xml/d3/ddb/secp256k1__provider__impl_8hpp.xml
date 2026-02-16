@@ -1,0 +1,227 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d3/ddb/secp256k1__provider__impl_8hpp" kind="file" language="C++">
+    <compoundname>secp256k1_provider_impl.hpp</compoundname>
+    <includes local="no">secp256k1.h</includes>
+    <includes refid="d2/d17/secp256k1__provider_8hpp" local="yes">crypto/secp256k1_provider.hpp</includes>
+    <includedby refid="d5/db3/secp256k1__provider__impl_8cpp" local="yes">src/crypto/secp256k1/secp256k1_provider_impl.cpp</includedby>
+    <incdepgraph>
+      <node id="5">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crypto/secp256k1/secp256k1_provider_impl.hpp</label>
+        <link refid="d3/ddb/secp256k1__provider__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>crypto/secp256k1_provider.hpp</label>
+        <link refid="d2/d17/secp256k1__provider_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>crypto/secp256k1_types.hpp</label>
+        <link refid="d9/d49/secp256k1__types_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>array</label>
+      </node>
+      <node id="8">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="6">
+        <label>cstddef</label>
+      </node>
+      <node id="12">
+        <label>gsl/span</label>
+      </node>
+      <node id="15">
+        <label>iostream</label>
+      </node>
+      <node id="14">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="2">
+        <label>secp256k1.h</label>
+      </node>
+      <node id="10">
+        <label>string_view</label>
+      </node>
+      <node id="11">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/crypto/secp256k1/secp256k1_provider_impl.cpp</label>
+        <link refid="d5/db3/secp256k1__provider__impl_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/crypto/secp256k1/secp256k1_provider_impl.hpp</label>
+        <link refid="d3/ddb/secp256k1__provider__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl" prot="public">sgns::crypto::Secp256k1ProviderImpl</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6e/namespacesgns_1_1crypto">sgns::crypto</innernamespace>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034f" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>Secp256k1ProviderError</name>
+        <qualifiedname>sgns::crypto::Secp256k1ProviderError</qualifiedname>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034faf295a0c3e37c94f078e1c5476479132d" prot="public">
+          <name>INVALID_ARGUMENT</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034fa05eb477ffbbc9913ce06c150ff6c0c85" prot="public">
+          <name>INVALID_V_VALUE</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034fa891dbe09d89473d23fd56ce6cfc2e648" prot="public">
+          <name>INVALID_R_OR_S_VALUE</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034fad0eb6b378baae0b4b64c2933674e61fc" prot="public">
+          <name>INVALID_SIGNATURE</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034faa5ae556eafda7b1b2942433cd519c000" prot="public">
+          <name>RECOVERY_FAILED</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1/secp256k1_provider_impl.hpp" line="9" column="3" bodyfile="src/crypto/secp256k1/secp256k1_provider_impl.hpp" bodystart="9" bodyend="15"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d3/ddb/secp256k1__provider__impl_8hpp_1a9aa554f2d406c93ff4b63dcc75d04c09" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>OUTCOME_HPP_DECLARE_ERROR_2</definition>
+        <argsstring>(sgns::crypto, Secp256k1ProviderError)</argsstring>
+        <name>OUTCOME_HPP_DECLARE_ERROR_2</name>
+        <param>
+          <type><ref refid="df/d6e/namespacesgns_1_1crypto" kindref="compound">sgns::crypto</ref></type>
+        </param>
+        <param>
+          <type>Secp256k1ProviderError</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1/secp256k1_provider_impl.hpp" line="40" column="1" declfile="src/crypto/secp256k1/secp256k1_provider_impl.hpp" declline="40" declcolumn="1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_CRYPTO_SECP256K1_PROVIDER_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_CRYPTO_SECP256K1_PROVIDER_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;secp256k1.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d2/d17/secp256k1__provider_8hpp" kindref="compound">crypto/secp256k1_provider.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d6e/namespacesgns_1_1crypto" kindref="compound">sgns::crypto</ref><sp/>{</highlight></codeline>
+<codeline lineno="9" refid="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034f" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">enum<sp/>class</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034f" kindref="member">Secp256k1ProviderError</ref><sp/>{</highlight></codeline>
+<codeline lineno="10" refid="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034faf295a0c3e37c94f078e1c5476479132d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034faf295a0c3e37c94f078e1c5476479132d" kindref="member">INVALID_ARGUMENT</ref><sp/>=<sp/>1,</highlight></codeline>
+<codeline lineno="11" refid="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034fa05eb477ffbbc9913ce06c150ff6c0c85" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034fa05eb477ffbbc9913ce06c150ff6c0c85" kindref="member">INVALID_V_VALUE</ref>,</highlight></codeline>
+<codeline lineno="12" refid="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034fa891dbe09d89473d23fd56ce6cfc2e648" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034fa891dbe09d89473d23fd56ce6cfc2e648" kindref="member">INVALID_R_OR_S_VALUE</ref>,</highlight></codeline>
+<codeline lineno="13" refid="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034fad0eb6b378baae0b4b64c2933674e61fc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034fad0eb6b378baae0b4b64c2933674e61fc" kindref="member">INVALID_SIGNATURE</ref>,</highlight></codeline>
+<codeline lineno="14" refid="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034faa5ae556eafda7b1b2942433cd519c000" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034faa5ae556eafda7b1b2942433cd519c000" kindref="member">RECOVERY_FAILED</ref>,</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17" refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1a40dd5d777303b4e27ebc877d5cd44d68" kindref="member">Secp256k1ProviderImpl</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d6/d6e/classsgns_1_1crypto_1_1_secp256k1_provider" kindref="compound">Secp256k1Provider</ref><sp/>{</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="19" refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1ae913c506e597af859bd9067aa5519835" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1ae913c506e597af859bd9067aa5519835" kindref="member">~Secp256k1ProviderImpl</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1a40dd5d777303b4e27ebc877d5cd44d68" kindref="member">Secp256k1ProviderImpl</ref>();</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;secp256k1::UncompressedPublicKey&gt;<sp/><ref refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1a8d1ef3e384b1dbc9fe4c5be041f6296d" kindref="member">recoverPublickeyUncompressed</ref>(</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1aa7cc5a710dcf2a1256a753b9a5005f29" kindref="member">secp256k1::RSVSignature</ref><sp/>&amp;signature,</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1abcf0e108bd6f3bd69a355144a5111105" kindref="member">secp256k1::MessageHash</ref><sp/>&amp;message_hash)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;secp256k1::CompressedPublicKey&gt;<sp/><ref refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1afdefb806f28554a42d2e5ec53fdab638" kindref="member">recoverPublickeyCompressed</ref>(</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1aa7cc5a710dcf2a1256a753b9a5005f29" kindref="member">secp256k1::RSVSignature</ref><sp/>&amp;signature,</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1abcf0e108bd6f3bd69a355144a5111105" kindref="member">secp256k1::MessageHash</ref><sp/>&amp;message_hash)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;secp256k1_pubkey&gt;<sp/><ref refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1a2943ab1783f89286fd7d72fe34df1afb" kindref="member">recoverPublickey</ref>(</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1aa7cc5a710dcf2a1256a753b9a5005f29" kindref="member">secp256k1::RSVSignature</ref><sp/>&amp;signature,</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1abcf0e108bd6f3bd69a355144a5111105" kindref="member">secp256k1::MessageHash</ref><sp/>&amp;message_hash)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36" refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1a2cf6fcafcc3f3fd3d0fab3f56a4b3e7d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::unique_ptr&lt;secp256k1_context,<sp/>void<sp/>(*)(secp256k1_context<sp/>*)&gt;<sp/><ref refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl_1a2cf6fcafcc3f3fd3d0fab3f56a4b3e7d" kindref="member">context_</ref>;</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="38"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40" refid="d3/ddb/secp256k1__provider__impl_8hpp_1a9aa554f2d406c93ff4b63dcc75d04c09" refkind="member"><highlight class="normal"><ref refid="d3/ddb/secp256k1__provider__impl_8hpp_1a9aa554f2d406c93ff4b63dcc75d04c09" kindref="member">OUTCOME_HPP_DECLARE_ERROR_2</ref>(<ref refid="df/d6e/namespacesgns_1_1crypto" kindref="compound">sgns::crypto</ref>,<sp/>Secp256k1ProviderError);</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/crypto/secp256k1/secp256k1_provider_impl.hpp"/>
+  </compounddef>
+</doxygen>

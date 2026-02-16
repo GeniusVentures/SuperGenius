@@ -1,0 +1,334 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster" kind="class" language="C++" prot="public">
+    <compoundname>sgns::crdt::PubSubBroadcaster</compoundname>
+    <basecompoundref refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster" prot="public" virt="non-virtual">sgns::crdt::Broadcaster</basecompoundref>
+    <includes refid="d8/dfe/pubsub__broadcaster_8hpp" local="no">pubsub_broadcaster.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a90f0a49e61a89bf7ba008bf68e5796cc" prot="public" static="no">
+        <type>sgns::ipfs_pubsub::GossipPubSub</type>
+        <definition>using sgns::crdt::PubSubBroadcaster::GossipPubSub = sgns::ipfs_pubsub::GossipPubSub</definition>
+        <argsstring></argsstring>
+        <name>GossipPubSub</name>
+        <qualifiedname>sgns::crdt::PubSubBroadcaster::GossipPubSub</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/pubsub_broadcaster.hpp" line="14" column="5" bodyfile="src/crdt/globaldb/pubsub_broadcaster.hpp" bodystart="14" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1ae8b9eb02e3d8823319026d4166ca4e08" prot="public" static="no">
+        <type>sgns::ipfs_pubsub::GossipPubSubTopic</type>
+        <definition>using sgns::crdt::PubSubBroadcaster::GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic</definition>
+        <argsstring></argsstring>
+        <name>GossipPubSubTopic</name>
+        <qualifiedname>sgns::crdt::PubSubBroadcaster::GossipPubSubTopic</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/pubsub_broadcaster.hpp" line="15" column="5" bodyfile="src/crdt/globaldb/pubsub_broadcaster.hpp" bodystart="15" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1aed182b4750ee437ca83fac5b7167fae8" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1ae8b9eb02e3d8823319026d4166ca4e08" kindref="member">GossipPubSubTopic</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;GossipPubSubTopic&gt; sgns::crdt::PubSubBroadcaster::gossipPubSubTopic_</definition>
+        <argsstring></argsstring>
+        <name>gossipPubSubTopic_</name>
+        <qualifiedname>sgns::crdt::PubSubBroadcaster::gossipPubSubTopic_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/pubsub_broadcaster.hpp" line="40" column="21" bodyfile="src/crdt/globaldb/pubsub_broadcaster.hpp" bodystart="40" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a670121a97616744dec6962c234dc9373" prot="private" static="no" mutable="no">
+        <type>std::queue&lt; std::tuple&lt; libp2p::peer::PeerId, std::string &gt; &gt;</type>
+        <definition>std::queue&lt;std::tuple&lt;libp2p::peer::PeerId, std::string&gt; &gt; sgns::crdt::PubSubBroadcaster::listOfMessages_</definition>
+        <argsstring></argsstring>
+        <name>listOfMessages_</name>
+        <qualifiedname>sgns::crdt::PubSubBroadcaster::listOfMessages_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/pubsub_broadcaster.hpp" line="41" column="16" bodyfile="src/crdt/globaldb/pubsub_broadcaster.hpp" bodystart="41" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a7847ab68c49eecbbffb4b2eba9b42af3" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::crdt::PubSubBroadcaster::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::crdt::PubSubBroadcaster::logger_</qualifiedname>
+        <initializer>= nullptr</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/pubsub_broadcaster.hpp" line="42" column="18" bodyfile="src/crdt/globaldb/pubsub_broadcaster.hpp" bodystart="42" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a651df6d2888aea6c429dafc78741e94f" prot="private" static="no" mutable="no">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::crdt::PubSubBroadcaster::mutex_</definition>
+        <argsstring></argsstring>
+        <name>mutex_</name>
+        <qualifiedname>sgns::crdt::PubSubBroadcaster::mutex_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/pubsub_broadcaster.hpp" line="43" column="16" bodyfile="src/crdt/globaldb/pubsub_broadcaster.hpp" bodystart="43" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a5e8aebe477cc8399f08e351babec2076" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crdt::PubSubBroadcaster::PubSubBroadcaster</definition>
+        <argsstring>(std::shared_ptr&lt; GossipPubSubTopic &gt; pubSubTopic)</argsstring>
+        <name>PubSubBroadcaster</name>
+        <qualifiedname>sgns::crdt::PubSubBroadcaster::PubSubBroadcaster</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1ae8b9eb02e3d8823319026d4166ca4e08" kindref="member">GossipPubSubTopic</ref> &gt;</type>
+          <declname>pubSubTopic</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/pubsub_broadcaster.hpp" line="17" column="5" bodyfile="src/crdt/globaldb/pubsub_broadcaster.cpp" bodystart="7" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a9415fc2359518adf1b1663908cf4b2ae" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::PubSubBroadcaster::SetLogger</definition>
+        <argsstring>(base::Logger logger)</argsstring>
+        <name>SetLogger</name>
+        <qualifiedname>sgns::crdt::PubSubBroadcaster::SetLogger</qualifiedname>
+        <param>
+          <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+          <declname>logger</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/pubsub_broadcaster.hpp" line="19" column="10" bodyfile="src/crdt/globaldb/pubsub_broadcaster.hpp" bodystart="19" bodyend="22"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a697fb87d8c26f13c22e56f01b840ec78" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::PubSubBroadcaster::Broadcast</definition>
+        <argsstring>(const base::Buffer &amp;buff, std::string topic, boost::optional&lt; libp2p::peer::PeerInfo &gt; peerInfo=boost::none) override</argsstring>
+        <name>Broadcast</name>
+        <qualifiedname>sgns::crdt::PubSubBroadcaster::Broadcast</qualifiedname>
+        <reimplements refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1a199af3de48ad91ab0be05f9671305ef8">Broadcast</reimplements>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>buff</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>topic</declname>
+        </param>
+        <param>
+          <type>boost::optional&lt; libp2p::peer::PeerInfo &gt;</type>
+          <declname>peerInfo</declname>
+          <defval>boost::none</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Send buffer payload to other replicas. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>buff</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> containing the data to broadcast. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>topic</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Topic to broadcast to. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>peerInfo</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional peer info. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>outcome::success on success or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/pubsub_broadcaster.hpp" line="31" column="25" bodyfile="src/crdt/globaldb/pubsub_broadcaster.cpp" bodystart="29" bodyend="37"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a754b1380820223d8fdf3d0c7c1b454f5" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; base::Buffer &gt; sgns::crdt::PubSubBroadcaster::Next</definition>
+        <argsstring>() override</argsstring>
+        <name>Next</name>
+        <qualifiedname>sgns::crdt::PubSubBroadcaster::Next</qualifiedname>
+        <reimplements refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1ace7660f596b3b136cb4c9c81515aa729">Next</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Obtain the next payload received from the network. <simplesect kind="return"><para>buffer value or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/pubsub_broadcaster.hpp" line="36" column="25" bodyfile="src/crdt/globaldb/pubsub_broadcaster.cpp" bodystart="39" bodyend="54"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a8e99f1ed779f432464caac5dc26cb641" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::PubSubBroadcaster::HasTopic</definition>
+        <argsstring>(const std::string &amp;topic) override</argsstring>
+        <name>HasTopic</name>
+        <qualifiedname>sgns::crdt::PubSubBroadcaster::HasTopic</qualifiedname>
+        <reimplements refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1a5ca229efa21b412f8a20369ef8700ca2">HasTopic</reimplements>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>topic</declname>
+        </param>
+        <briefdescription>
+<para>Checks whether the broadcaster is subscribed to the specified topic. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>topic</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The topic string to check. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if the broadcaster is subscribed to the topic, false otherwise. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/pubsub_broadcaster.hpp" line="38" column="14" bodyfile="src/crdt/globaldb/pubsub_broadcaster.hpp" bodystart="38" bodyend="38"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::crdt::Broadcaster</label>
+        <link refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster"/>
+      </node>
+      <node id="1">
+        <label>sgns::crdt::PubSubBroadcaster</label>
+        <link refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="5">
+        <label>T</label>
+      </node>
+      <node id="2">
+        <label>sgns::crdt::Broadcaster</label>
+        <link refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster"/>
+      </node>
+      <node id="1">
+        <label>sgns::crdt::PubSubBroadcaster</label>
+        <link refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-gossipPubSubTopic_</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>-listOfMessages_</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-mutex_</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::mutex</label>
+      </node>
+      <node id="7">
+        <label>std::queue&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::queue&lt; std::tuple&lt; libp2p::peer::PeerId, std::string &gt; &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; std::tuple&lt; libp2p::peer::PeerId, std::string &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; GossipPubSubTopic &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; GossipPubSubTopic &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crdt/globaldb/pubsub_broadcaster.hpp" line="11" column="1" bodyfile="src/crdt/globaldb/pubsub_broadcaster.hpp" bodystart="12" bodyend="44"/>
+    <listofallmembers>
+      <member refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a697fb87d8c26f13c22e56f01b840ec78" prot="public" virt="virtual"><scope>sgns::crdt::PubSubBroadcaster</scope><name>Broadcast</name></member>
+      <member refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1a0e73c18fe76ca35446806bc7e197a3fd" prot="public" virt="non-virtual"><scope>sgns::crdt::PubSubBroadcaster</scope><name>ErrorCode</name></member>
+      <member refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1a1594dc715fb4151f2af6ee634133621e" prot="public" virt="virtual"><scope>sgns::crdt::PubSubBroadcaster</scope><name>GetDagSyncer</name></member>
+      <member refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a90f0a49e61a89bf7ba008bf68e5796cc" prot="public" virt="non-virtual"><scope>sgns::crdt::PubSubBroadcaster</scope><name>GossipPubSub</name></member>
+      <member refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1ae8b9eb02e3d8823319026d4166ca4e08" prot="public" virt="non-virtual"><scope>sgns::crdt::PubSubBroadcaster</scope><name>GossipPubSubTopic</name></member>
+      <member refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1aed182b4750ee437ca83fac5b7167fae8" prot="private" virt="non-virtual"><scope>sgns::crdt::PubSubBroadcaster</scope><name>gossipPubSubTopic_</name></member>
+      <member refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a8e99f1ed779f432464caac5dc26cb641" prot="public" virt="virtual"><scope>sgns::crdt::PubSubBroadcaster</scope><name>HasTopic</name></member>
+      <member refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a670121a97616744dec6962c234dc9373" prot="private" virt="non-virtual"><scope>sgns::crdt::PubSubBroadcaster</scope><name>listOfMessages_</name></member>
+      <member refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a7847ab68c49eecbbffb4b2eba9b42af3" prot="private" virt="non-virtual"><scope>sgns::crdt::PubSubBroadcaster</scope><name>logger_</name></member>
+      <member refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a651df6d2888aea6c429dafc78741e94f" prot="private" virt="non-virtual"><scope>sgns::crdt::PubSubBroadcaster</scope><name>mutex_</name></member>
+      <member refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a754b1380820223d8fdf3d0c7c1b454f5" prot="public" virt="virtual"><scope>sgns::crdt::PubSubBroadcaster</scope><name>Next</name></member>
+      <member refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a5e8aebe477cc8399f08e351babec2076" prot="public" virt="non-virtual"><scope>sgns::crdt::PubSubBroadcaster</scope><name>PubSubBroadcaster</name></member>
+      <member refid="d7/df4/classsgns_1_1crdt_1_1_pub_sub_broadcaster_1a9415fc2359518adf1b1663908cf4b2ae" prot="public" virt="non-virtual"><scope>sgns::crdt::PubSubBroadcaster</scope><name>SetLogger</name></member>
+      <member refid="d9/de2/classsgns_1_1crdt_1_1_broadcaster_1ae15078f3a6e19fe5eeefabfb3c5b7add" prot="public" virt="virtual"><scope>sgns::crdt::PubSubBroadcaster</scope><name>~Broadcaster</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

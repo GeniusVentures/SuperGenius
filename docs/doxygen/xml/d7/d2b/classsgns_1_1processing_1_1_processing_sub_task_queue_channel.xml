@@ -1,0 +1,131 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::processing::ProcessingSubTaskQueueChannel</compoundname>
+    <derivedcompoundref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub" prot="public" virt="non-virtual">sgns::processing::ProcessingSubTaskQueueChannelPubSub</derivedcompoundref>
+    <includes refid="db/d1c/processing__subtask__queue__channel_8hpp" local="no">processing_subtask_queue_channel.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a61d360e4a1f265b1061acde32f030bd3" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::processing::ProcessingSubTaskQueueChannel::~ProcessingSubTaskQueueChannel</definition>
+        <argsstring>()=default</argsstring>
+        <name>~ProcessingSubTaskQueueChannel</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannel::~ProcessingSubTaskQueueChannel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel.hpp" line="23" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a86d1536ac372b9d6875a9d1dd38ac0ea" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::processing::ProcessingSubTaskQueueChannel::RequestQueueOwnership</definition>
+        <argsstring>(const std::string &amp;nodeId)=0</argsstring>
+        <name>RequestQueueOwnership</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannel::RequestQueueOwnership</qualifiedname>
+        <reimplementedby refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a93e2f7002ecd1a1237cf88a148ed1586">RequestQueueOwnership</reimplementedby>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>nodeId</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Sends a request for queue ownership nodeId - requestor node id </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel.hpp" line="28" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a8edd64eb53b6f4302eb7a47a4699dbf4" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::processing::ProcessingSubTaskQueueChannel::PublishQueue</definition>
+        <argsstring>(std::shared_ptr&lt; SGProcessing::SubTaskQueue &gt; queue)=0</argsstring>
+        <name>PublishQueue</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannel::PublishQueue</qualifiedname>
+        <reimplementedby refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a027b5d104fe2102bd32006b4a6955462">PublishQueue</reimplementedby>
+        <param>
+          <type>std::shared_ptr&lt; SGProcessing::SubTaskQueue &gt;</type>
+          <declname>queue</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Publishes queue to all queue consumers queue = subtask queue </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel.hpp" line="33" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1ab9e2b977c54c360e32471cda0bc2f363" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>size_t</type>
+        <definition>virtual size_t sgns::processing::ProcessingSubTaskQueueChannel::GetActiveNodesCount</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetActiveNodesCount</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannel::GetActiveNodesCount</qualifiedname>
+        <reimplementedby refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a8b5d5cee7aedc830d19d79b561318841">GetActiveNodesCount</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Returns the number of active nodes in the channel <simplesect kind="return"><para>number of nodes in the channel </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel.hpp" line="39" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a3a4186e2808764c2f542cdac17f2e842" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::vector&lt; libp2p::peer::PeerId &gt;</type>
+        <definition>virtual std::vector&lt; libp2p::peer::PeerId &gt; sgns::processing::ProcessingSubTaskQueueChannel::GetActiveNodes</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetActiveNodes</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannel::GetActiveNodes</qualifiedname>
+        <reimplementedby refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1aebfdbbb01a75f1d622d02529f6008599">GetActiveNodes</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get the number of active nodes in the channel <simplesect kind="return"><para>vector of nodes in the channel </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel.hpp" line="45" column="25"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Subtask queue channel interface which is used for in-memory queue synchronization </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::processing::ProcessingSubTaskQueueChannel</label>
+        <link refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel"/>
+      </node>
+      <node id="2">
+        <label>sgns::processing::ProcessingSubTaskQueueChannelPubSub</label>
+        <link refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::processing::ProcessingSubTaskQueueChannel</label>
+        <link refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/processing/processing_subtask_queue_channel.hpp" line="20" column="1" bodyfile="src/processing/processing_subtask_queue_channel.hpp" bodystart="21" bodyend="46"/>
+    <listofallmembers>
+      <member refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a3a4186e2808764c2f542cdac17f2e842" prot="public" virt="pure-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannel</scope><name>GetActiveNodes</name></member>
+      <member refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1ab9e2b977c54c360e32471cda0bc2f363" prot="public" virt="pure-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannel</scope><name>GetActiveNodesCount</name></member>
+      <member refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a8edd64eb53b6f4302eb7a47a4699dbf4" prot="public" virt="pure-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannel</scope><name>PublishQueue</name></member>
+      <member refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a86d1536ac372b9d6875a9d1dd38ac0ea" prot="public" virt="pure-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannel</scope><name>RequestQueueOwnership</name></member>
+      <member refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a61d360e4a1f265b1061acde32f030bd3" prot="public" virt="virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannel</scope><name>~ProcessingSubTaskQueueChannel</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

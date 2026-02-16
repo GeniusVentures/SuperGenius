@@ -1,0 +1,305 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/dac/processing__node_8hpp" kind="file" language="C++">
+    <compoundname>processing_node.hpp</compoundname>
+    <includes local="no">chrono</includes>
+    <includes local="no">thread</includes>
+    <includes local="no">optional</includes>
+    <includes local="no">ipfs_pubsub/gossip_pubsub_topic.hpp</includes>
+    <includes refid="d3/d33/processing__engine_8hpp" local="yes">processing/processing_engine.hpp</includes>
+    <includes refid="dd/dd8/processing__subtask__queue__manager_8hpp" local="yes">processing/processing_subtask_queue_manager.hpp</includes>
+    <includes refid="dd/db9/processing__subtask__queue__accessor_8hpp" local="yes">processing/processing_subtask_queue_accessor.hpp</includes>
+    <includes refid="d9/de8/processing__subtask__result__storage_8hpp" local="yes">processing/processing_subtask_result_storage.hpp</includes>
+    <includedby refid="de/d98/processing__node_8cpp" local="yes">src/processing/processing_node.cpp</includedby>
+    <includedby refid="d5/d37/processing__service_8hpp" local="yes">src/processing/processing_service.hpp</includedby>
+    <incdepgraph>
+      <node id="15">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>processing_core.hpp</label>
+        <link refid="df/d22/processing__core_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>processing/processing_engine.hpp</label>
+        <link refid="d3/d33/processing__engine_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/processing/processing_node.hpp</label>
+        <link refid="df/dac/processing__node_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>processing/processing_subtask_queue.hpp</label>
+        <link refid="d7/d97/processing__subtask__queue_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>processing_subtask_queue_accessor.hpp</label>
+        <link refid="dd/db9/processing__subtask__queue__accessor_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>processing/processing_subtask_queue_channel.hpp</label>
+        <link refid="db/d1c/processing__subtask__queue__channel_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>processing/processing_subtask_queue_manager.hpp</label>
+        <link refid="dd/dd8/processing__subtask__queue__manager_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>processing/processing_subtask_result_storage.hpp</label>
+        <link refid="d9/de8/processing__subtask__result__storage_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>boost/asio.hpp</label>
+      </node>
+      <node id="11">
+        <label>boost/asio/io_context.hpp</label>
+      </node>
+      <node id="13">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="2">
+        <label>chrono</label>
+      </node>
+      <node id="5">
+        <label>ipfs_pubsub/gossip_pubsub_topic.hpp</label>
+      </node>
+      <node id="10">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="14">
+        <label>list</label>
+      </node>
+      <node id="22">
+        <label>memory</label>
+      </node>
+      <node id="4">
+        <label>optional</label>
+      </node>
+      <node id="8">
+        <label>processing/proto/SGProcessing.pb.h</label>
+      </node>
+      <node id="24">
+        <label>queue</label>
+      </node>
+      <node id="16">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="17">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="21">
+        <label>string</label>
+      </node>
+      <node id="3">
+        <label>thread</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="5">
+        <label>src/account/GeniusNode.cpp</label>
+        <link refid="df/de0/_genius_node_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/account/GeniusNode.hpp</label>
+        <link refid="d3/d63/_genius_node_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>src/processing/processing_node.cpp</label>
+        <link refid="de/d98/processing__node_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/processing/processing_node.hpp</label>
+        <link refid="df/dac/processing__node_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>src/processing/processing_service.cpp</label>
+        <link refid="d3/d3a/processing__service_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/processing/processing_service.hpp</label>
+        <link refid="d5/d37/processing__service_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d2/d5b/classsgns_1_1processing_1_1_processing_node" prot="public">sgns::processing::ProcessingNode</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6a/namespacesgns_1_1processing">sgns::processing</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>GRPC_FOR_SUPERGENIUS_PROCESSING_NODE</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>GRPC_FOR_SUPERGENIUS_PROCESSING_NODE</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;chrono&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;thread&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;optional&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;ipfs_pubsub/gossip_pubsub_topic.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d3/d33/processing__engine_8hpp" kindref="compound">processing/processing_engine.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dd/dd8/processing__subtask__queue__manager_8hpp" kindref="compound">processing/processing_subtask_queue_manager.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dd/db9/processing__subtask__queue__accessor_8hpp" kindref="compound">processing/processing_subtask_queue_accessor.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d9/de8/processing__subtask__result__storage_8hpp" kindref="compound">processing/processing_subtask_result_storage.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d6a/namespacesgns_1_1processing" kindref="compound">sgns::processing</ref></highlight></codeline>
+<codeline lineno="20"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="26" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a6423d2f00f5ff1cc96f40d8599d7b97f" kindref="member">ProcessingNode</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>std::enable_shared_from_this&lt;ProcessingNode&gt;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;ProcessingNode&gt;<sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a6981203750e9b383ce633e637e599245" kindref="member">New</ref>(</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;ipfs_pubsub::GossipPubSub&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>gossipPubSub,</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;SubTaskResultStorage&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>subTaskResultStorage,</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;ProcessingCore&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>processingCore,</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;</highlight><highlight class="keywordtype">void</highlight><highlight class="normal">(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>SGProcessing::TaskResult<sp/>&amp;<sp/>)&gt;<sp/>taskResultProcessingSink,</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;</highlight><highlight class="keywordtype">void</highlight><highlight class="normal">(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<sp/>)&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>processingErrorSink,</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;</highlight><highlight class="keywordtype">void</highlight><highlight class="normal">(<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>)&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>processingDoneSink,</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>node_id,</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;processingQueueChannelId,</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::list&lt;SGProcessing::SubTask&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>subTasks<sp/>=<sp/>{},</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::milliseconds<sp/>msSubscriptionWaitingDuration<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>std::chrono::milliseconds(<sp/>2000<sp/>),</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::seconds<sp/><sp/><sp/><sp/><sp/><sp/>ttl<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>std::chrono::minutes(<sp/>2<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"></highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a0071f3776767a568c6dcc7e4d41195e6" kindref="member">~ProcessingNode</ref>();</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a02a3f4e4f8c3e88d78300c0462c61752" kindref="member">HasQueueOwnership</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">float</highlight><highlight class="normal"><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1ab949f851190d659a0ddd787f13a70f49" kindref="member">GetProgress</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"></highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a6423d2f00f5ff1cc96f40d8599d7b97f" kindref="member">ProcessingNode</ref>(<sp/>std::shared_ptr&lt;ipfs_pubsub::GossipPubSub&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>gossipPubSub,</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;SubTaskResultStorage&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>subTaskResultStorage,</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;ProcessingCore&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>processingCore,</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;</highlight><highlight class="keywordtype">void</highlight><highlight class="normal">(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>SGProcessing::TaskResult<sp/>&amp;<sp/>)&gt;<sp/>taskResultProcessingSink,</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;</highlight><highlight class="keywordtype">void</highlight><highlight class="normal">(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<sp/>)&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>processingErrorSink,</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;</highlight><highlight class="keywordtype">void</highlight><highlight class="normal">(<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>)&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>processingDoneSink,</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>node_id,</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::seconds<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ttl<sp/>);</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"></highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a3749bcaa94bdae6d94cc92724206d182" kindref="member">AttachTo</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;processingQueueChannelId<sp/>);</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a13446132f03fd0eaf74bc11b915b7084" kindref="member">CreateSubTaskQueue</ref>(<sp/>std::list&lt;SGProcessing::SubTask&gt;<sp/>subTasks<sp/>);</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a391c987c2692835633e404c8645c5781" kindref="member">Initialize</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;processingQueueChannelId,</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::milliseconds<sp/>msSubscriptionWaitingDuration<sp/>);</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"></highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1af3964706fe8a6008ff3894712bd597e6" kindref="member">InitTTL</ref>();</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a17e8a5ec019f1c11aa1c8700a99c7b7f" kindref="member">StartTTLTimer</ref>();</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1acb200c73b7d1ef45765ada47159669bf" kindref="member">CheckTTL</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::error_code<sp/>&amp;ec<sp/>);</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"></highlight></codeline>
+<codeline lineno="94" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1af950f11bfb6411f2e9d71dd3275a0a5a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;sgns::ipfs_pubsub::GossipPubSub&gt;<sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1af950f11bfb6411f2e9d71dd3275a0a5a" kindref="member">m_gossipPubSub</ref>;</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"></highlight></codeline>
+<codeline lineno="96" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a6a95bb5b5a28f52b4efa781d7a2e1ba6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a6a95bb5b5a28f52b4efa781d7a2e1ba6" kindref="member">m_nodeId</ref>;</highlight></codeline>
+<codeline lineno="97" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a14de633e443cdd8eef629a8a05b8af25" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a14de633e443cdd8eef629a8a05b8af25" kindref="member">m_escrowId</ref>;</highlight></codeline>
+<codeline lineno="98" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1ac07c9b7c2e0dbc901162450e20c31d47" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;ProcessingCore&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1ac07c9b7c2e0dbc901162450e20c31d47" kindref="member">m_processingCore</ref>;</highlight></codeline>
+<codeline lineno="99" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a01a0d41e1448ef4bf97984855bb373b6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;SubTaskResultStorage&gt;<sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a01a0d41e1448ef4bf97984855bb373b6" kindref="member">m_subTaskResultStorage</ref>;</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"></highlight></codeline>
+<codeline lineno="101" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1ab9b107ab0ac0f3e217acc3e3a65140a2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;ProcessingEngine&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1ab9b107ab0ac0f3e217acc3e3a65140a2" kindref="member">m_processingEngine</ref>;</highlight></codeline>
+<codeline lineno="102" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1ad93b6c1ca06f2871f51527e4ec99036f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;ProcessingSubTaskQueueChannel&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1ad93b6c1ca06f2871f51527e4ec99036f" kindref="member">m_queueChannel</ref>;</highlight></codeline>
+<codeline lineno="103" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1afb82514dfe129dfc467f4b3fba7214d5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;ProcessingSubTaskQueueManager&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1afb82514dfe129dfc467f4b3fba7214d5" kindref="member">m_subtaskQueueManager</ref>;</highlight></codeline>
+<codeline lineno="104" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a43ea55c96e7d7cccf0d4b03c815a0d71" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;SubTaskQueueAccessor&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a43ea55c96e7d7cccf0d4b03c815a0d71" kindref="member">m_subTaskQueueAccessor</ref>;</highlight></codeline>
+<codeline lineno="105" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1ac0a493128f4e8ea414341af10130b8cd" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;void(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>SGProcessing::TaskResult<sp/>&amp;<sp/>)&gt;<sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1ac0a493128f4e8ea414341af10130b8cd" kindref="member">m_taskResultProcessingSink</ref>;</highlight></codeline>
+<codeline lineno="106" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a0c783c76362727a5235c53e7fdab3a77" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;void(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<sp/>)&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a0c783c76362727a5235c53e7fdab3a77" kindref="member">m_processingErrorSink</ref>;</highlight></codeline>
+<codeline lineno="107" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a74fa7ea85543f6549660f872679c24ae" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;void(<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>)&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a74fa7ea85543f6549660f872679c24ae" kindref="member">m_processingDoneSink</ref>;</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"></highlight></codeline>
+<codeline lineno="109" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a3710da754be200b21b35375c0eff096b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::steady_clock::time_point<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a3710da754be200b21b35375c0eff096b" kindref="member">m_creationTime</ref>;</highlight></codeline>
+<codeline lineno="110" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a70939844c2caf6911124281c2637a65d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::seconds<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a70939844c2caf6911124281c2637a65d" kindref="member">m_ttl</ref>;</highlight></codeline>
+<codeline lineno="111" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1ac38b2bcb68d41efca47785c0aa7c914f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::unique_ptr&lt;boost::asio::steady_timer&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1ac38b2bcb68d41efca47785c0aa7c914f" kindref="member">m_ttlTimer</ref>;</highlight></codeline>
+<codeline lineno="112" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a228cc0fe4195daf2d39d1a09decb35d4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;void(<sp/>std::shared_ptr&lt;ProcessingNode&gt;<sp/>)&gt;<sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a228cc0fe4195daf2d39d1a09decb35d4" kindref="member">m_selfDestructCallback</ref>;</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"></highlight></codeline>
+<codeline lineno="114" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a1a1b9715e1ceaaaffd3be0f3aecc8d8e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;boost::asio::io_context&gt;<sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a1a1b9715e1ceaaaffd3be0f3aecc8d8e" kindref="member">m_localContext</ref>;</highlight></codeline>
+<codeline lineno="115" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a5525c3bf780d41d30af985c88f25f4d9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a5525c3bf780d41d30af985c88f25f4d9" kindref="member">WorkGuard</ref><sp/>=<sp/>boost::asio::executor_work_guard&lt;boost::asio::io_context::executor_type&gt;;</highlight></codeline>
+<codeline lineno="116" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1ad79ce14cc9044bb07c7e773303f6003e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::optional&lt;WorkGuard&gt;<sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1ad79ce14cc9044bb07c7e773303f6003e" kindref="member">m_localWorkGuard</ref>;</highlight></codeline>
+<codeline lineno="117" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a7233121bbeaa5ab83d5faaf05f0e045c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::thread<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a7233121bbeaa5ab83d5faaf05f0e045c" kindref="member">m_localIoThread</ref>;</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"></highlight></codeline>
+<codeline lineno="119" refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a214523e31b570369736b2292985037d7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref><sp/><ref refid="d2/d5b/classsgns_1_1processing_1_1_processing_node_1a214523e31b570369736b2292985037d7" kindref="member">m_logger</ref><sp/>=<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>(<sp/></highlight><highlight class="stringliteral">&quot;ProcessingNode&quot;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="121"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="122"><highlight class="normal"></highlight></codeline>
+<codeline lineno="123"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">//<sp/>GRPC_FOR_SUPERGENIUS_PROCESSING_NODE</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/processing/processing_node.hpp"/>
+  </compounddef>
+</doxygen>

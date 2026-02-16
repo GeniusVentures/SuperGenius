@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_6799b1796ac5c115d1ae7d5a8f350afd" kind="dir">
+    <compoundname>src/crypto/bip39/wordlist</compoundname>
+    <innerfile refid="d1/d00/english_8hpp">english.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/bip39/wordlist/"/>
+  </compounddef>
+</doxygen>

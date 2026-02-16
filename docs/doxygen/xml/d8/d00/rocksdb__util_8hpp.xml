@@ -1,0 +1,323 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d8/d00/rocksdb__util_8hpp" kind="file" language="C++">
+    <compoundname>rocksdb_util.hpp</compoundname>
+    <includes local="no">rocksdb/status.h</includes>
+    <includes local="no">gsl/span</includes>
+    <includes refid="d5/dda/outcome_8hpp" local="yes">outcome/outcome.hpp</includes>
+    <includes refid="da/d1d/buffer_8hpp" local="yes">base/buffer.hpp</includes>
+    <includes refid="d6/da3/logger_8hpp" local="yes">base/logger.hpp</includes>
+    <includes refid="d9/da2/database__error_8hpp" local="yes">storage/database_error.hpp</includes>
+    <includedby refid="dc/d6d/rocksdb_8cpp" local="yes">src/storage/rocksdb/rocksdb.cpp</includedby>
+    <includedby refid="d6/d9a/rocksdb__batch_8cpp" local="yes">src/storage/rocksdb/rocksdb_batch.cpp</includedby>
+    <includedby refid="da/dd7/rocksdb__cursor_8cpp" local="yes">src/storage/rocksdb/rocksdb_cursor.cpp</includedby>
+    <incdepgraph>
+      <node id="6">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>storage/database_error.hpp</label>
+        <link refid="d9/da2/database__error_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/storage/rocksdb/rocksdb_util.hpp</label>
+        <link refid="d8/d00/rocksdb__util_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="10">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="3">
+        <label>gsl/span</label>
+      </node>
+      <node id="5">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="2">
+        <label>rocksdb/status.h</label>
+      </node>
+      <node id="12">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="13">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="7">
+        <label>string_view</label>
+      </node>
+      <node id="8">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/storage/rocksdb/rocksdb.cpp</label>
+        <link refid="dc/d6d/rocksdb_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/storage/rocksdb/rocksdb_batch.cpp</label>
+        <link refid="d6/d9a/rocksdb__batch_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/storage/rocksdb/rocksdb_cursor.cpp</label>
+        <link refid="da/dd7/rocksdb__cursor_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/storage/rocksdb/rocksdb_util.hpp</label>
+        <link refid="d8/d00/rocksdb__util_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d0/dbf/namespacesgns_1_1storage">sgns::storage</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d0/dbf/namespacesgns_1_1storage_1adb3c69ab61f897c1f78049608e047f84" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>outcome::result&lt; T &gt;</type>
+        <definition>outcome::result&lt; T &gt; sgns::storage::error_as_result</definition>
+        <argsstring>(const rocksdb::Status &amp;s)</argsstring>
+        <name>error_as_result</name>
+        <qualifiedname>sgns::storage::error_as_result</qualifiedname>
+        <param>
+          <type>const rocksdb::Status &amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_util.hpp" line="18" column="26" bodyfile="src/storage/rocksdb/rocksdb_util.hpp" bodystart="18" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dbf/namespacesgns_1_1storage_1affc5602333e529a0fe799fa1fed36335" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>outcome::result&lt; T &gt;</type>
+        <definition>outcome::result&lt; T &gt; sgns::storage::error_as_result</definition>
+        <argsstring>(const rocksdb::Status &amp;s, const base::Logger &amp;logger)</argsstring>
+        <name>error_as_result</name>
+        <qualifiedname>sgns::storage::error_as_result</qualifiedname>
+        <param>
+          <type>const rocksdb::Status &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const base::Logger &amp;</type>
+          <declname>logger</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_util.hpp" line="54" column="26" bodyfile="src/storage/rocksdb/rocksdb_util.hpp" bodystart="54" bodyend="59"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dbf/namespacesgns_1_1storage_1aa6fcc1a5312204766c0bbd691f1124ee" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>rocksdb::Slice</type>
+        <definition>rocksdb::Slice sgns::storage::make_slice</definition>
+        <argsstring>(const base::Buffer &amp;buf)</argsstring>
+        <name>make_slice</name>
+        <qualifiedname>sgns::storage::make_slice</qualifiedname>
+        <param>
+          <type>const base::Buffer &amp;</type>
+          <declname>buf</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_util.hpp" line="61" column="25" bodyfile="src/storage/rocksdb/rocksdb_util.hpp" bodystart="61" bodyend="67"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dbf/namespacesgns_1_1storage_1a56df5a22e09697b14f4c597b13a90693" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>gsl::span&lt; const uint8_t &gt;</type>
+        <definition>gsl::span&lt; const uint8_t &gt; sgns::storage::make_span</definition>
+        <argsstring>(const rocksdb::Slice &amp;s)</argsstring>
+        <name>make_span</name>
+        <qualifiedname>sgns::storage::make_span</qualifiedname>
+        <param>
+          <type>const rocksdb::Slice &amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_util.hpp" line="69" column="20" bodyfile="src/storage/rocksdb/rocksdb_util.hpp" bodystart="69" bodyend="74"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dbf/namespacesgns_1_1storage_1a2c08f2bb7966fe114c222eb1d38979b0" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>base::Buffer</type>
+        <definition>base::Buffer sgns::storage::make_buffer</definition>
+        <argsstring>(const rocksdb::Slice &amp;s)</argsstring>
+        <name>make_buffer</name>
+        <qualifiedname>sgns::storage::make_buffer</qualifiedname>
+        <param>
+          <type>const rocksdb::Slice &amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_util.hpp" line="76" column="23" bodyfile="src/storage/rocksdb/rocksdb_util.hpp" bodystart="76" bodyend="82"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_rocksdb_UTIL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_rocksdb_UTIL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;rocksdb/status.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;gsl/span&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/dda/outcome_8hpp" kindref="compound">outcome/outcome.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="da/d1d/buffer_8hpp" kindref="compound">base/buffer.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/da3/logger_8hpp" kindref="compound">base/logger.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d9/da2/database__error_8hpp" kindref="compound">storage/database_error.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d0/dbf/namespacesgns_1_1storage" kindref="compound">sgns::storage</ref><sp/></highlight></codeline>
+<codeline lineno="15"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>T&gt;</highlight></codeline>
+<codeline lineno="18" refid="d0/dbf/namespacesgns_1_1storage_1adb3c69ab61f897c1f78049608e047f84" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/>outcome::result&lt;T&gt;<sp/><ref refid="d0/dbf/namespacesgns_1_1storage_1adb3c69ab61f897c1f78049608e047f84" kindref="member">error_as_result</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a0c62d4a12443a094d04b1f1c9c84d7b9" kindref="member">rocksdb::Status</ref><sp/>&amp;s)<sp/></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/>{</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(s.ok())</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4bacae0aa021e21dddbd6d8cecec71e9cf564" kindref="member">DatabaseError::OK</ref>;</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(s.IsNotFound())<sp/></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4baca8c02547a8a3b02382bac3557bcb2280d" kindref="member">DatabaseError::NOT_FOUND</ref>;</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(s.IsIOError())<sp/></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4baca198489bd72edc2407c15917c5323cd93" kindref="member">DatabaseError::IO_ERROR</ref>;</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(s.IsInvalidArgument())<sp/></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4bacaf295a0c3e37c94f078e1c5476479132d" kindref="member">DatabaseError::INVALID_ARGUMENT</ref>;</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(s.IsCorruption())<sp/></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4bacab0660e678637dd6e26c0f99dccb171e7" kindref="member">DatabaseError::CORRUPTION</ref>;</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(s.IsNotSupported())<sp/></highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4baca5343bcd21aad65124478a61831f6949e" kindref="member">DatabaseError::NOT_SUPPORTED</ref>;</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4baca696b031073e74bf2cb98e5ef201d4aa3" kindref="member">DatabaseError::UNKNOWN</ref>;</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"></highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>T&gt;</highlight></codeline>
+<codeline lineno="54" refid="d0/dbf/namespacesgns_1_1storage_1affc5602333e529a0fe799fa1fed36335" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/>outcome::result&lt;T&gt;<sp/><ref refid="d0/dbf/namespacesgns_1_1storage_1adb3c69ab61f897c1f78049608e047f84" kindref="member">error_as_result</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a0c62d4a12443a094d04b1f1c9c84d7b9" kindref="member">rocksdb::Status</ref><sp/>&amp;s,</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref><sp/>&amp;logger)<sp/></highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/>{</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/>logger-&gt;error(s.ToString());</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d0/dbf/namespacesgns_1_1storage_1adb3c69ab61f897c1f78049608e047f84" kindref="member">error_as_result&lt;T&gt;</ref>(s);</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"></highlight></codeline>
+<codeline lineno="61" refid="d0/dbf/namespacesgns_1_1storage_1aa6fcc1a5312204766c0bbd691f1124ee" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a1492da459c197a6587932a81c3f48423" kindref="member">rocksdb::Slice</ref><sp/><ref refid="d0/dbf/namespacesgns_1_1storage_1aa6fcc1a5312204766c0bbd691f1124ee" kindref="member">make_slice</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;buf)<sp/></highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/>{</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>*ptr<sp/>=<sp/></highlight><highlight class="keyword">reinterpret_cast&lt;</highlight><highlight class="keyword">const<sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(buf.<ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1abfeab78c054d64ddbddb3a991f71cbb4" kindref="member">data</ref>());</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>n<sp/>=<sp/>buf.<ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1a77edb688fb1bff45a612ee6f03c6bda8" kindref="member">size</ref>();</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a1492da459c197a6587932a81c3f48423" kindref="member">rocksdb::Slice</ref>{ptr,<sp/>n};</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"></highlight></codeline>
+<codeline lineno="69" refid="d0/dbf/namespacesgns_1_1storage_1a56df5a22e09697b14f4c597b13a90693" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/><ref refid="d0/dbf/namespacesgns_1_1storage_1a56df5a22e09697b14f4c597b13a90693" kindref="member">make_span</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a1492da459c197a6587932a81c3f48423" kindref="member">rocksdb::Slice</ref><sp/>&amp;s)<sp/></highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/>{</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>*ptr<sp/>=<sp/></highlight><highlight class="keyword">reinterpret_cast&lt;</highlight><highlight class="keyword">const<sp/></highlight><highlight class="normal">uint8_t<sp/>*</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(s.data());</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>gsl::make_span(ptr,<sp/>s.size());</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"></highlight></codeline>
+<codeline lineno="76" refid="d0/dbf/namespacesgns_1_1storage_1a2c08f2bb7966fe114c222eb1d38979b0" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/><ref refid="d0/dbf/namespacesgns_1_1storage_1a2c08f2bb7966fe114c222eb1d38979b0" kindref="member">make_buffer</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a1492da459c197a6587932a81c3f48423" kindref="member">rocksdb::Slice</ref><sp/>&amp;s)<sp/></highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/>{</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>*ptr<sp/>=<sp/></highlight><highlight class="keyword">reinterpret_cast&lt;</highlight><highlight class="keyword">const<sp/></highlight><highlight class="normal">uint8_t<sp/>*</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(s.data());</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>{<sp/>ptr,<sp/>ptr<sp/>+<sp/>s.size()<sp/>};</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"></highlight></codeline>
+<codeline lineno="84"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::storage</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="85"><highlight class="normal"></highlight></codeline>
+<codeline lineno="86"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_rocksdb_UTIL_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/storage/rocksdb/rocksdb_util.hpp"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,38 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_0a512cdfab597aff87e92947a97cc98a" kind="dir">
+    <compoundname>src/processing</compoundname>
+    <innerdir refid="dir_54778bebe1153b8aa7626f3520e9df44">src/processing/impl</innerdir>
+    <innerfile refid="df/d22/processing__core_8hpp">processing_core.hpp</innerfile>
+    <innerfile refid="df/d3c/processing__engine_8cpp">processing_engine.cpp</innerfile>
+    <innerfile refid="d3/d33/processing__engine_8hpp">processing_engine.hpp</innerfile>
+    <innerfile refid="de/d98/processing__node_8cpp">processing_node.cpp</innerfile>
+    <innerfile refid="df/dac/processing__node_8hpp">processing_node.hpp</innerfile>
+    <innerfile refid="d3/d3a/processing__service_8cpp">processing_service.cpp</innerfile>
+    <innerfile refid="d5/d37/processing__service_8hpp">processing_service.hpp</innerfile>
+    <innerfile refid="d6/de9/processing__subtask__enqueuer_8hpp">processing_subtask_enqueuer.hpp</innerfile>
+    <innerfile refid="dd/d16/processing__subtask__enqueuer__impl_8cpp">processing_subtask_enqueuer_impl.cpp</innerfile>
+    <innerfile refid="df/d39/processing__subtask__enqueuer__impl_8hpp">processing_subtask_enqueuer_impl.hpp</innerfile>
+    <innerfile refid="db/d9a/processing__subtask__queue_8cpp">processing_subtask_queue.cpp</innerfile>
+    <innerfile refid="d7/d97/processing__subtask__queue_8hpp">processing_subtask_queue.hpp</innerfile>
+    <innerfile refid="dd/db9/processing__subtask__queue__accessor_8hpp">processing_subtask_queue_accessor.hpp</innerfile>
+    <innerfile refid="dd/d14/processing__subtask__queue__accessor__impl_8cpp">processing_subtask_queue_accessor_impl.cpp</innerfile>
+    <innerfile refid="de/d17/processing__subtask__queue__accessor__impl_8hpp">processing_subtask_queue_accessor_impl.hpp</innerfile>
+    <innerfile refid="db/d1c/processing__subtask__queue__channel_8hpp">processing_subtask_queue_channel.hpp</innerfile>
+    <innerfile refid="d8/d6f/processing__subtask__queue__channel__pubsub_8cpp">processing_subtask_queue_channel_pubsub.cpp</innerfile>
+    <innerfile refid="d7/d8d/processing__subtask__queue__channel__pubsub_8hpp">processing_subtask_queue_channel_pubsub.hpp</innerfile>
+    <innerfile refid="da/d9e/processing__subtask__queue__manager_8cpp">processing_subtask_queue_manager.cpp</innerfile>
+    <innerfile refid="dd/dd8/processing__subtask__queue__manager_8hpp">processing_subtask_queue_manager.hpp</innerfile>
+    <innerfile refid="d9/de8/processing__subtask__result__storage_8hpp">processing_subtask_result_storage.hpp</innerfile>
+    <innerfile refid="d1/d7c/processing__task__queue_8hpp">processing_task_queue.hpp</innerfile>
+    <innerfile refid="d8/d06/processing__tasksplit_8cpp">processing_tasksplit.cpp</innerfile>
+    <innerfile refid="df/d74/processing__tasksplit_8hpp">processing_tasksplit.hpp</innerfile>
+    <innerfile refid="d4/deb/processing__validation__core_8cpp">processing_validation_core.cpp</innerfile>
+    <innerfile refid="d1/dd9/processing__validation__core_8hpp">processing_validation_core.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/processing/"/>
+  </compounddef>
+</doxygen>

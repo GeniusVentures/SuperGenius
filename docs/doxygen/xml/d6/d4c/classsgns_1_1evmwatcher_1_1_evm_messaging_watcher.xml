@@ -1,0 +1,452 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher" kind="class" language="C++" prot="public">
+    <compoundname>sgns::evmwatcher::EvmMessagingWatcher</compoundname>
+    <basecompoundref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher" prot="public" virt="non-virtual">sgns::watcher::MessagingWatcher</basecompoundref>
+    <includes refid="dc/d21/evm__messaging__watcher_8hpp" local="no">evm_messaging_watcher.hpp</includes>
+    <innerclass refid="d7/d91/structsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1_1_chain_config" prot="public">sgns::evmwatcher::EvmMessagingWatcher::ChainConfig</innerclass>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a9849ebe2c1496f8045373caa28f4c2f6" prot="public" static="no">
+        <type><ref refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a26d95425a6d2dab3ea19c2f5ee89a24d" kindref="member">api::WsClientImpl::Context</ref></type>
+        <definition>using sgns::evmwatcher::EvmMessagingWatcher::Context = api::WsClientImpl::Context</definition>
+        <argsstring></argsstring>
+        <name>Context</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::Context</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="15" column="9" bodyfile="src/watcher/impl/evm_messaging_watcher.hpp" bodystart="15" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a892258e15339b49a2ee6891f34481be7" prot="public" static="no">
+        <type>struct { std::string topic_hash; }</type>
+        <definition>using sgns::evmwatcher::EvmMessagingWatcher::TopicFilter = struct {
+           std::string topic_hash;
+       }</definition>
+        <argsstring></argsstring>
+        <name>TopicFilter</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::TopicFilter</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="17" column="9" bodyfile="src/watcher/impl/evm_messaging_watcher.hpp" bodystart="17" bodyend="19"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1ae35a65c58a51f042b7ec7f8dce9a4ce4" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::evmwatcher::EvmMessagingWatcher::contract_address</definition>
+        <argsstring></argsstring>
+        <name>contract_address</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::contract_address</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="45" column="21" bodyfile="src/watcher/impl/evm_messaging_watcher.hpp" bodystart="45" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1ad4a29116baa366259a667a3ea8525b10" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; <ref refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a892258e15339b49a2ee6891f34481be7" kindref="member">TopicFilter</ref> &gt;</type>
+        <definition>std::vector&lt;TopicFilter&gt; sgns::evmwatcher::EvmMessagingWatcher::topic_filters</definition>
+        <argsstring></argsstring>
+        <name>topic_filters</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::topic_filters</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="46" column="21" bodyfile="src/watcher/impl/evm_messaging_watcher.hpp" bodystart="46" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a55bc0072c42f4acbc3067e6a457e361d" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl" kindref="compound">api::WsClientImpl</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;api::WsClientImpl&gt; sgns::evmwatcher::EvmMessagingWatcher::ws_client</definition>
+        <argsstring></argsstring>
+        <name>ws_client</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::ws_client</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="47" column="25" bodyfile="src/watcher/impl/evm_messaging_watcher.hpp" bodystart="47" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a53716a32d4e04566983f8c1556fcf6cf" prot="private" static="no" mutable="no">
+        <type><ref refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl_1a26d95425a6d2dab3ea19c2f5ee89a24d" kindref="member">api::WsClientImpl::Context</ref></type>
+        <definition>api::WsClientImpl::Context sgns::evmwatcher::EvmMessagingWatcher::ws_context</definition>
+        <argsstring></argsstring>
+        <name>ws_context</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::ws_context</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="48" column="36" bodyfile="src/watcher/impl/evm_messaging_watcher.hpp" bodystart="48" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1ac2957f0b13a363610e90f92b362cfe05" prot="private" static="no" mutable="no">
+        <type><ref refid="d7/d91/structsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1_1_chain_config" kindref="compound">ChainConfig</ref></type>
+        <definition>ChainConfig sgns::evmwatcher::EvmMessagingWatcher::chain</definition>
+        <argsstring></argsstring>
+        <name>chain</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::chain</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="49" column="21" bodyfile="src/watcher/impl/evm_messaging_watcher.hpp" bodystart="49" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a1d5652d2b8100e5dce6d8bb91b23c153" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::evmwatcher::EvmMessagingWatcher::EvmMessagingWatcher</definition>
+        <argsstring>(const rapidjson::Document &amp;config, MessageCallback callback, const std::string &amp;contract_address, const std::vector&lt; TopicFilter &gt; &amp;topic_filters)</argsstring>
+        <name>EvmMessagingWatcher</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::EvmMessagingWatcher</qualifiedname>
+        <param>
+          <type>const rapidjson::Document &amp;</type>
+          <declname>config</declname>
+        </param>
+        <param>
+          <type><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a4ffcee76e2e73d98589885408cfba57e" kindref="member">MessageCallback</ref></type>
+          <declname>callback</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>contract_address</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; <ref refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a892258e15339b49a2ee6891f34481be7" kindref="member">TopicFilter</ref> &gt; &amp;</type>
+          <declname>topic_filters</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="28" column="9" bodyfile="src/watcher/impl/evm_messaging_watcher.cpp" bodystart="6" bodyend="12"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1aa31b796638637bfc71b53cdbcbfa3723" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::evmwatcher::EvmMessagingWatcher::getContractAddress</definition>
+        <argsstring>() const</argsstring>
+        <name>getContractAddress</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::getContractAddress</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="31" column="22" bodyfile="src/watcher/impl/evm_messaging_watcher.cpp" bodystart="16" bodyend="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a41e43f0de97f703c8dc6616e25f2e2cd" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::evmwatcher::EvmMessagingWatcher::setContractAddress</definition>
+        <argsstring>(const std::string &amp;contract_address)</argsstring>
+        <name>setContractAddress</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::setContractAddress</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>contract_address</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="32" column="14" bodyfile="src/watcher/impl/evm_messaging_watcher.cpp" bodystart="20" bodyend="22"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a22bd0331dda80d4331c38c37c6e9334d" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; <ref refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a892258e15339b49a2ee6891f34481be7" kindref="member">TopicFilter</ref> &gt;</type>
+        <definition>std::vector&lt; EvmMessagingWatcher::TopicFilter &gt; sgns::evmwatcher::EvmMessagingWatcher::getTopicFilters</definition>
+        <argsstring>() const</argsstring>
+        <name>getTopicFilters</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::getTopicFilters</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="34" column="22" bodyfile="src/watcher/impl/evm_messaging_watcher.cpp" bodystart="25" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1aeb4599e514a3fb84f1103d3299d6334c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::evmwatcher::EvmMessagingWatcher::setTopicFilters</definition>
+        <argsstring>(const std::vector&lt; TopicFilter &gt; &amp;topic_filters)</argsstring>
+        <name>setTopicFilters</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::setTopicFilters</qualifiedname>
+        <param>
+          <type>const std::vector&lt; <ref refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a892258e15339b49a2ee6891f34481be7" kindref="member">TopicFilter</ref> &gt; &amp;</type>
+          <declname>topic_filters</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="35" column="14" bodyfile="src/watcher/impl/evm_messaging_watcher.cpp" bodystart="29" bodyend="31"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1aa9b4e1710ec3fb14a90f6d2a263331ca" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::evmwatcher::EvmMessagingWatcher::setupWebSocketListener</definition>
+        <argsstring>(const ChainConfig &amp;chainConfig)</argsstring>
+        <name>setupWebSocketListener</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::setupWebSocketListener</qualifiedname>
+        <param>
+          <type>const <ref refid="d7/d91/structsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1_1_chain_config" kindref="compound">ChainConfig</ref> &amp;</type>
+          <declname>chainConfig</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="37" column="14" bodyfile="src/watcher/impl/evm_messaging_watcher.cpp" bodystart="33" bodyend="72"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a439cc5a7cae49dd7f3d063d21cc620bc" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d7/d91/structsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1_1_chain_config" kindref="compound">ChainConfig</ref></type>
+        <definition>EvmMessagingWatcher::ChainConfig sgns::evmwatcher::EvmMessagingWatcher::getChain</definition>
+        <argsstring>() const</argsstring>
+        <name>getChain</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::getChain</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="39" column="22" bodyfile="src/watcher/impl/evm_messaging_watcher.cpp" bodystart="118" bodyend="120"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a38b79d823bc72434a986b583c2d62afe" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::evmwatcher::EvmMessagingWatcher::startWatching</definition>
+        <argsstring>() override</argsstring>
+        <name>startWatching</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::startWatching</qualifiedname>
+        <reimplements refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1ad3eebc535cfe454e6f04af04be24574a">startWatching</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="40" column="14" bodyfile="src/watcher/impl/evm_messaging_watcher.cpp" bodystart="98" bodyend="106"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a4ccd2db5ccbf8ed35791b147a90fa5d4" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::evmwatcher::EvmMessagingWatcher::stopWatching</definition>
+        <argsstring>() override</argsstring>
+        <name>stopWatching</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::stopWatching</qualifiedname>
+        <reimplements refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a070742650711d2e74dd97e7746a9c0c8">stopWatching</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="41" column="14" bodyfile="src/watcher/impl/evm_messaging_watcher.cpp" bodystart="108" bodyend="116"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1af77b54b78a5a4abb7398ce2093fe50d4" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::evmwatcher::EvmMessagingWatcher::parseConfig</definition>
+        <argsstring>(const rapidjson::Document &amp;config)</argsstring>
+        <name>parseConfig</name>
+        <qualifiedname>sgns::evmwatcher::EvmMessagingWatcher::parseConfig</qualifiedname>
+        <param>
+          <type>const rapidjson::Document &amp;</type>
+          <declname>config</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="44" column="14" bodyfile="src/watcher/impl/evm_messaging_watcher.cpp" bodystart="74" bodyend="96"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::evmwatcher::EvmMessagingWatcher</label>
+        <link refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::watcher::MessagingWatcher</label>
+        <link refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="13">
+        <label>sgns::api::WsClientImpl</label>
+        <link refid="d2/d26/classsgns_1_1api_1_1_ws_client_impl"/>
+        <childnode refid="14" relation="public-inheritance">
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-host</edgelabel>
+          <edgelabel>-port</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::evmwatcher::EvmMessagingWatcher</label>
+        <link refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-contract_address</edgelabel>
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>-topic_filters</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>-ws_client</edgelabel>
+        </childnode>
+        <childnode refid="15" relation="usage">
+          <edgelabel>-chain</edgelabel>
+        </childnode>
+      </node>
+      <node id="15">
+        <label>sgns::evmwatcher::EvmMessagingWatcher::ChainConfig</label>
+        <link refid="d7/d91/structsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1_1_chain_config"/>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+chain_id</edgelabel>
+          <edgelabel>+chain_name</edgelabel>
+          <edgelabel>+rpc_url</edgelabel>
+          <edgelabel>+ws_url</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::watcher::MessagingWatcher</label>
+        <link refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>#running_mutex</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-m_watchers</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="14">
+        <label>std::enable_shared_from_this&lt; WsClientImpl &gt;</label>
+      </node>
+      <node id="3">
+        <label>std::mutex</label>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::shared_ptr&lt; sgns::api::WsClientImpl &gt;</label>
+        <childnode refid="13" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::api::WsClientImpl &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::shared_ptr&lt; sgns::watcher::MessagingWatcher &gt;</label>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::watcher::MessagingWatcher &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::string</label>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::vector&lt; TopicFilter &gt;</label>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; TopicFilter &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::vector&lt; std::shared_ptr&lt; sgns::watcher::MessagingWatcher &gt; &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; std::shared_ptr&lt; sgns::watcher::MessagingWatcher &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/watcher/impl/evm_messaging_watcher.hpp" line="12" column="1" bodyfile="src/watcher/impl/evm_messaging_watcher.hpp" bodystart="12" bodyend="50"/>
+    <listofallmembers>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1af3c7797a7b1847a58ed15d2223a982a8" prot="public" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>addWatcher</name></member>
+      <member refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1ac2957f0b13a363610e90f92b362cfe05" prot="private" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>chain</name></member>
+      <member refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a9849ebe2c1496f8045373caa28f4c2f6" prot="public" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>Context</name></member>
+      <member refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1ae35a65c58a51f042b7ec7f8dce9a4ce4" prot="private" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>contract_address</name></member>
+      <member refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a1d5652d2b8100e5dce6d8bb91b23c153" prot="public" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>EvmMessagingWatcher</name></member>
+      <member refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a439cc5a7cae49dd7f3d063d21cc620bc" prot="public" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>getChain</name></member>
+      <member refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1aa31b796638637bfc71b53cdbcbfa3723" prot="public" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>getContractAddress</name></member>
+      <member refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a22bd0331dda80d4331c38c37c6e9334d" prot="public" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>getTopicFilters</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1acae0398c853569da510bcda71aa5c36d" prot="public" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>isRunning</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a64d7fea1ee2928106b8fa3e9d765b8fb" prot="private" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>m_watchers</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a4ffcee76e2e73d98589885408cfba57e" prot="public" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>MessageCallback</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a4692d3293117111d3256053e9c5be37a" prot="protected" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>messageCallback</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a3dafcb831d68544a3d72399d7237157b" prot="protected" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>MessagingWatcher</name></member>
+      <member refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1af77b54b78a5a4abb7398ce2093fe50d4" prot="private" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>parseConfig</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a564631bff21e68e44020f76834203495" prot="protected" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>running</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a43dac8ac3576d41a2cad59c5de0cce72" prot="protected" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>running_mutex</name></member>
+      <member refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a41e43f0de97f703c8dc6616e25f2e2cd" prot="public" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>setContractAddress</name></member>
+      <member refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1aeb4599e514a3fb84f1103d3299d6334c" prot="public" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>setTopicFilters</name></member>
+      <member refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1aa9b4e1710ec3fb14a90f6d2a263331ca" prot="public" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>setupWebSocketListener</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1aa37dcd91910d193f8f09d89b09f7eb5e" prot="public" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>startAll</name></member>
+      <member refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a38b79d823bc72434a986b583c2d62afe" prot="public" virt="virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>startWatching</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1ad436e4c641413ca69b2d2fecec453bee" prot="public" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>stopAll</name></member>
+      <member refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a4ccd2db5ccbf8ed35791b147a90fa5d4" prot="public" virt="virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>stopWatching</name></member>
+      <member refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1ad4a29116baa366259a667a3ea8525b10" prot="private" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>topic_filters</name></member>
+      <member refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a892258e15339b49a2ee6891f34481be7" prot="public" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>TopicFilter</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a77d51f3f83c65ec24680094471c68bf9" prot="protected" virt="virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>watch</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a3b89299a5d50f7539fcb3799570baca0" prot="protected" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>watcherThread</name></member>
+      <member refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a55bc0072c42f4acbc3067e6a457e361d" prot="private" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>ws_client</name></member>
+      <member refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a53716a32d4e04566983f8c1556fcf6cf" prot="private" virt="non-virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>ws_context</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a8bccba48716d42227f29c3af51ceb96d" prot="public" virt="virtual"><scope>sgns::evmwatcher::EvmMessagingWatcher</scope><name>~MessagingWatcher</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

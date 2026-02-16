@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_29024c0a02ea27f690d5e9e9bcce9166" kind="dir">
+    <compoundname>src/crypto/vrf</compoundname>
+    <innerfile refid="d5/d8f/vrf__provider__impl_8cpp">vrf_provider_impl.cpp</innerfile>
+    <innerfile refid="d6/da3/vrf__provider__impl_8hpp">vrf_provider_impl.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/vrf/"/>
+  </compounddef>
+</doxygen>

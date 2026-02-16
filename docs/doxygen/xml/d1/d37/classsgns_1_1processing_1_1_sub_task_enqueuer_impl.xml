@@ -1,0 +1,172 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl" kind="class" language="C++" prot="public">
+    <compoundname>sgns::processing::SubTaskEnqueuerImpl</compoundname>
+    <basecompoundref refid="d2/d46/classsgns_1_1processing_1_1_sub_task_enqueuer" prot="public" virt="non-virtual">sgns::processing::SubTaskEnqueuer</basecompoundref>
+    <includes refid="df/d39/processing__subtask__enqueuer__impl_8hpp" local="no">processing_subtask_enqueuer_impl.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1abc5c3a3911b72479283fed27ebe56023" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d0/deb/class_processing_task_queue" kindref="compound">ProcessingTaskQueue</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;ProcessingTaskQueue&gt; sgns::processing::SubTaskEnqueuerImpl::m_taskQueue</definition>
+        <argsstring></argsstring>
+        <name>m_taskQueue</name>
+        <qualifiedname>sgns::processing::SubTaskEnqueuerImpl::m_taskQueue</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_enqueuer_impl.hpp" line="22" column="25" bodyfile="src/processing/processing_subtask_enqueuer_impl.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1a00df3ade3ac4f2c1da6c40a5dee47a18" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">sgns::base::Logger</ref></type>
+        <definition>sgns::base::Logger sgns::processing::SubTaskEnqueuerImpl::m_logger</definition>
+        <argsstring></argsstring>
+        <name>m_logger</name>
+        <qualifiedname>sgns::processing::SubTaskEnqueuerImpl::m_logger</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">sgns::base::createLogger</ref>( &quot;SubTaskEnqueuerImpl&quot; )</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_enqueuer_impl.hpp" line="23" column="46" bodyfile="src/processing/processing_subtask_enqueuer_impl.hpp" bodystart="23" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1a2b03358ac96e7ec8882ca1f125f1f647" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::processing::SubTaskEnqueuerImpl::SubTaskEnqueuerImpl</definition>
+        <argsstring>(std::shared_ptr&lt; ProcessingTaskQueue &gt; taskQueue)</argsstring>
+        <name>SubTaskEnqueuerImpl</name>
+        <qualifiedname>sgns::processing::SubTaskEnqueuerImpl::SubTaskEnqueuerImpl</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d0/deb/class_processing_task_queue" kindref="compound">ProcessingTaskQueue</ref> &gt;</type>
+          <declname>taskQueue</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_enqueuer_impl.hpp" line="17" column="9" bodyfile="src/processing/processing_subtask_enqueuer_impl.cpp" bodystart="7" bodyend="10"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1a8c3b9a29dc7e87a98a7f63ea331458e1" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; SGProcessing::Task &gt;</type>
+        <definition>outcome::result&lt; SGProcessing::Task &gt; sgns::processing::SubTaskEnqueuerImpl::EnqueueSubTasks</definition>
+        <argsstring>(std::string &amp;subTaskQueueId, std::list&lt; SGProcessing::SubTask &gt; &amp;subTasks) override</argsstring>
+        <name>EnqueueSubTasks</name>
+        <qualifiedname>sgns::processing::SubTaskEnqueuerImpl::EnqueueSubTasks</qualifiedname>
+        <reimplements refid="d2/d46/classsgns_1_1processing_1_1_sub_task_enqueuer_1a55a5ec27b566e2deb9349be551976cf3">EnqueueSubTasks</reimplements>
+        <param>
+          <type>std::string &amp;</type>
+          <declname>subTaskQueueId</declname>
+        </param>
+        <param>
+          <type>std::list&lt; SGProcessing::SubTask &gt; &amp;</type>
+          <declname>subTasks</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_enqueuer_impl.hpp" line="19" column="26" bodyfile="src/processing/processing_subtask_enqueuer_impl.cpp" bodystart="12" bodyend="32"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1a50a4672ec015e4621add0c1485fb16e1" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::processing::SubTaskEnqueuerImpl::MarkTaskBad</definition>
+        <argsstring>(const std::string &amp;taskKey) override</argsstring>
+        <name>MarkTaskBad</name>
+        <qualifiedname>sgns::processing::SubTaskEnqueuerImpl::MarkTaskBad</qualifiedname>
+        <reimplements refid="d2/d46/classsgns_1_1processing_1_1_sub_task_enqueuer_1a04d23e865340e4b4b61391d26a229a97">MarkTaskBad</reimplements>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>taskKey</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_enqueuer_impl.hpp" line="20" column="45" bodyfile="src/processing/processing_subtask_enqueuer_impl.cpp" bodystart="34" bodyend="37"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::processing::SubTaskEnqueuer</label>
+        <link refid="d2/d46/classsgns_1_1processing_1_1_sub_task_enqueuer"/>
+      </node>
+      <node id="1">
+        <label>sgns::processing::SubTaskEnqueuerImpl</label>
+        <link refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="4">
+        <label>ProcessingTaskQueue</label>
+        <link refid="d0/deb/class_processing_task_queue"/>
+      </node>
+      <node id="6">
+        <label>T</label>
+      </node>
+      <node id="2">
+        <label>sgns::processing::SubTaskEnqueuer</label>
+        <link refid="d2/d46/classsgns_1_1processing_1_1_sub_task_enqueuer"/>
+      </node>
+      <node id="1">
+        <label>sgns::processing::SubTaskEnqueuerImpl</label>
+        <link refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-m_taskQueue</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>-m_logger</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; ProcessingTaskQueue &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; ProcessingTaskQueue &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/processing/processing_subtask_enqueuer_impl.hpp" line="14" column="5" bodyfile="src/processing/processing_subtask_enqueuer_impl.hpp" bodystart="15" bodyend="24"/>
+    <listofallmembers>
+      <member refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1a8c3b9a29dc7e87a98a7f63ea331458e1" prot="public" virt="virtual"><scope>sgns::processing::SubTaskEnqueuerImpl</scope><name>EnqueueSubTasks</name></member>
+      <member refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1a00df3ade3ac4f2c1da6c40a5dee47a18" prot="private" virt="non-virtual"><scope>sgns::processing::SubTaskEnqueuerImpl</scope><name>m_logger</name></member>
+      <member refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1abc5c3a3911b72479283fed27ebe56023" prot="private" virt="non-virtual"><scope>sgns::processing::SubTaskEnqueuerImpl</scope><name>m_taskQueue</name></member>
+      <member refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1a50a4672ec015e4621add0c1485fb16e1" prot="public" virt="virtual"><scope>sgns::processing::SubTaskEnqueuerImpl</scope><name>MarkTaskBad</name></member>
+      <member refid="d1/d37/classsgns_1_1processing_1_1_sub_task_enqueuer_impl_1a2b03358ac96e7ec8882ca1f125f1f647" prot="public" virt="non-virtual"><scope>sgns::processing::SubTaskEnqueuerImpl</scope><name>SubTaskEnqueuerImpl</name></member>
+      <member refid="d2/d46/classsgns_1_1processing_1_1_sub_task_enqueuer_1af0d0cdc54794bfff044089d258cafe8f" prot="public" virt="virtual"><scope>sgns::processing::SubTaskEnqueuerImpl</scope><name>~SubTaskEnqueuer</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

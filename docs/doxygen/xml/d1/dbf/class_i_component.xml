@@ -1,0 +1,437 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/dbf/class_i_component" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>IComponent</compoundname>
+    <derivedcompoundref refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage" prot="public" virt="non-virtual">sgns::storage::face::GenericStorage&lt; Buffer, Buffer &gt;</derivedcompoundref>
+    <derivedcompoundref refid="d1/d00/classsgns_1_1_genius_node" prot="public" virt="non-virtual">sgns::GeniusNode</derivedcompoundref>
+    <derivedcompoundref refid="d5/db7/classsgns_1_1_i_secure_storage" prot="public" virt="non-virtual">sgns::ISecureStorage</derivedcompoundref>
+    <derivedcompoundref refid="dd/d62/classsgns_1_1api_1_1_author_api" prot="public" virt="non-virtual">sgns::api::AuthorApi</derivedcompoundref>
+    <derivedcompoundref refid="d6/d3f/classsgns_1_1api_1_1_listener" prot="public" virt="non-virtual">sgns::api::Listener</derivedcompoundref>
+    <derivedcompoundref refid="dd/d46/classsgns_1_1api_1_1_rpc_context" prot="public" virt="non-virtual">sgns::api::RpcContext</derivedcompoundref>
+    <derivedcompoundref refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool" prot="public" virt="non-virtual">sgns::api::RpcThreadPool</derivedcompoundref>
+    <derivedcompoundref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager" prot="public" virt="non-virtual">sgns::application::AppStateManager</derivedcompoundref>
+    <derivedcompoundref refid="d7/de2/classsgns_1_1application_1_1_configuration_storage" prot="public" virt="non-virtual">sgns::application::ConfigurationStorage</derivedcompoundref>
+    <derivedcompoundref refid="d5/ddb/classsgns_1_1application_1_1_key_storage" prot="public" virt="non-virtual">sgns::application::KeyStorage</derivedcompoundref>
+    <derivedcompoundref refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository" prot="public" virt="non-virtual">sgns::blockchain::BlockHeaderRepository</derivedcompoundref>
+    <derivedcompoundref refid="de/de8/classsgns_1_1blockchain_1_1_block_storage" prot="public" virt="non-virtual">sgns::blockchain::BlockStorage</derivedcompoundref>
+    <derivedcompoundref refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree" prot="public" virt="non-virtual">sgns::blockchain::BlockTree</derivedcompoundref>
+    <derivedcompoundref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" prot="public" virt="non-virtual">sgns::crypto::ED25519Keypair</derivedcompoundref>
+    <derivedcompoundref refid="da/d5d/classsgns_1_1crypto_1_1_e_d25519_provider" prot="public" virt="non-virtual">sgns::crypto::ED25519Provider</derivedcompoundref>
+    <derivedcompoundref refid="dd/d14/classsgns_1_1crypto_1_1_hasher" prot="public" virt="non-virtual">sgns::crypto::Hasher</derivedcompoundref>
+    <derivedcompoundref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair" prot="public" virt="non-virtual">sgns::crypto::SR25519Keypair</derivedcompoundref>
+    <derivedcompoundref refid="df/d78/classsgns_1_1crypto_1_1_s_r25519_provider" prot="public" virt="non-virtual">sgns::crypto::SR25519Provider</derivedcompoundref>
+    <derivedcompoundref refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider" prot="public" virt="non-virtual">sgns::crypto::VRFProvider</derivedcompoundref>
+    <derivedcompoundref refid="d4/dbe/structsgns_1_1primitives_1_1_production_configuration" prot="public" virt="non-virtual">sgns::primitives::ProductionConfiguration</derivedcompoundref>
+    <derivedcompoundref refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker" prot="public" virt="non-virtual">sgns::storage::changes_trie::ChangesTracker</derivedcompoundref>
+    <derivedcompoundref refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage" prot="public" virt="non-virtual">sgns::storage::face::GenericStorage&lt; K, V &gt;</derivedcompoundref>
+    <derivedcompoundref refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec" prot="public" virt="non-virtual">sgns::storage::trie::Codec</derivedcompoundref>
+    <derivedcompoundref refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory" prot="public" virt="non-virtual">sgns::storage::trie::SuperGeniusTrieFactory</derivedcompoundref>
+    <derivedcompoundref refid="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer" prot="public" virt="non-virtual">sgns::storage::trie::TrieSerializer</derivedcompoundref>
+    <derivedcompoundref refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage" prot="public" virt="non-virtual">sgns::storage::trie::TrieStorage</derivedcompoundref>
+    <includes refid="df/dec/_i_component_8hpp" local="no">IComponent.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual IComponent::~IComponent</definition>
+        <argsstring>()=default</argsstring>
+        <name>~IComponent</name>
+        <qualifiedname>IComponent::~IComponent</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/singleton/IComponent.hpp" line="14" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::string</type>
+        <definition>virtual std::string IComponent::GetName</definition>
+        <argsstring>()=0</argsstring>
+        <name>GetName</name>
+        <qualifiedname>IComponent::GetName</qualifiedname>
+        <reimplementedby refid="d5/d83/classsgns_1_1_android_secure_storage_1a43ba4764dc2432caaa1ce52aa75ee19e">GetName</reimplementedby>
+        <reimplementedby refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a5b84c56c2c00bb15bc0e1c428f27853b">GetName</reimplementedby>
+        <reimplementedby refid="dd/d46/classsgns_1_1api_1_1_rpc_context_1aab6adfdc1ba87d4b3687809bcbabf359">GetName</reimplementedby>
+        <reimplementedby refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool_1ae0cbffdf6463cc0761f069c65d698f46">GetName</reimplementedby>
+        <reimplementedby refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a9cbb9ed327df7da3f4d7b1a45a69eadc">GetName</reimplementedby>
+        <reimplementedby refid="d9/d1f/classsgns_1_1_apple_secure_storage_1a1efa387d80f635f3a1aab762004705c6">GetName</reimplementedby>
+        <reimplementedby refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ae298b89a2a868c8eda513383d1cfae7b">GetName</reimplementedby>
+        <reimplementedby refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a723a526b5b94c38e86edfff700180081">GetName</reimplementedby>
+        <reimplementedby refid="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a104b52e9e606d641833b9fb050a63754">GetName</reimplementedby>
+        <reimplementedby refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl_1ab82d0c098bb2fc25db7786428c0bd206">GetName</reimplementedby>
+        <reimplementedby refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1aef7cda4d4b8206cb13ef74d0932e5b17">GetName</reimplementedby>
+        <reimplementedby refid="d1/daf/classsgns_1_1blockchain_1_1_key_value_block_storage_1a53a90f7a3e861c97424bbba7395b088b">GetName</reimplementedby>
+        <reimplementedby refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair_1a407a7c28a8a31619e3ad4d1a914d23a9">GetName</reimplementedby>
+        <reimplementedby refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl_1a9bbf21777da5fab565356c8dd322a8b5">GetName</reimplementedby>
+        <reimplementedby refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl_1a5ba45829906092da57f578c57c9d9213">GetName</reimplementedby>
+        <reimplementedby refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1a3d9251c3ef03b405e9e1c2e5616d15fd">GetName</reimplementedby>
+        <reimplementedby refid="d3/d11/classsgns_1_1crypto_1_1_s_r25519_provider_impl_1a35adead926341d1cf6ceaf4526e3aae0">GetName</reimplementedby>
+        <reimplementedby refid="da/d25/classsgns_1_1crypto_1_1_v_r_f_provider_impl_1ab8f5de464a3b45ce128fc6e2274b0eef">GetName</reimplementedby>
+        <reimplementedby refid="d1/d00/classsgns_1_1_genius_node_1a034721993d66617e336c6d1d4444371f">GetName</reimplementedby>
+        <reimplementedby refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a5e2595afc441ef277e89c6ed13fc3495">GetName</reimplementedby>
+        <reimplementedby refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1a5d16972fcdadf19c6977ddfb35a43364">GetName</reimplementedby>
+        <reimplementedby refid="dd/de8/classsgns_1_1_linux_secure_storage_1a4e24c58d7c44e03cd5bba1bd8d158fac">GetName</reimplementedby>
+        <reimplementedby refid="d4/dbe/structsgns_1_1primitives_1_1_production_configuration_1a01acae3c95e0d8f0b136e43bad56690b">GetName</reimplementedby>
+        <reimplementedby refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl_1ab715b9e347c6f0e6262727df63c408bc">GetName</reimplementedby>
+        <reimplementedby refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage_1ae0cb38da5bfe41e13b64831365cfd578">GetName</reimplementedby>
+        <reimplementedby refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a23b9b096bd601ab101803431eb352b0f">GetName</reimplementedby>
+        <reimplementedby refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec_1a7b20cf61c8e8039cb18606f90e8d4ea8">GetName</reimplementedby>
+        <reimplementedby refid="d7/dba/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_impl_1a2ebbb4ad3e402e2c28c5fd0fe7a06938">GetName</reimplementedby>
+        <reimplementedby refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a4805f566131ac614e81bbd25686c3984">GetName</reimplementedby>
+        <reimplementedby refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl_1aa8d1c843480e3766c8a6ecbd165db326">GetName</reimplementedby>
+        <reimplementedby refid="d5/ddf/classsgns_1_1storage_1_1trie_1_1_trie_storage_impl_1a0587c1206cf4d2309b241f7c53e448a1">GetName</reimplementedby>
+        <reimplementedby refid="db/d24/classsgns_1_1_windows_secure_storage_1a45dce53c507a2304198f3451be5ecdd9">GetName</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/singleton/IComponent.hpp" line="15" column="25"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="10">
+        <label>sgns::AndroidSecureStorage</label>
+        <link refid="d5/d83/classsgns_1_1_android_secure_storage"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::AppleSecureStorage</label>
+        <link refid="d9/d1f/classsgns_1_1_apple_secure_storage"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::GeniusNode</label>
+        <link refid="d1/d00/classsgns_1_1_genius_node"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>sgns::ISecureStorage</label>
+        <link refid="d5/db7/classsgns_1_1_i_secure_storage"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::JSONBackend</label>
+        <link refid="d9/d71/classsgns_1_1_j_s_o_n_backend"/>
+        <childnode refid="8" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>sgns::JSONSecureStorage</label>
+        <link refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage"/>
+        <childnode refid="8" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>sgns::LinuxSecureStorage</label>
+        <link refid="dd/de8/classsgns_1_1_linux_secure_storage"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>sgns::WindowsSecureStorage</label>
+        <link refid="db/d24/classsgns_1_1_windows_secure_storage"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>sgns::api::AuthorApi</label>
+        <link refid="dd/d62/classsgns_1_1api_1_1_author_api"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>sgns::api::HttpListenerImpl</label>
+        <link refid="db/de6/classsgns_1_1api_1_1_http_listener_impl"/>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>sgns::api::Listener</label>
+        <link refid="d6/d3f/classsgns_1_1api_1_1_listener"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>sgns::api::RpcContext</label>
+        <link refid="dd/d46/classsgns_1_1api_1_1_rpc_context"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>sgns::api::RpcThreadPool</label>
+        <link refid="d3/dc4/classsgns_1_1api_1_1_rpc_thread_pool"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>sgns::api::WsListenerImpl</label>
+        <link refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl"/>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>sgns::application::AppStateManager</label>
+        <link refid="d4/d75/classsgns_1_1application_1_1_app_state_manager"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>sgns::application::AppStateManagerImpl</label>
+        <link refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl"/>
+        <childnode refid="21" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>sgns::application::ConfigurationStorage</label>
+        <link refid="d7/de2/classsgns_1_1application_1_1_configuration_storage"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>sgns::application::ConfigurationStorageImpl</label>
+        <link refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl"/>
+        <childnode refid="23" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>sgns::application::KeyStorage</label>
+        <link refid="d5/ddb/classsgns_1_1application_1_1_key_storage"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>sgns::application::LocalKeyStorage</label>
+        <link refid="d2/d70/classsgns_1_1application_1_1_local_key_storage"/>
+        <childnode refid="25" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>sgns::blockchain::BlockHeaderRepository</label>
+        <link refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>sgns::blockchain::BlockStorage</label>
+        <link refid="de/de8/classsgns_1_1blockchain_1_1_block_storage"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>sgns::blockchain::BlockTree</label>
+        <link refid="df/dd9/structsgns_1_1blockchain_1_1_block_tree"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>sgns::blockchain::BlockTreeImpl</label>
+        <link refid="d8/d42/classsgns_1_1blockchain_1_1_block_tree_impl"/>
+        <childnode refid="31" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>sgns::blockchain::KeyValueBlockHeaderRepository</label>
+        <link refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository"/>
+        <childnode refid="27" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>sgns::blockchain::KeyValueBlockStorage</label>
+        <link refid="d1/daf/classsgns_1_1blockchain_1_1_key_value_block_storage"/>
+        <childnode refid="29" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>sgns::crypto::ED25519Keypair</label>
+        <link refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="34">
+        <label>sgns::crypto::ED25519Provider</label>
+        <link refid="da/d5d/classsgns_1_1crypto_1_1_e_d25519_provider"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="35">
+        <label>sgns::crypto::ED25519ProviderImpl</label>
+        <link refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl"/>
+        <childnode refid="34" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="36">
+        <label>sgns::crypto::Hasher</label>
+        <link refid="dd/d14/classsgns_1_1crypto_1_1_hasher"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="37">
+        <label>sgns::crypto::HasherImpl</label>
+        <link refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl"/>
+        <childnode refid="36" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="38">
+        <label>sgns::crypto::SR25519Keypair</label>
+        <link refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="39">
+        <label>sgns::crypto::SR25519Provider</label>
+        <link refid="df/d78/classsgns_1_1crypto_1_1_s_r25519_provider"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="40">
+        <label>sgns::crypto::SR25519ProviderImpl</label>
+        <link refid="d3/d11/classsgns_1_1crypto_1_1_s_r25519_provider_impl"/>
+        <childnode refid="39" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="41">
+        <label>sgns::crypto::VRFProvider</label>
+        <link refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="42">
+        <label>sgns::crypto::VRFProviderImpl</label>
+        <link refid="da/d25/classsgns_1_1crypto_1_1_v_r_f_provider_impl"/>
+        <childnode refid="41" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="43">
+        <label>sgns::primitives::ProductionConfiguration</label>
+        <link refid="d4/dbe/structsgns_1_1primitives_1_1_production_configuration"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::InMemoryStorage</label>
+        <link refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="44">
+        <label>sgns::storage::changes_trie::ChangesTracker</label>
+        <link refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="45">
+        <label>sgns::storage::changes_trie::StorageChangesTrackerImpl</label>
+        <link refid="d6/d57/classsgns_1_1storage_1_1changes__trie_1_1_storage_changes_tracker_impl"/>
+        <childnode refid="44" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="46">
+        <label>sgns::storage::face::GenericStorage&lt; K, V &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::storage::face::GenericStorage&lt; Buffer, Buffer &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+        <childnode refid="46" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::storage::rocksdb</label>
+        <link refid="d5/dbf/classsgns_1_1storage_1_1rocksdb"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="47">
+        <label>sgns::storage::trie::Codec</label>
+        <link refid="d4/d94/classsgns_1_1storage_1_1trie_1_1_codec"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="48">
+        <label>sgns::storage::trie::SuperGeniusCodec</label>
+        <link refid="d0/dc8/classsgns_1_1storage_1_1trie_1_1_super_genius_codec"/>
+        <childnode refid="47" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="49">
+        <label>sgns::storage::trie::SuperGeniusTrieFactory</label>
+        <link refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="50">
+        <label>sgns::storage::trie::SuperGeniusTrieFactoryImpl</label>
+        <link refid="d7/dba/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_impl"/>
+        <childnode refid="49" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="51">
+        <label>sgns::storage::trie::TrieSerializer</label>
+        <link refid="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="52">
+        <label>sgns::storage::trie::TrieSerializerImpl</label>
+        <link refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl"/>
+        <childnode refid="51" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="53">
+        <label>sgns::storage::trie::TrieStorage</label>
+        <link refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::trie::TrieStorageBackend</label>
+        <link refid="dd/d95/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>sgns::storage::trie::TrieStorageBackendImpl</label>
+        <link refid="dc/d7f/classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="54">
+        <label>sgns::storage::trie::TrieStorageImpl</label>
+        <link refid="d5/ddf/classsgns_1_1storage_1_1trie_1_1_trie_storage_impl"/>
+        <childnode refid="53" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/singleton/IComponent.hpp" line="11" column="1" bodyfile="src/singleton/IComponent.hpp" bodystart="12" bodyend="17"/>
+    <listofallmembers>
+      <member refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7" prot="public" virt="pure-virtual"><scope>IComponent</scope><name>GetName</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>IComponent</scope><name>~IComponent</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,268 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/db5/classsgns_1_1node__id__handshake" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::node_id_handshake</compoundname>
+    <basecompoundref refid="db/da6/classsgns_1_1message" prot="public" virt="non-virtual">sgns::message</basecompoundref>
+    <includes refid="da/d8d/node_2common_8hpp" local="no">common.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="dc/db5/classsgns_1_1node__id__handshake_1a6da7ea693eac995e10fa60643f25bef2" prot="public" static="no" mutable="no">
+        <type>boost::optional&lt; sgns::uint256_union &gt;</type>
+        <definition>boost::optional&lt;sgns::uint256_union&gt; sgns::node_id_handshake::query</definition>
+        <argsstring></argsstring>
+        <name>query</name>
+        <qualifiedname>sgns::node_id_handshake::query</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="453" column="17" bodyfile="node/common.hpp" bodystart="453" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/db5/classsgns_1_1node__id__handshake_1af3a87b242fac1ef95bca6d598fe057b8" prot="public" static="no" mutable="no">
+        <type>boost::optional&lt; std::pair&lt; sgns::account, sgns::signature &gt; &gt;</type>
+        <definition>boost::optional&lt;std::pair&lt;sgns::account, sgns::signature&gt; &gt; sgns::node_id_handshake::response</definition>
+        <argsstring></argsstring>
+        <name>response</name>
+        <qualifiedname>sgns::node_id_handshake::response</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="454" column="17" bodyfile="node/common.hpp" bodystart="454" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dc/db5/classsgns_1_1node__id__handshake_1acd5c06c9b7aaf47fe33c8dcde9b21ee0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::node_id_handshake::node_id_handshake</definition>
+        <argsstring>(bool &amp;, sgns::stream &amp;, sgns::message_header const &amp;)</argsstring>
+        <name>node_id_handshake</name>
+        <qualifiedname>sgns::node_id_handshake::node_id_handshake</qualifiedname>
+        <param>
+          <type>bool &amp;</type>
+          <defname>error_a</defname>
+        </param>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type><ref refid="de/d6d/classsgns_1_1message__header" kindref="compound">sgns::message_header</ref> const &amp;</type>
+          <defname>header_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="447" column="1" bodyfile="node/common.cpp" bodystart="1329" bodyend="1335"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/db5/classsgns_1_1node__id__handshake_1aa9bb7fd33af57399cf6a92b6da902563" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::node_id_handshake::node_id_handshake</definition>
+        <argsstring>(boost::optional&lt; sgns::uint256_union &gt;, boost::optional&lt; std::pair&lt; sgns::account, sgns::signature &gt; &gt;)</argsstring>
+        <name>node_id_handshake</name>
+        <qualifiedname>sgns::node_id_handshake::node_id_handshake</qualifiedname>
+        <param>
+          <type>boost::optional&lt; sgns::uint256_union &gt;</type>
+          <defname>query</defname>
+        </param>
+        <param>
+          <type>boost::optional&lt; std::pair&lt; sgns::account, sgns::signature &gt; &gt;</type>
+          <defname>response</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="448" column="1" bodyfile="node/common.cpp" bodystart="1337" bodyend="1350"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/db5/classsgns_1_1node__id__handshake_1af27e2e942017aefd4e94db27d97bf89d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::node_id_handshake::serialize</definition>
+        <argsstring>(sgns::stream &amp;, bool) const override</argsstring>
+        <name>serialize</name>
+        <qualifiedname>sgns::node_id_handshake::serialize</qualifiedname>
+        <reimplements refid="db/da6/classsgns_1_1message_1a7caa91e43882d5ce6b2f84e7a180bfd8">serialize</reimplements>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type>bool</type>
+          <defname>use_epoch_2_min_version_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="449" column="6" bodyfile="node/common.cpp" bodystart="1352" bodyend="1364"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/db5/classsgns_1_1node__id__handshake_1aea01615d5d5b93420b8bb40cad4bc963" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::node_id_handshake::deserialize</definition>
+        <argsstring>(sgns::stream &amp;)</argsstring>
+        <name>deserialize</name>
+        <qualifiedname>sgns::node_id_handshake::deserialize</qualifiedname>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="450" column="6" bodyfile="node/common.cpp" bodystart="1366" bodyend="1394"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/db5/classsgns_1_1node__id__handshake_1a01ec635a54b6ece83f8ae8a07eb64933" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::node_id_handshake::visit</definition>
+        <argsstring>(sgns::message_visitor &amp;) const override</argsstring>
+        <name>visit</name>
+        <qualifiedname>sgns::node_id_handshake::visit</qualifiedname>
+        <reimplements refid="db/da6/classsgns_1_1message_1a85e15104bd6bb3f97732067f4a31b418">visit</reimplements>
+        <param>
+          <type><ref refid="dd/d84/classsgns_1_1message__visitor" kindref="compound">sgns::message_visitor</ref> &amp;</type>
+          <defname>visitor_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="451" column="6" bodyfile="node/common.cpp" bodystart="1402" bodyend="1405"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/db5/classsgns_1_1node__id__handshake_1a8eff959b88155b5dd4e2ca0511d598b9" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::node_id_handshake::operator==</definition>
+        <argsstring>(sgns::node_id_handshake const &amp;) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::node_id_handshake::operator==</qualifiedname>
+        <param>
+          <type><ref refid="dc/db5/classsgns_1_1node__id__handshake" kindref="compound">sgns::node_id_handshake</ref> const &amp;</type>
+          <defname>other_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="452" column="6" bodyfile="node/common.cpp" bodystart="1396" bodyend="1400"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/db5/classsgns_1_1node__id__handshake_1a12c3fc9bea4a8b59f9b64630fefc87d6" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t sgns::node_id_handshake::size</definition>
+        <argsstring>() const</argsstring>
+        <name>size</name>
+        <qualifiedname>sgns::node_id_handshake::size</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="455" column="8" bodyfile="node/common.cpp" bodystart="1407" bodyend="1410"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="dc/db5/classsgns_1_1node__id__handshake_1a2595132688d46dbd3e562c33a2bb1f69" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t sgns::node_id_handshake::size</definition>
+        <argsstring>(sgns::message_header const &amp;)</argsstring>
+        <name>size</name>
+        <qualifiedname>sgns::node_id_handshake::size</qualifiedname>
+        <param>
+          <type><ref refid="de/d6d/classsgns_1_1message__header" kindref="compound">sgns::message_header</ref> const &amp;</type>
+          <defname>header_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="456" column="15" bodyfile="node/common.cpp" bodystart="1412" bodyend="1424"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::message</label>
+        <link refid="db/da6/classsgns_1_1message"/>
+      </node>
+      <node id="1">
+        <label>sgns::node_id_handshake</label>
+        <link refid="dc/db5/classsgns_1_1node__id__handshake"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>sgns::message</label>
+        <link refid="db/da6/classsgns_1_1message"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+header</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::message_header</label>
+        <link refid="de/d6d/classsgns_1_1message__header"/>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+block_type_mask</edgelabel>
+          <edgelabel>+count_mask</edgelabel>
+          <edgelabel>+extensions</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::node_id_handshake</label>
+        <link refid="dc/db5/classsgns_1_1node__id__handshake"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::bitset&lt; Bits &gt;</label>
+      </node>
+      <node id="4">
+        <label>std::bitset&lt; 16 &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; 16 &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="node/common.hpp" line="444" column="1" bodyfile="node/common.hpp" bodystart="445" bodyend="457"/>
+    <listofallmembers>
+      <member refid="dc/db5/classsgns_1_1node__id__handshake_1aea01615d5d5b93420b8bb40cad4bc963" prot="public" virt="non-virtual"><scope>sgns::node_id_handshake</scope><name>deserialize</name></member>
+      <member refid="db/da6/classsgns_1_1message_1abc0de834dc846d1d86110caec8a4b7db" prot="public" virt="non-virtual"><scope>sgns::node_id_handshake</scope><name>header</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a1c0d801d4625dbcc8a9f40a5c6631b2c" prot="public" virt="non-virtual"><scope>sgns::node_id_handshake</scope><name>message</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a2fbf35d959e3532e2ce4675c9c26761e" prot="public" virt="non-virtual"><scope>sgns::node_id_handshake</scope><name>message</name></member>
+      <member refid="dc/db5/classsgns_1_1node__id__handshake_1acd5c06c9b7aaf47fe33c8dcde9b21ee0" prot="public" virt="non-virtual"><scope>sgns::node_id_handshake</scope><name>node_id_handshake</name></member>
+      <member refid="dc/db5/classsgns_1_1node__id__handshake_1aa9bb7fd33af57399cf6a92b6da902563" prot="public" virt="non-virtual"><scope>sgns::node_id_handshake</scope><name>node_id_handshake</name></member>
+      <member refid="dc/db5/classsgns_1_1node__id__handshake_1a8eff959b88155b5dd4e2ca0511d598b9" prot="public" virt="non-virtual"><scope>sgns::node_id_handshake</scope><name>operator==</name></member>
+      <member refid="dc/db5/classsgns_1_1node__id__handshake_1a6da7ea693eac995e10fa60643f25bef2" prot="public" virt="non-virtual"><scope>sgns::node_id_handshake</scope><name>query</name></member>
+      <member refid="dc/db5/classsgns_1_1node__id__handshake_1af3a87b242fac1ef95bca6d598fe057b8" prot="public" virt="non-virtual"><scope>sgns::node_id_handshake</scope><name>response</name></member>
+      <member refid="dc/db5/classsgns_1_1node__id__handshake_1af27e2e942017aefd4e94db27d97bf89d" prot="public" virt="virtual"><scope>sgns::node_id_handshake</scope><name>serialize</name></member>
+      <member refid="dc/db5/classsgns_1_1node__id__handshake_1a12c3fc9bea4a8b59f9b64630fefc87d6" prot="public" virt="non-virtual"><scope>sgns::node_id_handshake</scope><name>size</name></member>
+      <member refid="dc/db5/classsgns_1_1node__id__handshake_1a2595132688d46dbd3e562c33a2bb1f69" prot="public" virt="non-virtual"><scope>sgns::node_id_handshake</scope><name>size</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a2ad934099e11461e98605fcb5b001c0b" prot="public" virt="non-virtual"><scope>sgns::node_id_handshake</scope><name>to_bytes</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a5ae4e86a1763a52b65e042caed25ee54" prot="public" virt="non-virtual"><scope>sgns::node_id_handshake</scope><name>to_shared_const_buffer</name></member>
+      <member refid="dc/db5/classsgns_1_1node__id__handshake_1a01ec635a54b6ece83f8ae8a07eb64933" prot="public" virt="virtual"><scope>sgns::node_id_handshake</scope><name>visit</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a144f9f336461eb5a17eac7825ba23b41" prot="public" virt="virtual"><scope>sgns::node_id_handshake</scope><name>~message</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

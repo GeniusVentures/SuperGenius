@@ -1,0 +1,314 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/d25/classsgns_1_1application_1_1_syncing_node_application" kind="class" language="C++" prot="public">
+    <compoundname>sgns::application::SyncingNodeApplication</compoundname>
+    <basecompoundref refid="da/d1d/classsgns_1_1application_1_1_sgns_application" prot="public" virt="non-virtual">sgns::application::SgnsApplication</basecompoundref>
+    <includes refid="d3/dde/syncing__node__application_8hpp" local="no">syncing_node_application.hpp</includes>
+    <sectiondef kind="private-type">
+      <memberdef kind="typedef" id="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1af1ce2c61c08499baf77ff8dbdea1aeeb" prot="private" static="no">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type>std::shared_ptr&lt; T &gt;</type>
+        <definition>using sgns::application::SyncingNodeApplication::sptr = std::shared_ptr&lt;T&gt;</definition>
+        <argsstring></argsstring>
+        <name>sptr</name>
+        <qualifiedname>sgns::application::SyncingNodeApplication::sptr</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/syncing_node_application.hpp" line="15" column="5" bodyfile="src/application/impl/syncing_node_application.hpp" bodystart="15" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a80725e0bf467ba49f7a7ccb987821ce3" prot="private" static="no">
+        <templateparamlist>
+          <param>
+            <type>class T</type>
+          </param>
+        </templateparamlist>
+        <type>std::unique_ptr&lt; T &gt;</type>
+        <definition>using sgns::application::SyncingNodeApplication::uptr = std::unique_ptr&lt;T&gt;</definition>
+        <argsstring></argsstring>
+        <name>uptr</name>
+        <qualifiedname>sgns::application::SyncingNodeApplication::uptr</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/syncing_node_application.hpp" line="18" column="5" bodyfile="src/application/impl/syncing_node_application.hpp" bodystart="18" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a16ea94c26dea880c2528dd6022e36e3d" prot="public" static="no">
+        <type>decltype(injector::makeSyncingNodeInjector(<ref refid="db/d40/namespacesgns_1_1application_1a584cedf80f0bf06ab9d676db4ee5b252" kindref="member">AppConfigPtr</ref>{}))</type>
+        <definition>using sgns::application::SyncingNodeApplication::InjectorType = 
+decltype(injector::makeSyncingNodeInjector(AppConfigPtr{}))</definition>
+        <argsstring></argsstring>
+        <name>InjectorType</name>
+        <qualifiedname>sgns::application::SyncingNodeApplication::InjectorType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/syncing_node_application.hpp" line="21" column="5" bodyfile="src/application/impl/syncing_node_application.hpp" bodystart="21" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1aee81af868fecf5b55a5f4bb2cc31e04a" prot="private" static="no" mutable="no">
+        <type><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a16ea94c26dea880c2528dd6022e36e3d" kindref="member">InjectorType</ref></type>
+        <definition>InjectorType sgns::application::SyncingNodeApplication::injector_</definition>
+        <argsstring></argsstring>
+        <name>injector_</name>
+        <qualifiedname>sgns::application::SyncingNodeApplication::injector_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/syncing_node_application.hpp" line="32" column="18" bodyfile="src/application/impl/syncing_node_application.hpp" bodystart="32" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a2519d24a85b65a523c07eff9894a6678" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d2/d3c/class_app_state_manager" kindref="compound">AppStateManager</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;AppStateManager&gt; sgns::application::SyncingNodeApplication::app_state_manager_</definition>
+        <argsstring></argsstring>
+        <name>app_state_manager_</name>
+        <qualifiedname>sgns::application::SyncingNodeApplication::app_state_manager_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/syncing_node_application.hpp" line="34" column="21" bodyfile="src/application/impl/syncing_node_application.hpp" bodystart="34" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a0520c20eaf522eb516bfe67d948ff4cf" prot="private" static="no" mutable="no">
+        <type><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1af1ce2c61c08499baf77ff8dbdea1aeeb" kindref="member">sptr</ref>&lt; boost::asio::io_context &gt;</type>
+        <definition>sptr&lt;boost::asio::io_context&gt; sgns::application::SyncingNodeApplication::io_context_</definition>
+        <argsstring></argsstring>
+        <name>io_context_</name>
+        <qualifiedname>sgns::application::SyncingNodeApplication::io_context_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/syncing_node_application.hpp" line="36" column="10" bodyfile="src/application/impl/syncing_node_application.hpp" bodystart="36" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1adab5902b3ba1d669539a11573d879747" prot="private" static="no" mutable="no">
+        <type><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1af1ce2c61c08499baf77ff8dbdea1aeeb" kindref="member">sptr</ref>&lt; <ref refid="d7/de2/classsgns_1_1application_1_1_configuration_storage" kindref="compound">ConfigurationStorage</ref> &gt;</type>
+        <definition>sptr&lt;ConfigurationStorage&gt; sgns::application::SyncingNodeApplication::config_storage_</definition>
+        <argsstring></argsstring>
+        <name>config_storage_</name>
+        <qualifiedname>sgns::application::SyncingNodeApplication::config_storage_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/syncing_node_application.hpp" line="38" column="10" bodyfile="src/application/impl/syncing_node_application.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1ad100765bc790ba1eebcd29f049232c13" prot="private" static="no" mutable="no">
+        <type><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1af1ce2c61c08499baf77ff8dbdea1aeeb" kindref="member">sptr</ref>&lt; network::Router &gt;</type>
+        <definition>sptr&lt;network::Router&gt; sgns::application::SyncingNodeApplication::router_</definition>
+        <argsstring></argsstring>
+        <name>router_</name>
+        <qualifiedname>sgns::application::SyncingNodeApplication::router_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/syncing_node_application.hpp" line="39" column="10" bodyfile="src/application/impl/syncing_node_application.hpp" bodystart="39" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a0a85ef3101d982bca6a8db510a65970f" prot="private" static="no" mutable="no">
+        <type><ref refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1af1ce2c61c08499baf77ff8dbdea1aeeb" kindref="member">sptr</ref>&lt; api::ApiService &gt;</type>
+        <definition>sptr&lt;api::ApiService&gt; sgns::application::SyncingNodeApplication::jrpc_api_service_</definition>
+        <argsstring></argsstring>
+        <name>jrpc_api_service_</name>
+        <qualifiedname>sgns::application::SyncingNodeApplication::jrpc_api_service_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/syncing_node_application.hpp" line="41" column="10" bodyfile="src/application/impl/syncing_node_application.hpp" bodystart="41" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a91aed5fcfd389b5c0b7451cf9eacf532" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::application::SyncingNodeApplication::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::application::SyncingNodeApplication::logger_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/syncing_node_application.hpp" line="43" column="18" bodyfile="src/application/impl/syncing_node_application.hpp" bodystart="43" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a7f6d0fe592b832461c3577726bfdd2bf" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::SyncingNodeApplication::~SyncingNodeApplication</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~SyncingNodeApplication</name>
+        <qualifiedname>sgns::application::SyncingNodeApplication::~SyncingNodeApplication</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/syncing_node_application.hpp" line="24" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a1c60c724fe9f9825b517a59dc2b7388c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::SyncingNodeApplication::SyncingNodeApplication</definition>
+        <argsstring>(const AppConfigPtr &amp;app_config)</argsstring>
+        <name>SyncingNodeApplication</name>
+        <qualifiedname>sgns::application::SyncingNodeApplication::SyncingNodeApplication</qualifiedname>
+        <param>
+          <type>const <ref refid="db/d40/namespacesgns_1_1application_1a584cedf80f0bf06ab9d676db4ee5b252" kindref="member">AppConfigPtr</ref> &amp;</type>
+          <declname>app_config</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/syncing_node_application.hpp" line="26" column="5" bodyfile="src/application/impl/syncing_node_application.cpp" bodystart="7" bodyend="21"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1ab01c6e34ea934ddbc5541e93acfc5787" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::application::SyncingNodeApplication::run</definition>
+        <argsstring>() override</argsstring>
+        <name>run</name>
+        <qualifiedname>sgns::application::SyncingNodeApplication::run</qualifiedname>
+        <reimplements refid="da/d1d/classsgns_1_1application_1_1_sgns_application_1a2314654dc1f566607845a8ab5f427329">run</reimplements>
+        <briefdescription>
+<para>runs application </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/syncing_node_application.hpp" line="28" column="10" bodyfile="src/application/impl/syncing_node_application.cpp" bodystart="23" bodyend="70"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::application::SgnsApplication</label>
+        <link refid="da/d1d/classsgns_1_1application_1_1_sgns_application"/>
+      </node>
+      <node id="1">
+        <label>sgns::application::SyncingNodeApplication</label>
+        <link refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="9">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="5">
+        <label>T</label>
+      </node>
+      <node id="7">
+        <label>sgns::application::AppStateManager</label>
+        <link refid="d4/d75/classsgns_1_1application_1_1_app_state_manager"/>
+        <childnode refid="8" relation="public-inheritance">
+        </childnode>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::application::SgnsApplication</label>
+        <link refid="da/d1d/classsgns_1_1application_1_1_sgns_application"/>
+      </node>
+      <node id="1">
+        <label>sgns::application::SyncingNodeApplication</label>
+        <link refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-injector_</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>-app_state_manager_</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::enable_shared_from_this&lt; AppStateManager &gt;</label>
+      </node>
+      <node id="4">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; AppConfiguration &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; AppConfiguration &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; sgns::application::AppStateManager &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; sgns::application::AppStateManager &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/application/impl/syncing_node_application.hpp" line="13" column="3" bodyfile="src/application/impl/syncing_node_application.hpp" bodystart="13" bodyend="44"/>
+    <listofallmembers>
+      <member refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a2519d24a85b65a523c07eff9894a6678" prot="private" virt="non-virtual"><scope>sgns::application::SyncingNodeApplication</scope><name>app_state_manager_</name></member>
+      <member refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1adab5902b3ba1d669539a11573d879747" prot="private" virt="non-virtual"><scope>sgns::application::SyncingNodeApplication</scope><name>config_storage_</name></member>
+      <member refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1aee81af868fecf5b55a5f4bb2cc31e04a" prot="private" virt="non-virtual"><scope>sgns::application::SyncingNodeApplication</scope><name>injector_</name></member>
+      <member refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a16ea94c26dea880c2528dd6022e36e3d" prot="public" virt="non-virtual"><scope>sgns::application::SyncingNodeApplication</scope><name>InjectorType</name></member>
+      <member refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a0520c20eaf522eb516bfe67d948ff4cf" prot="private" virt="non-virtual"><scope>sgns::application::SyncingNodeApplication</scope><name>io_context_</name></member>
+      <member refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a0a85ef3101d982bca6a8db510a65970f" prot="private" virt="non-virtual"><scope>sgns::application::SyncingNodeApplication</scope><name>jrpc_api_service_</name></member>
+      <member refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a91aed5fcfd389b5c0b7451cf9eacf532" prot="private" virt="non-virtual"><scope>sgns::application::SyncingNodeApplication</scope><name>logger_</name></member>
+      <member refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1ad100765bc790ba1eebcd29f049232c13" prot="private" virt="non-virtual"><scope>sgns::application::SyncingNodeApplication</scope><name>router_</name></member>
+      <member refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1ab01c6e34ea934ddbc5541e93acfc5787" prot="public" virt="virtual"><scope>sgns::application::SyncingNodeApplication</scope><name>run</name></member>
+      <member refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1af1ce2c61c08499baf77ff8dbdea1aeeb" prot="private" virt="non-virtual"><scope>sgns::application::SyncingNodeApplication</scope><name>sptr</name></member>
+      <member refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a1c60c724fe9f9825b517a59dc2b7388c" prot="public" virt="non-virtual"><scope>sgns::application::SyncingNodeApplication</scope><name>SyncingNodeApplication</name></member>
+      <member refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a80725e0bf467ba49f7a7ccb987821ce3" prot="private" virt="non-virtual"><scope>sgns::application::SyncingNodeApplication</scope><name>uptr</name></member>
+      <member refid="da/d1d/classsgns_1_1application_1_1_sgns_application_1af6c814f3750d9dccbb78d2c653c3da36" prot="public" virt="virtual"><scope>sgns::application::SyncingNodeApplication</scope><name>~SgnsApplication</name></member>
+      <member refid="d9/d25/classsgns_1_1application_1_1_syncing_node_application_1a7f6d0fe592b832461c3577726bfdd2bf" prot="public" virt="non-virtual"><scope>sgns::application::SyncingNodeApplication</scope><name>~SyncingNodeApplication</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

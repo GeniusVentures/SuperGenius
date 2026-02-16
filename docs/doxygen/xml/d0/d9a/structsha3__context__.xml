@@ -1,0 +1,96 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/d9a/structsha3__context__" kind="struct" language="C++" prot="public">
+    <compoundname>sha3_context_</compoundname>
+    <includes refid="d6/dd8/keccak_8h" local="no">keccak.h</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d0/d9a/structsha3__context___1aa3e142662475461e1cb62c191358c095" prot="public" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sha3_context_::saved</definition>
+        <argsstring></argsstring>
+        <name>saved</name>
+        <qualifiedname>sha3_context_::saved</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="14" column="12" bodyfile="src/crypto/keccak/keccak.h" bodystart="14" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d9a/structsha3__context___1a8c714409dec92be987cc672fac23b9d9" prot="public" static="no" mutable="no">
+        <type>union sha3_context_::@074057106325245360031133032233277031237027064177</type>
+        <definition>union sha3_context_::@074057106325245360031133032233277031237027064177 sha3_context_::@071276333024056032336271272112247147040145220341</definition>
+        <argsstring></argsstring>
+        <name>@071276333024056032336271272112247147040145220341</name>
+        <qualifiedname>sha3_context_::@071276333024056032336271272112247147040145220341</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="19" column="3"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d9a/structsha3__context___1a3b82e6a02e3660338cadb8b8d4b2b82a" prot="public" static="no" mutable="no">
+        <type>unsigned</type>
+        <definition>unsigned sha3_context_::byteIndex</definition>
+        <argsstring></argsstring>
+        <name>byteIndex</name>
+        <qualifiedname>sha3_context_::byteIndex</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="20" column="12" bodyfile="src/crypto/keccak/keccak.h" bodystart="20" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d9a/structsha3__context___1a6bd3f08cba5bab58fa3b9014313bbde1" prot="public" static="no" mutable="no">
+        <type>unsigned</type>
+        <definition>unsigned sha3_context_::wordIndex</definition>
+        <argsstring></argsstring>
+        <name>wordIndex</name>
+        <qualifiedname>sha3_context_::wordIndex</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="22" column="12" bodyfile="src/crypto/keccak/keccak.h" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d9a/structsha3__context___1ac0931578aa317d7440cfa3297e1876a3" prot="public" static="no" mutable="no">
+        <type>unsigned</type>
+        <definition>unsigned sha3_context_::capacityWords</definition>
+        <argsstring></argsstring>
+        <name>capacityWords</name>
+        <qualifiedname>sha3_context_::capacityWords</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/keccak/keccak.h" line="24" column="12" bodyfile="src/crypto/keccak/keccak.h" bodystart="24" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sha3_context_</label>
+        <link refid="d0/d9a/structsha3__context__"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/crypto/keccak/keccak.h" line="13" column="1" bodyfile="src/crypto/keccak/keccak.h" bodystart="13" bodyend="26"/>
+    <listofallmembers>
+      <member refid="d0/d9a/structsha3__context___1a3b82e6a02e3660338cadb8b8d4b2b82a" prot="public" virt="non-virtual"><scope>sha3_context_</scope><name>byteIndex</name></member>
+      <member refid="d0/d9a/structsha3__context___1ac0931578aa317d7440cfa3297e1876a3" prot="public" virt="non-virtual"><scope>sha3_context_</scope><name>capacityWords</name></member>
+      <member refid="d0/d9a/structsha3__context___1aa3e142662475461e1cb62c191358c095" prot="public" virt="non-virtual"><scope>sha3_context_</scope><name>saved</name></member>
+      <member refid="d0/d9a/structsha3__context___1a6bd3f08cba5bab58fa3b9014313bbde1" prot="public" virt="non-virtual"><scope>sha3_context_</scope><name>wordIndex</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

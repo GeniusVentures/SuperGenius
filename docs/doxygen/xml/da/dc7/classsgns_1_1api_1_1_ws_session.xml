@@ -1,0 +1,624 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/dc7/classsgns_1_1api_1_1_ws_session" kind="class" language="C++" prot="public">
+    <compoundname>sgns::api::WsSession</compoundname>
+    <basecompoundref refid="db/d02/classsgns_1_1api_1_1_session" prot="public" virt="non-virtual">sgns::api::Session</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">std::enable_shared_from_this&lt; WsSession &gt;</basecompoundref>
+    <includes refid="d4/d57/ws__session_8hpp" local="no">ws_session.hpp</includes>
+    <innerclass refid="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration" prot="public">sgns::api::WsSession::Configuration</innerclass>
+    <sectiondef kind="private-type">
+      <memberdef kind="typedef" id="da/dc7/classsgns_1_1api_1_1_ws_session_1a9311caa8ba2119e385696c1e2fcb0f63" prot="private" static="no">
+        <type>boost::beast::websocket::error</type>
+        <definition>using sgns::api::WsSession::WsError = boost::beast::websocket::error</definition>
+        <argsstring></argsstring>
+        <name>WsError</name>
+        <qualifiedname>sgns::api::WsSession::WsError</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="19" column="5" bodyfile="src/api/transport/impl/ws/ws_session.hpp" bodystart="19" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="da/dc7/classsgns_1_1api_1_1_ws_session_1aeccdd0c4afd5ffc0ce1bfac133b1fa35" prot="private" static="no" mutable="no">
+        <type>boost::asio::strand&lt; boost::asio::io_context::executor_type &gt;</type>
+        <definition>boost::asio::strand&lt;boost::asio::io_context::executor_type&gt; sgns::api::WsSession::strand_</definition>
+        <argsstring></argsstring>
+        <name>strand_</name>
+        <qualifiedname>sgns::api::WsSession::strand_</qualifiedname>
+        <briefdescription>
+<para>Strand to ensure the connection&apos;s handlers are not called concurrently. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="119" column="25" bodyfile="src/api/transport/impl/ws/ws_session.hpp" bodystart="119" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/dc7/classsgns_1_1api_1_1_ws_session_1aafd28076b3342a82e06b0750d7c9b6a5" prot="private" static="no" mutable="no">
+        <type>boost::asio::ip::tcp::socket</type>
+        <definition>boost::asio::ip::tcp::socket sgns::api::WsSession::socket_</definition>
+        <argsstring></argsstring>
+        <name>socket_</name>
+        <qualifiedname>sgns::api::WsSession::socket_</qualifiedname>
+        <briefdescription>
+<para><ref refid="db/d02/classsgns_1_1api_1_1_session_1a283ab2019b76debbb9301e27b4a64d53" kindref="member">Socket</ref> for the connection. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="122" column="34" bodyfile="src/api/transport/impl/ws/ws_session.hpp" bodystart="122" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/dc7/classsgns_1_1api_1_1_ws_session_1a3036aa8deb88b04554e38a3b9b3ac6c2" prot="private" static="no" mutable="no">
+        <type><ref refid="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration" kindref="compound">Configuration</ref></type>
+        <definition>Configuration sgns::api::WsSession::config_</definition>
+        <argsstring></argsstring>
+        <name>config_</name>
+        <qualifiedname>sgns::api::WsSession::config_</qualifiedname>
+        <briefdescription>
+<para>session configuration </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="124" column="19" bodyfile="src/api/transport/impl/ws/ws_session.hpp" bodystart="124" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/dc7/classsgns_1_1api_1_1_ws_session_1a1d2fa4d4005d9d3ef3567198ab4f61d0" prot="private" static="no" mutable="no">
+        <type>boost::beast::websocket::stream&lt; boost::asio::ip::tcp::socket &amp; &gt;</type>
+        <definition>boost::beast::websocket::stream&lt;boost::asio::ip::tcp::socket &amp;&gt; sgns::api::WsSession::stream_</definition>
+        <argsstring></argsstring>
+        <name>stream_</name>
+        <qualifiedname>sgns::api::WsSession::stream_</qualifiedname>
+        <briefdescription>
+<para>stream </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="126" column="9" bodyfile="src/api/transport/impl/ws/ws_session.hpp" bodystart="126" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/dc7/classsgns_1_1api_1_1_ws_session_1ab5a7bb1c0ef52b071b60da8f1b3cfeac" prot="private" static="no" mutable="no">
+        <type>boost::beast::flat_buffer</type>
+        <definition>boost::beast::flat_buffer sgns::api::WsSession::rbuffer_</definition>
+        <argsstring></argsstring>
+        <name>rbuffer_</name>
+        <qualifiedname>sgns::api::WsSession::rbuffer_</qualifiedname>
+        <briefdescription>
+<para>read buffer </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="127" column="31" bodyfile="src/api/transport/impl/ws/ws_session.hpp" bodystart="127" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/dc7/classsgns_1_1api_1_1_ws_session_1a98c191c2f35723057d8e4ef708575524" prot="private" static="no" mutable="no">
+        <type>boost::beast::flat_buffer</type>
+        <definition>boost::beast::flat_buffer sgns::api::WsSession::wbuffer_</definition>
+        <argsstring></argsstring>
+        <name>wbuffer_</name>
+        <qualifiedname>sgns::api::WsSession::wbuffer_</qualifiedname>
+        <briefdescription>
+<para>write buffer </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="128" column="31" bodyfile="src/api/transport/impl/ws/ws_session.hpp" bodystart="128" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/dc7/classsgns_1_1api_1_1_ws_session_1a4736ad3cd3b43cf32736934ffe200fa6" prot="private" static="no" mutable="no">
+        <type><ref refid="db/d02/classsgns_1_1api_1_1_session_1aa68e294d772e90f0c69e8b8cd1d79d64" kindref="member">SessionId</ref> const</type>
+        <definition>SessionId const sgns::api::WsSession::id_</definition>
+        <argsstring></argsstring>
+        <name>id_</name>
+        <qualifiedname>sgns::api::WsSession::id_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="130" column="21" bodyfile="src/api/transport/impl/ws/ws_session.hpp" bodystart="130" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/dc7/classsgns_1_1api_1_1_ws_session_1ac69b9011fe0a65ddf8682c837ee5445c" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::api::WsSession::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::api::WsSession::logger_</qualifiedname>
+        <initializer>                 =
+<ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>(&quot;websocket session&quot;)</initializer>
+        <briefdescription>
+<para>logger instance </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="131" column="18" bodyfile="src/api/transport/impl/ws/ws_session.hpp" bodystart="131" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="da/dc7/classsgns_1_1api_1_1_ws_session_1a4312502efa5395ac0bfbe9a364ba9f96" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::api::WsSession::~WsSession</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~WsSession</name>
+        <qualifiedname>sgns::api::WsSession::~WsSession</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="30" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="da/dc7/classsgns_1_1api_1_1_ws_session_1a0a2c6833d17b698f32b636b11877c7f9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::api::WsSession::WsSession</definition>
+        <argsstring>(Context &amp;context, Configuration config, SessionId id)</argsstring>
+        <name>WsSession</name>
+        <qualifiedname>sgns::api::WsSession::WsSession</qualifiedname>
+        <param>
+          <type><ref refid="db/d02/classsgns_1_1api_1_1_session_1a4764a67d047daedafadc808a341dbae5" kindref="member">Context</ref> &amp;</type>
+          <declname>context</declname>
+        </param>
+        <param>
+          <type><ref refid="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration" kindref="compound">Configuration</ref></type>
+          <declname>config</declname>
+        </param>
+        <param>
+          <type><ref refid="db/d02/classsgns_1_1api_1_1_session_1aa68e294d772e90f0c69e8b8cd1d79d64" kindref="member">SessionId</ref></type>
+          <declname>id</declname>
+        </param>
+        <briefdescription>
+<para>constructor </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>context</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>context of session </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>config</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>session configuration </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ab921c7454a11ab36d66bdc6ff43836d5" kindref="member">id</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>session id </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="38" column="5" bodyfile="src/api/transport/impl/ws/ws_session.cpp" bodystart="12" bodyend="17"/>
+      </memberdef>
+      <memberdef kind="function" id="da/dc7/classsgns_1_1api_1_1_ws_session_1a060182526abc24d2d9ab7decbe72622d" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type><ref refid="db/d02/classsgns_1_1api_1_1_session_1a283ab2019b76debbb9301e27b4a64d53" kindref="member">Socket</ref> &amp;</type>
+        <definition>Socket &amp; sgns::api::WsSession::socket</definition>
+        <argsstring>() override</argsstring>
+        <name>socket</name>
+        <qualifiedname>sgns::api::WsSession::socket</qualifiedname>
+        <reimplements refid="db/d02/classsgns_1_1api_1_1_session_1a897f603425d34bd6a0cb13673650c25a">socket</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="40" column="12" bodyfile="src/api/transport/impl/ws/ws_session.hpp" bodystart="40" bodyend="42"/>
+      </memberdef>
+      <memberdef kind="function" id="da/dc7/classsgns_1_1api_1_1_ws_session_1ac11c2533147955069fa34c71b731bd40" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsSession::start</definition>
+        <argsstring>() override</argsstring>
+        <name>start</name>
+        <qualifiedname>sgns::api::WsSession::start</qualifiedname>
+        <reimplements refid="db/d02/classsgns_1_1api_1_1_session_1a3c3854eb5a09d59a21ab5dda73fab662">start</reimplements>
+        <briefdescription>
+<para>starts session </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="47" column="10" bodyfile="src/api/transport/impl/ws/ws_session.cpp" bodystart="19" bodyend="24"/>
+      </memberdef>
+      <memberdef kind="function" id="da/dc7/classsgns_1_1api_1_1_ws_session_1ab921c7454a11ab36d66bdc6ff43836d5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="db/d02/classsgns_1_1api_1_1_session_1aa68e294d772e90f0c69e8b8cd1d79d64" kindref="member">Session::SessionId</ref></type>
+        <definition>sgns::api::Session::SessionId sgns::api::WsSession::id</definition>
+        <argsstring>() const override</argsstring>
+        <name>id</name>
+        <qualifiedname>sgns::api::WsSession::id</qualifiedname>
+        <reimplements refid="db/d02/classsgns_1_1api_1_1_session_1ade1be3e75ef4b4b0e5bf0c9d83a9d79c">id</reimplements>
+        <briefdescription>
+<para>method to get id of the session </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>id of the session </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="53" column="24" bodyfile="src/api/transport/impl/ws/ws_session.cpp" bodystart="55" bodyend="57"/>
+      </memberdef>
+      <memberdef kind="function" id="da/dc7/classsgns_1_1api_1_1_ws_session_1a8ad23d4815bbbeb49a5c87e977f56b77" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="virtual">
+        <type><ref refid="df/d66/namespacesgns_1_1api_1a581f7e82b9cfa3fb5262a71984f54a1f" kindref="member">SessionType</ref></type>
+        <definition>SessionType sgns::api::WsSession::type</definition>
+        <argsstring>() const override</argsstring>
+        <name>type</name>
+        <qualifiedname>sgns::api::WsSession::type</qualifiedname>
+        <reimplements refid="db/d02/classsgns_1_1api_1_1_session_1a9f128ad7af2aaa49a1b8cb061f89f552">type</reimplements>
+        <briefdescription>
+<para>method to get type of the session </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>type of the session </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="59" column="17" bodyfile="src/api/transport/impl/ws/ws_session.hpp" bodystart="59" bodyend="61"/>
+      </memberdef>
+      <memberdef kind="function" id="da/dc7/classsgns_1_1api_1_1_ws_session_1a30a7b6b53690b096385da18ac23413d2" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsSession::respond</definition>
+        <argsstring>(std::string_view response) override</argsstring>
+        <name>respond</name>
+        <qualifiedname>sgns::api::WsSession::respond</qualifiedname>
+        <reimplements refid="db/d02/classsgns_1_1api_1_1_session_1a227f95f8f11b0572a50013d31203e44f">respond</reimplements>
+        <param>
+          <type>std::string_view</type>
+          <declname>response</declname>
+        </param>
+        <briefdescription>
+<para>sends response wrapped by websocket frame </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>response</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>message to send </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="67" column="10" bodyfile="src/api/transport/impl/ws/ws_session.cpp" bodystart="59" bodyend="66"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="da/dc7/classsgns_1_1api_1_1_ws_session_1aa598ef62f244c1ee033c3bd352ca04bb" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsSession::stop</definition>
+        <argsstring>()</argsstring>
+        <name>stop</name>
+        <qualifiedname>sgns::api::WsSession::stop</qualifiedname>
+        <briefdescription>
+<para>stops session </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="73" column="10" bodyfile="src/api/transport/impl/ws/ws_session.cpp" bodystart="26" bodyend="31"/>
+      </memberdef>
+      <memberdef kind="function" id="da/dc7/classsgns_1_1api_1_1_ws_session_1a15781b6b351b33e8a11db51334dd58f5" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsSession::handleRequest</definition>
+        <argsstring>(std::string_view data)</argsstring>
+        <name>handleRequest</name>
+        <qualifiedname>sgns::api::WsSession::handleRequest</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+<para>process received websocket frame, compose and execute response </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>request payload </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="79" column="10" bodyfile="src/api/transport/impl/ws/ws_session.cpp" bodystart="33" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="function" id="da/dc7/classsgns_1_1api_1_1_ws_session_1a75190fc7e0bc77d2718750c052c53971" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsSession::asyncRead</definition>
+        <argsstring>()</argsstring>
+        <name>asyncRead</name>
+        <qualifiedname>sgns::api::WsSession::asyncRead</qualifiedname>
+        <briefdescription>
+<para>asynchronously read </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="84" column="10" bodyfile="src/api/transport/impl/ws/ws_session.cpp" bodystart="37" bodyend="44"/>
+      </memberdef>
+      <memberdef kind="function" id="da/dc7/classsgns_1_1api_1_1_ws_session_1a1f94e6a66dd32e4192d6bfb3f4a1ee33" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsSession::asyncWrite</definition>
+        <argsstring>()</argsstring>
+        <name>asyncWrite</name>
+        <qualifiedname>sgns::api::WsSession::asyncWrite</qualifiedname>
+        <briefdescription>
+<para>asynchronously write </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="89" column="10" bodyfile="src/api/transport/impl/ws/ws_session.cpp" bodystart="46" bodyend="53"/>
+      </memberdef>
+      <memberdef kind="function" id="da/dc7/classsgns_1_1api_1_1_ws_session_1a4c497e8a483fb4e3115dc3fb3cd2c1fd" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsSession::onRun</definition>
+        <argsstring>()</argsstring>
+        <name>onRun</name>
+        <qualifiedname>sgns::api::WsSession::onRun</qualifiedname>
+        <briefdescription>
+<para>connected callback </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="94" column="10" bodyfile="src/api/transport/impl/ws/ws_session.cpp" bodystart="68" bodyend="85"/>
+      </memberdef>
+      <memberdef kind="function" id="da/dc7/classsgns_1_1api_1_1_ws_session_1ac839e7afca879e75fe1712d84682e2cd" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsSession::onAccept</definition>
+        <argsstring>(boost::system::error_code ec)</argsstring>
+        <name>onAccept</name>
+        <qualifiedname>sgns::api::WsSession::onAccept</qualifiedname>
+        <param>
+          <type>boost::system::error_code</type>
+          <declname>ec</declname>
+        </param>
+        <briefdescription>
+<para>handshake completion callback </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="99" column="10" bodyfile="src/api/transport/impl/ws/ws_session.cpp" bodystart="87" bodyend="97"/>
+      </memberdef>
+      <memberdef kind="function" id="da/dc7/classsgns_1_1api_1_1_ws_session_1ad4a313b52171806a0742a29852aed141" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsSession::onRead</definition>
+        <argsstring>(boost::system::error_code ec, std::size_t size)</argsstring>
+        <name>onRead</name>
+        <qualifiedname>sgns::api::WsSession::onRead</qualifiedname>
+        <param>
+          <type>boost::system::error_code</type>
+          <declname>ec</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>size</declname>
+        </param>
+        <briefdescription>
+<para>read completion callback </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="104" column="10" bodyfile="src/api/transport/impl/ws/ws_session.cpp" bodystart="99" bodyend="113"/>
+      </memberdef>
+      <memberdef kind="function" id="da/dc7/classsgns_1_1api_1_1_ws_session_1a2aab95d779fbc66239a759c0ebd00f12" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsSession::onWrite</definition>
+        <argsstring>(boost::system::error_code ec, std::size_t bytes_transferred)</argsstring>
+        <name>onWrite</name>
+        <qualifiedname>sgns::api::WsSession::onWrite</qualifiedname>
+        <param>
+          <type>boost::system::error_code</type>
+          <declname>ec</declname>
+        </param>
+        <param>
+          <type>std::size_t</type>
+          <declname>bytes_transferred</declname>
+        </param>
+        <briefdescription>
+<para>write completion callback </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="109" column="10" bodyfile="src/api/transport/impl/ws/ws_session.cpp" bodystart="115" bodyend="125"/>
+      </memberdef>
+      <memberdef kind="function" id="da/dc7/classsgns_1_1api_1_1_ws_session_1a1a91acf08b9caaa7eba0895677bb8c52" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::api::WsSession::reportError</definition>
+        <argsstring>(boost::system::error_code ec, std::string_view message)</argsstring>
+        <name>reportError</name>
+        <qualifiedname>sgns::api::WsSession::reportError</qualifiedname>
+        <param>
+          <type>boost::system::error_code</type>
+          <declname>ec</declname>
+        </param>
+        <param>
+          <type>std::string_view</type>
+          <declname>message</declname>
+        </param>
+        <briefdescription>
+<para>reports error code and message </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>ec</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>error code </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>error message </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="116" column="10" bodyfile="src/api/transport/impl/ws/ws_session.cpp" bodystart="127" bodyend="130"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::api::Session</label>
+        <link refid="db/d02/classsgns_1_1api_1_1_session"/>
+      </node>
+      <node id="1">
+        <label>sgns::api::WsSession</label>
+        <link refid="da/dc7/classsgns_1_1api_1_1_ws_session"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::enable_shared_from_this&lt; WsSession &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="2">
+        <label>sgns::api::Session</label>
+        <link refid="db/d02/classsgns_1_1api_1_1_session"/>
+      </node>
+      <node id="1">
+        <label>sgns::api::WsSession</label>
+        <link refid="da/dc7/classsgns_1_1api_1_1_ws_session"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-config_</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::api::WsSession::Configuration</label>
+        <link refid="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration"/>
+      </node>
+      <node id="3">
+        <label>std::enable_shared_from_this&lt; WsSession &gt;</label>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/api/transport/impl/ws/ws_session.hpp" line="17" column="3" bodyfile="src/api/transport/impl/ws/ws_session.hpp" bodystart="18" bodyend="133"/>
+    <listofallmembers>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a75190fc7e0bc77d2718750c052c53971" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>asyncRead</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1f94e6a66dd32e4192d6bfb3f4a1ee33" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>asyncWrite</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a3036aa8deb88b04554e38a3b9b3ac6c2" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>config_</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1ac3e901cde61af1e9cfba7ab0baf7f858" prot="public" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>Connection</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1aeb11d97bb8e29d696f1afecba7dabb4a" prot="public" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>connectOnCloseHandler</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1ad35d77dc02ce01ff9b548272ae2bc9a7" prot="public" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>connectOnRequest</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a4764a67d047daedafadc808a341dbae5" prot="public" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>Context</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1ade6442f88ca08387c1e733fef6f54655" prot="public" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>Duration</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a5e3bdd1623479f13a3700e8b5e8d7c5d" prot="public" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>ErrorCode</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a15781b6b351b33e8a11db51334dd58f5" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>handleRequest</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ab921c7454a11ab36d66bdc6ff43836d5" prot="public" virt="virtual"><scope>sgns::api::WsSession</scope><name>id</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a4736ad3cd3b43cf32736934ffe200fa6" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>id_</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ac69b9011fe0a65ddf8682c837ee5445c" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>logger_</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1ab3dad321654c3ba64a361844f2ea9499" prot="public" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>notifyOnClose</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1aac07a048258e122e14d7b6b402bc13ec" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>on_close_</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a76c3869f9fd623d31a00d1b059dae7a6" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>on_request_</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ac839e7afca879e75fe1712d84682e2cd" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>onAccept</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a87f1f677b7bd1282b182bcc76dd914e8" prot="public" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>OnCloseHandler</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ad4a313b52171806a0742a29852aed141" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>onRead</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1ac6bac7b2025c44184c38e34e8232a3c7" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>OnRequest</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a0354397ff9773e4bb7ec08ab2cf1ab65" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>OnRequestSignature</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a4c497e8a483fb4e3115dc3fb3cd2c1fd" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>onRun</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a2aab95d779fbc66239a759c0ebd00f12" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>onWrite</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1abd0a3726505e365e7aa987c5b2b21320" prot="public" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>processRequest</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ab5a7bb1c0ef52b071b60da8f1b3cfeac" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>rbuffer_</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1a91acf08b9caaa7eba0895677bb8c52" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>reportError</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a30a7b6b53690b096385da18ac23413d2" prot="public" virt="virtual"><scope>sgns::api::WsSession</scope><name>respond</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1aa68e294d772e90f0c69e8b8cd1d79d64" prot="public" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>SessionId</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1ab83d2fce65fb765c430881991ea24c67" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>Signal</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a283ab2019b76debbb9301e27b4a64d53" prot="public" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>Socket</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a060182526abc24d2d9ab7decbe72622d" prot="public" virt="virtual"><scope>sgns::api::WsSession</scope><name>socket</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1aafd28076b3342a82e06b0750d7c9b6a5" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>socket_</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1ac11c2533147955069fa34c71b731bd40" prot="public" virt="virtual"><scope>sgns::api::WsSession</scope><name>start</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1aa598ef62f244c1ee033c3bd352ca04bb" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>stop</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1aeccdd0c4afd5ffc0ce1bfac133b1fa35" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>strand_</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a1d2fa4d4005d9d3ef3567198ab4f61d0" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>stream_</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a8ffcb164f0690b1cd611d0fad0268922" prot="public" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>Streambuf</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1abb1ed543281476201cee542238b80ee4" prot="public" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>Timer</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a8ad23d4815bbbeb49a5c87e977f56b77" prot="public" virt="virtual"><scope>sgns::api::WsSession</scope><name>type</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a98c191c2f35723057d8e4ef708575524" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>wbuffer_</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a9311caa8ba2119e385696c1e2fcb0f63" prot="private" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>WsError</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a0a2c6833d17b698f32b636b11877c7f9" prot="public" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>WsSession</name></member>
+      <member refid="db/d02/classsgns_1_1api_1_1_session_1a94029caff4c3d132f662998b98e6fbb6" prot="public" virt="virtual"><scope>sgns::api::WsSession</scope><name>~Session</name></member>
+      <member refid="da/dc7/classsgns_1_1api_1_1_ws_session_1a4312502efa5395ac0bfbe9a364ba9f96" prot="public" virt="non-virtual"><scope>sgns::api::WsSession</scope><name>~WsSession</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

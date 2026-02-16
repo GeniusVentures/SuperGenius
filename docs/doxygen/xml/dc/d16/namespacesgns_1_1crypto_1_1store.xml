@@ -1,0 +1,83 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/d16/namespacesgns_1_1crypto_1_1store" kind="namespace" language="C++">
+    <compoundname>sgns::crypto::store</compoundname>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="dc/d16/namespacesgns_1_1crypto_1_1store_1a577f4dfd5dd8505f193cd7cee0498288" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>CryptoId</name>
+        <qualifiedname>sgns::crypto::store::CryptoId</qualifiedname>
+        <enumvalue id="dc/d16/namespacesgns_1_1crypto_1_1store_1a577f4dfd5dd8505f193cd7cee0498288a169d879179ec936c0570ce7873feba20" prot="public">
+          <name>ED25519</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dc/d16/namespacesgns_1_1crypto_1_1store_1a577f4dfd5dd8505f193cd7cee0498288aa075c6b9f7c4808d5878329c3b527ab2" prot="public">
+          <name>SR25519</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="21" column="5" bodyfile="src/crypto/crypto_store/crypto_store_impl.hpp" bodystart="21" bodyend="21"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="dc/d16/namespacesgns_1_1crypto_1_1store_1a8572b59eb0e3fb50fadfde9dc7cc4062" prot="public" static="no">
+        <type>boost::variant&lt; <ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" kindref="compound">ED25519Keypair</ref>, <ref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair" kindref="compound">SR25519Keypair</ref> &gt;</type>
+        <definition>using sgns::crypto::store::KeyPair = boost::variant&lt;ED25519Keypair, SR25519Keypair&gt;</definition>
+        <argsstring></argsstring>
+        <name>KeyPair</name>
+        <qualifiedname>sgns::crypto::store::KeyPair</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="16" column="5" bodyfile="src/crypto/crypto_store/crypto_store_impl.hpp" bodystart="16" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dc/d16/namespacesgns_1_1crypto_1_1store_1a60db0e724dec483aa58ce9bc9691e83c" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; 32 &gt;</type>
+        <definition>using sgns::crypto::store::PublicKey = base::Blob&lt;32&gt;</definition>
+        <argsstring></argsstring>
+        <name>PublicKey</name>
+        <qualifiedname>sgns::crypto::store::PublicKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="17" column="5" bodyfile="src/crypto/crypto_store/crypto_store_impl.hpp" bodystart="17" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dc/d16/namespacesgns_1_1crypto_1_1store_1a86c9a46bdc7c1fd42de20dd4f69546ac" prot="public" static="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+        <definition>using sgns::crypto::store::Seed = base::Hash256</definition>
+        <argsstring></argsstring>
+        <name>Seed</name>
+        <qualifiedname>sgns::crypto::store::Seed</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="18" column="5" bodyfile="src/crypto/crypto_store/crypto_store_impl.hpp" bodystart="18" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="15" column="3"/>
+  </compounddef>
+</doxygen>

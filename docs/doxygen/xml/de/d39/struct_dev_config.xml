@@ -1,0 +1,134 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/d39/struct_dev_config" kind="struct" language="C++" prot="public">
+    <compoundname>DevConfig</compoundname>
+    <includes refid="d3/d63/_genius_node_8hpp" local="no">GeniusNode.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="de/d39/struct_dev_config_1a7f5f6744f3a790c114bf637d0d4b2694" prot="public" static="no" mutable="no">
+        <type>char</type>
+        <definition>char DevConfig::Addr[255]</definition>
+        <argsstring>[255]</argsstring>
+        <name>Addr</name>
+        <qualifiedname>DevConfig::Addr</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusNode.hpp" line="37" column="17" bodyfile="src/account/GeniusNode.hpp" bodystart="37" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d39/struct_dev_config_1a8e0f49c7fa09c9df7f7581423be8340c" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string DevConfig::Cut</definition>
+        <argsstring></argsstring>
+        <name>Cut</name>
+        <qualifiedname>DevConfig::Cut</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusNode.hpp" line="38" column="17" bodyfile="src/account/GeniusNode.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d39/struct_dev_config_1ad06870bef7bf0f63934a35da3e32a005" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string DevConfig::TokenValueInGNUS</definition>
+        <argsstring></argsstring>
+        <name>TokenValueInGNUS</name>
+        <qualifiedname>DevConfig::TokenValueInGNUS</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusNode.hpp" line="39" column="17" bodyfile="src/account/GeniusNode.hpp" bodystart="39" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d39/struct_dev_config_1af5f0aa58c78092a42f249c1b1b1c5aa0" prot="public" static="no" mutable="no">
+        <type>TokenID</type>
+        <definition>TokenID DevConfig::TokenID</definition>
+        <argsstring></argsstring>
+        <name>TokenID</name>
+        <qualifiedname>DevConfig::TokenID</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusNode.hpp" line="40" column="17" bodyfile="src/account/GeniusNode.hpp" bodystart="40" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d39/struct_dev_config_1a9f333ae354d8ea510e261bb6d97342d0" prot="public" static="no" mutable="no">
+        <type>char</type>
+        <definition>char DevConfig::BaseWritePath[1024]</definition>
+        <argsstring>[1024]</argsstring>
+        <name>BaseWritePath</name>
+        <qualifiedname>DevConfig::BaseWritePath</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusNode.hpp" line="41" column="17" bodyfile="src/account/GeniusNode.hpp" bodystart="41" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>DevConfig</label>
+        <link refid="de/d39/struct_dev_config"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+Cut</edgelabel>
+          <edgelabel>+TokenValueInGNUS</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+TokenID</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="4">
+        <label>sgns::TokenID</label>
+        <link refid="d9/dd1/classsgns_1_1_token_i_d"/>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::array&lt; uint8_t, 32 &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; uint8_t, 32 &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="2">
+        <label>std::string</label>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/account/GeniusNode.hpp" line="35" column="1" bodyfile="src/account/GeniusNode.hpp" bodystart="36" bodyend="42"/>
+    <listofallmembers>
+      <member refid="de/d39/struct_dev_config_1a7f5f6744f3a790c114bf637d0d4b2694" prot="public" virt="non-virtual"><scope>DevConfig</scope><name>Addr</name></member>
+      <member refid="de/d39/struct_dev_config_1a9f333ae354d8ea510e261bb6d97342d0" prot="public" virt="non-virtual"><scope>DevConfig</scope><name>BaseWritePath</name></member>
+      <member refid="de/d39/struct_dev_config_1a8e0f49c7fa09c9df7f7581423be8340c" prot="public" virt="non-virtual"><scope>DevConfig</scope><name>Cut</name></member>
+      <member refid="de/d39/struct_dev_config_1af5f0aa58c78092a42f249c1b1b1c5aa0" prot="public" virt="non-virtual"><scope>DevConfig</scope><name>TokenID</name></member>
+      <member refid="de/d39/struct_dev_config_1ad06870bef7bf0f63934a35da3e32a005" prot="public" virt="non-virtual"><scope>DevConfig</scope><name>TokenValueInGNUS</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

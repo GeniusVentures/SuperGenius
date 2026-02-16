@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/d8a/network_8cpp" kind="file" language="C++">
+    <compoundname>network.cpp</compoundname>
+    <includes refid="d6/d67/network_8hpp" local="yes">network.hpp</includes>
+    <incdepgraph>
+      <node id="1">
+        <label>node/network.cpp</label>
+        <link refid="dc/d8a/network_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>network.hpp</label>
+        <link refid="d6/d67/network_8hpp"/>
+      </node>
+    </incdepgraph>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/d67/network_8hpp" kindref="compound">network.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2" refid="d6/d99/classsgns_1_1network_1a987a4c8e53426588d5270fa1e1605ca8" refkind="member"><highlight class="normal"><ref refid="d6/d99/classsgns_1_1network_1a987a4c8e53426588d5270fa1e1605ca8" kindref="member">sgns::network::network</ref>(){</highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="5" refid="d6/d99/classsgns_1_1network_1a4b0f4e62fd56b2c667efe0fee4817fdc" refkind="member"><highlight class="normal"><ref refid="d6/d99/classsgns_1_1network_1a4b0f4e62fd56b2c667efe0fee4817fdc" kindref="member">sgns::network::~network</ref>(){</highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="node/network.cpp"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,192 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/d4d/structsgns_1_1storage_1_1trie_1_1_leaf_node" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::storage::trie::LeafNode</compoundname>
+    <basecompoundref refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node" prot="public" virt="non-virtual">sgns::storage::trie::SuperGeniusNode</basecompoundref>
+    <includes refid="d0/d2c/supergenius__node_8hpp" local="no">supergenius_node.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dc/d4d/structsgns_1_1storage_1_1trie_1_1_leaf_node_1a1757d466a655de2f80816f606e05519b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::LeafNode::LeafNode</definition>
+        <argsstring>()=default</argsstring>
+        <name>LeafNode</name>
+        <qualifiedname>sgns::storage::trie::LeafNode::LeafNode</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="87" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d4d/structsgns_1_1storage_1_1trie_1_1_leaf_node_1a619af744e766d303d7167909bf0fc318" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::LeafNode::LeafNode</definition>
+        <argsstring>(KeyNibbles key_nibbles, boost::optional&lt; base::Buffer &gt; value)</argsstring>
+        <name>LeafNode</name>
+        <qualifiedname>sgns::storage::trie::LeafNode::LeafNode</qualifiedname>
+        <param>
+          <type><ref refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles" kindref="compound">KeyNibbles</ref></type>
+          <declname>key_nibbles</declname>
+        </param>
+        <param>
+          <type>boost::optional&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="88" column="5" bodyfile="src/storage/trie/supergenius_trie/supergenius_node.hpp" bodystart="88" bodyend="89"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d4d/structsgns_1_1storage_1_1trie_1_1_leaf_node_1a5478a4c88c66a9ad3ab9ec34e1c7e278" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::LeafNode::~LeafNode</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~LeafNode</name>
+        <qualifiedname>sgns::storage::trie::LeafNode::~LeafNode</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="91" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d4d/structsgns_1_1storage_1_1trie_1_1_leaf_node_1a7c6315e90b905cb009a4ddd0f7e90869" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="virtual">
+        <type>bool</type>
+        <definition>bool sgns::storage::trie::LeafNode::isDummy</definition>
+        <argsstring>() const override</argsstring>
+        <name>isDummy</name>
+        <qualifiedname>sgns::storage::trie::LeafNode::isDummy</qualifiedname>
+        <reimplements refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1a83e00d507d6b79a951726aa136d641e6">isDummy</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="93" column="10" bodyfile="src/storage/trie/supergenius_trie/supergenius_node.hpp" bodystart="93" bodyend="95"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d4d/structsgns_1_1storage_1_1trie_1_1_leaf_node_1aa345a774ade820254a6a7f1f03f52e2d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>int</type>
+        <definition>int sgns::storage::trie::LeafNode::getType</definition>
+        <argsstring>() const override</argsstring>
+        <name>getType</name>
+        <qualifiedname>sgns::storage::trie::LeafNode::getType</qualifiedname>
+        <reimplements refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node_1ae74019c97c6effa927393afb2bd9a791">getType</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="96" column="9" bodyfile="src/storage/trie/supergenius_trie/supergenius_node.cpp" bodystart="29" bodyend="31"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::storage::trie::LeafNode</label>
+        <link refid="dc/d4d/structsgns_1_1storage_1_1trie_1_1_leaf_node"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::trie::Node</label>
+        <link refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node"/>
+      </node>
+      <node id="2">
+        <label>sgns::storage::trie::SuperGeniusNode</label>
+        <link refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="11">
+        <label>T</label>
+      </node>
+      <node id="6">
+        <label>boost::equality_comparable&lt; Buffer &gt;</label>
+      </node>
+      <node id="7">
+        <label>boost::equality_comparable&lt; gsl::span&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="8">
+        <label>boost::equality_comparable&lt; std::vector&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="5">
+        <label>sgns::base::Buffer</label>
+        <link refid="de/dd5/classsgns_1_1base_1_1_buffer"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="7" relation="public-inheritance">
+        </childnode>
+        <childnode refid="8" relation="public-inheritance">
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::storage::trie::KeyNibbles</label>
+        <link refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::LeafNode</label>
+        <link refid="dc/d4d/structsgns_1_1storage_1_1trie_1_1_leaf_node"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::trie::Node</label>
+        <link refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node"/>
+      </node>
+      <node id="2">
+        <label>sgns::storage::trie::SuperGeniusNode</label>
+        <link refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+key_nibbles</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::vector&lt; uint8_t &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/trie/supergenius_trie/supergenius_node.hpp" line="86" column="3" bodyfile="src/storage/trie/supergenius_trie/supergenius_node.hpp" bodystart="86" bodyend="97"/>
+    <listofallmembers>
+      <member refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1a6e3f5c53d8253f1124a2eb9863a0d784" prot="public" virt="non-virtual"><scope>sgns::storage::trie::LeafNode</scope><name>getTrieType</name></member>
+      <member refid="dc/d4d/structsgns_1_1storage_1_1trie_1_1_leaf_node_1aa345a774ade820254a6a7f1f03f52e2d" prot="public" virt="virtual"><scope>sgns::storage::trie::LeafNode</scope><name>getType</name></member>
+      <member refid="dc/d4d/structsgns_1_1storage_1_1trie_1_1_leaf_node_1a7c6315e90b905cb009a4ddd0f7e90869" prot="public" virt="virtual"><scope>sgns::storage::trie::LeafNode</scope><name>isDummy</name></member>
+      <member refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1a3ea64df6e0051cfd7fef6b22189736c4" prot="public" virt="non-virtual"><scope>sgns::storage::trie::LeafNode</scope><name>key_nibbles</name></member>
+      <member refid="dc/d4d/structsgns_1_1storage_1_1trie_1_1_leaf_node_1a1757d466a655de2f80816f606e05519b" prot="public" virt="non-virtual"><scope>sgns::storage::trie::LeafNode</scope><name>LeafNode</name></member>
+      <member refid="dc/d4d/structsgns_1_1storage_1_1trie_1_1_leaf_node_1a619af744e766d303d7167909bf0fc318" prot="public" virt="non-virtual"><scope>sgns::storage::trie::LeafNode</scope><name>LeafNode</name></member>
+      <member refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1af162eb6a908e824066f31359882b6c9e" prot="public" virt="non-virtual"><scope>sgns::storage::trie::LeafNode</scope><name>SuperGeniusNode</name></member>
+      <member refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1ace5a7020367e21a3159fa99e6daa73d1" prot="public" virt="non-virtual"><scope>sgns::storage::trie::LeafNode</scope><name>SuperGeniusNode</name></member>
+      <member refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1a8e6ad7aafff6f51af4b80b396d6c8c2a" prot="public" virt="non-virtual"><scope>sgns::storage::trie::LeafNode</scope><name>Type</name></member>
+      <member refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1a41bf4761c1484cc298908486001d1de6" prot="public" virt="non-virtual"><scope>sgns::storage::trie::LeafNode</scope><name>value</name></member>
+      <member refid="dc/d4d/structsgns_1_1storage_1_1trie_1_1_leaf_node_1a5478a4c88c66a9ad3ab9ec34e1c7e278" prot="public" virt="non-virtual"><scope>sgns::storage::trie::LeafNode</scope><name>~LeafNode</name></member>
+      <member refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node_1aa43d0f34895a260aaf3f0156896c44f0" prot="public" virt="virtual"><scope>sgns::storage::trie::LeafNode</scope><name>~Node</name></member>
+      <member refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node_1a0cde10bcb3dca33813a23b36d5338be9" prot="public" virt="non-virtual"><scope>sgns::storage::trie::LeafNode</scope><name>~SuperGeniusNode</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

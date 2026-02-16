@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/dc1/structstd_1_1hash_3_01boost_1_1asio_1_1ip_1_1address_01_4" kind="struct" language="C++" prot="public">
+    <compoundname>std::hash&lt; boost::asio::ip::address &gt;</compoundname>
+    <includes refid="da/d8d/node_2common_8hpp" local="no">common.hpp</includes>
+    <templateparamlist>
+    </templateparamlist>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d1/dc1/structstd_1_1hash_3_01boost_1_1asio_1_1ip_1_1address_01_4_1ae9a689ddb91d15d0e8b0f772cfb173c9" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t std::hash&lt; boost::asio::ip::address &gt;::operator()</definition>
+        <argsstring>(boost::asio::ip::address const &amp;ip_a) const</argsstring>
+        <name>operator()</name>
+        <qualifiedname>std::hash&lt; boost::asio::ip::address &gt;::operator()</qualifiedname>
+        <param>
+          <type>boost::asio::ip::address const &amp;</type>
+          <declname>ip_a</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="118" column="8" bodyfile="node/common.hpp" bodystart="118" bodyend="122"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>std::hash&lt; boost::asio::ip::address &gt;</label>
+        <link refid="d1/dc1/structstd_1_1hash_3_01boost_1_1asio_1_1ip_1_1address_01_4"/>
+      </node>
+    </collaborationgraph>
+    <location file="node/common.hpp" line="116" column="1" bodyfile="node/common.hpp" bodystart="117" bodyend="123"/>
+    <listofallmembers>
+      <member refid="d1/dc1/structstd_1_1hash_3_01boost_1_1asio_1_1ip_1_1address_01_4_1ae9a689ddb91d15d0e8b0f772cfb173c9" prot="public" virt="non-virtual"><scope>std::hash&lt; boost::asio::ip::address &gt;</scope><name>operator()</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,103 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d3/dbc/structsgns_1_1_input_u_t_x_o_info" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::InputUTXOInfo</compoundname>
+    <includes refid="d1/dd1/_u_t_x_o_structs_8hpp" local="no">UTXOStructs.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d3/dbc/structsgns_1_1_input_u_t_x_o_info_1a618a65417634ac4eabe041be1a8a1f3c" prot="public" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+        <definition>base::Hash256 sgns::InputUTXOInfo::txid_hash_</definition>
+        <argsstring></argsstring>
+        <name>txid_hash_</name>
+        <qualifiedname>sgns::InputUTXOInfo::txid_hash_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOStructs.hpp" line="15" column="30" bodyfile="src/account/UTXOStructs.hpp" bodystart="15" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/dbc/structsgns_1_1_input_u_t_x_o_info_1a834d8f349c0ae3d2c610eba1cca32840" prot="public" static="no" mutable="no">
+        <type>uint32_t</type>
+        <definition>uint32_t sgns::InputUTXOInfo::output_idx_</definition>
+        <argsstring></argsstring>
+        <name>output_idx_</name>
+        <qualifiedname>sgns::InputUTXOInfo::output_idx_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOStructs.hpp" line="16" column="30" bodyfile="src/account/UTXOStructs.hpp" bodystart="16" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/dbc/structsgns_1_1_input_u_t_x_o_info_1ab953e7298cad3ebb3f31202643894902" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>std::vector&lt;uint8_t&gt; sgns::InputUTXOInfo::signature_</definition>
+        <argsstring></argsstring>
+        <name>signature_</name>
+        <qualifiedname>sgns::InputUTXOInfo::signature_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOStructs.hpp" line="17" column="21" bodyfile="src/account/UTXOStructs.hpp" bodystart="17" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d3/dbc/structsgns_1_1_input_u_t_x_o_info_1a9add95a13519275b09631adb86ee8fd2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>std::vector&lt; uint8_t &gt; sgns::InputUTXOInfo::SerializeForSigning</definition>
+        <argsstring>() const</argsstring>
+        <name>SerializeForSigning</name>
+        <qualifiedname>sgns::InputUTXOInfo::SerializeForSigning</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOStructs.hpp" line="13" column="21" bodyfile="src/account/UTXOStructs.cpp" bodystart="7" bodyend="17"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Raw UTXO input data for a transaction. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="4">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::InputUTXOInfo</label>
+        <link refid="d3/dbc/structsgns_1_1_input_u_t_x_o_info"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+signature_</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::vector&lt; uint8_t &gt;</label>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/account/UTXOStructs.hpp" line="11" column="5" bodyfile="src/account/UTXOStructs.hpp" bodystart="12" bodyend="18"/>
+    <listofallmembers>
+      <member refid="d3/dbc/structsgns_1_1_input_u_t_x_o_info_1a834d8f349c0ae3d2c610eba1cca32840" prot="public" virt="non-virtual"><scope>sgns::InputUTXOInfo</scope><name>output_idx_</name></member>
+      <member refid="d3/dbc/structsgns_1_1_input_u_t_x_o_info_1a9add95a13519275b09631adb86ee8fd2" prot="public" virt="non-virtual"><scope>sgns::InputUTXOInfo</scope><name>SerializeForSigning</name></member>
+      <member refid="d3/dbc/structsgns_1_1_input_u_t_x_o_info_1ab953e7298cad3ebb3f31202643894902" prot="public" virt="non-virtual"><scope>sgns::InputUTXOInfo</scope><name>signature_</name></member>
+      <member refid="d3/dbc/structsgns_1_1_input_u_t_x_o_info_1a618a65417634ac4eabe041be1a8a1f3c" prot="public" virt="non-virtual"><scope>sgns::InputUTXOInfo</scope><name>txid_hash_</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

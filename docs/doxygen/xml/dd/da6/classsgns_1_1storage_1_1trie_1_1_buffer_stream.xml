@@ -1,0 +1,125 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream" kind="class" language="C++" prot="public">
+    <compoundname>sgns::storage::trie::BufferStream</compoundname>
+    <includes refid="dc/d0b/buffer__stream_8hpp" local="no">buffer_stream.hpp</includes>
+    <sectiondef kind="private-type">
+      <memberdef kind="typedef" id="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a95a89653d87db800007489113422fef7" prot="private" static="no">
+        <type>gsl::span&lt; const uint8_t &gt;::index_type</type>
+        <definition>using sgns::storage::trie::BufferStream::index_type = gsl::span&lt;const uint8_t&gt;::index_type</definition>
+        <argsstring></argsstring>
+        <name>index_type</name>
+        <qualifiedname>sgns::storage::trie::BufferStream::index_type</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/buffer_stream.hpp" line="17" column="5" bodyfile="src/storage/trie/serialization/buffer_stream.hpp" bodystart="17" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a819de17444bebc0404d69136f2e9b9fb" prot="private" static="no" mutable="no">
+        <type>gsl::span&lt; const uint8_t &gt;</type>
+        <definition>gsl::span&lt;const uint8_t&gt; sgns::storage::trie::BufferStream::data_</definition>
+        <argsstring></argsstring>
+        <name>data_</name>
+        <qualifiedname>sgns::storage::trie::BufferStream::data_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/buffer_stream.hpp" line="37" column="15" bodyfile="src/storage/trie/serialization/buffer_stream.hpp" bodystart="37" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1ac3afdac236f7aa688630c7ab96b861ad" prot="public" static="no" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::BufferStream::BufferStream</definition>
+        <argsstring>(const base::Buffer &amp;buf)</argsstring>
+        <name>BufferStream</name>
+        <qualifiedname>sgns::storage::trie::BufferStream::BufferStream</qualifiedname>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>buf</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/buffer_stream.hpp" line="20" column="14" bodyfile="src/storage/trie/serialization/buffer_stream.hpp" bodystart="20" bodyend="20"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a3dcf72f11968f678e543217e2f12b3b8" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::storage::trie::BufferStream::hasMore</definition>
+        <argsstring>(index_type num_bytes) const</argsstring>
+        <name>hasMore</name>
+        <qualifiedname>sgns::storage::trie::BufferStream::hasMore</qualifiedname>
+        <param>
+          <type><ref refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a95a89653d87db800007489113422fef7" kindref="member">index_type</ref></type>
+          <declname>num_bytes</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/buffer_stream.hpp" line="22" column="10" bodyfile="src/storage/trie/serialization/buffer_stream.hpp" bodystart="22" bodyend="24"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a9ab25a2030618b71a6f8f0a86c57f82c" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>uint8_t</type>
+        <definition>uint8_t sgns::storage::trie::BufferStream::next</definition>
+        <argsstring>()</argsstring>
+        <name>next</name>
+        <qualifiedname>sgns::storage::trie::BufferStream::next</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/buffer_stream.hpp" line="26" column="13" bodyfile="src/storage/trie/serialization/buffer_stream.hpp" bodystart="26" bodyend="30"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a58731f8799d502505f742c7252858de1" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>gsl::span&lt; const uint8_t &gt;</type>
+        <definition>gsl::span&lt; const uint8_t &gt; sgns::storage::trie::BufferStream::leftBytes</definition>
+        <argsstring>() const</argsstring>
+        <name>leftBytes</name>
+        <qualifiedname>sgns::storage::trie::BufferStream::leftBytes</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/buffer_stream.hpp" line="32" column="15" bodyfile="src/storage/trie/serialization/buffer_stream.hpp" bodystart="32" bodyend="34"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Needed for decoding, might be replaced to a more common stream in the future, when one appears </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::storage::trie::BufferStream</label>
+        <link refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/trie/serialization/buffer_stream.hpp" line="16" column="3" bodyfile="src/storage/trie/serialization/buffer_stream.hpp" bodystart="16" bodyend="38"/>
+    <listofallmembers>
+      <member refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1ac3afdac236f7aa688630c7ab96b861ad" prot="public" virt="non-virtual"><scope>sgns::storage::trie::BufferStream</scope><name>BufferStream</name></member>
+      <member refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a819de17444bebc0404d69136f2e9b9fb" prot="private" virt="non-virtual"><scope>sgns::storage::trie::BufferStream</scope><name>data_</name></member>
+      <member refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a3dcf72f11968f678e543217e2f12b3b8" prot="public" virt="non-virtual"><scope>sgns::storage::trie::BufferStream</scope><name>hasMore</name></member>
+      <member refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a95a89653d87db800007489113422fef7" prot="private" virt="non-virtual"><scope>sgns::storage::trie::BufferStream</scope><name>index_type</name></member>
+      <member refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a58731f8799d502505f742c7252858de1" prot="public" virt="non-virtual"><scope>sgns::storage::trie::BufferStream</scope><name>leftBytes</name></member>
+      <member refid="dd/da6/classsgns_1_1storage_1_1trie_1_1_buffer_stream_1a9ab25a2030618b71a6f8f0a86c57f82c" prot="public" virt="non-virtual"><scope>sgns::storage::trie::BufferStream</scope><name>next</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

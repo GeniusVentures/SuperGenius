@@ -1,0 +1,286 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/dc6/classsgns_1_1face_1_1_generic_list" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::face::GenericList</compoundname>
+    <includes refid="d1/da1/generic__list_8hpp" local="no">generic_list.hpp</includes>
+    <templateparamlist>
+      <param>
+        <type>typename T</type>
+      </param>
+    </templateparamlist>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d4/dc6/classsgns_1_1face_1_1_generic_list_1aa7172649f06403bac2688269f2cacc9b" prot="public" static="no">
+        <type>size_t</type>
+        <definition>using sgns::face::GenericList&lt; T &gt;::size_type = size_t</definition>
+        <argsstring></argsstring>
+        <name>size_type</name>
+        <qualifiedname>sgns::face::GenericList::size_type</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/generic_list.hpp" line="20" column="5" bodyfile="src/storage/face/generic_list.hpp" bodystart="20" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d4/dc6/classsgns_1_1face_1_1_generic_list_1a115251a1f7d6ce24242b16c8e5e40715" prot="public" static="no">
+        <type>T</type>
+        <definition>using sgns::face::GenericList&lt; T &gt;::value_type = T</definition>
+        <argsstring></argsstring>
+        <name>value_type</name>
+        <qualifiedname>sgns::face::GenericList::value_type</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/generic_list.hpp" line="21" column="5" bodyfile="src/storage/face/generic_list.hpp" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d4/dc6/classsgns_1_1face_1_1_generic_list_1a115d989db9ce765a3e234646cfa7586f" prot="public" static="no">
+        <type><ref refid="df/dd2/classsgns_1_1face_1_1_forward_iterator" kindref="compound">ForwardIterator</ref>&lt; <ref refid="d4/dc6/classsgns_1_1face_1_1_generic_list" kindref="compound">GenericList</ref>&lt; T &gt; &gt;</type>
+        <definition>using sgns::face::GenericList&lt; T &gt;::iterator = ForwardIterator&lt;GenericList&lt;T&gt;&gt;</definition>
+        <argsstring></argsstring>
+        <name>iterator</name>
+        <qualifiedname>sgns::face::GenericList::iterator</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/generic_list.hpp" line="22" column="5" bodyfile="src/storage/face/generic_list.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d4/dc6/classsgns_1_1face_1_1_generic_list_1a44d4a29d35f00e35996d851b36217f54" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::face::GenericList&lt; T &gt;::~GenericList</definition>
+        <argsstring>()=default</argsstring>
+        <name>~GenericList</name>
+        <qualifiedname>sgns::face::GenericList::~GenericList</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/generic_list.hpp" line="24" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dc6/classsgns_1_1face_1_1_generic_list_1adb766a36ef505bd2b97a057b180e39e1" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::face::GenericList&lt; T &gt;::push_back</definition>
+        <argsstring>(value_type &amp;&amp;t)=0</argsstring>
+        <name>push_back</name>
+        <qualifiedname>sgns::face::GenericList::push_back</qualifiedname>
+        <param>
+          <type><ref refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a115251a1f7d6ce24242b16c8e5e40715" kindref="member">value_type</ref> &amp;&amp;</type>
+          <declname>t</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Put an element to the back of the list </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/generic_list.hpp" line="29" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dc6/classsgns_1_1face_1_1_generic_list_1a351636a5e8179b0722caa2c8eacae600" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::face::GenericList&lt; T &gt;::push_back</definition>
+        <argsstring>(const value_type &amp;t)=0</argsstring>
+        <name>push_back</name>
+        <qualifiedname>sgns::face::GenericList::push_back</qualifiedname>
+        <param>
+          <type>const <ref refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a115251a1f7d6ce24242b16c8e5e40715" kindref="member">value_type</ref> &amp;</type>
+          <declname>t</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/generic_list.hpp" line="30" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dc6/classsgns_1_1face_1_1_generic_list_1a0fe3d4fec0406ed8004c18138b59a3ce" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::face::GenericList&lt; T &gt;::push_front</definition>
+        <argsstring>(value_type &amp;&amp;t)=0</argsstring>
+        <name>push_front</name>
+        <qualifiedname>sgns::face::GenericList::push_front</qualifiedname>
+        <param>
+          <type><ref refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a115251a1f7d6ce24242b16c8e5e40715" kindref="member">value_type</ref> &amp;&amp;</type>
+          <declname>t</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Put an element to the front of the list </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/generic_list.hpp" line="35" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dc6/classsgns_1_1face_1_1_generic_list_1a5ae65cb58afec92a42c19136c10aca81" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::face::GenericList&lt; T &gt;::push_front</definition>
+        <argsstring>(const value_type &amp;t)=0</argsstring>
+        <name>push_front</name>
+        <qualifiedname>sgns::face::GenericList::push_front</qualifiedname>
+        <param>
+          <type>const <ref refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a115251a1f7d6ce24242b16c8e5e40715" kindref="member">value_type</ref> &amp;</type>
+          <declname>t</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/generic_list.hpp" line="36" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dc6/classsgns_1_1face_1_1_generic_list_1a8117d805fcb811210747ca2098262e91" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a115251a1f7d6ce24242b16c8e5e40715" kindref="member">value_type</ref></type>
+        <definition>virtual value_type sgns::face::GenericList&lt; T &gt;::pop_back</definition>
+        <argsstring>()=0</argsstring>
+        <name>pop_back</name>
+        <qualifiedname>sgns::face::GenericList::pop_back</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get the back of the list and then remove it </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/generic_list.hpp" line="41" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dc6/classsgns_1_1face_1_1_generic_list_1a74cf98014ef80af7c6724f367e4d328e" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a115251a1f7d6ce24242b16c8e5e40715" kindref="member">value_type</ref></type>
+        <definition>virtual value_type sgns::face::GenericList&lt; T &gt;::pop_front</definition>
+        <argsstring>()=0</argsstring>
+        <name>pop_front</name>
+        <qualifiedname>sgns::face::GenericList::pop_front</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get the front of the list and then remove it </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/generic_list.hpp" line="46" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dc6/classsgns_1_1face_1_1_generic_list_1a15c54dfd12cc131fca472344c77f3518" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::face::GenericList&lt; T &gt;::erase</definition>
+        <argsstring>(const iterator &amp;begin, const iterator &amp;end)=0</argsstring>
+        <name>erase</name>
+        <qualifiedname>sgns::face::GenericList::erase</qualifiedname>
+        <param>
+          <type>const <ref refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a115d989db9ce765a3e234646cfa7586f" kindref="member">iterator</ref> &amp;</type>
+          <declname>begin</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a115d989db9ce765a3e234646cfa7586f" kindref="member">iterator</ref> &amp;</type>
+          <declname>end</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Erase a range of elements </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/generic_list.hpp" line="51" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dc6/classsgns_1_1face_1_1_generic_list_1a0116c4428b0d3a2c50177a658573b259" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a115d989db9ce765a3e234646cfa7586f" kindref="member">iterator</ref></type>
+        <definition>virtual iterator sgns::face::GenericList&lt; T &gt;::begin</definition>
+        <argsstring>()=0</argsstring>
+        <name>begin</name>
+        <qualifiedname>sgns::face::GenericList::begin</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/generic_list.hpp" line="56" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dc6/classsgns_1_1face_1_1_generic_list_1a1fbcba3570108d2953cd40e88f7cf4de" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a115d989db9ce765a3e234646cfa7586f" kindref="member">iterator</ref></type>
+        <definition>virtual iterator sgns::face::GenericList&lt; T &gt;::end</definition>
+        <argsstring>()=0</argsstring>
+        <name>end</name>
+        <qualifiedname>sgns::face::GenericList::end</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/generic_list.hpp" line="57" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dc6/classsgns_1_1face_1_1_generic_list_1a5bfc367edebe33ef662f3958447522dc" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>bool</type>
+        <definition>virtual bool sgns::face::GenericList&lt; T &gt;::empty</definition>
+        <argsstring>() const =0</argsstring>
+        <name>empty</name>
+        <qualifiedname>sgns::face::GenericList::empty</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Tell whether list is empty </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/generic_list.hpp" line="62" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/dc6/classsgns_1_1face_1_1_generic_list_1ac60b0cacb98a29c34d89917ae039a69b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1aa7172649f06403bac2688269f2cacc9b" kindref="member">size_type</ref></type>
+        <definition>virtual size_type sgns::face::GenericList&lt; T &gt;::size</definition>
+        <argsstring>() const =0</argsstring>
+        <name>size</name>
+        <qualifiedname>sgns::face::GenericList::size</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Obtain the size of the list </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/generic_list.hpp" line="67" column="23"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>An interface for a generic list. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::face::GenericList&lt; T &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1face_1_1_generic_list"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/face/generic_list.hpp" line="18" column="3" bodyfile="src/storage/face/generic_list.hpp" bodystart="18" bodyend="68"/>
+    <listofallmembers>
+      <member refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a0116c4428b0d3a2c50177a658573b259" prot="public" virt="pure-virtual"><scope>sgns::face::GenericList</scope><name>begin</name></member>
+      <member refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a5bfc367edebe33ef662f3958447522dc" prot="public" virt="pure-virtual"><scope>sgns::face::GenericList</scope><name>empty</name></member>
+      <member refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a1fbcba3570108d2953cd40e88f7cf4de" prot="public" virt="pure-virtual"><scope>sgns::face::GenericList</scope><name>end</name></member>
+      <member refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a15c54dfd12cc131fca472344c77f3518" prot="public" virt="pure-virtual"><scope>sgns::face::GenericList</scope><name>erase</name></member>
+      <member refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a115d989db9ce765a3e234646cfa7586f" prot="public" virt="non-virtual"><scope>sgns::face::GenericList</scope><name>iterator</name></member>
+      <member refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a8117d805fcb811210747ca2098262e91" prot="public" virt="pure-virtual"><scope>sgns::face::GenericList</scope><name>pop_back</name></member>
+      <member refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a74cf98014ef80af7c6724f367e4d328e" prot="public" virt="pure-virtual"><scope>sgns::face::GenericList</scope><name>pop_front</name></member>
+      <member refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1adb766a36ef505bd2b97a057b180e39e1" prot="public" virt="pure-virtual"><scope>sgns::face::GenericList</scope><name>push_back</name></member>
+      <member refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a351636a5e8179b0722caa2c8eacae600" prot="public" virt="pure-virtual"><scope>sgns::face::GenericList</scope><name>push_back</name></member>
+      <member refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a0fe3d4fec0406ed8004c18138b59a3ce" prot="public" virt="pure-virtual"><scope>sgns::face::GenericList</scope><name>push_front</name></member>
+      <member refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a5ae65cb58afec92a42c19136c10aca81" prot="public" virt="pure-virtual"><scope>sgns::face::GenericList</scope><name>push_front</name></member>
+      <member refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1ac60b0cacb98a29c34d89917ae039a69b" prot="public" virt="pure-virtual"><scope>sgns::face::GenericList</scope><name>size</name></member>
+      <member refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1aa7172649f06403bac2688269f2cacc9b" prot="public" virt="non-virtual"><scope>sgns::face::GenericList</scope><name>size_type</name></member>
+      <member refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a115251a1f7d6ce24242b16c8e5e40715" prot="public" virt="non-virtual"><scope>sgns::face::GenericList</scope><name>value_type</name></member>
+      <member refid="d4/dc6/classsgns_1_1face_1_1_generic_list_1a44d4a29d35f00e35996d851b36217f54" prot="public" virt="virtual"><scope>sgns::face::GenericList</scope><name>~GenericList</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,66 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/dac/structsgns_1_1_unused" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::Unused</compoundname>
+    <includes refid="dd/d26/unused_8hpp" local="no">unused.hpp</includes>
+    <templateparamlist>
+      <param>
+        <type>size_t</type>
+        <declname>N</declname>
+        <defname>N</defname>
+      </param>
+    </templateparamlist>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="da/dac/structsgns_1_1_unused_1a6df8d8bed8ef0af8674b44e108c0cfca" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::Unused&lt; N &gt;::index</definition>
+        <argsstring></argsstring>
+        <name>index</name>
+        <qualifiedname>sgns::Unused::index</qualifiedname>
+        <initializer>= N</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/unused.hpp" line="12" column="36" bodyfile="src/base/unused.hpp" bodystart="12" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="da/dac/structsgns_1_1_unused_1a77235fda4dc7c9324af49843bd527a81" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::Unused&lt; N &gt;::operator==</definition>
+        <argsstring>(const Unused &amp;) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::Unused::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="da/dac/structsgns_1_1_unused" kindref="compound">Unused</ref> &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/unused.hpp" line="14" column="10" bodyfile="src/base/unused.hpp" bodystart="14" bodyend="16"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Special zero-size-type for some things (e.g., unsupported and experimental). </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::Unused&lt; N &gt;</label>
+        <link refid="da/dac/structsgns_1_1_unused"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/base/unused.hpp" line="11" column="3" bodyfile="src/base/unused.hpp" bodystart="11" bodyend="17"/>
+    <listofallmembers>
+      <member refid="da/dac/structsgns_1_1_unused_1a6df8d8bed8ef0af8674b44e108c0cfca" prot="public" virt="non-virtual"><scope>sgns::Unused</scope><name>index</name></member>
+      <member refid="da/dac/structsgns_1_1_unused_1a77235fda4dc7c9324af49843bd527a81" prot="public" virt="non-virtual"><scope>sgns::Unused</scope><name>operator==</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

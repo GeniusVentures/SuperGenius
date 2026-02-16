@@ -1,0 +1,139 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="db/d26/structsgns_1_1runtime_1_1_wasm_result" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::runtime::WasmResult</compoundname>
+    <includes refid="d4/d08/wasm__result_8hpp" local="no">wasm_result.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a2db3056be60b475a34c3fafa4b613e2a" prot="public" static="no" mutable="no">
+        <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+        <definition>WasmPointer sgns::runtime::WasmResult::address</definition>
+        <argsstring></argsstring>
+        <name>address</name>
+        <qualifiedname>sgns::runtime::WasmResult::address</qualifiedname>
+        <initializer>= 0u</initializer>
+        <briefdescription>
+<para>address of buffer result </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/wasm_result.hpp" line="36" column="17" bodyfile="src/runtime/wasm_result.hpp" bodystart="36" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a37fafc34e5775a534cb48e7eadb7dc07" prot="public" static="no" mutable="no">
+        <type><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref></type>
+        <definition>WasmSize sgns::runtime::WasmResult::length</definition>
+        <argsstring></argsstring>
+        <name>length</name>
+        <qualifiedname>sgns::runtime::WasmResult::length</qualifiedname>
+        <initializer>= 0u</initializer>
+        <briefdescription>
+<para>length of buffer result </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/wasm_result.hpp" line="37" column="14" bodyfile="src/runtime/wasm_result.hpp" bodystart="37" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="db/d26/structsgns_1_1runtime_1_1_wasm_result_1aea4d35edcf0c757b748a90cff6a4e8fe" prot="public" static="no" constexpr="yes" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type>constexpr</type>
+        <definition>sgns::runtime::WasmResult::WasmResult</definition>
+        <argsstring>(WasmSpan v)</argsstring>
+        <name>WasmResult</name>
+        <qualifiedname>sgns::runtime::WasmResult::WasmResult</qualifiedname>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1adc9fc98228747f341ff4f49e2f8d9002" kindref="member">WasmSpan</ref></type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/wasm_result.hpp" line="14" column="24" bodyfile="src/runtime/wasm_result.hpp" bodystart="14" bodyend="18"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a35a9a514ea46c55946007665ea9bd7cb" prot="public" static="no" constexpr="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>constexpr</type>
+        <definition>sgns::runtime::WasmResult::WasmResult</definition>
+        <argsstring>(WasmPointer ptr, WasmSize size)</argsstring>
+        <name>WasmResult</name>
+        <qualifiedname>sgns::runtime::WasmResult::WasmResult</qualifiedname>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+          <declname>ptr</declname>
+        </param>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref></type>
+          <declname>size</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/wasm_result.hpp" line="20" column="15" bodyfile="src/runtime/wasm_result.hpp" bodystart="20" bodyend="21"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a36342ab3631b0a36092eae84d333e4a2" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="dd/da6/namespacesgns_1_1runtime_1adc9fc98228747f341ff4f49e2f8d9002" kindref="member">WasmSpan</ref></type>
+        <definition>WasmSpan sgns::runtime::WasmResult::combine</definition>
+        <argsstring>() const</argsstring>
+        <name>combine</name>
+        <qualifiedname>sgns::runtime::WasmResult::combine</qualifiedname>
+        <briefdescription>
+<para>makes combined pointer-size result from address </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>pointer-size uint64_t value </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/wasm_result.hpp" line="27" column="14" bodyfile="src/runtime/wasm_result.hpp" bodystart="27" bodyend="30"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d26/structsgns_1_1runtime_1_1_wasm_result_1ae528f1929eb864a3580eafdc154e538e" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::runtime::WasmResult::operator==</definition>
+        <argsstring>(const WasmResult &amp;rhs) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::runtime::WasmResult::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1aea4d35edcf0c757b748a90cff6a4e8fe" kindref="member">WasmResult</ref> &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/wasm_result.hpp" line="32" column="10" bodyfile="src/runtime/wasm_result.hpp" bodystart="32" bodyend="34"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Result of a call to a Runtime API wasm function is an i64 where first 32 bits are the address and next 32 bits are the size of the returned buffer. </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::runtime::WasmResult</label>
+        <link refid="db/d26/structsgns_1_1runtime_1_1_wasm_result"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/wasm_result.hpp" line="12" column="3" bodyfile="src/runtime/wasm_result.hpp" bodystart="12" bodyend="38"/>
+    <listofallmembers>
+      <member refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a2db3056be60b475a34c3fafa4b613e2a" prot="public" virt="non-virtual"><scope>sgns::runtime::WasmResult</scope><name>address</name></member>
+      <member refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a36342ab3631b0a36092eae84d333e4a2" prot="public" virt="non-virtual"><scope>sgns::runtime::WasmResult</scope><name>combine</name></member>
+      <member refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a37fafc34e5775a534cb48e7eadb7dc07" prot="public" virt="non-virtual"><scope>sgns::runtime::WasmResult</scope><name>length</name></member>
+      <member refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1ae528f1929eb864a3580eafdc154e538e" prot="public" virt="non-virtual"><scope>sgns::runtime::WasmResult</scope><name>operator==</name></member>
+      <member refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1aea4d35edcf0c757b748a90cff6a4e8fe" prot="public" virt="non-virtual"><scope>sgns::runtime::WasmResult</scope><name>WasmResult</name></member>
+      <member refid="db/d26/structsgns_1_1runtime_1_1_wasm_result_1a35a9a514ea46c55946007665ea9bd7cb" prot="public" virt="non-virtual"><scope>sgns::runtime::WasmResult</scope><name>WasmResult</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

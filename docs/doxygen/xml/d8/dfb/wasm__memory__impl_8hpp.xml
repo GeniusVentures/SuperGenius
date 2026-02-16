@@ -1,0 +1,243 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d8/dfb/wasm__memory__impl_8hpp" kind="file" language="C++">
+    <compoundname>wasm_memory_impl.hpp</compoundname>
+    <includes local="no">binaryen/shell-interface.h</includes>
+    <includes local="no">array</includes>
+    <includes local="no">cstring</includes>
+    <includes local="no">memory</includes>
+    <includes local="no">unordered_map</includes>
+    <includes local="no">boost/optional.hpp</includes>
+    <includes refid="d4/dc2/wasm__memory_8hpp" local="yes">runtime/wasm_memory.hpp</includes>
+    <includedby refid="df/d4e/runtime__external__interface_8cpp" local="yes">src/runtime/binaryen/runtime_external_interface.cpp</includedby>
+    <includedby refid="d8/d89/wasm__memory__impl_8cpp" local="yes">src/runtime/binaryen/wasm_memory_impl.cpp</includedby>
+    <incdepgraph>
+      <node id="10">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/runtime/binaryen/wasm_memory_impl.hpp</label>
+        <link refid="d8/dfb/wasm__memory__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>runtime/types.hpp</label>
+        <link refid="d1/d64/runtime_2types_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>runtime/wasm_memory.hpp</label>
+        <link refid="d4/dc2/wasm__memory_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>array</label>
+      </node>
+      <node id="2">
+        <label>binaryen/shell-interface.h</label>
+      </node>
+      <node id="13">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="14">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="7">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="18">
+        <label>cstdint</label>
+      </node>
+      <node id="4">
+        <label>cstring</label>
+      </node>
+      <node id="9">
+        <label>gsl/span</label>
+      </node>
+      <node id="16">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="5">
+        <label>memory</label>
+      </node>
+      <node id="11">
+        <label>string_view</label>
+      </node>
+      <node id="6">
+        <label>unordered_map</label>
+      </node>
+      <node id="19">
+        <label>utility</label>
+      </node>
+      <node id="12">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/runtime/binaryen/runtime_external_interface.cpp</label>
+        <link refid="df/d4e/runtime__external__interface_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/runtime/binaryen/wasm_memory_impl.cpp</label>
+        <link refid="d8/d89/wasm__memory__impl_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/runtime/binaryen/wasm_memory_impl.hpp</label>
+        <link refid="d8/dfb/wasm__memory__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl" prot="public">sgns::runtime::binaryen::WasmMemoryImpl</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="dd/da6/namespacesgns_1_1runtime">sgns::runtime</innernamespace>
+    <innernamespace refid="d5/d54/namespacesgns_1_1runtime_1_1binaryen">sgns::runtime::binaryen</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_RUNTIME_BINARYEN_WASM_MEMORY_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_RUNTIME_BINARYEN_WASM_MEMORY_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;binaryen/shell-interface.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;array&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstring&gt;</highlight><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>for<sp/>std::memset<sp/>in<sp/>gcc</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;memory&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;unordered_map&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/optional.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d4/dc2/wasm__memory_8hpp" kindref="compound">runtime/wasm_memory.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d5/d54/namespacesgns_1_1runtime_1_1binaryen" kindref="compound">sgns::runtime::binaryen</ref><sp/>{</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24" refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a300f1cbda296dfcf2a758d95880f335d" kindref="member">WasmMemoryImpl</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory" kindref="compound">WasmMemory</ref><sp/>{</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">explicit</highlight><highlight class="normal"><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a300f1cbda296dfcf2a758d95880f335d" kindref="member">WasmMemoryImpl</ref>(</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>wasm::ShellExternalInterface::Memory<sp/>*memory,</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa0a444fcde4ba175912ef78293f5c629" kindref="member">size</ref><sp/>=</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>1114112);<sp/><sp/></highlight><highlight class="comment">//<sp/>default<sp/>value<sp/>for<sp/>binaryen&apos;s<sp/>shell<sp/>interface</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="30" refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a50847e00e1bc0202c122af05f68c8a2c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a50847e00e1bc0202c122af05f68c8a2c" kindref="member">WasmMemoryImpl</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a300f1cbda296dfcf2a758d95880f335d" kindref="member">WasmMemoryImpl</ref><sp/>&amp;copy)<sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="31" refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a45fda8f7d55c0dcab63d8fc8988d576a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a300f1cbda296dfcf2a758d95880f335d" kindref="member">WasmMemoryImpl</ref><sp/>&amp;<ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a45fda8f7d55c0dcab63d8fc8988d576a" kindref="member">operator=</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a300f1cbda296dfcf2a758d95880f335d" kindref="member">WasmMemoryImpl</ref><sp/>&amp;copy)<sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="32" refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a05f12c9a179cfbfc084d825ac691f98c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a05f12c9a179cfbfc084d825ac691f98c" kindref="member">WasmMemoryImpl</ref>(<ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a300f1cbda296dfcf2a758d95880f335d" kindref="member">WasmMemoryImpl</ref><sp/>&amp;&amp;move)<sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="33" refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a0385a20a7a5d68df2d4bcb2769f8c080" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a300f1cbda296dfcf2a758d95880f335d" kindref="member">WasmMemoryImpl</ref><sp/>&amp;<ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a0385a20a7a5d68df2d4bcb2769f8c080" kindref="member">operator=</ref>(<ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a300f1cbda296dfcf2a758d95880f335d" kindref="member">WasmMemoryImpl</ref><sp/>&amp;&amp;move)<sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="34" refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ae2fd2312f4c75700959f1a3b51c2abaf" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ae2fd2312f4c75700959f1a3b51c2abaf" kindref="member">~WasmMemoryImpl</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a310cda5acd7ea1d631ae67abdb84f63b" kindref="member">reset</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa0a444fcde4ba175912ef78293f5c629" kindref="member">size</ref>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ac753e244d00eeb5cf00e9985107b226e" kindref="member">resize</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref><sp/>newSize)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a5294b49486e28c5f76657db357484ea8" kindref="member">allocate</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa0a444fcde4ba175912ef78293f5c629" kindref="member">size</ref>)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/>boost::optional&lt;WasmSize&gt;<sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a0c4368a8063fb78b50715ea3cb63138c" kindref="member">deallocate</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/>ptr)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/>int8_t<sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a08d3ec851366b7fbca6302641909269a" kindref="member">load8s</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/>addr)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/>uint8_t<sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a1417156a98eb4c07be049a2ddc6b211c" kindref="member">load8u</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/>addr)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/>int16_t<sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a4404cb5be87f738cfdf470cdeda0b5f2" kindref="member">load16s</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/>addr)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/>uint16_t<sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aefc3e3e9d331f37fbc5287e7d8ac3a25" kindref="member">load16u</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/>addr)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/>int32_t<sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a228bf2b47d31bd40de88dabcf2df75c4" kindref="member">load32s</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/>addr)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/>uint32_t<sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a896436dc97908d528e6ab83071c88f7f" kindref="member">load32u</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/>addr)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/>int64_t<sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ac024fdcacfd22a551088b1e10e4df9a9" kindref="member">load64s</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/>addr)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a0c1d7480ebc1ba8f67c09d5d97cb1ae3" kindref="member">load64u</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/>addr)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/>std::array&lt;uint8_t,<sp/>16&gt;<sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ae44a091abfba975ea3b4e2c85cc06bfd" kindref="member">load128</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/>addr)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a23657fa45d80175366b72b5a43a187d3" kindref="member">loadN</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">sgns::runtime::WasmPointer</ref><sp/>addr,</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">sgns::runtime::WasmSize</ref><sp/>n)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a25910f00116bf7d35523d58ac8ba7bca" kindref="member">loadStr</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">sgns::runtime::WasmPointer</ref><sp/>addr,</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">sgns::runtime::WasmSize</ref><sp/>n)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a4e118d967f59a86ef3d7f9c43c86b016" kindref="member">store8</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/>addr,<sp/>int8_t<sp/>value)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ae51b0eeaa4135782d191fce2fe7d5046" kindref="member">store16</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/>addr,<sp/>int16_t<sp/>value)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a33a4e4c33f10c04950123adaa53e9f87" kindref="member">store32</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/>addr,<sp/>int32_t<sp/>value)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a7cfec9009caea833c2c9bc2f688564bb" kindref="member">store64</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/>addr,<sp/>int64_t<sp/>value)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a2dbb585dbe92d3fc2a52cf1058c629a4" kindref="member">store128</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/>addr,</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::array&lt;uint8_t,<sp/>16&gt;<sp/>&amp;value)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa06e5a6a113d81cfbb8717a32a7ae77b" kindref="member">storeBuffer</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">sgns::runtime::WasmPointer</ref><sp/>addr,</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>gsl::span&lt;const<sp/>uint8_t&gt;<sp/>value)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"></highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1adc9fc98228747f341ff4f49e2f8d9002" kindref="member">WasmSpan</ref><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa06e5a6a113d81cfbb8717a32a7ae77b" kindref="member">storeBuffer</ref>(gsl::span&lt;const<sp/>uint8_t&gt;<sp/>value)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"></highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="70" refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a7d177774d64b47f6456c83b12640fce4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>wasm::ShellExternalInterface::Memory<sp/>*<ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a7d177774d64b47f6456c83b12640fce4" kindref="member">memory_</ref>;</highlight></codeline>
+<codeline lineno="71" refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aee7dcbf6357b04bdbb8f0aef73827b03" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aee7dcbf6357b04bdbb8f0aef73827b03" kindref="member">size_</ref>;</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"></highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Offset<sp/>on<sp/>the<sp/>tail<sp/>of<sp/>the<sp/>last<sp/>allocated<sp/>MemoryImpl<sp/>chunk</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="74" refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa2d31affe657e243733608e78d726a2a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa2d31affe657e243733608e78d726a2a" kindref="member">offset_</ref>;</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"></highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>map<sp/>containing<sp/>addresses<sp/>of<sp/>allocated<sp/>MemoryImpl<sp/>chunks</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="77" refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ab0c7705ac8108647eb3a0d0a87d15c09" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::unordered_map&lt;WasmPointer,<sp/>WasmSize&gt;<sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ab0c7705ac8108647eb3a0d0a87d15c09" kindref="member">allocated_</ref>;</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"></highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>map<sp/>containing<sp/>addresses<sp/>to<sp/>the<sp/>deallocated<sp/>MemoryImpl<sp/>chunks</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="80" refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1adbc1622db4c8f7d36636217a443ec33b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::unordered_map&lt;WasmPointer,<sp/>WasmSize&gt;<sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1adbc1622db4c8f7d36636217a443ec33b" kindref="member">deallocated_</ref>;</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"></highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>T&gt;</highlight></codeline>
+<codeline lineno="83" refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a4d7d6cb14ec9455fa912c998152f73c7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a4d7d6cb14ec9455fa912c998152f73c7" kindref="member">aligned</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>*address)<sp/>{</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static_assert</highlight><highlight class="normal">(!(</highlight><highlight class="keyword">sizeof</highlight><highlight class="normal">(T)<sp/>&amp;<sp/>(</highlight><highlight class="keyword">sizeof</highlight><highlight class="normal">(T)<sp/>-<sp/>1)),<sp/></highlight><highlight class="stringliteral">&quot;must<sp/>be<sp/>a<sp/>power<sp/>of<sp/>2&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>0<sp/>==<sp/>(</highlight><highlight class="keyword">reinterpret_cast&lt;</highlight><highlight class="normal">uintptr_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(address)<sp/>&amp;<sp/>(</highlight><highlight class="keyword">sizeof</highlight><highlight class="normal">(T)<sp/>-<sp/>1));</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"></highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a088e1d3d7d3496b91e4971df167babc1" kindref="member">freealloc</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa0a444fcde4ba175912ef78293f5c629" kindref="member">size</ref>);</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"></highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1af54af3e843fcced95e026134453fd19e" kindref="member">findContaining</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa0a444fcde4ba175912ef78293f5c629" kindref="member">size</ref>);</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"></highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a69e8247f12d32abdee18d2a9155951e8" kindref="member">growAlloc</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa0a444fcde4ba175912ef78293f5c629" kindref="member">size</ref>);</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"></highlight></codeline>
+<codeline lineno="114" refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1abe079c2ae8f7bb17f1a74492cf713f6d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1abe079c2ae8f7bb17f1a74492cf713f6d" kindref="member">resizeInternal</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref><sp/>newSize);</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"></highlight></codeline>
+<codeline lineno="117"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::runtime::binaryen</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="118"><highlight class="normal"></highlight></codeline>
+<codeline lineno="119"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_SRC_RUNTIME_BINARYEN_WASM_MEMORY_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/runtime/binaryen/wasm_memory_impl.hpp"/>
+  </compounddef>
+</doxygen>

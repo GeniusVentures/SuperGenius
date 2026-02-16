@@ -1,0 +1,211 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider" kind="class" language="C++" prot="public">
+    <compoundname>sgns::runtime::StorageWasmProvider</compoundname>
+    <basecompoundref refid="d2/d00/classsgns_1_1runtime_1_1_wasm_provider" prot="public" virt="non-virtual">sgns::runtime::WasmProvider</basecompoundref>
+    <includes refid="d5/df8/storage__wasm__provider_8hpp" local="no">storage_wasm_provider.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1aa21d6759803d69dd21a8b24184f3a50a" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; const <ref refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage" kindref="compound">storage::trie::TrieStorage</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;const storage::trie::TrieStorage&gt; sgns::runtime::StorageWasmProvider::storage_</definition>
+        <argsstring></argsstring>
+        <name>storage_</name>
+        <qualifiedname>sgns::runtime::StorageWasmProvider::storage_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/storage_wasm_provider.hpp" line="24" column="21" bodyfile="src/runtime/common/storage_wasm_provider.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1a6aac15d00a60243f2cb371c853565328" prot="private" static="no" mutable="yes">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>base::Buffer sgns::runtime::StorageWasmProvider::state_code_</definition>
+        <argsstring></argsstring>
+        <name>state_code_</name>
+        <qualifiedname>sgns::runtime::StorageWasmProvider::state_code_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/storage_wasm_provider.hpp" line="25" column="26" bodyfile="src/runtime/common/storage_wasm_provider.hpp" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1a374dada4135a044e67b9f6e6db124ef5" prot="private" static="no" mutable="yes">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>base::Buffer sgns::runtime::StorageWasmProvider::last_state_root_</definition>
+        <argsstring></argsstring>
+        <name>last_state_root_</name>
+        <qualifiedname>sgns::runtime::StorageWasmProvider::last_state_root_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/storage_wasm_provider.hpp" line="26" column="26" bodyfile="src/runtime/common/storage_wasm_provider.hpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1a108b5b4eca7b6cf8ca89c373ae40d7f5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::StorageWasmProvider::~StorageWasmProvider</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~StorageWasmProvider</name>
+        <qualifiedname>sgns::runtime::StorageWasmProvider::~StorageWasmProvider</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/storage_wasm_provider.hpp" line="16" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1afe2a181b5312831b5982a8f747c001cb" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::StorageWasmProvider::StorageWasmProvider</definition>
+        <argsstring>(std::shared_ptr&lt; const storage::trie::TrieStorage &gt; storage)</argsstring>
+        <name>StorageWasmProvider</name>
+        <qualifiedname>sgns::runtime::StorageWasmProvider::StorageWasmProvider</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; const <ref refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage" kindref="compound">storage::trie::TrieStorage</ref> &gt;</type>
+          <declname>storage</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/storage_wasm_provider.hpp" line="18" column="14" bodyfile="src/runtime/common/storage_wasm_provider.cpp" bodystart="6" bodyend="20"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1adb1f45d96e2092f9131ca641418a7d43" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+        <definition>const base::Buffer &amp; sgns::runtime::StorageWasmProvider::getStateCode</definition>
+        <argsstring>() const override</argsstring>
+        <name>getStateCode</name>
+        <qualifiedname>sgns::runtime::StorageWasmProvider::getStateCode</qualifiedname>
+        <reimplements refid="d2/d00/classsgns_1_1runtime_1_1_wasm_provider_1a753f3b4868712df7855290c65127b067">getStateCode</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>wasm runtime code </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/common/storage_wasm_provider.hpp" line="21" column="24" bodyfile="src/runtime/common/storage_wasm_provider.cpp" bodystart="22" bodyend="37"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::runtime::StorageWasmProvider</label>
+        <link refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::WasmProvider</label>
+        <link refid="d2/d00/classsgns_1_1runtime_1_1_wasm_provider"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="5">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="9">
+        <label>boost::equality_comparable&lt; Buffer &gt;</label>
+      </node>
+      <node id="10">
+        <label>boost::equality_comparable&lt; gsl::span&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="11">
+        <label>boost::equality_comparable&lt; std::vector&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="8">
+        <label>sgns::base::Buffer</label>
+        <link refid="de/dd5/classsgns_1_1base_1_1_buffer"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::StorageWasmProvider</label>
+        <link refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-storage_</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-last_state_root_</edgelabel>
+          <edgelabel>-state_code_</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::WasmProvider</label>
+        <link refid="d2/d00/classsgns_1_1runtime_1_1_wasm_provider"/>
+      </node>
+      <node id="4">
+        <label>sgns::storage::trie::TrieStorage</label>
+        <link refid="db/df0/classsgns_1_1storage_1_1trie_1_1_trie_storage"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; const sgns::storage::trie::TrieStorage &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; const sgns::storage::trie::TrieStorage &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="13">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::vector&lt; uint8_t &gt;</label>
+        <childnode refid="13" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/common/storage_wasm_provider.hpp" line="14" column="3" bodyfile="src/runtime/common/storage_wasm_provider.hpp" bodystart="14" bodyend="27"/>
+    <listofallmembers>
+      <member refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1adb1f45d96e2092f9131ca641418a7d43" prot="public" virt="virtual"><scope>sgns::runtime::StorageWasmProvider</scope><name>getStateCode</name></member>
+      <member refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1a374dada4135a044e67b9f6e6db124ef5" prot="private" virt="non-virtual"><scope>sgns::runtime::StorageWasmProvider</scope><name>last_state_root_</name></member>
+      <member refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1a6aac15d00a60243f2cb371c853565328" prot="private" virt="non-virtual"><scope>sgns::runtime::StorageWasmProvider</scope><name>state_code_</name></member>
+      <member refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1aa21d6759803d69dd21a8b24184f3a50a" prot="private" virt="non-virtual"><scope>sgns::runtime::StorageWasmProvider</scope><name>storage_</name></member>
+      <member refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1afe2a181b5312831b5982a8f747c001cb" prot="public" virt="non-virtual"><scope>sgns::runtime::StorageWasmProvider</scope><name>StorageWasmProvider</name></member>
+      <member refid="d6/d38/classsgns_1_1runtime_1_1_storage_wasm_provider_1a108b5b4eca7b6cf8ca89c373ae40d7f5" prot="public" virt="non-virtual"><scope>sgns::runtime::StorageWasmProvider</scope><name>~StorageWasmProvider</name></member>
+      <member refid="d2/d00/classsgns_1_1runtime_1_1_wasm_provider_1a380f66d67c973b57a1e12f9159fad82b" prot="public" virt="virtual"><scope>sgns::runtime::StorageWasmProvider</scope><name>~WasmProvider</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

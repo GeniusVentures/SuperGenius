@@ -1,0 +1,52 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_c56d198fa588e71da7ab4334564c4fd0" kind="dir">
+    <compoundname>src/account</compoundname>
+    <innerfile refid="d0/d58/_account_messenger_8cpp">AccountMessenger.cpp</innerfile>
+    <innerfile refid="d8/d7a/_account_messenger_8hpp">AccountMessenger.hpp</innerfile>
+    <innerfile refid="d5/dab/_escrow_release_transaction_8cpp">EscrowReleaseTransaction.cpp</innerfile>
+    <innerfile refid="dc/dd2/_escrow_release_transaction_8hpp">EscrowReleaseTransaction.hpp</innerfile>
+    <innerfile refid="d7/d12/_escrow_transaction_8cpp">EscrowTransaction.cpp</innerfile>
+    <innerfile refid="df/df3/_escrow_transaction_8hpp">EscrowTransaction.hpp</innerfile>
+    <innerfile refid="dd/dd9/_genius_account_8cpp">GeniusAccount.cpp</innerfile>
+    <innerfile refid="d0/dad/_genius_account_8hpp">GeniusAccount.hpp</innerfile>
+    <innerfile refid="df/de0/_genius_node_8cpp">GeniusNode.cpp</innerfile>
+    <innerfile refid="d3/d63/_genius_node_8hpp">GeniusNode.hpp</innerfile>
+    <innerfile refid="d6/d74/_genius_u_t_x_o_8hpp">GeniusUTXO.hpp</innerfile>
+    <innerfile refid="da/dcc/_i_genius_transactions_8cpp">IGeniusTransactions.cpp</innerfile>
+    <innerfile refid="db/d3c/_i_genius_transactions_8hpp">IGeniusTransactions.hpp</innerfile>
+    <innerfile refid="d5/da7/_i_migration_step_8hpp">IMigrationStep.hpp</innerfile>
+    <innerfile refid="dc/dfe/_migration0__2__0_to1__0__0_8cpp">Migration0_2_0To1_0_0.cpp</innerfile>
+    <innerfile refid="d1/d31/_migration0__2__0_to1__0__0_8hpp">Migration0_2_0To1_0_0.hpp</innerfile>
+    <innerfile refid="d8/d30/_migration1__0__0_to3__4__0_8cpp">Migration1_0_0To3_4_0.cpp</innerfile>
+    <innerfile refid="dc/db1/_migration1__0__0_to3__4__0_8hpp">Migration1_0_0To3_4_0.hpp</innerfile>
+    <innerfile refid="d6/d71/_migration3__4__0_to3__5__0_8cpp">Migration3_4_0To3_5_0.cpp</innerfile>
+    <innerfile refid="de/d71/_migration3__4__0_to3__5__0_8hpp">Migration3_4_0To3_5_0.hpp</innerfile>
+    <innerfile refid="da/d32/_migration3__5__0_to3__5__1_8cpp">Migration3_5_0To3_5_1.cpp</innerfile>
+    <innerfile refid="d6/d6e/_migration3__5__0_to3__5__1_8hpp">Migration3_5_0To3_5_1.hpp</innerfile>
+    <innerfile refid="db/da7/_migration3__5__1_to3__6__0_8cpp">Migration3_5_1To3_6_0.cpp</innerfile>
+    <innerfile refid="df/dd5/_migration3__5__1_to3__6__0_8hpp">Migration3_5_1To3_6_0.hpp</innerfile>
+    <innerfile refid="d2/d4b/_migration_manager_8cpp">MigrationManager.cpp</innerfile>
+    <innerfile refid="dc/d31/_migration_manager_8hpp">MigrationManager.hpp</innerfile>
+    <innerfile refid="d8/d70/_mint_transaction_8cpp">MintTransaction.cpp</innerfile>
+    <innerfile refid="d2/d0f/_mint_transaction_8hpp">MintTransaction.hpp</innerfile>
+    <innerfile refid="d2/d15/_processing_transaction_8cpp">ProcessingTransaction.cpp</innerfile>
+    <innerfile refid="d4/dec/_processing_transaction_8hpp">ProcessingTransaction.hpp</innerfile>
+    <innerfile refid="d2/d28/_token_amount_8cpp">TokenAmount.cpp</innerfile>
+    <innerfile refid="d9/d19/_token_amount_8hpp">TokenAmount.hpp</innerfile>
+    <innerfile refid="df/d5f/_token_i_d_8hpp">TokenID.hpp</innerfile>
+    <innerfile refid="d0/dcc/_transaction_manager_8cpp">TransactionManager.cpp</innerfile>
+    <innerfile refid="de/d54/_transaction_manager_8hpp">TransactionManager.hpp</innerfile>
+    <innerfile refid="db/dbb/_transfer_transaction_8cpp">TransferTransaction.cpp</innerfile>
+    <innerfile refid="dd/d70/_transfer_transaction_8hpp">TransferTransaction.hpp</innerfile>
+    <innerfile refid="dc/d76/_u_t_x_o_manager_8cpp">UTXOManager.cpp</innerfile>
+    <innerfile refid="d1/dac/_u_t_x_o_manager_8hpp">UTXOManager.hpp</innerfile>
+    <innerfile refid="d4/d13/_u_t_x_o_structs_8cpp">UTXOStructs.cpp</innerfile>
+    <innerfile refid="d1/dd1/_u_t_x_o_structs_8hpp">UTXOStructs.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/account/"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,267 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="db/d21/classsgns_1_1telemetry__ack" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::telemetry_ack</compoundname>
+    <basecompoundref refid="db/da6/classsgns_1_1message" prot="public" virt="non-virtual">sgns::message</basecompoundref>
+    <includes refid="da/d8d/node_2common_8hpp" local="no">common.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="db/d21/classsgns_1_1telemetry__ack_1a2f7ac7b4bfb267162e6eac0957a63c7f" prot="public" static="no" mutable="no">
+        <type><ref refid="da/d52/classsgns_1_1telemetry__data" kindref="compound">sgns::telemetry_data</ref></type>
+        <definition>sgns::telemetry_data sgns::telemetry_ack::data</definition>
+        <argsstring></argsstring>
+        <name>data</name>
+        <qualifiedname>sgns::telemetry_ack::data</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="401" column="22" bodyfile="node/common.hpp" bodystart="401" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="db/d21/classsgns_1_1telemetry__ack_1a8bb69af49f6c69b070ac48b7adf6aab3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::telemetry_ack::telemetry_ack</definition>
+        <argsstring>()</argsstring>
+        <name>telemetry_ack</name>
+        <qualifiedname>sgns::telemetry_ack::telemetry_ack</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="392" column="1" bodyfile="node/common.cpp" bodystart="1100" bodyend="1103"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d21/classsgns_1_1telemetry__ack_1a8f15dd580516643afd803964ce393dcb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::telemetry_ack::telemetry_ack</definition>
+        <argsstring>(bool &amp;, sgns::stream &amp;, sgns::message_header const &amp;)</argsstring>
+        <name>telemetry_ack</name>
+        <qualifiedname>sgns::telemetry_ack::telemetry_ack</qualifiedname>
+        <param>
+          <type>bool &amp;</type>
+          <defname>error_a</defname>
+        </param>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type><ref refid="de/d6d/classsgns_1_1message__header" kindref="compound">sgns::message_header</ref> const &amp;</type>
+          <defname>message_header</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="393" column="1" bodyfile="node/common.cpp" bodystart="1105" bodyend="1112"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d21/classsgns_1_1telemetry__ack_1ae5309e2652a7571093bc464dee983449" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::telemetry_ack::telemetry_ack</definition>
+        <argsstring>(telemetry_data const &amp;)</argsstring>
+        <name>telemetry_ack</name>
+        <qualifiedname>sgns::telemetry_ack::telemetry_ack</qualifiedname>
+        <param>
+          <type><ref refid="da/d52/classsgns_1_1telemetry__data" kindref="compound">telemetry_data</ref> const &amp;</type>
+          <defname>telemetry_data_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="394" column="10" bodyfile="node/common.cpp" bodystart="1114" bodyend="1119"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d21/classsgns_1_1telemetry__ack_1ab6acec41bdfafc421b9a72b5ec2cafba" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::telemetry_ack::serialize</definition>
+        <argsstring>(sgns::stream &amp;, bool) const override</argsstring>
+        <name>serialize</name>
+        <qualifiedname>sgns::telemetry_ack::serialize</qualifiedname>
+        <reimplements refid="db/da6/classsgns_1_1message_1a7caa91e43882d5ce6b2f84e7a180bfd8">serialize</reimplements>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type>bool</type>
+          <defname>use_epoch_2_min_version_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="395" column="6" bodyfile="node/common.cpp" bodystart="1121" bodyend="1128"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d21/classsgns_1_1telemetry__ack_1a6268f0ddfc0786a212b99015c751e2e5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::telemetry_ack::visit</definition>
+        <argsstring>(sgns::message_visitor &amp;) const override</argsstring>
+        <name>visit</name>
+        <qualifiedname>sgns::telemetry_ack::visit</qualifiedname>
+        <reimplements refid="db/da6/classsgns_1_1message_1a85e15104bd6bb3f97732067f4a31b418">visit</reimplements>
+        <param>
+          <type><ref refid="dd/d84/classsgns_1_1message__visitor" kindref="compound">sgns::message_visitor</ref> &amp;</type>
+          <defname>visitor_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="396" column="6" bodyfile="node/common.cpp" bodystart="1149" bodyend="1152"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d21/classsgns_1_1telemetry__ack_1adc84aab70bbf2d51e59697a21711c48d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::telemetry_ack::deserialize</definition>
+        <argsstring>(sgns::stream &amp;)</argsstring>
+        <name>deserialize</name>
+        <qualifiedname>sgns::telemetry_ack::deserialize</qualifiedname>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="397" column="6" bodyfile="node/common.cpp" bodystart="1130" bodyend="1147"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d21/classsgns_1_1telemetry__ack_1ae85bb8cb39dc534497e1fbd8e47c30ba" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>uint16_t</type>
+        <definition>uint16_t sgns::telemetry_ack::size</definition>
+        <argsstring>() const</argsstring>
+        <name>size</name>
+        <qualifiedname>sgns::telemetry_ack::size</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="398" column="10" bodyfile="node/common.cpp" bodystart="1154" bodyend="1157"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d21/classsgns_1_1telemetry__ack_1a7c35a22cca5157204cd579a0c2df5d82" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::telemetry_ack::is_empty_payload</definition>
+        <argsstring>() const</argsstring>
+        <name>is_empty_payload</name>
+        <qualifiedname>sgns::telemetry_ack::is_empty_payload</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="399" column="6" bodyfile="node/common.cpp" bodystart="1164" bodyend="1167"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="db/d21/classsgns_1_1telemetry__ack_1a2839ad1664fc0ec7f0e7711e74578f15" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>uint16_t</type>
+        <definition>uint16_t sgns::telemetry_ack::size</definition>
+        <argsstring>(sgns::message_header const &amp;)</argsstring>
+        <name>size</name>
+        <qualifiedname>sgns::telemetry_ack::size</qualifiedname>
+        <param>
+          <type><ref refid="de/d6d/classsgns_1_1message__header" kindref="compound">sgns::message_header</ref> const &amp;</type>
+          <defname>message_header_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="400" column="17" bodyfile="node/common.cpp" bodystart="1159" bodyend="1162"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::message</label>
+        <link refid="db/da6/classsgns_1_1message"/>
+      </node>
+      <node id="1">
+        <label>sgns::telemetry_ack</label>
+        <link refid="db/d21/classsgns_1_1telemetry__ack"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>sgns::message</label>
+        <link refid="db/da6/classsgns_1_1message"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+header</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::message_header</label>
+        <link refid="de/d6d/classsgns_1_1message__header"/>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+block_type_mask</edgelabel>
+          <edgelabel>+count_mask</edgelabel>
+          <edgelabel>+extensions</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::telemetry_ack</label>
+        <link refid="db/d21/classsgns_1_1telemetry__ack"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+data</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>sgns::telemetry_data</label>
+        <link refid="da/d52/classsgns_1_1telemetry__data"/>
+      </node>
+      <node id="5">
+        <label>std::bitset&lt; Bits &gt;</label>
+      </node>
+      <node id="4">
+        <label>std::bitset&lt; 16 &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; 16 &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="node/common.hpp" line="389" column="1" bodyfile="node/common.hpp" bodystart="390" bodyend="402"/>
+    <listofallmembers>
+      <member refid="db/d21/classsgns_1_1telemetry__ack_1a2f7ac7b4bfb267162e6eac0957a63c7f" prot="public" virt="non-virtual"><scope>sgns::telemetry_ack</scope><name>data</name></member>
+      <member refid="db/d21/classsgns_1_1telemetry__ack_1adc84aab70bbf2d51e59697a21711c48d" prot="public" virt="non-virtual"><scope>sgns::telemetry_ack</scope><name>deserialize</name></member>
+      <member refid="db/da6/classsgns_1_1message_1abc0de834dc846d1d86110caec8a4b7db" prot="public" virt="non-virtual"><scope>sgns::telemetry_ack</scope><name>header</name></member>
+      <member refid="db/d21/classsgns_1_1telemetry__ack_1a7c35a22cca5157204cd579a0c2df5d82" prot="public" virt="non-virtual"><scope>sgns::telemetry_ack</scope><name>is_empty_payload</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a1c0d801d4625dbcc8a9f40a5c6631b2c" prot="public" virt="non-virtual"><scope>sgns::telemetry_ack</scope><name>message</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a2fbf35d959e3532e2ce4675c9c26761e" prot="public" virt="non-virtual"><scope>sgns::telemetry_ack</scope><name>message</name></member>
+      <member refid="db/d21/classsgns_1_1telemetry__ack_1ab6acec41bdfafc421b9a72b5ec2cafba" prot="public" virt="virtual"><scope>sgns::telemetry_ack</scope><name>serialize</name></member>
+      <member refid="db/d21/classsgns_1_1telemetry__ack_1ae85bb8cb39dc534497e1fbd8e47c30ba" prot="public" virt="non-virtual"><scope>sgns::telemetry_ack</scope><name>size</name></member>
+      <member refid="db/d21/classsgns_1_1telemetry__ack_1a2839ad1664fc0ec7f0e7711e74578f15" prot="public" virt="non-virtual"><scope>sgns::telemetry_ack</scope><name>size</name></member>
+      <member refid="db/d21/classsgns_1_1telemetry__ack_1a8bb69af49f6c69b070ac48b7adf6aab3" prot="public" virt="non-virtual"><scope>sgns::telemetry_ack</scope><name>telemetry_ack</name></member>
+      <member refid="db/d21/classsgns_1_1telemetry__ack_1a8f15dd580516643afd803964ce393dcb" prot="public" virt="non-virtual"><scope>sgns::telemetry_ack</scope><name>telemetry_ack</name></member>
+      <member refid="db/d21/classsgns_1_1telemetry__ack_1ae5309e2652a7571093bc464dee983449" prot="public" virt="non-virtual"><scope>sgns::telemetry_ack</scope><name>telemetry_ack</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a2ad934099e11461e98605fcb5b001c0b" prot="public" virt="non-virtual"><scope>sgns::telemetry_ack</scope><name>to_bytes</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a5ae4e86a1763a52b65e042caed25ee54" prot="public" virt="non-virtual"><scope>sgns::telemetry_ack</scope><name>to_shared_const_buffer</name></member>
+      <member refid="db/d21/classsgns_1_1telemetry__ack_1a6268f0ddfc0786a212b99015c751e2e5" prot="public" virt="virtual"><scope>sgns::telemetry_ack</scope><name>visit</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a144f9f336461eb5a17eac7825ba23b41" prot="public" virt="virtual"><scope>sgns::telemetry_ack</scope><name>~message</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

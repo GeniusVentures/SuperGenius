@@ -1,0 +1,536 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/df5/classsgns_1_1message__parser" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::message_parser</compoundname>
+    <includes refid="da/d8d/node_2common_8hpp" local="no">common.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="dc/df5/classsgns_1_1message__parser_1a65917b43a9c59b8bcdf7b74568936397" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>parse_status</name>
+        <qualifiedname>sgns::message_parser::parse_status</qualifiedname>
+        <enumvalue id="dc/df5/classsgns_1_1message__parser_1a65917b43a9c59b8bcdf7b74568936397a260ca9dd8a4577fc00b7bd5810298076" prot="public">
+          <name>success</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dc/df5/classsgns_1_1message__parser_1a65917b43a9c59b8bcdf7b74568936397a9f36f64a8a447ee135e2bcabdfc449e7" prot="public">
+          <name>insufficient_work</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dc/df5/classsgns_1_1message__parser_1a65917b43a9c59b8bcdf7b74568936397a4585e5059044360f4622dd7e172d7b86" prot="public">
+          <name>invalid_header</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dc/df5/classsgns_1_1message__parser_1a65917b43a9c59b8bcdf7b74568936397a73ce3f80d48ccf428a44263cb1b0475e" prot="public">
+          <name>invalid_message_type</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dc/df5/classsgns_1_1message__parser_1a65917b43a9c59b8bcdf7b74568936397aa415259b86a3e861bfd3b30a612ccf34" prot="public">
+          <name>invalid_keepalive_message</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dc/df5/classsgns_1_1message__parser_1a65917b43a9c59b8bcdf7b74568936397ad8cf2573a3c2ef4994d5a8737c581dca" prot="public">
+          <name>invalid_publish_message</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dc/df5/classsgns_1_1message__parser_1a65917b43a9c59b8bcdf7b74568936397ab09cb1e89b06cc439775f46f4f5a1030" prot="public">
+          <name>invalid_confirm_req_message</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dc/df5/classsgns_1_1message__parser_1a65917b43a9c59b8bcdf7b74568936397a2e2d4db6cd41d1b6a14fb774322bdf2e" prot="public">
+          <name>invalid_confirm_ack_message</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dc/df5/classsgns_1_1message__parser_1a65917b43a9c59b8bcdf7b74568936397aa0084edebb6a9db796020d1f3e944095" prot="public">
+          <name>invalid_node_id_handshake_message</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dc/df5/classsgns_1_1message__parser_1a65917b43a9c59b8bcdf7b74568936397a70abb0cbd79800ce96cd53066d7600de" prot="public">
+          <name>invalid_telemetry_req_message</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dc/df5/classsgns_1_1message__parser_1a65917b43a9c59b8bcdf7b74568936397a71de8292a460bf1ec1d5ec1dc86fce27" prot="public">
+          <name>invalid_telemetry_ack_message</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dc/df5/classsgns_1_1message__parser_1a65917b43a9c59b8bcdf7b74568936397a26ff5db0fa71385066d8b29a573b58eb" prot="public">
+          <name>outdated_version</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dc/df5/classsgns_1_1message__parser_1a65917b43a9c59b8bcdf7b74568936397a308e169af343fb76140f985e3897893c" prot="public">
+          <name>invalid_magic</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dc/df5/classsgns_1_1message__parser_1a65917b43a9c59b8bcdf7b74568936397a2a0ba9362f40b47565f9a5160ea97d7d" prot="public">
+          <name>invalid_network</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dc/df5/classsgns_1_1message__parser_1a65917b43a9c59b8bcdf7b74568936397a2c17d8e7821494015a05ff79c44da8a3" prot="public">
+          <name>duplicate_publish_message</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="241" column="1" bodyfile="node/common.hpp" bodystart="242" bodyend="258"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="dc/df5/classsgns_1_1message__parser_1ac142871ddaf6cc5219e260e47eccad46" prot="public" static="no" mutable="no">
+        <type>sgns::network_filter &amp;</type>
+        <definition>sgns::network_filter&amp; sgns::message_parser::publish_filter</definition>
+        <argsstring></argsstring>
+        <name>publish_filter</name>
+        <qualifiedname>sgns::message_parser::publish_filter</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="269" column="23" bodyfile="node/common.hpp" bodystart="269" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/df5/classsgns_1_1message__parser_1a30cf718b892ae549a6ce8bf7f0843fa5" prot="public" static="no" mutable="no">
+        <type>sgns::block_uniquer &amp;</type>
+        <definition>sgns::block_uniquer&amp; sgns::message_parser::block_uniquer</definition>
+        <argsstring></argsstring>
+        <name>block_uniquer</name>
+        <qualifiedname>sgns::message_parser::block_uniquer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="270" column="22" bodyfile="node/common.hpp" bodystart="270" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/df5/classsgns_1_1message__parser_1a47ecff76d03f3b7b34a8df74eae37de8" prot="public" static="no" mutable="no">
+        <type>sgns::vote_uniquer &amp;</type>
+        <definition>sgns::vote_uniquer&amp; sgns::message_parser::vote_uniquer</definition>
+        <argsstring></argsstring>
+        <name>vote_uniquer</name>
+        <qualifiedname>sgns::message_parser::vote_uniquer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="271" column="21" bodyfile="node/common.hpp" bodystart="271" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/df5/classsgns_1_1message__parser_1ae40d45da12de01c123f313a3ff0fd628" prot="public" static="no" mutable="no">
+        <type><ref refid="dd/d84/classsgns_1_1message__visitor" kindref="compound">sgns::message_visitor</ref> &amp;</type>
+        <definition>sgns::message_visitor&amp; sgns::message_parser::visitor</definition>
+        <argsstring></argsstring>
+        <name>visitor</name>
+        <qualifiedname>sgns::message_parser::visitor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="272" column="24" bodyfile="node/common.hpp" bodystart="272" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/df5/classsgns_1_1message__parser_1a647e9182bc7c76d1d585831be18c93bc" prot="public" static="no" mutable="no">
+        <type>sgns::work_pool &amp;</type>
+        <definition>sgns::work_pool&amp; sgns::message_parser::pool</definition>
+        <argsstring></argsstring>
+        <name>pool</name>
+        <qualifiedname>sgns::message_parser::pool</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="273" column="18" bodyfile="node/common.hpp" bodystart="273" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/df5/classsgns_1_1message__parser_1a04efaa725b55bedab02ecf19b39790a4" prot="public" static="no" mutable="no">
+        <type><ref refid="dc/df5/classsgns_1_1message__parser_1a65917b43a9c59b8bcdf7b74568936397" kindref="member">parse_status</ref></type>
+        <definition>parse_status sgns::message_parser::status</definition>
+        <argsstring></argsstring>
+        <name>status</name>
+        <qualifiedname>sgns::message_parser::status</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="274" column="14" bodyfile="node/common.hpp" bodystart="274" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/df5/classsgns_1_1message__parser_1ad0800f8da76b4403dd3dc2b3c62e3334" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::message_parser::use_epoch_2_min_version</definition>
+        <argsstring></argsstring>
+        <name>use_epoch_2_min_version</name>
+        <qualifiedname>sgns::message_parser::use_epoch_2_min_version</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="275" column="6" bodyfile="node/common.hpp" bodystart="275" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="dc/df5/classsgns_1_1message__parser_1a6c451545228ac54037fb8fc05878a86b" prot="public" static="yes" mutable="no">
+        <type>const size_t</type>
+        <definition>const size_t sgns::message_parser::max_safe_udp_message_size</definition>
+        <argsstring></argsstring>
+        <name>max_safe_udp_message_size</name>
+        <qualifiedname>sgns::message_parser::max_safe_udp_message_size</qualifiedname>
+        <initializer>= 508</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="277" column="21" bodyfile="node/common.hpp" bodystart="277" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dc/df5/classsgns_1_1message__parser_1a378df977cfacf9e036d94ac1b00342d1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::message_parser::message_parser</definition>
+        <argsstring>(sgns::network_filter &amp;, sgns::block_uniquer &amp;, sgns::vote_uniquer &amp;, sgns::message_visitor &amp;, sgns::work_pool &amp;, bool)</argsstring>
+        <name>message_parser</name>
+        <qualifiedname>sgns::message_parser::message_parser</qualifiedname>
+        <param>
+          <type>sgns::network_filter &amp;</type>
+          <defname>publish_filter_a</defname>
+        </param>
+        <param>
+          <type>sgns::block_uniquer &amp;</type>
+          <defname>block_uniquer_a</defname>
+        </param>
+        <param>
+          <type>sgns::vote_uniquer &amp;</type>
+          <defname>vote_uniquer_a</defname>
+        </param>
+        <param>
+          <type><ref refid="dd/d84/classsgns_1_1message__visitor" kindref="compound">sgns::message_visitor</ref> &amp;</type>
+          <defname>visitor_a</defname>
+        </param>
+        <param>
+          <type>sgns::work_pool &amp;</type>
+          <defname>pool_a</defname>
+        </param>
+        <param>
+          <type>bool</type>
+          <defname>use_epoch_2_min_version_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="259" column="1" bodyfile="node/common.cpp" bodystart="331" bodyend="340"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/df5/classsgns_1_1message__parser_1ae53bcd484196362184a7dc5137a58f96" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::message_parser::deserialize_buffer</definition>
+        <argsstring>(uint8_t const *, size_t)</argsstring>
+        <name>deserialize_buffer</name>
+        <qualifiedname>sgns::message_parser::deserialize_buffer</qualifiedname>
+        <param>
+          <type>uint8_t const *</type>
+          <defname>buffer_a</defname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <defname>size_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="260" column="6" bodyfile="node/common.cpp" bodystart="342" bodyend="418"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/df5/classsgns_1_1message__parser_1aae5c10cb4120abe7f5075961c155617f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::message_parser::deserialize_keepalive</definition>
+        <argsstring>(sgns::stream &amp;, sgns::message_header const &amp;)</argsstring>
+        <name>deserialize_keepalive</name>
+        <qualifiedname>sgns::message_parser::deserialize_keepalive</qualifiedname>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type><ref refid="de/d6d/classsgns_1_1message__header" kindref="compound">sgns::message_header</ref> const &amp;</type>
+          <defname>header_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="261" column="6" bodyfile="node/common.cpp" bodystart="420" bodyend="432"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/df5/classsgns_1_1message__parser_1a2b72bfa99fcc40bf499a0d396074bc9a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::message_parser::deserialize_publish</definition>
+        <argsstring>(sgns::stream &amp;, sgns::message_header const &amp;, sgns::uint128_t const &amp;=0)</argsstring>
+        <name>deserialize_publish</name>
+        <qualifiedname>sgns::message_parser::deserialize_publish</qualifiedname>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type><ref refid="de/d6d/classsgns_1_1message__header" kindref="compound">sgns::message_header</ref> const &amp;</type>
+          <defname>header_a</defname>
+        </param>
+        <param>
+          <type>sgns::uint128_t const &amp;</type>
+          <defname>digest_a</defname>
+          <defval>0</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="262" column="6" bodyfile="node/common.cpp" bodystart="434" bodyend="453"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/df5/classsgns_1_1message__parser_1ae3e9c6aa3d88814635bdeade4572b7be" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::message_parser::deserialize_confirm_req</definition>
+        <argsstring>(sgns::stream &amp;, sgns::message_header const &amp;)</argsstring>
+        <name>deserialize_confirm_req</name>
+        <qualifiedname>sgns::message_parser::deserialize_confirm_req</qualifiedname>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type><ref refid="de/d6d/classsgns_1_1message__header" kindref="compound">sgns::message_header</ref> const &amp;</type>
+          <defname>header_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="263" column="6" bodyfile="node/common.cpp" bodystart="455" bodyend="474"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/df5/classsgns_1_1message__parser_1a07f67a35444ce519e684e24af9dcaf5a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::message_parser::deserialize_confirm_ack</definition>
+        <argsstring>(sgns::stream &amp;, sgns::message_header const &amp;)</argsstring>
+        <name>deserialize_confirm_ack</name>
+        <qualifiedname>sgns::message_parser::deserialize_confirm_ack</qualifiedname>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type><ref refid="de/d6d/classsgns_1_1message__header" kindref="compound">sgns::message_header</ref> const &amp;</type>
+          <defname>header_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="264" column="6" bodyfile="node/common.cpp" bodystart="476" bodyend="503"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/df5/classsgns_1_1message__parser_1ad0aa2189e5e99f3878753a33d70ebe4b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::message_parser::deserialize_node_id_handshake</definition>
+        <argsstring>(sgns::stream &amp;, sgns::message_header const &amp;)</argsstring>
+        <name>deserialize_node_id_handshake</name>
+        <qualifiedname>sgns::message_parser::deserialize_node_id_handshake</qualifiedname>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type><ref refid="de/d6d/classsgns_1_1message__header" kindref="compound">sgns::message_header</ref> const &amp;</type>
+          <defname>header_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="265" column="6" bodyfile="node/common.cpp" bodystart="505" bodyend="517"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/df5/classsgns_1_1message__parser_1a79f8702474f394efd5f1e479c0113950" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::message_parser::deserialize_telemetry_req</definition>
+        <argsstring>(sgns::stream &amp;, sgns::message_header const &amp;)</argsstring>
+        <name>deserialize_telemetry_req</name>
+        <qualifiedname>sgns::message_parser::deserialize_telemetry_req</qualifiedname>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type><ref refid="de/d6d/classsgns_1_1message__header" kindref="compound">sgns::message_header</ref> const &amp;</type>
+          <defname>header_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="266" column="6" bodyfile="node/common.cpp" bodystart="519" bodyend="530"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/df5/classsgns_1_1message__parser_1aabe4e340c1796f0e74483b76776246c1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::message_parser::deserialize_telemetry_ack</definition>
+        <argsstring>(sgns::stream &amp;, sgns::message_header const &amp;)</argsstring>
+        <name>deserialize_telemetry_ack</name>
+        <qualifiedname>sgns::message_parser::deserialize_telemetry_ack</qualifiedname>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type><ref refid="de/d6d/classsgns_1_1message__header" kindref="compound">sgns::message_header</ref> const &amp;</type>
+          <defname>header_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="267" column="6" bodyfile="node/common.cpp" bodystart="532" bodyend="545"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/df5/classsgns_1_1message__parser_1aa5dd043d919111523fdc22b8d259b822" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::message_parser::at_end</definition>
+        <argsstring>(sgns::stream &amp;)</argsstring>
+        <name>at_end</name>
+        <qualifiedname>sgns::message_parser::at_end</qualifiedname>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="268" column="6" bodyfile="node/common.cpp" bodystart="547" bodyend="552"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/df5/classsgns_1_1message__parser_1a0e2d4513c0fc8e60ce3eefda0e4031dd" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::message_parser::status_string</definition>
+        <argsstring>()</argsstring>
+        <name>status_string</name>
+        <qualifiedname>sgns::message_parser::status_string</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="276" column="13" bodyfile="node/common.cpp" bodystart="260" bodyend="329"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::message_parser</label>
+        <link refid="dc/df5/classsgns_1_1message__parser"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+visitor</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::message_visitor</label>
+        <link refid="dd/d84/classsgns_1_1message__visitor"/>
+      </node>
+    </collaborationgraph>
+    <location file="node/common.hpp" line="238" column="1" bodyfile="node/common.hpp" bodystart="239" bodyend="278"/>
+    <listofallmembers>
+      <member refid="dc/df5/classsgns_1_1message__parser_1aa5dd043d919111523fdc22b8d259b822" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>at_end</name></member>
+      <member refid="dc/df5/classsgns_1_1message__parser_1a30cf718b892ae549a6ce8bf7f0843fa5" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>block_uniquer</name></member>
+      <member refid="dc/df5/classsgns_1_1message__parser_1ae53bcd484196362184a7dc5137a58f96" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>deserialize_buffer</name></member>
+      <member refid="dc/df5/classsgns_1_1message__parser_1a07f67a35444ce519e684e24af9dcaf5a" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>deserialize_confirm_ack</name></member>
+      <member refid="dc/df5/classsgns_1_1message__parser_1ae3e9c6aa3d88814635bdeade4572b7be" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>deserialize_confirm_req</name></member>
+      <member refid="dc/df5/classsgns_1_1message__parser_1aae5c10cb4120abe7f5075961c155617f" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>deserialize_keepalive</name></member>
+      <member refid="dc/df5/classsgns_1_1message__parser_1ad0aa2189e5e99f3878753a33d70ebe4b" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>deserialize_node_id_handshake</name></member>
+      <member refid="dc/df5/classsgns_1_1message__parser_1a2b72bfa99fcc40bf499a0d396074bc9a" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>deserialize_publish</name></member>
+      <member refid="dc/df5/classsgns_1_1message__parser_1aabe4e340c1796f0e74483b76776246c1" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>deserialize_telemetry_ack</name></member>
+      <member refid="dc/df5/classsgns_1_1message__parser_1a79f8702474f394efd5f1e479c0113950" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>deserialize_telemetry_req</name></member>
+      <member refid="dc/df5/classsgns_1_1message__parser_1a6c451545228ac54037fb8fc05878a86b" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>max_safe_udp_message_size</name></member>
+      <member refid="dc/df5/classsgns_1_1message__parser_1a378df977cfacf9e036d94ac1b00342d1" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>message_parser</name></member>
+      <member refid="dc/df5/classsgns_1_1message__parser_1a65917b43a9c59b8bcdf7b74568936397" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>parse_status</name></member>
+      <member refid="dc/df5/classsgns_1_1message__parser_1a647e9182bc7c76d1d585831be18c93bc" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>pool</name></member>
+      <member refid="dc/df5/classsgns_1_1message__parser_1ac142871ddaf6cc5219e260e47eccad46" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>publish_filter</name></member>
+      <member refid="dc/df5/classsgns_1_1message__parser_1a04efaa725b55bedab02ecf19b39790a4" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>status</name></member>
+      <member refid="dc/df5/classsgns_1_1message__parser_1a0e2d4513c0fc8e60ce3eefda0e4031dd" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>status_string</name></member>
+      <member refid="dc/df5/classsgns_1_1message__parser_1ad0800f8da76b4403dd3dc2b3c62e3334" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>use_epoch_2_min_version</name></member>
+      <member refid="dc/df5/classsgns_1_1message__parser_1ae40d45da12de01c123f313a3ff0fd628" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>visitor</name></member>
+      <member refid="dc/df5/classsgns_1_1message__parser_1a47ecff76d03f3b7b34a8df74eae37de8" prot="public" virt="non-virtual"><scope>sgns::message_parser</scope><name>vote_uniquer</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

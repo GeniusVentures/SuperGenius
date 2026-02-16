@@ -1,0 +1,201 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/dd9/processing__validation__core_8hpp" kind="file" language="C++">
+    <compoundname>processing_validation_core.hpp</compoundname>
+    <includes local="no">map</includes>
+    <includes local="no">string</includes>
+    <includes local="no">set</includes>
+    <includes local="no">vector</includes>
+    <includes local="no">cstdint</includes>
+    <includes refid="d5/dda/outcome_8hpp" local="yes">outcome/outcome.hpp</includes>
+    <includes refid="d6/da3/logger_8hpp" local="yes">base/logger.hpp</includes>
+    <includes local="yes">processing/proto/SGProcessing.pb.h</includes>
+    <includedby refid="de/d17/processing__subtask__queue__accessor__impl_8hpp" local="yes">src/processing/processing_subtask_queue_accessor_impl.hpp</includedby>
+    <includedby refid="d4/deb/processing__validation__core_8cpp" local="yes">src/processing/processing_validation_core.cpp</includedby>
+    <incdepgraph>
+      <node id="9">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/processing/processing_validation_core.hpp</label>
+        <link refid="d1/dd9/processing__validation__core_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>cstdint</label>
+      </node>
+      <node id="8">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="2">
+        <label>map</label>
+      </node>
+      <node id="12">
+        <label>processing/proto/SGProcessing.pb.h</label>
+      </node>
+      <node id="4">
+        <label>set</label>
+      </node>
+      <node id="10">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="11">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="3">
+        <label>string</label>
+      </node>
+      <node id="5">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="3">
+        <label>src/processing/processing_node.cpp</label>
+        <link refid="de/d98/processing__node_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/processing/processing_subtask_queue_accessor_impl.cpp</label>
+        <link refid="dd/d14/processing__subtask__queue__accessor__impl_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/processing/processing_subtask_queue_accessor_impl.hpp</label>
+        <link refid="de/d17/processing__subtask__queue__accessor__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>src/processing/processing_validation_core.cpp</label>
+        <link refid="d4/deb/processing__validation__core_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/processing/processing_validation_core.hpp</label>
+        <link refid="d1/dd9/processing__validation__core_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core" prot="public">sgns::processing::ProcessingValidationCore</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6a/namespacesgns_1_1processing">sgns::processing</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d1/dd9/processing__validation__core_8hpp_1a9863890cd8ebbae694197727833cec67" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>OUTCOME_HPP_DECLARE_ERROR_2</definition>
+        <argsstring>(sgns::processing, ProcessingValidationCore::Error)</argsstring>
+        <name>OUTCOME_HPP_DECLARE_ERROR_2</name>
+        <param>
+          <type><ref refid="df/d6a/namespacesgns_1_1processing" kindref="compound">sgns::processing</ref></type>
+        </param>
+        <param>
+          <type>ProcessingValidationCore::Error</type>
+        </param>
+        <briefdescription>
+<para>Macro for declaring error handling in the IBasicProof class. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_validation_core.hpp" line="79" column="1" declfile="src/processing/processing_validation_core.hpp" declline="79" declcolumn="1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Header file of core implementation of processing task results validation. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="date"><para>2022-05-08 </para>
+</simplesect>
+<simplesect kind="author"><para>creativeid00 </para>
+</simplesect>
+<simplesect kind="note"><para>This was mostly rewritten by Henrique A. Klein (<ulink url="mailto:hklein@gnus.ai">hklein@gnus.ai</ulink>) and Justin Church (<ulink url="mailto:jchurch@gnus.ai">jchurch@gnus.ai</ulink>) </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_PROCESSING_VALIDATION_CORE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_PROCESSING_VALIDATION_CORE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;map&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;set&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;vector&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstdint&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/dda/outcome_8hpp" kindref="compound">outcome/outcome.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/da3/logger_8hpp" kindref="compound">base/logger.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;processing/proto/SGProcessing.pb.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d6a/namespacesgns_1_1processing" kindref="compound">sgns::processing</ref></highlight></codeline>
+<codeline lineno="23"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="24" refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a4555222f83e0b8eabda65af484db82e0" kindref="member">ProcessingValidationCore</ref></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="30" refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">enum<sp/>class</highlight><highlight class="normal"><sp/><ref refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64f" kindref="member">Error</ref></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="32" refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64faff7e1e9d3ad99547050e6083e54132f0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64faff7e1e9d3ad99547050e6083e54132f0" kindref="member">NO_RESULTS_FOR_SUBTASK</ref><sp/>=<sp/>0,<sp/><sp/></highlight></codeline>
+<codeline lineno="33" refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fa94a2aa99daf9f4402fad17060b58f143" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fa94a2aa99daf9f4402fad17060b58f143" kindref="member">WRONG_RESULT_HASHES_LENGTH</ref>,<sp/><sp/></highlight></codeline>
+<codeline lineno="34" refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fa0f108a550cc77a1bca37ec2a1a4cc87e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fa0f108a550cc77a1bca37ec2a1a4cc87e" kindref="member">DUPLICATE_CHUNK_RESULT_HASH</ref>,<sp/></highlight></codeline>
+<codeline lineno="35" refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fa3da3a2accca8dc1ea340cd59978cc0e5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fa3da3a2accca8dc1ea340cd59978cc0e5" kindref="member">EMPTY_CHUNK_RESULT_HASH</ref>,<sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="36" refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fae24260a296c56a11496b39613b48d025" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fae24260a296c56a11496b39613b48d025" kindref="member">MISSING_CHUNK_RESULT</ref>,<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="37" refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fa1b729146c56e28c7c88fa4a1bc4a9a3c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fa1b729146c56e28c7c88fa4a1bc4a9a3c" kindref="member">INVALID_CHUNK_RESULT_HASH</ref>,<sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="38" refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fa7a125db5c6d62fd1587b31c2733e8c2a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fa7a125db5c6d62fd1587b31c2733e8c2a" kindref="member">SUBTASK_ID_MISMATCH</ref>,<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="39" refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fa05354d82728846d671610e257634f123" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a7e8b4508e5bd34f932dad3236fd5d64fa05354d82728846d671610e257634f123" kindref="member">INVALID_RESULTS_BATCH</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a4555222f83e0b8eabda65af484db82e0" kindref="member">ProcessingValidationCore</ref>();</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1ae6bdeff49c8b3f098f03eceafa101e14" kindref="member">ValidateResults</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>SGProcessing::SubTaskCollection<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;subTasks,</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::map&lt;std::string,<sp/>SGProcessing::SubTaskResult&gt;<sp/>&amp;results,</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::set&lt;std::string&gt;<sp/>&amp;invalidSubTaskIds<sp/>);</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a9c897a3f9f67e3981b81b4151e4ead6c" kindref="member">ValidateIndividualResult</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>SGProcessing::SubTask<sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;subTask,</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>SGProcessing::SubTaskResult<sp/>&amp;result<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1aed932efe0b2d730ed21a1f6df604c6ce" kindref="member">CheckSubTaskResultHashes</ref>(</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>SGProcessing::SubTask<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;subTask,</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::map&lt;std::string,<sp/>std::vector&lt;uint8_t&gt;&gt;<sp/>&amp;chunks<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"></highlight></codeline>
+<codeline lineno="72" refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a83a3dd5f66180281c6aa2b5c74cafc9e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref><sp/><ref refid="d0/d2c/classsgns_1_1processing_1_1_processing_validation_core_1a83a3dd5f66180281c6aa2b5c74cafc9e" kindref="member">m_logger</ref><sp/>=<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>(<sp/></highlight><highlight class="stringliteral">&quot;ProcessingValidationCore&quot;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="74"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"></highlight></codeline>
+<codeline lineno="79" refid="d1/dd9/processing__validation__core_8hpp_1a9863890cd8ebbae694197727833cec67" refkind="member"><highlight class="normal"><ref refid="d1/dd9/processing__validation__core_8hpp_1a9863890cd8ebbae694197727833cec67" kindref="member">OUTCOME_HPP_DECLARE_ERROR_2</ref>(<sp/><ref refid="df/d6a/namespacesgns_1_1processing" kindref="compound">sgns::processing</ref>,<sp/>ProcessingValidationCore::Error<sp/>);</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"></highlight></codeline>
+<codeline lineno="81"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_PROCESSING_VALIDATION_CORE_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/processing/processing_validation_core.hpp"/>
+  </compounddef>
+</doxygen>

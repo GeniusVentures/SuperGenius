@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_b0262cfdf1651c6d86b9cfcd09f4f201" kind="dir">
+    <compoundname>src/crypto/twox</compoundname>
+    <innerfile refid="d8/d88/twox_8cpp">twox.cpp</innerfile>
+    <innerfile refid="d9/ded/twox_8hpp">twox.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/twox/"/>
+  </compounddef>
+</doxygen>

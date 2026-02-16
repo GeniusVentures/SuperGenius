@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_0af1587c8378955de40f48b4bd1869f0" kind="dir">
+    <compoundname>src/base</compoundname>
+    <innerfile refid="dd/dc0/blob_8cpp">blob.cpp</innerfile>
+    <innerfile refid="d4/d16/blob_8hpp">blob.hpp</innerfile>
+    <innerfile refid="dd/d85/buffer_8cpp">buffer.cpp</innerfile>
+    <innerfile refid="da/d1d/buffer_8hpp">buffer.hpp</innerfile>
+    <innerfile refid="d4/d19/buffer__back__insert__iterator_8hpp">buffer_back_insert_iterator.hpp</innerfile>
+    <innerfile refid="d1/d84/endian_8h">endian.h</innerfile>
+    <innerfile refid="d1/d4c/hexutil_8cpp">hexutil.cpp</innerfile>
+    <innerfile refid="df/d28/hexutil_8hpp">hexutil.hpp</innerfile>
+    <innerfile refid="d3/d30/logger_8cpp">logger.cpp</innerfile>
+    <innerfile refid="d6/da3/logger_8hpp">logger.hpp</innerfile>
+    <innerfile refid="d7/d57/mp__utils_8cpp">mp_utils.cpp</innerfile>
+    <innerfile refid="d8/d59/mp__utils_8hpp">mp_utils.hpp</innerfile>
+    <innerfile refid="d6/d8d/outcome__throw_8hpp">outcome_throw.hpp</innerfile>
+    <innerfile refid="dc/d4f/_scaled_integer_8cpp">ScaledInteger.cpp</innerfile>
+    <innerfile refid="d5/daa/_scaled_integer_8hpp">ScaledInteger.hpp</innerfile>
+    <innerfile refid="d4/d36/sgns__version_8cpp">sgns_version.cpp</innerfile>
+    <innerfile refid="de/d68/sgns__version_8hpp">sgns_version.hpp</innerfile>
+    <innerfile refid="dc/d54/type__traits_8hpp">type_traits.hpp</innerfile>
+    <innerfile refid="dd/d26/unused_8hpp">unused.hpp</innerfile>
+    <innerfile refid="d0/d3f/util_8hpp">util.hpp</innerfile>
+    <innerfile refid="d2/df0/visitor_8hpp">visitor.hpp</innerfile>
+    <innerfile refid="d8/d7c/wrapper_8hpp">wrapper.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/base/"/>
+  </compounddef>
+</doxygen>

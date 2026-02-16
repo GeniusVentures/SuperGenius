@@ -1,0 +1,447 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="db/d70/classsgns_1_1_escrow_transaction" kind="class" language="C++" prot="public">
+    <compoundname>sgns::EscrowTransaction</compoundname>
+    <basecompoundref refid="d1/d07/classsgns_1_1_i_genius_transactions" prot="public" virt="non-virtual">sgns::IGeniusTransactions</basecompoundref>
+    <includes refid="df/df3/_escrow_transaction_8hpp" local="no">EscrowTransaction.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="db/d70/classsgns_1_1_escrow_transaction_1aa7219add40b58f95cde61d579e5de6d9" prot="private" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1ab5ebc7fc374823b9575e303e417424fc" kindref="member">UTXOTxParameters</ref></type>
+        <definition>UTXOTxParameters sgns::EscrowTransaction::utxo_params_</definition>
+        <argsstring></argsstring>
+        <name>utxo_params_</name>
+        <qualifiedname>sgns::EscrowTransaction::utxo_params_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowTransaction.hpp" line="64" column="26" bodyfile="src/account/EscrowTransaction.hpp" bodystart="64" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="db/d70/classsgns_1_1_escrow_transaction_1a782b8930c8d9ea21a23a46033461eafb" prot="private" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::EscrowTransaction::amount_</definition>
+        <argsstring></argsstring>
+        <name>amount_</name>
+        <qualifiedname>sgns::EscrowTransaction::amount_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowTransaction.hpp" line="65" column="26" bodyfile="src/account/EscrowTransaction.hpp" bodystart="65" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="db/d70/classsgns_1_1_escrow_transaction_1a429cdb551c53f154bd0f6f6f61f5a794" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::EscrowTransaction::dev_addr_</definition>
+        <argsstring></argsstring>
+        <name>dev_addr_</name>
+        <qualifiedname>sgns::EscrowTransaction::dev_addr_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowTransaction.hpp" line="66" column="26" bodyfile="src/account/EscrowTransaction.hpp" bodystart="66" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="db/d70/classsgns_1_1_escrow_transaction_1a6242c499dba2fb52af084cc12b4e1eca" prot="private" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::EscrowTransaction::peers_cut_</definition>
+        <argsstring></argsstring>
+        <name>peers_cut_</name>
+        <qualifiedname>sgns::EscrowTransaction::peers_cut_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowTransaction.hpp" line="67" column="26" bodyfile="src/account/EscrowTransaction.hpp" bodystart="67" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="db/d70/classsgns_1_1_escrow_transaction_1a875910bfb5e3beda9b3622e4352ad9db" prot="private" static="yes" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::EscrowTransaction::registered</definition>
+        <argsstring></argsstring>
+        <name>registered</name>
+        <qualifiedname>sgns::EscrowTransaction::registered</qualifiedname>
+        <initializer>= <ref refid="db/d70/classsgns_1_1_escrow_transaction_1aada7304994c1f1c5698b29cb50991eb7" kindref="member">Register</ref>()</initializer>
+        <briefdescription>
+<para>Static variable to ensure registration happens on inclusion of header file. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowTransaction.hpp" line="82" column="28" bodyfile="src/account/EscrowTransaction.hpp" bodystart="82" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="db/d70/classsgns_1_1_escrow_transaction_1a9a6be9f5b808c0c4f9a6e2636e0ce904" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="db/d70/classsgns_1_1_escrow_transaction_1a3085c3448093e5d725f0b8c9a6e683ed" kindref="member">EscrowTransaction</ref></type>
+        <definition>EscrowTransaction sgns::EscrowTransaction::New</definition>
+        <argsstring>(UTXOTxParameters params, uint64_t amount, std::string dev_addr, uint64_t peers_cut, SGTransaction::DAGStruct dag)</argsstring>
+        <name>New</name>
+        <qualifiedname>sgns::EscrowTransaction::New</qualifiedname>
+        <param>
+          <type><ref refid="d2/d2b/namespacesgns_1ab5ebc7fc374823b9575e303e417424fc" kindref="member">UTXOTxParameters</ref></type>
+          <declname>params</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>amount</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>dev_addr</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>peers_cut</declname>
+        </param>
+        <param>
+          <type>SGTransaction::DAGStruct</type>
+          <declname>dag</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowTransaction.hpp" line="19" column="34" bodyfile="src/account/EscrowTransaction.cpp" bodystart="29" bodyend="38"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d70/classsgns_1_1_escrow_transaction_1aafd984f91f2c633e00b66e3e42864e88" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="db/d70/classsgns_1_1_escrow_transaction_1a3085c3448093e5d725f0b8c9a6e683ed" kindref="member">EscrowTransaction</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; EscrowTransaction &gt; sgns::EscrowTransaction::DeSerializeByteVector</definition>
+        <argsstring>(const std::vector&lt; uint8_t &gt; &amp;data)</argsstring>
+        <name>DeSerializeByteVector</name>
+        <qualifiedname>sgns::EscrowTransaction::DeSerializeByteVector</qualifiedname>
+        <param>
+          <type>const std::vector&lt; uint8_t &gt; &amp;</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowTransaction.hpp" line="25" column="32" bodyfile="src/account/EscrowTransaction.cpp" bodystart="70" bodyend="107"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="db/d70/classsgns_1_1_escrow_transaction_1a4d802d819e688f71d7ec729aed09d8bd" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::EscrowTransaction::~EscrowTransaction</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~EscrowTransaction</name>
+        <qualifiedname>sgns::EscrowTransaction::~EscrowTransaction</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowTransaction.hpp" line="27" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d70/classsgns_1_1_escrow_transaction_1a465911b27388ec11d724a818c8467b19" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>std::vector&lt; uint8_t &gt; sgns::EscrowTransaction::SerializeByteVector</definition>
+        <argsstring>() override</argsstring>
+        <name>SerializeByteVector</name>
+        <qualifiedname>sgns::EscrowTransaction::SerializeByteVector</qualifiedname>
+        <reimplements refid="d1/d07/classsgns_1_1_i_genius_transactions_1a13a85bfa2911ff2327ffcc81260a9fc4">SerializeByteVector</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowTransaction.hpp" line="29" column="21" bodyfile="src/account/EscrowTransaction.cpp" bodystart="40" bodyend="68"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d70/classsgns_1_1_escrow_transaction_1a26b2e77e203bbbff94fd764fa3c29781" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::EscrowTransaction::GetNumChunks</definition>
+        <argsstring>() const</argsstring>
+        <name>GetNumChunks</name>
+        <qualifiedname>sgns::EscrowTransaction::GetNumChunks</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowTransaction.hpp" line="30" column="30"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d70/classsgns_1_1_escrow_transaction_1a5d40c2833a7ef282bb0b0d5f49261b25" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::EscrowTransaction::GetTransactionSpecificPath</definition>
+        <argsstring>() const override</argsstring>
+        <name>GetTransactionSpecificPath</name>
+        <qualifiedname>sgns::EscrowTransaction::GetTransactionSpecificPath</qualifiedname>
+        <reimplements refid="d1/d07/classsgns_1_1_i_genius_transactions_1a53e60bc5badda3cc6df0c57561e14acb">GetTransactionSpecificPath</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowTransaction.hpp" line="32" column="21" bodyfile="src/account/EscrowTransaction.hpp" bodystart="32" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d70/classsgns_1_1_escrow_transaction_1aff5b03b9dea83c2fde242d38288d1e8c" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d2/d2b/namespacesgns_1ab5ebc7fc374823b9575e303e417424fc" kindref="member">UTXOTxParameters</ref></type>
+        <definition>UTXOTxParameters sgns::EscrowTransaction::GetUTXOParameters</definition>
+        <argsstring>() const</argsstring>
+        <name>GetUTXOParameters</name>
+        <qualifiedname>sgns::EscrowTransaction::GetUTXOParameters</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowTransaction.hpp" line="37" column="26" bodyfile="src/account/EscrowTransaction.hpp" bodystart="37" bodyend="40"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d70/classsgns_1_1_escrow_transaction_1a4c19997942f69621cf74d01ddbc04e2c" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::EscrowTransaction::GetDevAddress</definition>
+        <argsstring>() const</argsstring>
+        <name>GetDevAddress</name>
+        <qualifiedname>sgns::EscrowTransaction::GetDevAddress</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowTransaction.hpp" line="42" column="21" bodyfile="src/account/EscrowTransaction.hpp" bodystart="42" bodyend="45"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d70/classsgns_1_1_escrow_transaction_1a41ef75cb4cd4673ec18aae81b23eee92" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::EscrowTransaction::GetAmount</definition>
+        <argsstring>() const</argsstring>
+        <name>GetAmount</name>
+        <qualifiedname>sgns::EscrowTransaction::GetAmount</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowTransaction.hpp" line="47" column="18" bodyfile="src/account/EscrowTransaction.hpp" bodystart="47" bodyend="50"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d70/classsgns_1_1_escrow_transaction_1a8d03ee9f2114e30c3717e76c1eb65633" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::EscrowTransaction::GetPeersCut</definition>
+        <argsstring>() const</argsstring>
+        <name>GetPeersCut</name>
+        <qualifiedname>sgns::EscrowTransaction::GetPeersCut</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowTransaction.hpp" line="52" column="18" bodyfile="src/account/EscrowTransaction.hpp" bodystart="52" bodyend="55"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="db/d70/classsgns_1_1_escrow_transaction_1a3085c3448093e5d725f0b8c9a6e683ed" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::EscrowTransaction::EscrowTransaction</definition>
+        <argsstring>(UTXOTxParameters params, uint64_t amount, std::string dev_addr, uint64_t peers_cut, SGTransaction::DAGStruct dag)</argsstring>
+        <name>EscrowTransaction</name>
+        <qualifiedname>sgns::EscrowTransaction::EscrowTransaction</qualifiedname>
+        <param>
+          <type><ref refid="d2/d2b/namespacesgns_1ab5ebc7fc374823b9575e303e417424fc" kindref="member">UTXOTxParameters</ref></type>
+          <declname>params</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>amount</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>dev_addr</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>peers_cut</declname>
+        </param>
+        <param>
+          <type>SGTransaction::DAGStruct</type>
+          <declname>dag</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowTransaction.hpp" line="58" column="9" bodyfile="src/account/EscrowTransaction.cpp" bodystart="16" bodyend="27"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="db/d70/classsgns_1_1_escrow_transaction_1aada7304994c1f1c5698b29cb50991eb7" prot="private" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>static bool sgns::EscrowTransaction::Register</definition>
+        <argsstring>()</argsstring>
+        <name>Register</name>
+        <qualifiedname>sgns::EscrowTransaction::Register</qualifiedname>
+        <briefdescription>
+<para>Registers the deserializer for the transfer transaction type. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A boolean indicating successful registration. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowTransaction.hpp" line="73" column="21" bodyfile="src/account/EscrowTransaction.hpp" bodystart="73" bodyend="77"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::EscrowTransaction</label>
+        <link refid="db/d70/classsgns_1_1_escrow_transaction"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::IGeniusTransactions</label>
+        <link refid="d1/d07/classsgns_1_1_i_genius_transactions"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="7">
+        <label>K</label>
+      </node>
+      <node id="8">
+        <label>T</label>
+      </node>
+      <node id="11">
+        <label>T1</label>
+      </node>
+      <node id="12">
+        <label>T2</label>
+      </node>
+      <node id="1">
+        <label>sgns::EscrowTransaction</label>
+        <link refid="db/d70/classsgns_1_1_escrow_transaction"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-utxo_params_</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-dev_addr_</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::IGeniusTransactions</label>
+        <link refid="d1/d07/classsgns_1_1_i_genius_transactions"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+deserializers_map</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-transaction_type</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="10">
+        <label>std::pair&lt; T1, T2 &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+second_type</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::pair&lt; std::vector&lt; InputUTXOInfo &gt;, std::vector&lt; OutputDestInfo &gt; &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; std::vector&lt; InputUTXOInfo &gt;, std::vector&lt; OutputDestInfo &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::string</label>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::unordered_map&lt; K, T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::unordered_map&lt; std::string, TransactionDeserializeFn &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; std::string, TransactionDeserializeFn &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/account/EscrowTransaction.hpp" line="16" column="5" bodyfile="src/account/EscrowTransaction.hpp" bodystart="17" bodyend="83"/>
+    <listofallmembers>
+      <member refid="db/d70/classsgns_1_1_escrow_transaction_1a782b8930c8d9ea21a23a46033461eafb" prot="private" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>amount_</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1acd74bf05f2e8b0123163806c90071c57" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>CheckDAGSignatureLegacy</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1ab13efbfe0444411e9d4e19725157de25" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>CheckHash</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1af5e62c217af069a76213a9b7812ab626" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>CheckSignature</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a3b9fef5951e36dc7f31128247fdbc59e" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>dag_st</name></member>
+      <member refid="db/d70/classsgns_1_1_escrow_transaction_1aafd984f91f2c633e00b66e3e42864e88" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>DeSerializeByteVector</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a7fc888000de3d0c758a125ca485ce4a1" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>DeSerializeDAGStruct</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a884eebd98dc345a622b165f9ce9b60e1" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>DeSerializeDAGStruct</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a82f860ff9ae3149788d7a31cffc82529" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>deserializers_map</name></member>
+      <member refid="db/d70/classsgns_1_1_escrow_transaction_1a429cdb551c53f154bd0f6f6f61f5a794" prot="private" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>dev_addr_</name></member>
+      <member refid="db/d70/classsgns_1_1_escrow_transaction_1a3085c3448093e5d725f0b8c9a6e683ed" prot="private" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>EscrowTransaction</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a61846445efa8aa09b7291655e981cf65" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>FillHash</name></member>
+      <member refid="db/d70/classsgns_1_1_escrow_transaction_1a41ef75cb4cd4673ec18aae81b23eee92" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>GetAmount</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a9800478402d0ecbd38493d3b5789f9a9" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>GetDeSerializers</name></member>
+      <member refid="db/d70/classsgns_1_1_escrow_transaction_1a4c19997942f69621cf74d01ddbc04e2c" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>GetDevAddress</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1ab78d8716ceaf368ddd888e91ac84deb3" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>GetHash</name></member>
+      <member refid="db/d70/classsgns_1_1_escrow_transaction_1a26b2e77e203bbbff94fd764fa3c29781" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>GetNumChunks</name></member>
+      <member refid="db/d70/classsgns_1_1_escrow_transaction_1a8d03ee9f2114e30c3717e76c1eb65633" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>GetPeersCut</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1af8cd3ed709b329dfccd519d1bf178424" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>GetProofFullPath</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a3eaa922b6192d8342a08c7ea66cbafbc" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>GetSrcAddress</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1aead0ba189578cd0a323ba56b1367f470" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>GetTimestamp</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1aea8074c464dcd1e2e15ac9196a4c9e09" prot="public" virt="virtual"><scope>sgns::EscrowTransaction</scope><name>GetTopics</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a0f2963348939f103af3404a653a9f91b" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>GetTransactionFullPath</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a47d69eafb82280cd7de3f2c268054494" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>GetTransactionFullPath</name></member>
+      <member refid="db/d70/classsgns_1_1_escrow_transaction_1a5d40c2833a7ef282bb0b0d5f49261b25" prot="public" virt="virtual"><scope>sgns::EscrowTransaction</scope><name>GetTransactionSpecificPath</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a836b1a1080b24f6f9fd220332b3b5b24" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>GetType</name></member>
+      <member refid="db/d70/classsgns_1_1_escrow_transaction_1aff5b03b9dea83c2fde242d38288d1e8c" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>GetUTXOParameters</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a75f5591823eb6eaaf612e6bdfb5aae94" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>IGeniusTransactions</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a771a632131b46b4a001a5fe829607b18" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>MakeSignature</name></member>
+      <member refid="db/d70/classsgns_1_1_escrow_transaction_1a9a6be9f5b808c0c4f9a6e2636e0ce904" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>New</name></member>
+      <member refid="db/d70/classsgns_1_1_escrow_transaction_1a6242c499dba2fb52af084cc12b4e1eca" prot="private" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>peers_cut_</name></member>
+      <member refid="db/d70/classsgns_1_1_escrow_transaction_1aada7304994c1f1c5698b29cb50991eb7" prot="private" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>Register</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a773fcfb15ae0aebdf628f8603dc326e1" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>RegisterDeserializer</name></member>
+      <member refid="db/d70/classsgns_1_1_escrow_transaction_1a875910bfb5e3beda9b3622e4352ad9db" prot="private" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>registered</name></member>
+      <member refid="db/d70/classsgns_1_1_escrow_transaction_1a465911b27388ec11d724a818c8467b19" prot="public" virt="virtual"><scope>sgns::EscrowTransaction</scope><name>SerializeByteVector</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a543616dd7f86c5df91fa91716aca10b2" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>SetDAGWithType</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1aeacfba89da66740c2b37b4bbf7110863" prot="private" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>transaction_type</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a320ffd126b7cd6483894894bf7147afb" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>TransactionDeserializeFn</name></member>
+      <member refid="db/d70/classsgns_1_1_escrow_transaction_1aa7219add40b58f95cde61d579e5de6d9" prot="private" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>utxo_params_</name></member>
+      <member refid="db/d70/classsgns_1_1_escrow_transaction_1a4d802d819e688f71d7ec729aed09d8bd" prot="public" virt="non-virtual"><scope>sgns::EscrowTransaction</scope><name>~EscrowTransaction</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a99ca00e5f73c9ea483ebf83513bd8063" prot="public" virt="virtual"><scope>sgns::EscrowTransaction</scope><name>~IGeniusTransactions</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

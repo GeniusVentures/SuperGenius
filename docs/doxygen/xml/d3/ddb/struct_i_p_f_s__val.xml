@@ -1,0 +1,57 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d3/ddb/struct_i_p_f_s__val" kind="struct" language="C++" prot="public">
+    <compoundname>IPFS_val</compoundname>
+    <includes refid="de/d32/ipfs__lite__store_8hpp" local="no">ipfs_lite_store.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d3/ddb/struct_i_p_f_s__val_1af1ea6c0682211f432e071a38dbe51ae0" prot="public" static="no" mutable="no">
+        <type>size_t</type>
+        <definition>size_t IPFS_val::mv_size</definition>
+        <argsstring></argsstring>
+        <name>mv_size</name>
+        <qualifiedname>IPFS_val::mv_size</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>size of the data item </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="18" column="8" bodyfile="node/ipfs_lite_store.hpp" bodystart="18" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/ddb/struct_i_p_f_s__val_1a30a9f4bd54e410659317291c7ee39a7b" prot="public" static="no" mutable="no">
+        <type>void *</type>
+        <definition>void* IPFS_val::mv_data</definition>
+        <argsstring></argsstring>
+        <name>mv_data</name>
+        <qualifiedname>IPFS_val::mv_data</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>address of the data item </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/ipfs_lite_store.hpp" line="19" column="5" bodyfile="node/ipfs_lite_store.hpp" bodystart="19" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>==================================================================================== \file <ref refid="de/d32/ipfs__lite__store_8hpp" kindref="compound">ipfs_lite_store.hpp</ref> \brief Header file for storing block into ipfs-lite \date 07/06/2020 </para>
+<sect1 id="de/d32/ipfs__lite__store_8hpp_1autotoc_md5">
+<title>\author ruymaster</title></sect1>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>IPFS_val</label>
+        <link refid="d3/ddb/struct_i_p_f_s__val"/>
+      </node>
+    </collaborationgraph>
+    <location file="node/ipfs_lite_store.hpp" line="17" column="1" bodyfile="node/ipfs_lite_store.hpp" bodystart="17" bodyend="20"/>
+    <listofallmembers>
+      <member refid="d3/ddb/struct_i_p_f_s__val_1a30a9f4bd54e410659317291c7ee39a7b" prot="public" virt="non-virtual"><scope>IPFS_val</scope><name>mv_data</name></member>
+      <member refid="d3/ddb/struct_i_p_f_s__val_1af1ea6c0682211f432e071a38dbe51ae0" prot="public" virt="non-virtual"><scope>IPFS_val</scope><name>mv_size</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

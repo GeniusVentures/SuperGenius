@@ -1,0 +1,86 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/d79/structsgns_1_1storage_1_1trie_1_1_node" kind="struct" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::storage::trie::Node</compoundname>
+    <derivedcompoundref refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node" prot="public" virt="non-virtual">sgns::storage::trie::SuperGeniusNode</derivedcompoundref>
+    <includes refid="df/dc8/src_2storage_2trie_2node_8hpp" local="no">node.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d4/d79/structsgns_1_1storage_1_1trie_1_1_node_1aa43d0f34895a260aaf3f0156896c44f0" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::storage::trie::Node::~Node</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Node</name>
+        <qualifiedname>sgns::storage::trie::Node::~Node</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/node.hpp" line="9" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d79/structsgns_1_1storage_1_1trie_1_1_node_1ae74019c97c6effa927393afb2bd9a791" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>int</type>
+        <definition>virtual int sgns::storage::trie::Node::getType</definition>
+        <argsstring>() const =0</argsstring>
+        <name>getType</name>
+        <qualifiedname>sgns::storage::trie::Node::getType</qualifiedname>
+        <reimplementedby refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node_1ae211e35cf0c6f9ffaea2da783e8c4d5d">getType</reimplementedby>
+        <reimplementedby refid="de/d6d/structsgns_1_1storage_1_1trie_1_1_dummy_node_1af97d0d479d9cb5ddbb1916c19681b2d6">getType</reimplementedby>
+        <reimplementedby refid="dc/d4d/structsgns_1_1storage_1_1trie_1_1_leaf_node_1aa345a774ade820254a6a7f1f03f52e2d">getType</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/node.hpp" line="12" column="17"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>sgns::storage::trie::BranchNode</label>
+        <link refid="d7/d36/structsgns_1_1storage_1_1trie_1_1_branch_node"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::storage::trie::DummyNode</label>
+        <link refid="de/d6d/structsgns_1_1storage_1_1trie_1_1_dummy_node"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::trie::LeafNode</label>
+        <link refid="dc/d4d/structsgns_1_1storage_1_1trie_1_1_leaf_node"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::Node</label>
+        <link refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node"/>
+      </node>
+      <node id="2">
+        <label>sgns::storage::trie::SuperGeniusNode</label>
+        <link refid="d5/d97/structsgns_1_1storage_1_1trie_1_1_super_genius_node"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::storage::trie::Node</label>
+        <link refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/trie/node.hpp" line="8" column="3" bodyfile="src/storage/trie/node.hpp" bodystart="8" bodyend="13"/>
+    <listofallmembers>
+      <member refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node_1ae74019c97c6effa927393afb2bd9a791" prot="public" virt="pure-virtual"><scope>sgns::storage::trie::Node</scope><name>getType</name></member>
+      <member refid="d4/d79/structsgns_1_1storage_1_1trie_1_1_node_1aa43d0f34895a260aaf3f0156896c44f0" prot="public" virt="virtual"><scope>sgns::storage::trie::Node</scope><name>~Node</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

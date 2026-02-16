@@ -1,0 +1,77 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="db/df4/structsgns_1_1primitives_1_1_pause" kind="struct" language="C++" prot="public" final="yes">
+    <compoundname>sgns::primitives::Pause</compoundname>
+    <basecompoundref refid="da/d18/structsgns_1_1primitives_1_1_delay_in_chain" prot="public" virt="non-virtual">sgns::primitives::DelayInChain</basecompoundref>
+    <includes refid="d7/d5f/scheduled__change_8hpp" local="no">scheduled_change.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="db/df4/structsgns_1_1primitives_1_1_pause_1a63b5b6cb3b7edada7397111664cbfc50" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::primitives::DelayInChain::DelayInChain</definition>
+        <argsstring>()=default</argsstring>
+        <name>DelayInChain</name>
+        <qualifiedname>sgns::primitives::Pause::DelayInChain</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/scheduled_change.hpp" line="36" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="db/df4/structsgns_1_1primitives_1_1_pause_1a233e221686191d3c3aff707080d66088" prot="public" static="no" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::primitives::DelayInChain::DelayInChain</definition>
+        <argsstring>(uint32_t delay)</argsstring>
+        <name>DelayInChain</name>
+        <qualifiedname>sgns::primitives::Pause::DelayInChain</qualifiedname>
+        <param>
+          <type>uint32_t</type>
+          <declname>delay</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/scheduled_change.hpp" line="36" column="5" bodyfile="src/primitives/scheduled_change.hpp" bodystart="12" bodyend="12"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::primitives::DelayInChain</label>
+        <link refid="da/d18/structsgns_1_1primitives_1_1_delay_in_chain"/>
+      </node>
+      <node id="1">
+        <label>sgns::primitives::Pause</label>
+        <link refid="db/df4/structsgns_1_1primitives_1_1_pause"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>sgns::primitives::DelayInChain</label>
+        <link refid="da/d18/structsgns_1_1primitives_1_1_delay_in_chain"/>
+      </node>
+      <node id="1">
+        <label>sgns::primitives::Pause</label>
+        <link refid="db/df4/structsgns_1_1primitives_1_1_pause"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/primitives/scheduled_change.hpp" line="35" column="3" bodyfile="src/primitives/scheduled_change.hpp" bodystart="35" bodyend="37"/>
+    <listofallmembers>
+      <member refid="db/df4/structsgns_1_1primitives_1_1_pause_1a63b5b6cb3b7edada7397111664cbfc50" prot="public" virt="non-virtual"><scope>sgns::primitives::Pause</scope><name>DelayInChain</name></member>
+      <member refid="db/df4/structsgns_1_1primitives_1_1_pause_1a233e221686191d3c3aff707080d66088" prot="public" virt="non-virtual"><scope>sgns::primitives::Pause</scope><name>DelayInChain</name></member>
+      <member refid="da/d18/structsgns_1_1primitives_1_1_delay_in_chain_1a2b2817651f56141752315479cd3b53f9" prot="public" virt="non-virtual"><scope>sgns::primitives::Pause</scope><name>subchain_lenght</name></member>
+      <member refid="da/d18/structsgns_1_1primitives_1_1_delay_in_chain_1a35e3dcde4b09550da116f08bf2087b52" prot="public" virt="virtual"><scope>sgns::primitives::Pause</scope><name>~DelayInChain</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

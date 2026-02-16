@@ -1,0 +1,243 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/d23/ws__listener__impl_8hpp" kind="file" language="C++">
+    <compoundname>ws_listener_impl.hpp</compoundname>
+    <includes refid="df/d31/listener_8hpp" local="yes">api/transport/listener.hpp</includes>
+    <includes refid="d4/d57/ws__session_8hpp" local="yes">api/transport/impl/ws/ws_session.hpp</includes>
+    <includes refid="df/d24/app__state__manager_8hpp" local="yes">application/app_state_manager.hpp</includes>
+    <includes refid="d6/da3/logger_8hpp" local="yes">base/logger.hpp</includes>
+    <includedby refid="db/d20/ws__listener__impl_8cpp" local="yes">src/api/transport/impl/ws/ws_listener_impl.cpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/api/transport/impl/ws/ws_listener_impl.hpp</label>
+        <link refid="dc/d23/ws__listener__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>api/transport/impl/ws/ws_session.hpp</label>
+        <link refid="d4/d57/ws__session_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>api/transport/listener.hpp</label>
+        <link refid="df/d31/listener_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>api/transport/rpc_io_context.hpp</label>
+        <link refid="d7/db2/rpc__io__context_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>api/transport/session.hpp</label>
+        <link refid="d4/d5e/session_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>application/app_state_manager.hpp</label>
+        <link refid="df/d24/app__state__manager_8hpp"/>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>boost/asio/buffer.hpp</label>
+      </node>
+      <node id="6">
+        <label>boost/asio/io_context.hpp</label>
+      </node>
+      <node id="3">
+        <label>boost/asio/ip/tcp.hpp</label>
+      </node>
+      <node id="11">
+        <label>boost/asio/read_until.hpp</label>
+      </node>
+      <node id="16">
+        <label>boost/asio/strand.hpp</label>
+      </node>
+      <node id="12">
+        <label>boost/asio/streambuf.hpp</label>
+      </node>
+      <node id="13">
+        <label>boost/asio/write.hpp</label>
+      </node>
+      <node id="17">
+        <label>boost/beast/core/tcp_stream.hpp</label>
+      </node>
+      <node id="18">
+        <label>boost/beast/websocket.hpp</label>
+      </node>
+      <node id="14">
+        <label>boost/signals2/signal.hpp</label>
+      </node>
+      <node id="19">
+        <label>chrono</label>
+      </node>
+      <node id="20">
+        <label>cstdlib</label>
+      </node>
+      <node id="25">
+        <label>functional</label>
+      </node>
+      <node id="4">
+        <label>memory</label>
+      </node>
+      <node id="22">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="23">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="26">
+        <label>stdexcept</label>
+      </node>
+      <node id="8">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/api/transport/impl/ws/ws_listener_impl.cpp</label>
+        <link refid="db/d20/ws__listener__impl_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/api/transport/impl/ws/ws_listener_impl.hpp</label>
+        <link refid="dc/d23/ws__listener__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl" prot="public">sgns::api::WsListenerImpl</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d66/namespacesgns_1_1api">sgns::api</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_API_TRANSPORT_IMPL_WS_LISTENER_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_API_TRANSPORT_IMPL_WS_LISTENER_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="df/d31/listener_8hpp" kindref="compound">api/transport/listener.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d4/d57/ws__session_8hpp" kindref="compound">api/transport/impl/ws/ws_session.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="df/d24/app__state__manager_8hpp" kindref="compound">application/app_state_manager.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/da3/logger_8hpp" kindref="compound">base/logger.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d66/namespacesgns_1_1api" kindref="compound">sgns::api</ref><sp/>{</highlight></codeline>
+<codeline lineno="16" refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a565beed7881e52227b4f4ed443b50bca" kindref="member">WsListenerImpl</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d6/d3f/classsgns_1_1api_1_1_listener" kindref="compound">Listener</ref>,</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>std::enable_shared_from_this&lt;WsListenerImpl&gt;<sp/>{</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="19" refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1add7302064a96b4b3c38b82bb59f7dcda" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1add7302064a96b4b3c38b82bb59f7dcda" kindref="member">SessionImpl</ref><sp/>=<sp/><ref refid="da/dc7/classsgns_1_1api_1_1_ws_session" kindref="compound">WsSession</ref>;</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a565beed7881e52227b4f4ed443b50bca" kindref="member">WsListenerImpl</ref>(</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;application::AppStateManager&gt;<sp/>&amp;app_state_manager,</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;Context&gt;<sp/>context,</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d5/d93/structsgns_1_1api_1_1_listener_1_1_configuration" kindref="compound">Configuration</ref><sp/>listener_config,</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration" kindref="compound">SessionImpl::Configuration</ref><sp/>session_config);</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27" refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a5c70321479b384f63d36c453a7a813b9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a5c70321479b384f63d36c453a7a813b9" kindref="member">~WsListenerImpl</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a567d0f4d15a9369ee07a4a7ddb25c5c4" kindref="member">prepare</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1ad977149f983f4c1cf17cdc8cd6eadad5" kindref="member">start</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1ae4c802a834827b66b78b096856034c74" kindref="member">stop</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a4a5f6fe68a3fdb050104ef6140021206" kindref="member">setHandlerForNewSession</ref>(<ref refid="d6/d3f/classsgns_1_1api_1_1_listener_1a46eee029b2ad2b539a0a22182adf9370" kindref="member">NewSessionHandler</ref><sp/>&amp;&amp;on_new_session)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40" refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a9cbb9ed327df7da3f4d7b1a45a69eadc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a9cbb9ed327df7da3f4d7b1a45a69eadc" kindref="member">GetName</ref>()</highlight><highlight class="keyword"><sp/>override</highlight></codeline>
+<codeline lineno="41"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;WsListenerImpl&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a18c5a5e3b3ce401be88e163cd68b8bb3" kindref="member">acceptOnce</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="48" refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a8d1ad185c41a25e9910841eabe9dbbed" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;Context&gt;<sp/><ref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a8d1ad185c41a25e9910841eabe9dbbed" kindref="member">context_</ref>;</highlight></codeline>
+<codeline lineno="49" refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a3e9a55dbc72d06a2877d8efa335e3d71" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d5/d93/structsgns_1_1api_1_1_listener_1_1_configuration" kindref="compound">Configuration</ref><sp/><ref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a3e9a55dbc72d06a2877d8efa335e3d71" kindref="member">config_</ref>;</highlight></codeline>
+<codeline lineno="50" refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a7299fc845f011e1ac6d374697cc8af3f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration" kindref="compound">SessionImpl::Configuration</ref><sp/><ref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a7299fc845f011e1ac6d374697cc8af3f" kindref="member">session_config_</ref>;</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"></highlight></codeline>
+<codeline lineno="52" refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a155c4e4896decebc692a17a695865d85" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::unique_ptr&lt;Acceptor&gt;<sp/><ref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a155c4e4896decebc692a17a695865d85" kindref="member">acceptor_</ref>;</highlight></codeline>
+<codeline lineno="53" refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a75a8921992ef0ce7afc32894e1db0be3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::unique_ptr&lt;NewSessionHandler&gt;<sp/><ref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a75a8921992ef0ce7afc32894e1db0be3" kindref="member">on_new_session_</ref>;</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight></codeline>
+<codeline lineno="55" refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1abde4e93fa3d1199eb20ea5e04a76e78e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::atomic&lt;Session::SessionId&gt;<sp/><ref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1abde4e93fa3d1199eb20ea5e04a76e78e" kindref="member">next_session_id_</ref>;</highlight></codeline>
+<codeline lineno="56" refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1af73cdb4fe7cc41d09d1e8eff76ecbe17" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;SessionImpl&gt;<sp/><ref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1af73cdb4fe7cc41d09d1e8eff76ecbe17" kindref="member">new_session_</ref>;</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight></codeline>
+<codeline lineno="58" refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a11b048d35e5f677a18aee646ae1e3fb5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref><sp/><ref refid="dc/d90/classsgns_1_1api_1_1_ws_listener_impl_1a11b048d35e5f677a18aee646ae1e3fb5" kindref="member">logger_</ref><sp/>=<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>(</highlight><highlight class="stringliteral">&quot;RPC_Websocket_Listener&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"></highlight></codeline>
+<codeline lineno="61"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::api</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="62"><highlight class="normal"></highlight></codeline>
+<codeline lineno="63"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_SRC_API_TRANSPORT_IMPL_WS_LISTENER_IMPL_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/api/transport/impl/ws/ws_listener_impl.hpp"/>
+  </compounddef>
+</doxygen>

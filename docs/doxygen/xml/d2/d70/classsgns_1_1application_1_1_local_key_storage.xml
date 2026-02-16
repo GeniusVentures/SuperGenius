@@ -1,0 +1,380 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/d70/classsgns_1_1application_1_1_local_key_storage" kind="class" language="C++" prot="public">
+    <compoundname>sgns::application::LocalKeyStorage</compoundname>
+    <basecompoundref refid="d5/ddb/classsgns_1_1application_1_1_key_storage" prot="public" virt="non-virtual">sgns::application::KeyStorage</basecompoundref>
+    <includes refid="d8/d59/local__key__storage_8hpp" local="no">local_key_storage.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a54c5662bb09211627ea4a9b08f4a3d87" prot="private" static="no" mutable="no">
+        <type><ref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair" kindref="compound">crypto::SR25519Keypair</ref></type>
+        <definition>crypto::SR25519Keypair sgns::application::LocalKeyStorage::sr_25519_keypair_</definition>
+        <argsstring></argsstring>
+        <name>sr_25519_keypair_</name>
+        <qualifiedname>sgns::application::LocalKeyStorage::sr_25519_keypair_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/local_key_storage.hpp" line="44" column="28" bodyfile="src/application/impl/local_key_storage.hpp" bodystart="44" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d2/d70/classsgns_1_1application_1_1_local_key_storage_1ad60f4d216e83080d140ccf5f8061fc02" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" kindref="compound">crypto::ED25519Keypair</ref></type>
+        <definition>crypto::ED25519Keypair sgns::application::LocalKeyStorage::ed_25519_keypair_</definition>
+        <argsstring></argsstring>
+        <name>ed_25519_keypair_</name>
+        <qualifiedname>sgns::application::LocalKeyStorage::ed_25519_keypair_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/local_key_storage.hpp" line="45" column="28" bodyfile="src/application/impl/local_key_storage.hpp" bodystart="45" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a0283b96c47d2031a7d105982645d6f10" prot="private" static="no" mutable="no">
+        <type>libp2p::crypto::KeyPair</type>
+        <definition>libp2p::crypto::KeyPair sgns::application::LocalKeyStorage::p2p_keypair_</definition>
+        <argsstring></argsstring>
+        <name>p2p_keypair_</name>
+        <qualifiedname>sgns::application::LocalKeyStorage::p2p_keypair_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/local_key_storage.hpp" line="46" column="29" bodyfile="src/application/impl/local_key_storage.hpp" bodystart="46" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a277578119b1d994cc9111a02d6d5eac9" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; <ref refid="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a43e8ab3fbdfee3cb3e4905e0d588ccbc" kindref="member">LocalKeyStorage</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; LocalKeyStorage &gt; &gt; sgns::application::LocalKeyStorage::create</definition>
+        <argsstring>(const std::string &amp;keystore_path)</argsstring>
+        <name>create</name>
+        <qualifiedname>sgns::application::LocalKeyStorage::create</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>keystore_path</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/local_key_storage.hpp" line="16" column="28" bodyfile="src/application/impl/local_key_storage.cpp" bodystart="11" bodyend="16"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a5eb4a39083e3ed8a45b4a424e73dcfc7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::LocalKeyStorage::~LocalKeyStorage</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~LocalKeyStorage</name>
+        <qualifiedname>sgns::application::LocalKeyStorage::~LocalKeyStorage</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/local_key_storage.hpp" line="19" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d70/classsgns_1_1application_1_1_local_key_storage_1aa91b141f5d91a124c9d62f4ee86f81d6" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair" kindref="compound">crypto::SR25519Keypair</ref></type>
+        <definition>sgns::crypto::SR25519Keypair sgns::application::LocalKeyStorage::getLocalSr25519Keypair</definition>
+        <argsstring>() const override</argsstring>
+        <name>getLocalSr25519Keypair</name>
+        <qualifiedname>sgns::application::LocalKeyStorage::getLocalSr25519Keypair</qualifiedname>
+        <reimplements refid="d5/ddb/classsgns_1_1application_1_1_key_storage_1a7f4b6ea447bbd972bfb3f163db7e4233">getLocalSr25519Keypair</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get the node sr25519 keypair, which is used, for example, in PRODUCTION </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/local_key_storage.hpp" line="21" column="28" bodyfile="src/application/impl/local_key_storage.cpp" bodystart="18" bodyend="21"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d70/classsgns_1_1application_1_1_local_key_storage_1aa66bc97a419e3d28bd24923616c81614" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" kindref="compound">crypto::ED25519Keypair</ref></type>
+        <definition>sgns::crypto::ED25519Keypair sgns::application::LocalKeyStorage::getLocalEd25519Keypair</definition>
+        <argsstring>() const override</argsstring>
+        <name>getLocalEd25519Keypair</name>
+        <qualifiedname>sgns::application::LocalKeyStorage::getLocalEd25519Keypair</qualifiedname>
+        <reimplements refid="d5/ddb/classsgns_1_1application_1_1_key_storage_1aa15d8a5e01876b744db7cddf4ffd12e3">getLocalEd25519Keypair</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get the node ed25519 keypair used in finality of verificaiton </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/local_key_storage.hpp" line="22" column="28" bodyfile="src/application/impl/local_key_storage.cpp" bodystart="23" bodyend="26"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a3ae5482071da671d1a718a8733eafd24" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>libp2p::crypto::KeyPair</type>
+        <definition>libp2p::crypto::KeyPair sgns::application::LocalKeyStorage::getP2PKeypair</definition>
+        <argsstring>() const override</argsstring>
+        <name>getP2PKeypair</name>
+        <qualifiedname>sgns::application::LocalKeyStorage::getP2PKeypair</qualifiedname>
+        <reimplements refid="d5/ddb/classsgns_1_1application_1_1_key_storage_1a4d5b1374b58d285d709fe2388d1661b0">getP2PKeypair</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get the node <ref refid="de/da8/namespacelibp2p" kindref="compound">libp2p</ref> keypair, which is used by <ref refid="de/da8/namespacelibp2p" kindref="compound">libp2p</ref> network library </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/local_key_storage.hpp" line="23" column="29" bodyfile="src/application/impl/local_key_storage.cpp" bodystart="28" bodyend="30"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a104b52e9e606d641833b9fb050a63754" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::application::LocalKeyStorage::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::application::LocalKeyStorage::GetName</qualifiedname>
+        <reimplements refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/local_key_storage.hpp" line="25" column="17" bodyfile="src/application/impl/local_key_storage.hpp" bodystart="25" bodyend="28"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a43e8ab3fbdfee3cb3e4905e0d588ccbc" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::LocalKeyStorage::LocalKeyStorage</definition>
+        <argsstring>()=default</argsstring>
+        <name>LocalKeyStorage</name>
+        <qualifiedname>sgns::application::LocalKeyStorage::LocalKeyStorage</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/local_key_storage.hpp" line="31" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a116fcacbe68042bd90ebdd8c39b30b4d" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::application::LocalKeyStorage::loadFromJson</definition>
+        <argsstring>(const std::string &amp;file_path)</argsstring>
+        <name>loadFromJson</name>
+        <qualifiedname>sgns::application::LocalKeyStorage::loadFromJson</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>file_path</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Loads a keystore from the provided file </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/local_key_storage.hpp" line="36" column="21" bodyfile="src/application/impl/local_key_storage.cpp" bodystart="32" bodyend="45"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d70/classsgns_1_1application_1_1_local_key_storage_1ab5d253219cbd10627380da93e348a428" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::application::LocalKeyStorage::loadSR25519Keys</definition>
+        <argsstring>(const boost::property_tree::ptree &amp;tree)</argsstring>
+        <name>loadSR25519Keys</name>
+        <qualifiedname>sgns::application::LocalKeyStorage::loadSR25519Keys</qualifiedname>
+        <param>
+          <type>const boost::property_tree::ptree &amp;</type>
+          <declname>tree</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/local_key_storage.hpp" line="38" column="21" bodyfile="src/application/impl/local_key_storage.cpp" bodystart="47" bodyend="68"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d70/classsgns_1_1application_1_1_local_key_storage_1ae121c66fb2f399cd8b9a12098c13a143" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::application::LocalKeyStorage::loadED25519Keys</definition>
+        <argsstring>(const boost::property_tree::ptree &amp;tree)</argsstring>
+        <name>loadED25519Keys</name>
+        <qualifiedname>sgns::application::LocalKeyStorage::loadED25519Keys</qualifiedname>
+        <param>
+          <type>const boost::property_tree::ptree &amp;</type>
+          <declname>tree</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/local_key_storage.hpp" line="40" column="21" bodyfile="src/application/impl/local_key_storage.cpp" bodystart="70" bodyend="93"/>
+      </memberdef>
+      <memberdef kind="function" id="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a3866138204c379e469bfc28fd6842ee6" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::application::LocalKeyStorage::loadP2PKeys</definition>
+        <argsstring>(const boost::property_tree::ptree &amp;tree)</argsstring>
+        <name>loadP2PKeys</name>
+        <qualifiedname>sgns::application::LocalKeyStorage::loadP2PKeys</qualifiedname>
+        <param>
+          <type>const boost::property_tree::ptree &amp;</type>
+          <declname>tree</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/local_key_storage.hpp" line="42" column="21" bodyfile="src/application/impl/local_key_storage.cpp" bodystart="95" bodyend="139"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="2">
+        <label>sgns::application::KeyStorage</label>
+        <link refid="d5/ddb/classsgns_1_1application_1_1_key_storage"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::application::LocalKeyStorage</label>
+        <link refid="d2/d70/classsgns_1_1application_1_1_local_key_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="2">
+        <label>sgns::application::KeyStorage</label>
+        <link refid="d5/ddb/classsgns_1_1application_1_1_key_storage"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::application::LocalKeyStorage</label>
+        <link refid="d2/d70/classsgns_1_1application_1_1_local_key_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-sr_25519_keypair_</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>-ed_25519_keypair_</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>sgns::base::Blob&lt; size_ &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::base::Blob&lt; constants::ed25519::PRIVKEY_SIZE &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; constants::ed25519::PRIVKEY_SIZE &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>sgns::base::Blob&lt; constants::ed25519::PUBKEY_SIZE &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; constants::ed25519::PUBKEY_SIZE &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::base::Blob&lt; constants::sr25519::PUBLIC_SIZE &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; constants::sr25519::PUBLIC_SIZE &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::base::Blob&lt; constants::sr25519::SECRET_SIZE &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; constants::sr25519::SECRET_SIZE &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>sgns::crypto::ED25519Keypair</label>
+        <link refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+private_key</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+public_key</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::crypto::SR25519Keypair</label>
+        <link refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+secret_key</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+public_key</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/application/impl/local_key_storage.hpp" line="14" column="3" bodyfile="src/application/impl/local_key_storage.hpp" bodystart="14" bodyend="47"/>
+    <listofallmembers>
+      <member refid="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a277578119b1d994cc9111a02d6d5eac9" prot="public" virt="non-virtual"><scope>sgns::application::LocalKeyStorage</scope><name>create</name></member>
+      <member refid="d2/d70/classsgns_1_1application_1_1_local_key_storage_1ad60f4d216e83080d140ccf5f8061fc02" prot="private" virt="non-virtual"><scope>sgns::application::LocalKeyStorage</scope><name>ed_25519_keypair_</name></member>
+      <member refid="d2/d70/classsgns_1_1application_1_1_local_key_storage_1aa66bc97a419e3d28bd24923616c81614" prot="public" virt="virtual"><scope>sgns::application::LocalKeyStorage</scope><name>getLocalEd25519Keypair</name></member>
+      <member refid="d2/d70/classsgns_1_1application_1_1_local_key_storage_1aa91b141f5d91a124c9d62f4ee86f81d6" prot="public" virt="virtual"><scope>sgns::application::LocalKeyStorage</scope><name>getLocalSr25519Keypair</name></member>
+      <member refid="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a104b52e9e606d641833b9fb050a63754" prot="public" virt="virtual"><scope>sgns::application::LocalKeyStorage</scope><name>GetName</name></member>
+      <member refid="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a3ae5482071da671d1a718a8733eafd24" prot="public" virt="virtual"><scope>sgns::application::LocalKeyStorage</scope><name>getP2PKeypair</name></member>
+      <member refid="d2/d70/classsgns_1_1application_1_1_local_key_storage_1ae121c66fb2f399cd8b9a12098c13a143" prot="private" virt="non-virtual"><scope>sgns::application::LocalKeyStorage</scope><name>loadED25519Keys</name></member>
+      <member refid="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a116fcacbe68042bd90ebdd8c39b30b4d" prot="private" virt="non-virtual"><scope>sgns::application::LocalKeyStorage</scope><name>loadFromJson</name></member>
+      <member refid="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a3866138204c379e469bfc28fd6842ee6" prot="private" virt="non-virtual"><scope>sgns::application::LocalKeyStorage</scope><name>loadP2PKeys</name></member>
+      <member refid="d2/d70/classsgns_1_1application_1_1_local_key_storage_1ab5d253219cbd10627380da93e348a428" prot="private" virt="non-virtual"><scope>sgns::application::LocalKeyStorage</scope><name>loadSR25519Keys</name></member>
+      <member refid="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a43e8ab3fbdfee3cb3e4905e0d588ccbc" prot="private" virt="non-virtual"><scope>sgns::application::LocalKeyStorage</scope><name>LocalKeyStorage</name></member>
+      <member refid="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a0283b96c47d2031a7d105982645d6f10" prot="private" virt="non-virtual"><scope>sgns::application::LocalKeyStorage</scope><name>p2p_keypair_</name></member>
+      <member refid="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a54c5662bb09211627ea4a9b08f4a3d87" prot="private" virt="non-virtual"><scope>sgns::application::LocalKeyStorage</scope><name>sr_25519_keypair_</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::application::LocalKeyStorage</scope><name>~IComponent</name></member>
+      <member refid="d5/ddb/classsgns_1_1application_1_1_key_storage_1a825750017da32b5816bbf4f3a6d57ae2" prot="public" virt="non-virtual"><scope>sgns::application::LocalKeyStorage</scope><name>~KeyStorage</name></member>
+      <member refid="d2/d70/classsgns_1_1application_1_1_local_key_storage_1a5eb4a39083e3ed8a45b4a424e73dcfc7" prot="public" virt="non-virtual"><scope>sgns::application::LocalKeyStorage</scope><name>~LocalKeyStorage</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

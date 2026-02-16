@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_0bac89866673b9346e6f1bef0c671d78" kind="dir">
+    <compoundname>src/scale/detail</compoundname>
+    <innerfile refid="de/d03/fixed__witdh__integer_8hpp">fixed_witdh_integer.hpp</innerfile>
+    <innerfile refid="d3/d6f/tuple_8hpp">tuple.hpp</innerfile>
+    <innerfile refid="d9/d7a/variant_8hpp">variant.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/scale/detail/"/>
+  </compounddef>
+</doxygen>

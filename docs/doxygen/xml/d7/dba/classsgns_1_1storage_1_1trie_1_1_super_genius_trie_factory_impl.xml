@@ -1,0 +1,162 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/dba/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_impl" kind="class" language="C++" prot="public">
+    <compoundname>sgns::storage::trie::SuperGeniusTrieFactoryImpl</compoundname>
+    <basecompoundref refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory" prot="public" virt="non-virtual">sgns::storage::trie::SuperGeniusTrieFactory</basecompoundref>
+    <includes refid="da/da2/supergenius__trie__factory__impl_8hpp" local="no">supergenius_trie_factory_impl.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d7/dba/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_impl_1a1816a5130b343b9ee1603e9af5dfe88f" prot="private" static="no" mutable="no">
+        <type><ref refid="df/dfd/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_impl_1ad41b4148bb37f162055f5c5e0f29efdb" kindref="member">SuperGeniusTrieImpl::ChildRetrieveFunctor</ref></type>
+        <definition>SuperGeniusTrieImpl::ChildRetrieveFunctor sgns::storage::trie::SuperGeniusTrieFactoryImpl::default_child_retrieve_f_</definition>
+        <argsstring></argsstring>
+        <name>default_child_retrieve_f_</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieFactoryImpl::default_child_retrieve_f_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp" line="26" column="47" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d7/dba/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_impl_1a18f1f921a89a735ee31c3f68b56dfcb8" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>std::unique_ptr&lt; <ref refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie" kindref="compound">SuperGeniusTrie</ref> &gt;</type>
+        <definition>std::unique_ptr&lt; SuperGeniusTrie &gt; sgns::storage::trie::SuperGeniusTrieFactoryImpl::createEmpty</definition>
+        <argsstring>(ChildRetrieveFunctor f) const override</argsstring>
+        <name>createEmpty</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieFactoryImpl::createEmpty</qualifiedname>
+        <reimplements refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_1a5e4e5e49ebb735fdcf4de201b6bd9b32">createEmpty</reimplements>
+        <param>
+          <type><ref refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_1a2849b7ceebef0c172658a3c41d482dc7" kindref="member">ChildRetrieveFunctor</ref></type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Creates an empty trie <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>f</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>functor that a trie uses to obtain a child of a branch. If optional is none, the default one will be used </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp" line="14" column="21" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_factory_impl.cpp" bodystart="7" bodyend="10"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/dba/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_impl_1a29880510e637feff9f4885da93a4f5e2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>std::unique_ptr&lt; <ref refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie" kindref="compound">SuperGeniusTrie</ref> &gt;</type>
+        <definition>std::unique_ptr&lt; SuperGeniusTrie &gt; sgns::storage::trie::SuperGeniusTrieFactoryImpl::createFromRoot</definition>
+        <argsstring>(SuperGeniusTrie::NodePtr root, ChildRetrieveFunctor f) const override</argsstring>
+        <name>createFromRoot</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieFactoryImpl::createFromRoot</qualifiedname>
+        <reimplements refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_1a6a743c8ec42c24ea4476807944fa366c">createFromRoot</reimplements>
+        <param>
+          <type><ref refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_1a1b60f029e681ccadc921629dc417fde7" kindref="member">SuperGeniusTrie::NodePtr</ref></type>
+          <declname>root</declname>
+        </param>
+        <param>
+          <type><ref refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_1a2849b7ceebef0c172658a3c41d482dc7" kindref="member">ChildRetrieveFunctor</ref></type>
+          <declname>f</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Creates a trie with the given root <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>root</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>root node for the trie </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>f</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>functor that a trie uses to obtain a child of a branch. If optional is none, the default one will be used </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp" line="16" column="21" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_factory_impl.cpp" bodystart="12" bodyend="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/dba/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_impl_1a2ebbb4ad3e402e2c28c5fd0fe7a06938" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::storage::trie::SuperGeniusTrieFactoryImpl::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::storage::trie::SuperGeniusTrieFactoryImpl::GetName</qualifiedname>
+        <reimplements refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp" line="20" column="17" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp" bodystart="20" bodyend="23"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="2">
+        <label>sgns::storage::trie::SuperGeniusTrieFactory</label>
+        <link refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::SuperGeniusTrieFactoryImpl</label>
+        <link refid="d7/dba/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="3">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="2">
+        <label>sgns::storage::trie::SuperGeniusTrieFactory</label>
+        <link refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::SuperGeniusTrieFactoryImpl</label>
+        <link refid="d7/dba/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp" line="11" column="3" bodyfile="src/storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp" bodystart="11" bodyend="27"/>
+    <listofallmembers>
+      <member refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_1a2849b7ceebef0c172658a3c41d482dc7" prot="public" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieFactoryImpl</scope><name>ChildRetrieveFunctor</name></member>
+      <member refid="d7/dba/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_impl_1a18f1f921a89a735ee31c3f68b56dfcb8" prot="public" virt="virtual"><scope>sgns::storage::trie::SuperGeniusTrieFactoryImpl</scope><name>createEmpty</name></member>
+      <member refid="d7/dba/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_impl_1a29880510e637feff9f4885da93a4f5e2" prot="public" virt="virtual"><scope>sgns::storage::trie::SuperGeniusTrieFactoryImpl</scope><name>createFromRoot</name></member>
+      <member refid="d7/dba/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_impl_1a1816a5130b343b9ee1603e9af5dfe88f" prot="private" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieFactoryImpl</scope><name>default_child_retrieve_f_</name></member>
+      <member refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_1aec345407637c38c5a55a89031ad20673" prot="protected" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieFactoryImpl</scope><name>defaultChildRetriever</name></member>
+      <member refid="d7/dba/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_impl_1a2ebbb4ad3e402e2c28c5fd0fe7a06938" prot="public" virt="virtual"><scope>sgns::storage::trie::SuperGeniusTrieFactoryImpl</scope><name>GetName</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::storage::trie::SuperGeniusTrieFactoryImpl</scope><name>~IComponent</name></member>
+      <member refid="d1/df6/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_factory_1a8b9d7abe1bc95bfd04a0eb9495baf9f5" prot="public" virt="non-virtual"><scope>sgns::storage::trie::SuperGeniusTrieFactoryImpl</scope><name>~SuperGeniusTrieFactory</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

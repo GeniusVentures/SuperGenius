@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_5d58d02fca59986ee5ebe992a52c93e9" kind="dir">
+    <compoundname>src/crypto/sha</compoundname>
+    <innerfile refid="d4/d08/sha256_8cpp">sha256.cpp</innerfile>
+    <innerfile refid="d5/d68/sha256_8hpp">sha256.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/sha/"/>
+  </compounddef>
+</doxygen>

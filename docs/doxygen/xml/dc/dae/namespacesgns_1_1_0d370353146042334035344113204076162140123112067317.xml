@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/dae/namespacesgns_1_1_0d370353146042334035344113204076162140123112067317" kind="namespace" language="C++">
+    <compoundname>sgns::@370353146042334035344113204076162140123112067317</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/account/Migration1_0_0To3_4_0.cpp" line="13" column="5"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,180 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d8/d51/_processing_proof_8hpp" kind="file" language="C++">
+    <compoundname>ProcessingProof.hpp</compoundname>
+    <includes local="no">string</includes>
+    <includes local="no">cstdint</includes>
+    <includes local="no">array</includes>
+    <includes local="no">utility</includes>
+    <includes local="no">boost/json.hpp</includes>
+    <includes local="no">string_view</includes>
+    <includes refid="de/d4a/_i_basic_proof_8hpp" local="yes">IBasicProof.hpp</includes>
+    <includedby refid="d0/dcc/_transaction_manager_8cpp" local="yes">src/account/TransactionManager.cpp</includedby>
+    <includedby refid="dc/dc6/_processing_proof_8cpp" local="yes">src/proof/ProcessingProof.cpp</includedby>
+    <incdepgraph>
+      <node id="12">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>IBasicProof.hpp</label>
+        <link refid="de/d4a/_i_basic_proof_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/proof/ProcessingProof.hpp</label>
+        <link refid="d8/d51/_processing_proof_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>array</label>
+      </node>
+      <node id="6">
+        <label>boost/json.hpp</label>
+      </node>
+      <node id="3">
+        <label>cstdint</label>
+      </node>
+      <node id="13">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="10">
+        <label>memory</label>
+      </node>
+      <node id="11">
+        <label>proof/proto/SGProof.pb.h</label>
+      </node>
+      <node id="2">
+        <label>string</label>
+      </node>
+      <node id="7">
+        <label>string_view</label>
+      </node>
+      <node id="5">
+        <label>utility</label>
+      </node>
+      <node id="9">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/account/TransactionManager.cpp</label>
+        <link refid="d0/dcc/_transaction_manager_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/proof/ProcessingProof.cpp</label>
+        <link refid="dc/dc6/_processing_proof_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/proof/ProcessingProof.hpp</label>
+        <link refid="d8/d51/_processing_proof_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="df/df1/classsgns_1_1_processing_proof" prot="public">sgns::ProcessingProof</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <briefdescription>
+<para>Derived class for generating and verifying processing proofs. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="date"><para>2024-09-29 </para>
+</simplesect>
+<simplesect kind="author"><para>Henrique A. Klein (<ulink url="mailto:hklein@gnus.ai">hklein@gnus.ai</ulink>) </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>_PROCESSING_PROOF_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>_PROCESSING_PROOF_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstdint&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;array&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;utility&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/json.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string_view&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="de/d4a/_i_basic_proof_8hpp" kindref="compound">IBasicProof.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="20"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="28" refid="df/df1/classsgns_1_1_processing_proof" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="df/df1/classsgns_1_1_processing_proof_1a3c19d231b65f83c44de0da53c50012be" kindref="member">ProcessingProof</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d9/dbe/classsgns_1_1_i_basic_proof_1a6949373f697d0a371c8788f04f706443" kindref="member">IBasicProof</ref></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="35" refid="df/df1/classsgns_1_1_processing_proof_1a3c19d231b65f83c44de0da53c50012be" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">explicit</highlight><highlight class="normal"><sp/><ref refid="df/df1/classsgns_1_1_processing_proof_1a3c19d231b65f83c44de0da53c50012be" kindref="member">ProcessingProof</ref>(<sp/>std::string<sp/>subtask_id<sp/>)<sp/>:</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/dbe/classsgns_1_1_i_basic_proof_1a6949373f697d0a371c8788f04f706443" kindref="member">IBasicProof</ref>(<sp/></highlight><highlight class="stringliteral">&quot;Bypass&quot;</highlight><highlight class="normal"><sp/>),<sp/></highlight><highlight class="comment">//</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/df1/classsgns_1_1_processing_proof_1ac2b08ba7d1e487c6b489519d1b75f8fe" kindref="member">subtask_id_m</ref>(<sp/><ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(<sp/>subtask_id<sp/>)<sp/>)</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44" refid="df/df1/classsgns_1_1_processing_proof_1ad29d4a7d6659c9266b5471b97caeaaa7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/df1/classsgns_1_1_processing_proof_1ad29d4a7d6659c9266b5471b97caeaaa7" kindref="member">~ProcessingProof</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight></codeline>
+<codeline lineno="50" refid="df/df1/classsgns_1_1_processing_proof_1af9e2f2f9ed4307dee3315f53a076af88" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="df/df1/classsgns_1_1_processing_proof_1af9e2f2f9ed4307dee3315f53a076af88" kindref="member">GetProofType</ref>()</highlight><highlight class="keyword"><sp/>const<sp/>override</highlight></codeline>
+<codeline lineno="51"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::string(<sp/><ref refid="df/df1/classsgns_1_1_processing_proof_1ac990c025275622e9c6835aeff9e98037" kindref="member">PROCESSING_TYPE_NAME</ref><sp/>);</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="56" refid="df/df1/classsgns_1_1_processing_proof_1ac2b08ba7d1e487c6b489519d1b75f8fe" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="df/df1/classsgns_1_1_processing_proof_1ac2b08ba7d1e487c6b489519d1b75f8fe" kindref="member">subtask_id_m</ref>;<sp/></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;std::vector&lt;uint8_t&gt;&gt;<sp/><ref refid="df/df1/classsgns_1_1_processing_proof_1ade6021b920db97896f14e435e0cb9518" kindref="member">SerializeFullProof</ref>(</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>SGProof::BaseProofData<sp/>&amp;base_proof_data<sp/>)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"></highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::pair&lt;boost::json::array,<sp/>boost::json::array&gt;<sp/><ref refid="df/df1/classsgns_1_1_processing_proof_1ad8306b903bb582592a2e481a2e7e7268" kindref="member">GenerateJsonParameters</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"></highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>outcome::result&lt;std::pair&lt;boost::json::array,<sp/>boost::json::array&gt;&gt;<sp/><ref refid="df/df1/classsgns_1_1_processing_proof_1af7dc6ffab191b97386d6bcd1bf92f704" kindref="member">DeSerializePublicParams</ref>(</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;uint8_t&gt;<sp/>&amp;full_proof_data<sp/>);</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"></highlight></codeline>
+<codeline lineno="83" refid="df/df1/classsgns_1_1_processing_proof_1ac990c025275622e9c6835aeff9e98037" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::string_view<sp/><ref refid="df/df1/classsgns_1_1_processing_proof_1ac990c025275622e9c6835aeff9e98037" kindref="member">PROCESSING_TYPE_NAME</ref><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;Processing&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"></highlight></codeline>
+<codeline lineno="89" refid="df/df1/classsgns_1_1_processing_proof_1af600161308a235f85b0a342cb7380586" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="df/df1/classsgns_1_1_processing_proof_1af600161308a235f85b0a342cb7380586" kindref="member">Register</ref>()</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/dbe/classsgns_1_1_i_basic_proof_1a82b0e6eb12aa407abab8cc96f4d7831c" kindref="member">RegisterDeserializer</ref>(<sp/>std::string(<sp/><ref refid="df/df1/classsgns_1_1_processing_proof_1ac990c025275622e9c6835aeff9e98037" kindref="member">PROCESSING_TYPE_NAME</ref><sp/>),<sp/>&amp;<ref refid="df/df1/classsgns_1_1_processing_proof_1af7dc6ffab191b97386d6bcd1bf92f704" kindref="member">ProcessingProof::DeSerializePublicParams</ref><sp/>);</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/dbe/classsgns_1_1_i_basic_proof_1a8760ff952add694d3862deaa3891e3b7" kindref="member">RegisterBytecode</ref>(<sp/>std::string(<sp/><ref refid="df/df1/classsgns_1_1_processing_proof_1ac990c025275622e9c6835aeff9e98037" kindref="member">PROCESSING_TYPE_NAME</ref><sp/>),<sp/></highlight><highlight class="stringliteral">&quot;Bypass&quot;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"></highlight></codeline>
+<codeline lineno="99" refid="df/df1/classsgns_1_1_processing_proof_1ae316443005309cfff066d003d52ce08a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="df/df1/classsgns_1_1_processing_proof_1ae316443005309cfff066d003d52ce08a" kindref="member">registered</ref><sp/>=<sp/><ref refid="df/df1/classsgns_1_1_processing_proof_1af600161308a235f85b0a342cb7380586" kindref="member">Register</ref>();</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="101"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"></highlight></codeline>
+<codeline lineno="103"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/proof/ProcessingProof.hpp"/>
+  </compounddef>
+</doxygen>

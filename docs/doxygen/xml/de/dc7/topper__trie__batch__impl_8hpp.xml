@@ -1,0 +1,261 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/dc7/topper__trie__batch__impl_8hpp" kind="file" language="C++">
+    <compoundname>topper_trie_batch_impl.hpp</compoundname>
+    <includes local="no">map</includes>
+    <includes local="no">list</includes>
+    <includes local="no">boost/optional.hpp</includes>
+    <includes refid="dc/d8a/trie__batches_8hpp" local="yes">storage/trie/trie_batches.hpp</includes>
+    <includedby refid="dd/dda/persistent__trie__batch__impl_8cpp" local="yes">src/storage/trie/impl/persistent_trie_batch_impl.cpp</includedby>
+    <includedby refid="d1/dfc/topper__trie__batch__impl_8cpp" local="yes">src/storage/trie/impl/topper_trie_batch_impl.cpp</includedby>
+    <incdepgraph>
+      <node id="8">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>storage/buffer_map_types.hpp</label>
+        <link refid="d8/dcc/buffer__map__types_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>storage/face/batchable.hpp</label>
+        <link refid="de/d87/batchable_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>storage/face/generic_maps.hpp</label>
+        <link refid="d9/daa/generic__maps_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>storage/face/generic_storage.hpp</label>
+        <link refid="d6/d4e/generic__storage_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>storage/face/iterable.hpp</label>
+        <link refid="db/d3e/iterable_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>storage/face/map_cursor.hpp</label>
+        <link refid="d9/d4b/map__cursor_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>storage/face/readable.hpp</label>
+        <link refid="d5/dd2/readable_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>storage/face/write_batch.hpp</label>
+        <link refid="d2/d76/write__batch_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>storage/face/writeable.hpp</label>
+        <link refid="dc/da4/writeable_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/storage/trie/impl/topper_trie_batch_impl.hpp</label>
+        <link refid="de/dc7/topper__trie__batch__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>storage/trie/trie_batches.hpp</label>
+        <link refid="dc/d8a/trie__batches_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="12">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="4">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="7">
+        <label>gsl/span</label>
+      </node>
+      <node id="14">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="3">
+        <label>list</label>
+      </node>
+      <node id="2">
+        <label>map</label>
+      </node>
+      <node id="18">
+        <label>memory</label>
+      </node>
+      <node id="25">
+        <label>string</label>
+      </node>
+      <node id="9">
+        <label>string_view</label>
+      </node>
+      <node id="10">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/storage/trie/impl/persistent_trie_batch_impl.cpp</label>
+        <link refid="dd/dda/persistent__trie__batch__impl_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/storage/trie/impl/topper_trie_batch_impl.cpp</label>
+        <link refid="d1/dfc/topper__trie__batch__impl_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/storage/trie/impl/topper_trie_batch_impl.hpp</label>
+        <link refid="de/dc7/topper__trie__batch__impl_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl" prot="public">sgns::storage::trie::TopperTrieBatchImpl</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d0/dbf/namespacesgns_1_1storage">sgns::storage</innernamespace>
+    <innernamespace refid="d2/db5/namespacesgns_1_1storage_1_1trie">sgns::storage::trie</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="de/dc7/topper__trie__batch__impl_8hpp_1a95f6e61bdf554b9b757dd07e178a8148" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>OUTCOME_HPP_DECLARE_ERROR_2</definition>
+        <argsstring>(sgns::storage::trie, TopperTrieBatchImpl::Error)</argsstring>
+        <name>OUTCOME_HPP_DECLARE_ERROR_2</name>
+        <param>
+          <type><ref refid="d2/db5/namespacesgns_1_1storage_1_1trie" kindref="compound">sgns::storage::trie</ref></type>
+        </param>
+        <param>
+          <type>TopperTrieBatchImpl::Error</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/impl/topper_trie_batch_impl.hpp" line="47" column="1" declfile="src/storage/trie/impl/topper_trie_batch_impl.hpp" declline="47" declcolumn="1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_STORAGE_TRIE_IMPL_TOPPER_TRIE_BATCH_IMPL</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_STORAGE_TRIE_IMPL_TOPPER_TRIE_BATCH_IMPL</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;map&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;list&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/optional.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dc/d8a/trie__batches_8hpp" kindref="compound">storage/trie/trie_batches.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/db5/namespacesgns_1_1storage_1_1trie" kindref="compound">sgns::storage::trie</ref><sp/>{</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight></codeline>
+<codeline lineno="15" refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a2a3ca603ba33c3e4330ab7e8c9987673" kindref="member">TopperTrieBatchImpl</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d2/d7a/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch" kindref="compound">TopperTrieBatch</ref><sp/>{</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="17" refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aaf8c3e1f54b6f0c205d02365e3713172" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">enum<sp/>class</highlight><highlight class="normal"><sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aaf8c3e1f54b6f0c205d02365e3713172" kindref="member">Error</ref><sp/>{<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aaf8c3e1f54b6f0c205d02365e3713172a8a82367f02b31213005708c2ff1929c2" kindref="member">PARENT_EXPIRED</ref><sp/>=<sp/>1<sp/>};</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">explicit</highlight><highlight class="normal"><sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a2a3ca603ba33c3e4330ab7e8c9987673" kindref="member">TopperTrieBatchImpl</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;TrieBatch&gt;<sp/>&amp;parent);</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;Buffer&gt;<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aed779b066e2ffe01df0ac5e66eec6be9" kindref="member">get</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/>std::unique_ptr&lt;BufferMapCursor&gt;<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1ae5cebd05a2d8cb19279a76744b531407" kindref="member">cursor</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1ad4513dbf71e657ea135485d7094ba9a9" kindref="member">contains</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key)<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a16cd7374bbfa9f97228045618749f202" kindref="member">empty</ref>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1acb2b93d4895d494727ad8898f52060f5" kindref="member">put</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;value)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1acb2b93d4895d494727ad8898f52060f5" kindref="member">put</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key,<sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;&amp;value)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aad234930f71ae7634b4f154e2ae26574" kindref="member">remove</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;key)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1af7c3a65846cf1c48fe980757820e7364" kindref="member">clearPrefix</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref><sp/>&amp;prefix)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a1ab14c2672be158751e3dc43a0534fa2" kindref="member">writeBack</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1af5b3a705f76f472c266919f1d8484efd" kindref="member">wasClearedByPrefix</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref>&amp;<sp/>key)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40" refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a5a940bc1b02fee8be947a40a5fed28ee" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::map&lt;Buffer,<sp/>boost::optional&lt;Buffer&gt;&gt;<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a5a940bc1b02fee8be947a40a5fed28ee" kindref="member">cache_</ref>;</highlight></codeline>
+<codeline lineno="41" refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aabd939eca3dd730241168e71131a81e1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::list&lt;Buffer&gt;<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1aabd939eca3dd730241168e71131a81e1" kindref="member">cleared_prefixes_</ref>;</highlight></codeline>
+<codeline lineno="42" refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a6575d5f7267356a009fbb4f6a00beb86" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::weak_ptr&lt;TrieBatch&gt;<sp/><ref refid="d8/d0f/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl_1a6575d5f7267356a009fbb4f6a00beb86" kindref="member">parent_</ref>;</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::storage::trie</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight></codeline>
+<codeline lineno="47" refid="de/dc7/topper__trie__batch__impl_8hpp_1a95f6e61bdf554b9b757dd07e178a8148" refkind="member"><highlight class="normal"><ref refid="de/dc7/topper__trie__batch__impl_8hpp_1a95f6e61bdf554b9b757dd07e178a8148" kindref="member">OUTCOME_HPP_DECLARE_ERROR_2</ref>(<ref refid="d2/db5/namespacesgns_1_1storage_1_1trie" kindref="compound">sgns::storage::trie</ref>,<sp/>TopperTrieBatchImpl::Error);</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"></highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_SRC_STORAGE_TRIE_IMPL_TOPPER_TRIE_BATCH_IMPL</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/storage/trie/impl/topper_trie_batch_impl.hpp"/>
+  </compounddef>
+</doxygen>

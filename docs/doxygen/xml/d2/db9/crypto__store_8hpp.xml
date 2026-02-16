@@ -1,0 +1,225 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/db9/crypto__store_8hpp" kind="file" language="C++">
+    <compoundname>crypto_store.hpp</compoundname>
+    <includes local="no">boost/filesystem.hpp</includes>
+    <includes local="no">boost/optional.hpp</includes>
+    <includes local="no">libp2p/crypto/key.hpp</includes>
+    <includes refid="dc/d6f/key__type_8hpp" local="yes">crypto/crypto_store/key_type.hpp</includes>
+    <includes refid="d4/d6e/ed25519__types_8hpp" local="yes">crypto/ed25519_types.hpp</includes>
+    <includes refid="d2/d9c/sr25519__types_8hpp" local="yes">crypto/sr25519_types.hpp</includes>
+    <includedby refid="d4/d05/crypto__store__impl_8hpp" local="yes">src/crypto/crypto_store/crypto_store_impl.hpp</includedby>
+    <incdepgraph>
+      <node id="10">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crypto/crypto_store.hpp</label>
+        <link refid="d2/db9/crypto__store_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>crypto/crypto_store/key_type.hpp</label>
+        <link refid="dc/d6f/key__type_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>crypto/ed25519_types.hpp</label>
+        <link refid="d4/d6e/ed25519__types_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>crypto/sr25519_types.hpp</label>
+        <link refid="d2/d9c/sr25519__types_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>array</label>
+      </node>
+      <node id="2">
+        <label>boost/filesystem.hpp</label>
+      </node>
+      <node id="13">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="23">
+        <label>boost/multiprecision/cpp_int.hpp</label>
+      </node>
+      <node id="3">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="11">
+        <label>cstddef</label>
+      </node>
+      <node id="9">
+        <label>ed25519/ed25519.h</label>
+      </node>
+      <node id="17">
+        <label>gsl/span</label>
+      </node>
+      <node id="18">
+        <label>iostream</label>
+      </node>
+      <node id="4">
+        <label>libp2p/crypto/key.hpp</label>
+      </node>
+      <node id="7">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="22">
+        <label>sr25519.h</label>
+      </node>
+      <node id="20">
+        <label>string</label>
+      </node>
+      <node id="15">
+        <label>string_view</label>
+      </node>
+      <node id="16">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="1">
+        <label>src/crypto/crypto_store.hpp</label>
+        <link refid="d2/db9/crypto__store_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>src/crypto/crypto_store/crypto_store_impl.cpp</label>
+        <link refid="dd/d14/crypto__store__impl_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/crypto/crypto_store/crypto_store_impl.hpp</label>
+        <link refid="d4/d05/crypto__store__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="da/d52/classsgns_1_1crypto_1_1_crypto_store" prot="public">sgns::crypto::CryptoStore</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6e/namespacesgns_1_1crypto">sgns::crypto</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_CRYPTO_STORE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_CRYPTO_STORE_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/filesystem.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/optional.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libp2p/crypto/key.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dc/d6f/key__type_8hpp" kindref="compound">crypto/crypto_store/key_type.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d4/d6e/ed25519__types_8hpp" kindref="compound">crypto/ed25519_types.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d2/d9c/sr25519__types_8hpp" kindref="compound">crypto/sr25519_types.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d6e/namespacesgns_1_1crypto" kindref="compound">sgns::crypto</ref><sp/>{</highlight></codeline>
+<codeline lineno="12" refid="da/d52/classsgns_1_1crypto_1_1_crypto_store" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store" kindref="compound">CryptoStore</ref><sp/>{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>currently<sp/>std::filesystem::path<sp/>is<sp/>missing<sp/>required<sp/>methods<sp/>in<sp/>macos<sp/>SDK</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>so<sp/>we<sp/>have<sp/>to<sp/>use<sp/>boost&apos;s<sp/>filesystem<sp/>primitives</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16" refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a0e4314ce82cfcde206e5d1fc17fdc3af" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a0e4314ce82cfcde206e5d1fc17fdc3af" kindref="member">Path</ref><sp/>=<sp/>boost::filesystem::path;</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18" refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a5d0b24eecb9c5efb5419c373e66e8d4a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a5d0b24eecb9c5efb5419c373e66e8d4a" kindref="member">~CryptoStore</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20" refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1aee2cc68cf7941dc6b99fdb74d18b5225" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1aee2cc68cf7941dc6b99fdb74d18b5225" kindref="member">ED25519Keys</ref><sp/>=<sp/>std::vector&lt;ED25519PublicKey&gt;;</highlight></codeline>
+<codeline lineno="21" refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a5ba061881ca805424e7352edc6159afc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a5ba061881ca805424e7352edc6159afc" kindref="member">SR25519Keys</ref><sp/>=<sp/>std::vector&lt;SR25519PublicKey&gt;;</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29" refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a68fafbb800ecad9c8089622ad6669fd4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;ED25519Keypair&gt;<sp/><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a68fafbb800ecad9c8089622ad6669fd4" kindref="member">generateEd25519Keypair</ref>(</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref><sp/>key_type,<sp/>std::string_view<sp/>mnemonic_phrase)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="38" refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a8c62b5fb71a14e544704370a67bef2ec" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;SR25519Keypair&gt;<sp/><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a8c62b5fb71a14e544704370a67bef2ec" kindref="member">generateSr25519Keypair</ref>(</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref><sp/>key_type,<sp/>std::string_view<sp/>mnemonic_phrase)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="47" refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1aab1d88b9b9a5fb2955150973f210f525" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" kindref="compound">ED25519Keypair</ref><sp/><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1aab1d88b9b9a5fb2955150973f210f525" kindref="member">generateEd25519Keypair</ref>(<ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref><sp/>key_type,</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a64ab301ce6ac44216464094d4020302b" kindref="member">ED25519Seed</ref><sp/>&amp;seed)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight></codeline>
+<codeline lineno="56" refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1ae77958a44e0481a43cdd725fb42086a0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair" kindref="compound">SR25519Keypair</ref><sp/><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1ae77958a44e0481a43cdd725fb42086a0" kindref="member">generateSr25519Keypair</ref>(<ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref><sp/>key_type,</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1ac4cbbe40768a209e8418d7f7ada91072" kindref="member">SR25519Seed</ref><sp/>&amp;seed)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"></highlight></codeline>
+<codeline lineno="64" refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a472b1bdcebf359d94febc0a66742eff7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;ED25519Keypair&gt;<sp/><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a472b1bdcebf359d94febc0a66742eff7" kindref="member">generateEd25519Keypair</ref>(</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref><sp/>key_type)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"></highlight></codeline>
+<codeline lineno="72" refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1ad2000805a2639cb1450e7e993c01fcc6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;SR25519Keypair&gt;<sp/><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1ad2000805a2639cb1450e7e993c01fcc6" kindref="member">generateSr25519Keypair</ref>(</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref><sp/>key_type)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"></highlight></codeline>
+<codeline lineno="81" refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1ab86767d20f039b29fef0d2d5ad48ec89" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;ED25519Keypair&gt;<sp/><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1ab86767d20f039b29fef0d2d5ad48ec89" kindref="member">findEd25519Keypair</ref>(</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref><sp/>key_type,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1aabd48e8fa382c75b453fce43c158f97d" kindref="member">ED25519PublicKey</ref><sp/>&amp;pk)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"></highlight></codeline>
+<codeline lineno="90" refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a1a162073fc231a085de8a751506a3968" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>outcome::result&lt;SR25519Keypair&gt;<sp/><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a1a162073fc231a085de8a751506a3968" kindref="member">findSr25519Keypair</ref>(</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref><sp/>key_type,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1ac763dcc567072893f82795e8d546ba88" kindref="member">SR25519PublicKey</ref><sp/>&amp;pk)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"></highlight></codeline>
+<codeline lineno="98" refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1af4caa43c108d07bfb170fa48a00253dd" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1aee2cc68cf7941dc6b99fdb74d18b5225" kindref="member">ED25519Keys</ref><sp/><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1af4caa43c108d07bfb170fa48a00253dd" kindref="member">getEd25519PublicKeys</ref>(<ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref><sp/>key_type)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"></highlight></codeline>
+<codeline lineno="105" refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a24a817a25007ca82fc05f179c7ceb128" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a5ba061881ca805424e7352edc6159afc" kindref="member">SR25519Keys</ref><sp/><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a24a817a25007ca82fc05f179c7ceb128" kindref="member">getSr25519PublicKeys</ref>(<ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref><sp/>key_type)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="107"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"></highlight></codeline>
+<codeline lineno="109"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/crypto/crypto_store.hpp"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,272 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::blockchain::BlockHeaderRepository</compoundname>
+    <basecompoundref refid="d1/dbf/class_i_component" prot="public" virt="non-virtual">IComponent</basecompoundref>
+    <derivedcompoundref refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository" prot="public" virt="non-virtual">sgns::blockchain::KeyValueBlockHeaderRepository</derivedcompoundref>
+    <includes refid="d6/d4c/block__header__repository_8hpp" local="no">block_header_repository.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1ae01d3ff3728f72830ed3fe1d4ed4a105" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; primitives::BlockNumber &gt; sgns::blockchain::BlockHeaderRepository::getNumberByHash</definition>
+        <argsstring>(const base::Hash256 &amp;hash) const =0</argsstring>
+        <name>getNumberByHash</name>
+        <qualifiedname>sgns::blockchain::BlockHeaderRepository::getNumberByHash</qualifiedname>
+        <reimplementedby refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a7692def0cda45326d2e29739e4edd780">getNumberByHash</reimplementedby>
+        <param>
+          <type>const <ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref> &amp;</type>
+          <declname>hash</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>hash</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- a blake2_256 hash of an SCALE encoded block header </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>the number of the block with the provided hash in case one is in the storage or an error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_header_repository.hpp" line="34" column="34"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a2f1bd33a158b858790919435ea724287" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; base::Hash256 &gt; sgns::blockchain::BlockHeaderRepository::getHashByNumber</definition>
+        <argsstring>(const primitives::BlockNumber &amp;number) const =0</argsstring>
+        <name>getHashByNumber</name>
+        <qualifiedname>sgns::blockchain::BlockHeaderRepository::getHashByNumber</qualifiedname>
+        <reimplementedby refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a57556c732afa1bedbe8faebbcbb5cae3">getHashByNumber</reimplementedby>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref> &amp;</type>
+          <declname>number</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>number</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- the number of a block, contained in a block header </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>the hash of the block with the provided number in case one is in the storage or an error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_header_repository.hpp" line="42" column="34"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1abdda56d42d916b4c4347d9c0218437e8" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">primitives::BlockHeader</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; primitives::BlockHeader &gt; sgns::blockchain::BlockHeaderRepository::getBlockHeader</definition>
+        <argsstring>(const primitives::BlockId &amp;id) const =0</argsstring>
+        <name>getBlockHeader</name>
+        <qualifiedname>sgns::blockchain::BlockHeaderRepository::getBlockHeader</qualifiedname>
+        <reimplementedby refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1af28ae085a48ef46ef735a062941ac883">getBlockHeader</reimplementedby>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>block header with corresponding id or an error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_header_repository.hpp" line="48" column="34"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a715e15760cede3d29dab5151b90d2614" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; primitives::BlockHash &gt; sgns::blockchain::BlockHeaderRepository::putBlockHeader</definition>
+        <argsstring>(const primitives::BlockHeader &amp;header)=0</argsstring>
+        <name>putBlockHeader</name>
+        <qualifiedname>sgns::blockchain::BlockHeaderRepository::putBlockHeader</qualifiedname>
+        <reimplementedby refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1ab4ebee53692356fc27faed7d03018f7d">putBlockHeader</reimplementedby>
+        <param>
+          <type>const <ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">primitives::BlockHeader</ref> &amp;</type>
+          <declname>header</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_header_repository.hpp" line="51" column="33"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a51cf7179f72edbf1d685ed4ec6a8b1af" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::blockchain::BlockHeaderRepository::removeBlockHeader</definition>
+        <argsstring>(const primitives::BlockId &amp;id)=0</argsstring>
+        <name>removeBlockHeader</name>
+        <qualifiedname>sgns::blockchain::BlockHeaderRepository::removeBlockHeader</qualifiedname>
+        <reimplementedby refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a9396c88d4baf7605184519fe9bcc9f27">removeBlockHeader</reimplementedby>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_header_repository.hpp" line="53" column="33"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a9b64699fae33ac63a0bf15136872d981" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="d9/df6/namespacesgns_1_1blockchain_1a3fc0313c5d47d95b48f02d1ebb6e0aea" kindref="member">sgns::blockchain::BlockStatus</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; sgns::blockchain::BlockStatus &gt; sgns::blockchain::BlockHeaderRepository::getBlockStatus</definition>
+        <argsstring>(const primitives::BlockId &amp;id) const =0</argsstring>
+        <name>getBlockStatus</name>
+        <qualifiedname>sgns::blockchain::BlockHeaderRepository::getBlockStatus</qualifiedname>
+        <reimplementedby refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository_1a89b8739f45cf77533759f2c24c3369b7">getBlockStatus</reimplementedby>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>of a block which status is returned </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>status of a block or a storage error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_header_repository.hpp" line="59" column="34"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1afd8c7ea054ae0a36b2e44f772e13c768" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref> &gt;</type>
+        <definition>outcome::result&lt; primitives::BlockNumber &gt; sgns::blockchain::BlockHeaderRepository::getNumberById</definition>
+        <argsstring>(const primitives::BlockId &amp;id) const</argsstring>
+        <name>getNumberById</name>
+        <qualifiedname>sgns::blockchain::BlockHeaderRepository::getNumberById</qualifiedname>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>of a block which number is returned </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>block number or a none optional if the corresponding block header is not in storage or a storage error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_header_repository.hpp" line="67" column="26" bodyfile="src/blockchain/impl/block_header_repository.cpp" bodystart="7" bodyend="12"/>
+      </memberdef>
+      <memberdef kind="function" id="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a2d5c162b8cc3929937c060ea3bee1549" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref> &gt;</type>
+        <definition>outcome::result&lt; base::Hash256 &gt; sgns::blockchain::BlockHeaderRepository::getHashById</definition>
+        <argsstring>(const primitives::BlockId &amp;id) const</argsstring>
+        <name>getHashById</name>
+        <qualifiedname>sgns::blockchain::BlockHeaderRepository::getHashById</qualifiedname>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>of a block which hash is returned </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>block hash or a none optional if the corresponding block header is not in storage or a storage error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_header_repository.hpp" line="74" column="26" bodyfile="src/blockchain/impl/block_header_repository.cpp" bodystart="14" bodyend="19"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>An interface to a storage with block headers that provides several convenience methods, such as getting block number by its hash and vice versa or getting a block status </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::blockchain::BlockHeaderRepository</label>
+        <link refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::blockchain::KeyValueBlockHeaderRepository</label>
+        <link refid="de/d64/classsgns_1_1blockchain_1_1_key_value_block_header_repository"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::blockchain::BlockHeaderRepository</label>
+        <link refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/blockchain/block_header_repository.hpp" line="26" column="5" bodyfile="src/blockchain/block_header_repository.hpp" bodystart="27" bodyend="75"/>
+    <listofallmembers>
+      <member refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1abdda56d42d916b4c4347d9c0218437e8" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockHeaderRepository</scope><name>getBlockHeader</name></member>
+      <member refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a9b64699fae33ac63a0bf15136872d981" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockHeaderRepository</scope><name>getBlockStatus</name></member>
+      <member refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a2d5c162b8cc3929937c060ea3bee1549" prot="public" virt="non-virtual"><scope>sgns::blockchain::BlockHeaderRepository</scope><name>getHashById</name></member>
+      <member refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a2f1bd33a158b858790919435ea724287" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockHeaderRepository</scope><name>getHashByNumber</name></member>
+      <member refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockHeaderRepository</scope><name>GetName</name></member>
+      <member refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1ae01d3ff3728f72830ed3fe1d4ed4a105" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockHeaderRepository</scope><name>getNumberByHash</name></member>
+      <member refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1afd8c7ea054ae0a36b2e44f772e13c768" prot="public" virt="non-virtual"><scope>sgns::blockchain::BlockHeaderRepository</scope><name>getNumberById</name></member>
+      <member refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a715e15760cede3d29dab5151b90d2614" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockHeaderRepository</scope><name>putBlockHeader</name></member>
+      <member refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository_1a51cf7179f72edbf1d685ed4ec6a8b1af" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockHeaderRepository</scope><name>removeBlockHeader</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::blockchain::BlockHeaderRepository</scope><name>~IComponent</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

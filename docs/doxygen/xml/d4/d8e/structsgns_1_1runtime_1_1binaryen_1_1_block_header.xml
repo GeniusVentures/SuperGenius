@@ -1,0 +1,212 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/d8e/structsgns_1_1runtime_1_1binaryen_1_1_block_header" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::runtime::binaryen::BlockHeader</compoundname>
+    <includes refid="d7/d72/block__header_8hpp" local="no">block_header.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d4/d8e/structsgns_1_1runtime_1_1binaryen_1_1_block_header_1a6f1fce359916e33810d0a5ddbe440313" prot="public" static="no" mutable="no">
+        <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">BlockHash</ref></type>
+        <definition>BlockHash sgns::primitives::BlockHeader::parent_hash</definition>
+        <argsstring></argsstring>
+        <name>parent_hash</name>
+        <qualifiedname>sgns::runtime::binaryen::BlockHeader::parent_hash</qualifiedname>
+        <briefdescription>
+<para>32-byte Blake2s hash of parent header </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/block_header.hpp" line="22" column="23" bodyfile="src/primitives/block_header.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d8e/structsgns_1_1runtime_1_1binaryen_1_1_block_header_1a3f2d94b17a71d03e1092880e3d98f837" prot="public" static="no" mutable="no">
+        <type><ref refid="de/d1b/key__value__block__header__repository_8cpp_1a4d41d58038f35d095940e2f3660d7381" kindref="member">BlockNumber</ref></type>
+        <definition>BlockNumber sgns::primitives::BlockHeader::number</definition>
+        <argsstring></argsstring>
+        <name>number</name>
+        <qualifiedname>sgns::runtime::binaryen::BlockHeader::number</qualifiedname>
+        <initializer>= 0U</initializer>
+        <briefdescription>
+<para>index of current block in the chain </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/block_header.hpp" line="23" column="23" bodyfile="src/primitives/block_header.hpp" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d8e/structsgns_1_1runtime_1_1binaryen_1_1_block_header_1ae56304194c9585e5e35ae00ccaa6b10a" prot="public" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+        <definition>base::Hash256 sgns::primitives::BlockHeader::state_root</definition>
+        <argsstring></argsstring>
+        <name>state_root</name>
+        <qualifiedname>sgns::runtime::binaryen::BlockHeader::state_root</qualifiedname>
+        <briefdescription>
+<para>root of the Merkle tree </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/block_header.hpp" line="24" column="23" bodyfile="src/primitives/block_header.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d8e/structsgns_1_1runtime_1_1binaryen_1_1_block_header_1a2cc3771590207c09b360998982883872" prot="public" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+        <definition>base::Hash256 sgns::primitives::BlockHeader::extrinsics_root</definition>
+        <argsstring></argsstring>
+        <name>extrinsics_root</name>
+        <qualifiedname>sgns::runtime::binaryen::BlockHeader::extrinsics_root</qualifiedname>
+        <briefdescription>
+<para>field for validation integrity </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/block_header.hpp" line="25" column="23" bodyfile="src/primitives/block_header.hpp" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d4/d8e/structsgns_1_1runtime_1_1binaryen_1_1_block_header_1a81337e2c6ef94303a57f40fcd5c83f5c" prot="public" static="no" mutable="no">
+        <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1ab8880d489009bfb6d376eb6dc0c1a855" kindref="member">Digest</ref></type>
+        <definition>Digest sgns::primitives::BlockHeader::digest</definition>
+        <argsstring></argsstring>
+        <name>digest</name>
+        <qualifiedname>sgns::runtime::binaryen::BlockHeader::digest</qualifiedname>
+        <briefdescription>
+<para>chain-specific auxiliary data </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/block_header.hpp" line="26" column="23" bodyfile="src/primitives/block_header.hpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d4/d8e/structsgns_1_1runtime_1_1binaryen_1_1_block_header_1a704af342871650f4d8a51804057f90ab" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::primitives::BlockHeader::operator==</definition>
+        <argsstring>(const BlockHeader &amp;rhs) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::runtime::binaryen::BlockHeader::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">BlockHeader</ref> &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/block_header.hpp" line="28" column="14" bodyfile="src/primitives/block_header.hpp" bodystart="28" bodyend="32"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d8e/structsgns_1_1runtime_1_1binaryen_1_1_block_header_1a73c5c12c367ea85bf89b43b792e7941d" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::primitives::BlockHeader::operator!=</definition>
+        <argsstring>(const BlockHeader &amp;rhs) const</argsstring>
+        <name>operator!=</name>
+        <qualifiedname>sgns::runtime::binaryen::BlockHeader::operator!=</qualifiedname>
+        <param>
+          <type>const <ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">BlockHeader</ref> &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/block_header.hpp" line="34" column="14" bodyfile="src/primitives/block_header.hpp" bodystart="34" bodyend="37"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="friend">
+      <memberdef kind="friend" id="d4/d8e/structsgns_1_1runtime_1_1binaryen_1_1_block_header_1a295f5902804ad1e32282a868e39c35fb" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::ostream &amp;</type>
+        <definition>std::ostream &amp; operator&lt;&lt;</definition>
+        <argsstring>(std::ostream &amp;out, const BlockHeader &amp;bh)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::runtime::binaryen::BlockHeader::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>std::ostream &amp;</type>
+          <declname>out</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">BlockHeader</ref> &amp;</type>
+          <declname>bh</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/block_header.hpp" line="40" column="16" bodyfile="src/primitives/block_header.hpp" bodystart="40" bodyend="50"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Header of a block in the chain. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Contains parent linkage, state roots, and auxiliary digest data used for validation and consensus. </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="4">
+        <label>T</label>
+      </node>
+      <node id="5">
+        <label>sgns::base::Blob&lt; size_ &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::base::Blob&lt; 32 &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; 32 &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::binaryen::BlockHeader</label>
+        <link refid="d4/d8e/structsgns_1_1runtime_1_1binaryen_1_1_block_header"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+parent_hash</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+digest</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::vector&lt; DigestItem &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; DigestItem &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/primitives/block_header.hpp" line="20" column="5" bodyfile="src/primitives/block_header.hpp" bodystart="21" bodyend="53"/>
+    <listofallmembers>
+      <member refid="d4/d8e/structsgns_1_1runtime_1_1binaryen_1_1_block_header_1a81337e2c6ef94303a57f40fcd5c83f5c" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::BlockHeader</scope><name>digest</name></member>
+      <member refid="d4/d8e/structsgns_1_1runtime_1_1binaryen_1_1_block_header_1a2cc3771590207c09b360998982883872" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::BlockHeader</scope><name>extrinsics_root</name></member>
+      <member refid="d4/d8e/structsgns_1_1runtime_1_1binaryen_1_1_block_header_1a3f2d94b17a71d03e1092880e3d98f837" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::BlockHeader</scope><name>number</name></member>
+      <member refid="d4/d8e/structsgns_1_1runtime_1_1binaryen_1_1_block_header_1a73c5c12c367ea85bf89b43b792e7941d" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::BlockHeader</scope><name>operator!=</name></member>
+      <member refid="d4/d8e/structsgns_1_1runtime_1_1binaryen_1_1_block_header_1a295f5902804ad1e32282a868e39c35fb" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::BlockHeader</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d4/d8e/structsgns_1_1runtime_1_1binaryen_1_1_block_header_1a704af342871650f4d8a51804057f90ab" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::BlockHeader</scope><name>operator==</name></member>
+      <member refid="d4/d8e/structsgns_1_1runtime_1_1binaryen_1_1_block_header_1a6f1fce359916e33810d0a5ddbe440313" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::BlockHeader</scope><name>parent_hash</name></member>
+      <member refid="d4/d8e/structsgns_1_1runtime_1_1binaryen_1_1_block_header_1ae56304194c9585e5e35ae00ccaa6b10a" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::BlockHeader</scope><name>state_root</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

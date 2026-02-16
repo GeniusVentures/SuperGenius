@@ -1,0 +1,478 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="db/d3c/_i_genius_transactions_8hpp" kind="file" language="C++">
+    <compoundname>IGeniusTransactions.hpp</compoundname>
+    <includes local="no">utility</includes>
+    <includes local="no">vector</includes>
+    <includes local="no">string</includes>
+    <includes local="no">boost/format.hpp</includes>
+    <includes refid="d5/dda/outcome_8hpp" local="yes">outcome/outcome.hpp</includes>
+    <includes local="yes">account/proto/SGTransaction.pb.h</includes>
+    <includes refid="d0/dad/_genius_account_8hpp" local="yes">GeniusAccount.hpp</includes>
+    <includes local="no">gsl/span</includes>
+    <includedby refid="dc/dd2/_escrow_release_transaction_8hpp" local="yes">src/account/EscrowReleaseTransaction.hpp</includedby>
+    <includedby refid="df/df3/_escrow_transaction_8hpp" local="yes">src/account/EscrowTransaction.hpp</includedby>
+    <includedby refid="da/dcc/_i_genius_transactions_8cpp" local="yes">src/account/IGeniusTransactions.cpp</includedby>
+    <includedby refid="d2/d0f/_mint_transaction_8hpp" local="yes">src/account/MintTransaction.hpp</includedby>
+    <includedby refid="d4/dec/_processing_transaction_8hpp" local="yes">src/account/ProcessingTransaction.hpp</includedby>
+    <includedby refid="de/d54/_transaction_manager_8hpp" local="yes">src/account/TransactionManager.hpp</includedby>
+    <includedby refid="dd/d70/_transfer_transaction_8hpp" local="yes">src/account/TransferTransaction.hpp</includedby>
+    <incdepgraph>
+      <node id="9">
+        <label>GeniusAccount.hpp</label>
+        <link refid="d0/dad/_genius_account_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/account/IGeniusTransactions.hpp</label>
+        <link refid="db/d3c/_i_genius_transactions_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>account/TokenID.hpp</label>
+        <link refid="df/d5f/_token_i_d_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>local_secure_storage/ISecureStorage.hpp</label>
+        <link refid="dd/d1a/_i_secure_storage_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>ProofSystem/ElGamalKeyGenerator.hpp</label>
+      </node>
+      <node id="22">
+        <label>ProofSystem/EthereumKeyGenerator.hpp</label>
+      </node>
+      <node id="8">
+        <label>account/proto/SGTransaction.pb.h</label>
+      </node>
+      <node id="28">
+        <label>algorithm</label>
+      </node>
+      <node id="10">
+        <label>array</label>
+      </node>
+      <node id="33">
+        <label>boost/filesystem/operations.hpp</label>
+      </node>
+      <node id="32">
+        <label>boost/filesystem/path.hpp</label>
+      </node>
+      <node id="5">
+        <label>boost/format.hpp</label>
+      </node>
+      <node id="20">
+        <label>boost/multiprecision/cpp_int.hpp</label>
+      </node>
+      <node id="15">
+        <label>chrono</label>
+      </node>
+      <node id="14">
+        <label>condition_variable</label>
+      </node>
+      <node id="24">
+        <label>cstdint</label>
+      </node>
+      <node id="25">
+        <label>cstring</label>
+      </node>
+      <node id="16">
+        <label>filesystem</label>
+      </node>
+      <node id="17">
+        <label>functional</label>
+      </node>
+      <node id="34">
+        <label>gsl/span</label>
+      </node>
+      <node id="26">
+        <label>iomanip</label>
+      </node>
+      <node id="7">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="11">
+        <label>memory</label>
+      </node>
+      <node id="13">
+        <label>mutex</label>
+      </node>
+      <node id="18">
+        <label>optional</label>
+      </node>
+      <node id="19">
+        <label>set</label>
+      </node>
+      <node id="12">
+        <label>shared_mutex</label>
+      </node>
+      <node id="27">
+        <label>sstream</label>
+      </node>
+      <node id="4">
+        <label>string</label>
+      </node>
+      <node id="31">
+        <label>unordered_set</label>
+      </node>
+      <node id="2">
+        <label>utility</label>
+      </node>
+      <node id="3">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="3">
+        <label>src/account/EscrowReleaseTransaction.cpp</label>
+        <link refid="d5/dab/_escrow_release_transaction_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/account/EscrowReleaseTransaction.hpp</label>
+        <link refid="dc/dd2/_escrow_release_transaction_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>src/account/EscrowTransaction.cpp</label>
+        <link refid="d7/d12/_escrow_transaction_8cpp"/>
+      </node>
+      <node id="8">
+        <label>src/account/EscrowTransaction.hpp</label>
+        <link refid="df/df3/_escrow_transaction_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>src/account/GeniusNode.cpp</label>
+        <link refid="df/de0/_genius_node_8cpp"/>
+      </node>
+      <node id="16">
+        <label>src/account/GeniusNode.hpp</label>
+        <link refid="d3/d63/_genius_node_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>src/account/IGeniusTransactions.cpp</label>
+        <link refid="da/dcc/_i_genius_transactions_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/account/IGeniusTransactions.hpp</label>
+        <link refid="db/d3c/_i_genius_transactions_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>src/account/Migration0_2_0To1_0_0.cpp</label>
+        <link refid="dc/dfe/_migration0__2__0_to1__0__0_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/account/Migration3_4_0To3_5_0.cpp</label>
+        <link refid="d6/d71/_migration3__4__0_to3__5__0_8cpp"/>
+      </node>
+      <node id="18">
+        <label>src/account/Migration3_5_0To3_5_1.cpp</label>
+        <link refid="da/d32/_migration3__5__0_to3__5__1_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/account/Migration3_5_1To3_6_0.cpp</label>
+        <link refid="db/da7/_migration3__5__1_to3__6__0_8cpp"/>
+      </node>
+      <node id="12">
+        <label>src/account/MintTransaction.cpp</label>
+        <link refid="d8/d70/_mint_transaction_8cpp"/>
+      </node>
+      <node id="11">
+        <label>src/account/MintTransaction.hpp</label>
+        <link refid="d2/d0f/_mint_transaction_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>src/account/ProcessingTransaction.cpp</label>
+        <link refid="d2/d15/_processing_transaction_8cpp"/>
+      </node>
+      <node id="13">
+        <label>src/account/ProcessingTransaction.hpp</label>
+        <link refid="d4/dec/_processing_transaction_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>src/account/TransactionManager.cpp</label>
+        <link refid="d0/dcc/_transaction_manager_8cpp"/>
+      </node>
+      <node id="15">
+        <label>src/account/TransactionManager.hpp</label>
+        <link refid="de/d54/_transaction_manager_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>src/account/TransferTransaction.cpp</label>
+        <link refid="db/dbb/_transfer_transaction_8cpp"/>
+      </node>
+      <node id="19">
+        <label>src/account/TransferTransaction.hpp</label>
+        <link refid="dd/d70/_transfer_transaction_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d1/d07/classsgns_1_1_i_genius_transactions" prot="public">sgns::IGeniusTransactions</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <briefdescription>
+<para>Transaction interface class. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="date"><para>2024-03-11 </para>
+</simplesect>
+<simplesect kind="author"><para>Henrique A. Klein (<ulink url="mailto:hklein@gnus.ai">hklein@gnus.ai</ulink>) </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>_IGENIUS_TRANSACTIONS_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>_IGENIUS_TRANSACTIONS_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;utility&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;vector&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/format.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/dda/outcome_8hpp" kindref="compound">outcome/outcome.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;account/proto/SGTransaction.pb.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d0/dad/_genius_account_8hpp" kindref="compound">GeniusAccount.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;gsl/span&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="23"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">boost::multiprecision;</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//class<sp/>GeniusBlockHeader;<sp/>//TODO<sp/>-<sp/>Design<sp/>new<sp/>header<sp/>or<sp/>rework<sp/>old<sp/>one</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28" refid="d1/d07/classsgns_1_1_i_genius_transactions" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a75f5591823eb6eaaf612e6bdfb5aae94" kindref="member">IGeniusTransactions</ref></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="34" refid="d1/d07/classsgns_1_1_i_genius_transactions_1a320ffd126b7cd6483894894bf7147afb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a320ffd126b7cd6483894894bf7147afb" kindref="member">TransactionDeserializeFn</ref><sp/>=</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;std::shared_ptr&lt;IGeniusTransactions&gt;(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;uint8_t&gt;<sp/>&amp;<sp/>)&gt;;</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37" refid="d1/d07/classsgns_1_1_i_genius_transactions_1a75f5591823eb6eaaf612e6bdfb5aae94" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a75f5591823eb6eaaf612e6bdfb5aae94" kindref="member">IGeniusTransactions</ref>(<sp/>std::string<sp/>type,<sp/>SGTransaction::DAGStruct<sp/>dag<sp/>)<sp/>:</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a3b9fef5951e36dc7f31128247fdbc59e" kindref="member">dag_st</ref>(<sp/><ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(<sp/>dag<sp/>)<sp/>),<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1aeacfba89da66740c2b37b4bbf7110863" kindref="member">transaction_type</ref>(<sp/><ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(<sp/>type<sp/>)<sp/>)</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="42" refid="d1/d07/classsgns_1_1_i_genius_transactions_1a99ca00e5f73c9ea483ebf83513bd8063" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a99ca00e5f73c9ea483ebf83513bd8063" kindref="member">~IGeniusTransactions</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44" refid="d1/d07/classsgns_1_1_i_genius_transactions_1a836b1a1080b24f6f9fd220332b3b5b24" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[[nodiscard]]<sp/>std::string<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a836b1a1080b24f6f9fd220332b3b5b24" kindref="member">GetType</ref>()</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="45"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1aeacfba89da66740c2b37b4bbf7110863" kindref="member">transaction_type</ref>;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"></highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>outcome::result&lt;SGTransaction::DAGStruct&gt;<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a7fc888000de3d0c758a125ca485ce4a1" kindref="member">DeSerializeDAGStruct</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;uint8_t&gt;<sp/>&amp;data<sp/>);</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>outcome::result&lt;SGTransaction::DAGStruct&gt;<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a7fc888000de3d0c758a125ca485ce4a1" kindref="member">DeSerializeDAGStruct</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;data<sp/>);</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"></highlight></codeline>
+<codeline lineno="52" refid="d1/d07/classsgns_1_1_i_genius_transactions_1a543616dd7f86c5df91fa91716aca10b2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>SGTransaction::DAGStruct<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a543616dd7f86c5df91fa91716aca10b2" kindref="member">SetDAGWithType</ref>(<sp/>SGTransaction::DAGStruct<sp/>dag,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;type<sp/>)</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>dag.set_type(<sp/>type<sp/>);</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>dag;</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight></codeline>
+<codeline lineno="58" refid="d1/d07/classsgns_1_1_i_genius_transactions_1a13a85bfa2911ff2327ffcc81260a9fc4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>std::vector&lt;uint8_t&gt;<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a13a85bfa2911ff2327ffcc81260a9fc4" kindref="member">SerializeByteVector</ref>()<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight></codeline>
+<codeline lineno="60" refid="d1/d07/classsgns_1_1_i_genius_transactions_1a53e60bc5badda3cc6df0c57561e14acb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>std::string<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a53e60bc5badda3cc6df0c57561e14acb" kindref="member">GetTransactionSpecificPath</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"></highlight></codeline>
+<codeline lineno="62" refid="d1/d07/classsgns_1_1_i_genius_transactions_1a0f2963348939f103af3404a653a9f91b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::string<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a0f2963348939f103af3404a653a9f91b" kindref="member">GetTransactionFullPath</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;tx_hash<sp/>)</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;tx/&quot;</highlight><highlight class="normal"><sp/>+<sp/>tx_hash;</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"></highlight></codeline>
+<codeline lineno="67" refid="d1/d07/classsgns_1_1_i_genius_transactions_1a47d69eafb82280cd7de3f2c268054494" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a47d69eafb82280cd7de3f2c268054494" kindref="member">GetTransactionFullPath</ref>()</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="68"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;tx/&quot;</highlight><highlight class="normal"><sp/>+<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1ab78d8716ceaf368ddd888e91ac84deb3" kindref="member">GetHash</ref>();</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"></highlight></codeline>
+<codeline lineno="72" refid="d1/d07/classsgns_1_1_i_genius_transactions_1af8cd3ed709b329dfccd519d1bf178424" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1af8cd3ed709b329dfccd519d1bf178424" kindref="member">GetProofFullPath</ref>()</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="73"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;proof/&quot;</highlight><highlight class="normal"><sp/>+<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1ab78d8716ceaf368ddd888e91ac84deb3" kindref="member">GetHash</ref>();</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"></highlight></codeline>
+<codeline lineno="77" refid="d1/d07/classsgns_1_1_i_genius_transactions_1a3eaa922b6192d8342a08c7ea66cbafbc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a3eaa922b6192d8342a08c7ea66cbafbc" kindref="member">GetSrcAddress</ref>()</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="78"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a3b9fef5951e36dc7f31128247fdbc59e" kindref="member">dag_st</ref>.source_addr();</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"></highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1ab78d8716ceaf368ddd888e91ac84deb3" kindref="member">GetHash</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"></highlight></codeline>
+<codeline lineno="84" refid="d1/d07/classsgns_1_1_i_genius_transactions_1aead0ba189578cd0a323ba56b1367f470" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1aead0ba189578cd0a323ba56b1367f470" kindref="member">GetTimestamp</ref>()</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="85"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a3b9fef5951e36dc7f31128247fdbc59e" kindref="member">dag_st</ref>.timestamp();</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"></highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>std::unordered_set&lt;std::string&gt;<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1aea8074c464dcd1e2e15ac9196a4c9e09" kindref="member">GetTopics</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"></highlight></codeline>
+<codeline lineno="96" refid="d1/d07/classsgns_1_1_i_genius_transactions_1a773fcfb15ae0aebdf628f8603dc326e1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a773fcfb15ae0aebdf628f8603dc326e1" kindref="member">RegisterDeserializer</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1aeacfba89da66740c2b37b4bbf7110863" kindref="member">transaction_type</ref>,<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a320ffd126b7cd6483894894bf7147afb" kindref="member">TransactionDeserializeFn</ref><sp/>fn<sp/>)</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a82f860ff9ae3149788d7a31cffc82529" kindref="member">deserializers_map</ref>[<ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1aeacfba89da66740c2b37b4bbf7110863" kindref="member">transaction_type</ref>]<sp/>=<sp/>std::move(<sp/>fn<sp/>);</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"></highlight></codeline>
+<codeline lineno="101" refid="d1/d07/classsgns_1_1_i_genius_transactions_1a9800478402d0ecbd38493d3b5789f9a9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::unordered_map&lt;std::string,<sp/>TransactionDeserializeFn&gt;<sp/>&amp;<ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a9800478402d0ecbd38493d3b5789f9a9" kindref="member">GetDeSerializers</ref>()</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a82f860ff9ae3149788d7a31cffc82529" kindref="member">deserializers_map</ref>;</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"></highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a61846445efa8aa09b7291655e981cf65" kindref="member">FillHash</ref>();</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1ab13efbfe0444411e9d4e19725157de25" kindref="member">CheckHash</ref>();</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"></highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;uint8_t&gt;<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a771a632131b46b4a001a5fe829607b18" kindref="member">MakeSignature</ref>(<sp/><ref refid="dc/d64/classsgns_1_1_genius_account" kindref="compound">GeniusAccount</ref><sp/>&amp;account<sp/>);</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1af5e62c217af069a76213a9b7812ab626" kindref="member">CheckSignature</ref>();</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1acd74bf05f2e8b0123163806c90071c57" kindref="member">CheckDAGSignatureLegacy</ref>();</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"></highlight></codeline>
+<codeline lineno="113" refid="d1/d07/classsgns_1_1_i_genius_transactions_1a3b9fef5951e36dc7f31128247fdbc59e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>SGTransaction::DAGStruct<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a3b9fef5951e36dc7f31128247fdbc59e" kindref="member">dag_st</ref>;</highlight></codeline>
+<codeline lineno="114" refid="d1/d07/classsgns_1_1_i_genius_transactions_1a82f860ff9ae3149788d7a31cffc82529" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/>std::unordered_map&lt;std::string,<sp/>TransactionDeserializeFn&gt;<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1a82f860ff9ae3149788d7a31cffc82529" kindref="member">deserializers_map</ref>;</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"></highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="117" refid="d1/d07/classsgns_1_1_i_genius_transactions_1aeacfba89da66740c2b37b4bbf7110863" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/><ref refid="d1/d07/classsgns_1_1_i_genius_transactions_1aeacfba89da66740c2b37b4bbf7110863" kindref="member">transaction_type</ref>;</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="119"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"></highlight></codeline>
+<codeline lineno="121"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/account/IGeniusTransactions.hpp"/>
+  </compounddef>
+</doxygen>

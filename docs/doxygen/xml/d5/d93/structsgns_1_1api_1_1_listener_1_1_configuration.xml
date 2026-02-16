@@ -1,0 +1,56 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/d93/structsgns_1_1api_1_1_listener_1_1_configuration" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::api::Listener::Configuration</compoundname>
+    <includes refid="df/d31/listener_8hpp" local="no">listener.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d5/d93/structsgns_1_1api_1_1_listener_1_1_configuration_1a9d6d8da0857e406c86b7ef037d8e136a" prot="public" static="no" mutable="no">
+        <type><ref refid="d6/d3f/classsgns_1_1api_1_1_listener_1a7e388013a06677841216e4f837a2345b" kindref="member">Endpoint</ref></type>
+        <definition>Endpoint sgns::api::Listener::Configuration::endpoint</definition>
+        <argsstring></argsstring>
+        <name>endpoint</name>
+        <qualifiedname>sgns::api::Listener::Configuration::endpoint</qualifiedname>
+        <initializer>{}</initializer>
+        <briefdescription>
+<para>listning endpoint </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/listener.hpp" line="27" column="16" bodyfile="src/api/transport/listener.hpp" bodystart="27" bodyend="27"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d5/d93/structsgns_1_1api_1_1_listener_1_1_configuration_1a7ac2b2ac1ebb69fef94986ea9be6451e" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::api::Listener::Configuration::Configuration</definition>
+        <argsstring>()</argsstring>
+        <name>Configuration</name>
+        <qualifiedname>sgns::api::Listener::Configuration::Configuration</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/listener.hpp" line="28" column="7" bodyfile="src/api/transport/listener.hpp" bodystart="28" bodyend="31"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::api::Listener::Configuration</label>
+        <link refid="d5/d93/structsgns_1_1api_1_1_listener_1_1_configuration"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/api/transport/listener.hpp" line="26" column="5" bodyfile="src/api/transport/listener.hpp" bodystart="26" bodyend="32"/>
+    <listofallmembers>
+      <member refid="d5/d93/structsgns_1_1api_1_1_listener_1_1_configuration_1a7ac2b2ac1ebb69fef94986ea9be6451e" prot="public" virt="non-virtual"><scope>sgns::api::Listener::Configuration</scope><name>Configuration</name></member>
+      <member refid="d5/d93/structsgns_1_1api_1_1_listener_1_1_configuration_1a9d6d8da0857e406c86b7ef037d8e136a" prot="public" virt="non-virtual"><scope>sgns::api::Listener::Configuration</scope><name>endpoint</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

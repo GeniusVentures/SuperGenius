@@ -1,0 +1,987 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/d29/classsgns_1_1logging" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::logging</compoundname>
+    <includes refid="d0/da9/logging_8hpp" local="no">logging.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1af839a12f0532205e2c54109e535f00c4" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::ledger_logging_value</definition>
+        <argsstring></argsstring>
+        <name>ledger_logging_value</name>
+        <qualifiedname>sgns::logging::ledger_logging_value</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="70" column="6" bodyfile="node/logging.hpp" bodystart="70" bodyend="70"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1a801fb0109afa0167860f6d80038e3d2d" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::ledger_duplicate_logging_value</definition>
+        <argsstring></argsstring>
+        <name>ledger_duplicate_logging_value</name>
+        <qualifiedname>sgns::logging::ledger_duplicate_logging_value</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="71" column="6" bodyfile="node/logging.hpp" bodystart="71" bodyend="71"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1a2dafc22ccfc043bb5662a85261ef1a02" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::vote_logging_value</definition>
+        <argsstring></argsstring>
+        <name>vote_logging_value</name>
+        <qualifiedname>sgns::logging::vote_logging_value</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="72" column="6" bodyfile="node/logging.hpp" bodystart="72" bodyend="72"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1aca64e97e35433d8a4e5e9d97c5799e17" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::network_logging_value</definition>
+        <argsstring></argsstring>
+        <name>network_logging_value</name>
+        <qualifiedname>sgns::logging::network_logging_value</qualifiedname>
+        <initializer>{ true }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="73" column="6" bodyfile="node/logging.hpp" bodystart="73" bodyend="73"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1aefeb0d2727e95558699effe86faf04eb" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::network_timeout_logging_value</definition>
+        <argsstring></argsstring>
+        <name>network_timeout_logging_value</name>
+        <qualifiedname>sgns::logging::network_timeout_logging_value</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="74" column="6" bodyfile="node/logging.hpp" bodystart="74" bodyend="74"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1a43d4c104cceff65815add51c5174e98e" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::network_message_logging_value</definition>
+        <argsstring></argsstring>
+        <name>network_message_logging_value</name>
+        <qualifiedname>sgns::logging::network_message_logging_value</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="75" column="6" bodyfile="node/logging.hpp" bodystart="75" bodyend="75"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1ae624688278fbdd90c983061defb9d85a" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::network_publish_logging_value</definition>
+        <argsstring></argsstring>
+        <name>network_publish_logging_value</name>
+        <qualifiedname>sgns::logging::network_publish_logging_value</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="76" column="6" bodyfile="node/logging.hpp" bodystart="76" bodyend="76"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1abbdbbb2648b8389985d12f183ef31547" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::network_packet_logging_value</definition>
+        <argsstring></argsstring>
+        <name>network_packet_logging_value</name>
+        <qualifiedname>sgns::logging::network_packet_logging_value</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="77" column="6" bodyfile="node/logging.hpp" bodystart="77" bodyend="77"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1ae612278869cd64bac66f5b0ab52887c1" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::network_keepalive_logging_value</definition>
+        <argsstring></argsstring>
+        <name>network_keepalive_logging_value</name>
+        <qualifiedname>sgns::logging::network_keepalive_logging_value</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="78" column="6" bodyfile="node/logging.hpp" bodystart="78" bodyend="78"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1a6519602d390a7958a34c4e0909e3ed4e" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::network_node_id_handshake_logging_value</definition>
+        <argsstring></argsstring>
+        <name>network_node_id_handshake_logging_value</name>
+        <qualifiedname>sgns::logging::network_node_id_handshake_logging_value</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="79" column="6" bodyfile="node/logging.hpp" bodystart="79" bodyend="79"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1a0983862d23bfbc0753c27d0e5399cdfa" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::network_telemetry_logging_value</definition>
+        <argsstring></argsstring>
+        <name>network_telemetry_logging_value</name>
+        <qualifiedname>sgns::logging::network_telemetry_logging_value</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="80" column="6" bodyfile="node/logging.hpp" bodystart="80" bodyend="80"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1aae79ab9ba725de9a1b7f7e2d8571651a" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::network_rejected_logging_value</definition>
+        <argsstring></argsstring>
+        <name>network_rejected_logging_value</name>
+        <qualifiedname>sgns::logging::network_rejected_logging_value</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="81" column="6" bodyfile="node/logging.hpp" bodystart="81" bodyend="81"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1adc57362162f5302f6cdd0aa98f6f8ca4" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::node_lifetime_tracing_value</definition>
+        <argsstring></argsstring>
+        <name>node_lifetime_tracing_value</name>
+        <qualifiedname>sgns::logging::node_lifetime_tracing_value</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="82" column="6" bodyfile="node/logging.hpp" bodystart="82" bodyend="82"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1a586af63e1166748753506402f757ac3c" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::insufficient_work_logging_value</definition>
+        <argsstring></argsstring>
+        <name>insufficient_work_logging_value</name>
+        <qualifiedname>sgns::logging::insufficient_work_logging_value</qualifiedname>
+        <initializer>{ true }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="83" column="6" bodyfile="node/logging.hpp" bodystart="83" bodyend="83"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1a4729c31f31b8f17e121fc937a2f10b8f" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::log_ipc_value</definition>
+        <argsstring></argsstring>
+        <name>log_ipc_value</name>
+        <qualifiedname>sgns::logging::log_ipc_value</qualifiedname>
+        <initializer>{ true }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="84" column="6" bodyfile="node/logging.hpp" bodystart="84" bodyend="84"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1ae71185b31d8095d00b435cd0bc1cf042" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::bulk_pull_logging_value</definition>
+        <argsstring></argsstring>
+        <name>bulk_pull_logging_value</name>
+        <qualifiedname>sgns::logging::bulk_pull_logging_value</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="85" column="6" bodyfile="node/logging.hpp" bodystart="85" bodyend="85"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1a8768eb03c3bde84d86f8435fd69e68d2" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::work_generation_time_value</definition>
+        <argsstring></argsstring>
+        <name>work_generation_time_value</name>
+        <qualifiedname>sgns::logging::work_generation_time_value</qualifiedname>
+        <initializer>{ true }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="86" column="6" bodyfile="node/logging.hpp" bodystart="86" bodyend="86"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1a83fcbf0f8a36185ec6d27204b1569796" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::upnp_details_logging_value</definition>
+        <argsstring></argsstring>
+        <name>upnp_details_logging_value</name>
+        <qualifiedname>sgns::logging::upnp_details_logging_value</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="87" column="6" bodyfile="node/logging.hpp" bodystart="87" bodyend="87"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1a4e18890392f94eb422fbef06c899241f" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::timing_logging_value</definition>
+        <argsstring></argsstring>
+        <name>timing_logging_value</name>
+        <qualifiedname>sgns::logging::timing_logging_value</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="88" column="6" bodyfile="node/logging.hpp" bodystart="88" bodyend="88"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1a74bf490442de82553e5468ec9ed313c5" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::active_update_value</definition>
+        <argsstring></argsstring>
+        <name>active_update_value</name>
+        <qualifiedname>sgns::logging::active_update_value</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="89" column="6" bodyfile="node/logging.hpp" bodystart="89" bodyend="89"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1ab3aac59cfcc18b8494f9ccf5cba63dfe" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::log_to_cerr_value</definition>
+        <argsstring></argsstring>
+        <name>log_to_cerr_value</name>
+        <qualifiedname>sgns::logging::log_to_cerr_value</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="90" column="6" bodyfile="node/logging.hpp" bodystart="90" bodyend="90"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1a7676c1c3db71208c41fd4473187caf09" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::flush</definition>
+        <argsstring></argsstring>
+        <name>flush</name>
+        <qualifiedname>sgns::logging::flush</qualifiedname>
+        <initializer>{ true }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="91" column="6" bodyfile="node/logging.hpp" bodystart="91" bodyend="91"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1aa55b4e1d31ab32fa200aa449e19d5298" prot="public" static="no" mutable="no">
+        <type>uintmax_t</type>
+        <definition>uintmax_t sgns::logging::max_size</definition>
+        <argsstring></argsstring>
+        <name>max_size</name>
+        <qualifiedname>sgns::logging::max_size</qualifiedname>
+        <initializer>{ 128 * 1024 * 1024 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="92" column="11" bodyfile="node/logging.hpp" bodystart="92" bodyend="92"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1a9e94e2adde70ced5f10745656e2383fc" prot="public" static="no" mutable="no">
+        <type>uintmax_t</type>
+        <definition>uintmax_t sgns::logging::rotation_size</definition>
+        <argsstring></argsstring>
+        <name>rotation_size</name>
+        <qualifiedname>sgns::logging::rotation_size</qualifiedname>
+        <initializer>{ 4 * 1024 * 1024 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="93" column="11" bodyfile="node/logging.hpp" bodystart="93" bodyend="93"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1a8e85f9a4150fa016d1c25746d24a9df4" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::stable_log_filename</definition>
+        <argsstring></argsstring>
+        <name>stable_log_filename</name>
+        <qualifiedname>sgns::logging::stable_log_filename</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="94" column="6" bodyfile="node/logging.hpp" bodystart="94" bodyend="94"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1a635bf6535035f5d4a7c3f150c0b5b68d" prot="public" static="no" mutable="no">
+        <type>std::chrono::milliseconds</type>
+        <definition>std::chrono::milliseconds sgns::logging::min_time_between_log_output</definition>
+        <argsstring></argsstring>
+        <name>min_time_between_log_output</name>
+        <qualifiedname>sgns::logging::min_time_between_log_output</qualifiedname>
+        <initializer>{ 5 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="95" column="27" bodyfile="node/logging.hpp" bodystart="95" bodyend="95"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1aa506cb18feb0be41d2fc17874b9750ec" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::logging::single_line_record_value</definition>
+        <argsstring></argsstring>
+        <name>single_line_record_value</name>
+        <qualifiedname>sgns::logging::single_line_record_value</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="96" column="6" bodyfile="node/logging.hpp" bodystart="96" bodyend="96"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1a0429c406b3438d48dc5e22de439328d6" prot="private" static="yes" mutable="no">
+        <type>boost::shared_ptr&lt; boost::log::sinks::synchronous_sink&lt; boost::log::sinks::text_file_backend &gt; &gt;</type>
+        <definition>boost::shared_ptr&lt; boost::log::sinks::synchronous_sink&lt; boost::log::sinks::text_file_backend &gt; &gt; sgns::logging::file_sink</definition>
+        <argsstring></argsstring>
+        <name>file_sink</name>
+        <qualifiedname>sgns::logging::file_sink</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="104" column="26" bodyfile="node/logging.hpp" bodystart="104" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d29/classsgns_1_1logging_1afff9ed6cda8e1815c2409c94a92a4bc7" prot="private" static="yes" mutable="no">
+        <type>std::atomic_flag</type>
+        <definition>std::atomic_flag sgns::logging::logging_already_added</definition>
+        <argsstring></argsstring>
+        <name>logging_already_added</name>
+        <qualifiedname>sgns::logging::logging_already_added</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="105" column="25" bodyfile="node/logging.hpp" bodystart="105" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1adc65d0d2ff736f1c8e07202adf423a34" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::error_</type>
+        <definition>sgns::error_ sgns::logging::serialize_json</definition>
+        <argsstring>(sgns::jsonconfig &amp;) const</argsstring>
+        <name>serialize_json</name>
+        <qualifiedname>sgns::logging::serialize_json</qualifiedname>
+        <param>
+          <type>sgns::jsonconfig &amp;</type>
+          <defname>json</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="40" column="14" bodyfile="node/logging.cpp" bodystart="192" bodyend="221"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1a735dae442b58d55e5f69b000a2326de8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::error_</type>
+        <definition>sgns::error_ sgns::logging::deserialize_json</definition>
+        <argsstring>(bool &amp;, sgns::jsonconfig &amp;)</argsstring>
+        <name>deserialize_json</name>
+        <qualifiedname>sgns::logging::deserialize_json</qualifiedname>
+        <param>
+          <type>bool &amp;</type>
+          <defname>upgraded_a</defname>
+        </param>
+        <param>
+          <type>sgns::jsonconfig &amp;</type>
+          <defname>json</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="41" column="14" bodyfile="node/logging.cpp" bodystart="260" bodyend="307"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1a969990a7e0251824eb68f7991ddcef10" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::error_</type>
+        <definition>sgns::error_ sgns::logging::serialize_toml</definition>
+        <argsstring>(sgns::tomlconfig &amp;) const</argsstring>
+        <name>serialize_toml</name>
+        <qualifiedname>sgns::logging::serialize_toml</qualifiedname>
+        <param>
+          <type>sgns::tomlconfig &amp;</type>
+          <defname>toml</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="42" column="14" bodyfile="node/logging.cpp" bodystart="124" bodyend="155"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1ac5000262777e244ca80b52fac8c15c22" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::error_</type>
+        <definition>sgns::error_ sgns::logging::deserialize_toml</definition>
+        <argsstring>(sgns::tomlconfig &amp;)</argsstring>
+        <name>deserialize_toml</name>
+        <qualifiedname>sgns::logging::deserialize_toml</qualifiedname>
+        <param>
+          <type>sgns::tomlconfig &amp;</type>
+          <defname>toml</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="43" column="14" bodyfile="node/logging.cpp" bodystart="157" bodyend="190"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1a9f59c36b6b11b1474ea8a7e3315ee51c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::upgrade_json</definition>
+        <argsstring>(unsigned, sgns::jsonconfig &amp;)</argsstring>
+        <name>upgrade_json</name>
+        <qualifiedname>sgns::logging::upgrade_json</qualifiedname>
+        <param>
+          <type>unsigned</type>
+          <defname>version_a</defname>
+        </param>
+        <param>
+          <type>sgns::jsonconfig &amp;</type>
+          <defname>json</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="44" column="6" bodyfile="node/logging.cpp" bodystart="223" bodyend="258"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1a0a0173d35dfe2bb2ab7119c7d854ece5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::ledger_logging</definition>
+        <argsstring>() const</argsstring>
+        <name>ledger_logging</name>
+        <qualifiedname>sgns::logging::ledger_logging</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="45" column="6" bodyfile="node/logging.cpp" bodystart="309" bodyend="312"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1acbada8daa8cd170e7c7da5c00f9b067b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::ledger_duplicate_logging</definition>
+        <argsstring>() const</argsstring>
+        <name>ledger_duplicate_logging</name>
+        <qualifiedname>sgns::logging::ledger_duplicate_logging</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="46" column="6" bodyfile="node/logging.cpp" bodystart="314" bodyend="317"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1af37340df04eab8550ba5042c0e3dea51" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::vote_logging</definition>
+        <argsstring>() const</argsstring>
+        <name>vote_logging</name>
+        <qualifiedname>sgns::logging::vote_logging</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="47" column="6" bodyfile="node/logging.cpp" bodystart="319" bodyend="322"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1af58408810bbe55491be620f96b2f5cbb" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::network_logging</definition>
+        <argsstring>() const</argsstring>
+        <name>network_logging</name>
+        <qualifiedname>sgns::logging::network_logging</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="48" column="6" bodyfile="node/logging.cpp" bodystart="324" bodyend="327"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1abd084883fa064604fe5194c4c513ebc1" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::network_timeout_logging</definition>
+        <argsstring>() const</argsstring>
+        <name>network_timeout_logging</name>
+        <qualifiedname>sgns::logging::network_timeout_logging</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="49" column="6" bodyfile="node/logging.cpp" bodystart="329" bodyend="332"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1a76c58696f952af1497cf7171e8453aa9" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::network_message_logging</definition>
+        <argsstring>() const</argsstring>
+        <name>network_message_logging</name>
+        <qualifiedname>sgns::logging::network_message_logging</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="50" column="6" bodyfile="node/logging.cpp" bodystart="334" bodyend="337"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1abad17af8871b30302b63eb32c446059a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::network_publish_logging</definition>
+        <argsstring>() const</argsstring>
+        <name>network_publish_logging</name>
+        <qualifiedname>sgns::logging::network_publish_logging</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="51" column="6" bodyfile="node/logging.cpp" bodystart="339" bodyend="342"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1a84919a7e77597f6c1c081c03580dc438" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::network_packet_logging</definition>
+        <argsstring>() const</argsstring>
+        <name>network_packet_logging</name>
+        <qualifiedname>sgns::logging::network_packet_logging</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="52" column="6" bodyfile="node/logging.cpp" bodystart="344" bodyend="347"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1a28878241a1eaa914b69e52ce727eb429" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::network_keepalive_logging</definition>
+        <argsstring>() const</argsstring>
+        <name>network_keepalive_logging</name>
+        <qualifiedname>sgns::logging::network_keepalive_logging</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="53" column="6" bodyfile="node/logging.cpp" bodystart="349" bodyend="352"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1a0773e0f808a2cc814ec1dffd88273d7b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::network_node_id_handshake_logging</definition>
+        <argsstring>() const</argsstring>
+        <name>network_node_id_handshake_logging</name>
+        <qualifiedname>sgns::logging::network_node_id_handshake_logging</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="54" column="6" bodyfile="node/logging.cpp" bodystart="354" bodyend="357"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1a937f74cd6b769c597d904d2182577b82" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::network_telemetry_logging</definition>
+        <argsstring>() const</argsstring>
+        <name>network_telemetry_logging</name>
+        <qualifiedname>sgns::logging::network_telemetry_logging</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="55" column="6" bodyfile="node/logging.cpp" bodystart="359" bodyend="362"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1a55327c318f0b7a361e036847a919f6a9" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::network_rejected_logging</definition>
+        <argsstring>() const</argsstring>
+        <name>network_rejected_logging</name>
+        <qualifiedname>sgns::logging::network_rejected_logging</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="56" column="6" bodyfile="node/logging.cpp" bodystart="364" bodyend="367"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1aa4a8e86d9266b2e9c549f86fa641ce75" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::node_lifetime_tracing</definition>
+        <argsstring>() const</argsstring>
+        <name>node_lifetime_tracing</name>
+        <qualifiedname>sgns::logging::node_lifetime_tracing</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="57" column="6" bodyfile="node/logging.cpp" bodystart="369" bodyend="372"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1a6b60dff85b3427022e6fdf185973df29" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::insufficient_work_logging</definition>
+        <argsstring>() const</argsstring>
+        <name>insufficient_work_logging</name>
+        <qualifiedname>sgns::logging::insufficient_work_logging</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="58" column="6" bodyfile="node/logging.cpp" bodystart="374" bodyend="377"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1ac86f6aa263fccfe20fcc8d768e778c23" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::upnp_details_logging</definition>
+        <argsstring>() const</argsstring>
+        <name>upnp_details_logging</name>
+        <qualifiedname>sgns::logging::upnp_details_logging</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="59" column="6" bodyfile="node/logging.cpp" bodystart="399" bodyend="402"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1a0ab5d8c0f6fc986e425bbe22c6eff369" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::timing_logging</definition>
+        <argsstring>() const</argsstring>
+        <name>timing_logging</name>
+        <qualifiedname>sgns::logging::timing_logging</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="60" column="6" bodyfile="node/logging.cpp" bodystart="404" bodyend="407"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1a985ac283bed41bcc4f5ff7f490579559" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::log_ipc</definition>
+        <argsstring>() const</argsstring>
+        <name>log_ipc</name>
+        <qualifiedname>sgns::logging::log_ipc</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="61" column="6" bodyfile="node/logging.cpp" bodystart="379" bodyend="382"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1a4713783af81ab7a02e85b7a2167d2d2b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::bulk_pull_logging</definition>
+        <argsstring>() const</argsstring>
+        <name>bulk_pull_logging</name>
+        <qualifiedname>sgns::logging::bulk_pull_logging</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="62" column="6" bodyfile="node/logging.cpp" bodystart="384" bodyend="387"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1afe88495e441294ede0241b12f05182c6" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::callback_logging</definition>
+        <argsstring>() const</argsstring>
+        <name>callback_logging</name>
+        <qualifiedname>sgns::logging::callback_logging</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="63" column="6" bodyfile="node/logging.cpp" bodystart="389" bodyend="392"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1a45ad5665d47ee696939f1adbde5f082a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::work_generation_time</definition>
+        <argsstring>() const</argsstring>
+        <name>work_generation_time</name>
+        <qualifiedname>sgns::logging::work_generation_time</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="64" column="6" bodyfile="node/logging.cpp" bodystart="394" bodyend="397"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1a5250101078cd9f709f8f9bd2dee0d95e" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::active_update_logging</definition>
+        <argsstring>() const</argsstring>
+        <name>active_update_logging</name>
+        <qualifiedname>sgns::logging::active_update_logging</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="65" column="6" bodyfile="node/logging.cpp" bodystart="409" bodyend="412"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1a917c880bd4587c6f4df9b1ae7d7d7488" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::log_to_cerr</definition>
+        <argsstring>() const</argsstring>
+        <name>log_to_cerr</name>
+        <qualifiedname>sgns::logging::log_to_cerr</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="66" column="6" bodyfile="node/logging.cpp" bodystart="414" bodyend="417"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1a0866350e8f8f30f35d8756b5c34bfd71" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::logging::single_line_record</definition>
+        <argsstring>() const</argsstring>
+        <name>single_line_record</name>
+        <qualifiedname>sgns::logging::single_line_record</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="67" column="6" bodyfile="node/logging.cpp" bodystart="419" bodyend="422"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1aff2a668795f33f9142c31ace20203f0b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::logging::init</definition>
+        <argsstring>(boost::filesystem::path const &amp;)</argsstring>
+        <name>init</name>
+        <qualifiedname>sgns::logging::init</qualifiedname>
+        <param>
+          <type>boost::filesystem::path const &amp;</type>
+          <defname>application_path_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="68" column="6" bodyfile="node/logging.cpp" bodystart="25" bodyend="113"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1a7af56b0f2fa4727df955df287e0bb611" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>unsigned</type>
+        <definition>unsigned sgns::logging::json_version</definition>
+        <argsstring>() const</argsstring>
+        <name>json_version</name>
+        <qualifiedname>sgns::logging::json_version</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="98" column="10" bodyfile="node/logging.hpp" bodystart="98" bodyend="101"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="dd/d29/classsgns_1_1logging_1aed517ece0d2323bc76b8d7aa07d64b5d" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::logging::release_file_sink</definition>
+        <argsstring>()</argsstring>
+        <name>release_file_sink</name>
+        <qualifiedname>sgns::logging::release_file_sink</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/logging.hpp" line="97" column="13" bodyfile="node/logging.cpp" bodystart="115" bodyend="122"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::logging</label>
+        <link refid="dd/d29/classsgns_1_1logging"/>
+      </node>
+    </collaborationgraph>
+    <location file="node/logging.hpp" line="37" column="1" bodyfile="node/logging.hpp" bodystart="38" bodyend="106"/>
+    <listofallmembers>
+      <member refid="dd/d29/classsgns_1_1logging_1a5250101078cd9f709f8f9bd2dee0d95e" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>active_update_logging</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a74bf490442de82553e5468ec9ed313c5" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>active_update_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a4713783af81ab7a02e85b7a2167d2d2b" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>bulk_pull_logging</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1ae71185b31d8095d00b435cd0bc1cf042" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>bulk_pull_logging_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1afe88495e441294ede0241b12f05182c6" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>callback_logging</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a735dae442b58d55e5f69b000a2326de8" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>deserialize_json</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1ac5000262777e244ca80b52fac8c15c22" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>deserialize_toml</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a0429c406b3438d48dc5e22de439328d6" prot="private" virt="non-virtual"><scope>sgns::logging</scope><name>file_sink</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a7676c1c3db71208c41fd4473187caf09" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>flush</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1aff2a668795f33f9142c31ace20203f0b" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>init</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a6b60dff85b3427022e6fdf185973df29" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>insufficient_work_logging</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a586af63e1166748753506402f757ac3c" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>insufficient_work_logging_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a7af56b0f2fa4727df955df287e0bb611" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>json_version</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1acbada8daa8cd170e7c7da5c00f9b067b" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>ledger_duplicate_logging</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a801fb0109afa0167860f6d80038e3d2d" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>ledger_duplicate_logging_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a0a0173d35dfe2bb2ab7119c7d854ece5" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>ledger_logging</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1af839a12f0532205e2c54109e535f00c4" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>ledger_logging_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a985ac283bed41bcc4f5ff7f490579559" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>log_ipc</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a4729c31f31b8f17e121fc937a2f10b8f" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>log_ipc_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a917c880bd4587c6f4df9b1ae7d7d7488" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>log_to_cerr</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1ab3aac59cfcc18b8494f9ccf5cba63dfe" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>log_to_cerr_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1afff9ed6cda8e1815c2409c94a92a4bc7" prot="private" virt="non-virtual"><scope>sgns::logging</scope><name>logging_already_added</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1aa55b4e1d31ab32fa200aa449e19d5298" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>max_size</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a635bf6535035f5d4a7c3f150c0b5b68d" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>min_time_between_log_output</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a28878241a1eaa914b69e52ce727eb429" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>network_keepalive_logging</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1ae612278869cd64bac66f5b0ab52887c1" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>network_keepalive_logging_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1af58408810bbe55491be620f96b2f5cbb" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>network_logging</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1aca64e97e35433d8a4e5e9d97c5799e17" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>network_logging_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a76c58696f952af1497cf7171e8453aa9" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>network_message_logging</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a43d4c104cceff65815add51c5174e98e" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>network_message_logging_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a0773e0f808a2cc814ec1dffd88273d7b" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>network_node_id_handshake_logging</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a6519602d390a7958a34c4e0909e3ed4e" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>network_node_id_handshake_logging_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a84919a7e77597f6c1c081c03580dc438" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>network_packet_logging</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1abbdbbb2648b8389985d12f183ef31547" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>network_packet_logging_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1abad17af8871b30302b63eb32c446059a" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>network_publish_logging</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1ae624688278fbdd90c983061defb9d85a" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>network_publish_logging_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a55327c318f0b7a361e036847a919f6a9" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>network_rejected_logging</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1aae79ab9ba725de9a1b7f7e2d8571651a" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>network_rejected_logging_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a937f74cd6b769c597d904d2182577b82" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>network_telemetry_logging</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a0983862d23bfbc0753c27d0e5399cdfa" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>network_telemetry_logging_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1abd084883fa064604fe5194c4c513ebc1" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>network_timeout_logging</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1aefeb0d2727e95558699effe86faf04eb" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>network_timeout_logging_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1aa4a8e86d9266b2e9c549f86fa641ce75" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>node_lifetime_tracing</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1adc57362162f5302f6cdd0aa98f6f8ca4" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>node_lifetime_tracing_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1aed517ece0d2323bc76b8d7aa07d64b5d" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>release_file_sink</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a9e94e2adde70ced5f10745656e2383fc" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>rotation_size</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1adc65d0d2ff736f1c8e07202adf423a34" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>serialize_json</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a969990a7e0251824eb68f7991ddcef10" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>serialize_toml</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a0866350e8f8f30f35d8756b5c34bfd71" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>single_line_record</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1aa506cb18feb0be41d2fc17874b9750ec" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>single_line_record_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a8e85f9a4150fa016d1c25746d24a9df4" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>stable_log_filename</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a0ab5d8c0f6fc986e425bbe22c6eff369" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>timing_logging</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a4e18890392f94eb422fbef06c899241f" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>timing_logging_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a9f59c36b6b11b1474ea8a7e3315ee51c" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>upgrade_json</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1ac86f6aa263fccfe20fcc8d768e778c23" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>upnp_details_logging</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a83fcbf0f8a36185ec6d27204b1569796" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>upnp_details_logging_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1af37340df04eab8550ba5042c0e3dea51" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>vote_logging</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a2dafc22ccfc043bb5662a85261ef1a02" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>vote_logging_value</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a45ad5665d47ee696939f1adbde5f082a" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>work_generation_time</name></member>
+      <member refid="dd/d29/classsgns_1_1logging_1a8768eb03c3bde84d86f8435fd69e68d2" prot="public" virt="non-virtual"><scope>sgns::logging</scope><name>work_generation_time_value</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

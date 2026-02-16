@@ -1,0 +1,395 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/dd8/classsgns_1_1runtime_1_1binaryen_1_1_core_factory_impl" kind="class" language="C++" prot="public">
+    <compoundname>sgns::runtime::binaryen::CoreFactoryImpl</compoundname>
+    <basecompoundref refid="d0/d4b/classsgns_1_1runtime_1_1_core_factory" prot="public" virt="non-virtual">sgns::runtime::CoreFactory</basecompoundref>
+    <includes refid="d7/de4/core__factory__impl_8hpp" local="no">core_factory_impl.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d5/dd8/classsgns_1_1runtime_1_1binaryen_1_1_core_factory_impl_1a1205bc1a202a58858dd36cdedcf39c59" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager" kindref="compound">RuntimeManager</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;RuntimeManager&gt; sgns::runtime::binaryen::CoreFactoryImpl::runtime_manager_</definition>
+        <argsstring></argsstring>
+        <name>runtime_manager_</name>
+        <qualifiedname>sgns::runtime::binaryen::CoreFactoryImpl::runtime_manager_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/core_factory_impl.hpp" line="30" column="21" bodyfile="src/runtime/binaryen/runtime_api/core_factory_impl.hpp" bodystart="30" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/dd8/classsgns_1_1runtime_1_1binaryen_1_1_core_factory_impl_1a850b33301fb6a46c7d093035f58cdaee" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker" kindref="compound">storage::changes_trie::ChangesTracker</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;storage::changes_trie::ChangesTracker&gt; sgns::runtime::binaryen::CoreFactoryImpl::changes_tracker_</definition>
+        <argsstring></argsstring>
+        <name>changes_tracker_</name>
+        <qualifiedname>sgns::runtime::binaryen::CoreFactoryImpl::changes_tracker_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/core_factory_impl.hpp" line="31" column="21" bodyfile="src/runtime/binaryen/runtime_api/core_factory_impl.hpp" bodystart="31" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/dd8/classsgns_1_1runtime_1_1binaryen_1_1_core_factory_impl_1a8183f3423eaaba9fc2e8db267e8aa4e9" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository" kindref="compound">blockchain::BlockHeaderRepository</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;blockchain::BlockHeaderRepository&gt; sgns::runtime::binaryen::CoreFactoryImpl::header_repo_</definition>
+        <argsstring></argsstring>
+        <name>header_repo_</name>
+        <qualifiedname>sgns::runtime::binaryen::CoreFactoryImpl::header_repo_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/core_factory_impl.hpp" line="32" column="21" bodyfile="src/runtime/binaryen/runtime_api/core_factory_impl.hpp" bodystart="32" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d5/dd8/classsgns_1_1runtime_1_1binaryen_1_1_core_factory_impl_1a6134399c79011097eaf5678684887760" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::binaryen::CoreFactoryImpl::CoreFactoryImpl</definition>
+        <argsstring>(std::shared_ptr&lt; RuntimeManager &gt; runtime_manager, std::shared_ptr&lt; storage::changes_trie::ChangesTracker &gt; changes_tracker, std::shared_ptr&lt; blockchain::BlockHeaderRepository &gt; header_repo)</argsstring>
+        <name>CoreFactoryImpl</name>
+        <qualifiedname>sgns::runtime::binaryen::CoreFactoryImpl::CoreFactoryImpl</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager" kindref="compound">RuntimeManager</ref> &gt;</type>
+          <declname>runtime_manager</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker" kindref="compound">storage::changes_trie::ChangesTracker</ref> &gt;</type>
+          <declname>changes_tracker</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository" kindref="compound">blockchain::BlockHeaderRepository</ref> &gt;</type>
+          <declname>header_repo</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/core_factory_impl.hpp" line="20" column="5" bodyfile="src/runtime/binaryen/runtime_api/core_factory_impl.cpp" bodystart="9" bodyend="19"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dd8/classsgns_1_1runtime_1_1binaryen_1_1_core_factory_impl_1a83a00d06c16a5ca7d80e818ae2e0cba1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::binaryen::CoreFactoryImpl::~CoreFactoryImpl</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~CoreFactoryImpl</name>
+        <qualifiedname>sgns::runtime::binaryen::CoreFactoryImpl::~CoreFactoryImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/core_factory_impl.hpp" line="24" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dd8/classsgns_1_1runtime_1_1binaryen_1_1_core_factory_impl_1a8c7903ae662b2e791a20ea5c42a09acb" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>std::unique_ptr&lt; <ref refid="d4/df1/classsgns_1_1runtime_1_1_core" kindref="compound">Core</ref> &gt;</type>
+        <definition>std::unique_ptr&lt; Core &gt; sgns::runtime::binaryen::CoreFactoryImpl::createWithCode</definition>
+        <argsstring>(std::shared_ptr&lt; WasmProvider &gt; wasm_provider) override</argsstring>
+        <name>createWithCode</name>
+        <qualifiedname>sgns::runtime::binaryen::CoreFactoryImpl::createWithCode</qualifiedname>
+        <reimplements refid="d0/d4b/classsgns_1_1runtime_1_1_core_factory_1ad0570ddd09532e4caf38992fabdd3a52">createWithCode</reimplements>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d2/d00/classsgns_1_1runtime_1_1_wasm_provider" kindref="compound">WasmProvider</ref> &gt;</type>
+          <declname>wasm_provider</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Creates a <ref refid="d4/df1/classsgns_1_1runtime_1_1_core" kindref="compound">Core</ref> API object backed by the code that <itemizedlist>
+<listitem><para>wasm_provider serves </para>
+</listitem>
+</itemizedlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/core_factory_impl.hpp" line="26" column="21" bodyfile="src/runtime/binaryen/runtime_api/core_factory_impl.cpp" bodystart="21" bodyend="27"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::runtime::CoreFactory</label>
+        <link refid="d0/d4b/classsgns_1_1runtime_1_1_core_factory"/>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::binaryen::CoreFactoryImpl</label>
+        <link refid="d5/dd8/classsgns_1_1runtime_1_1binaryen_1_1_core_factory_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="15">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="24">
+        <label>K</label>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="20">
+        <label>sgns::base::Blob&lt; size_ &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>sgns::base::Blob&lt; 32 &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+        <childnode refid="20" relation="template-instance">
+          <edgelabel>&lt; 32 &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="33">
+        <label>sgns::blockchain::BlockHeaderRepository</label>
+        <link refid="dc/d45/classsgns_1_1blockchain_1_1_block_header_repository"/>
+        <childnode refid="15" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>sgns::crypto::Hasher</label>
+        <link refid="dd/d14/classsgns_1_1crypto_1_1_hasher"/>
+        <childnode refid="15" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::CoreFactory</label>
+        <link refid="d0/d4b/classsgns_1_1runtime_1_1_core_factory"/>
+      </node>
+      <node id="9">
+        <label>sgns::runtime::TrieStorageProvider</label>
+        <link refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider"/>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::binaryen::CoreFactoryImpl</label>
+        <link refid="d5/dd8/classsgns_1_1runtime_1_1binaryen_1_1_core_factory_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-runtime_manager_</edgelabel>
+        </childnode>
+        <childnode refid="30" relation="usage">
+          <edgelabel>-changes_tracker_</edgelabel>
+        </childnode>
+        <childnode refid="32" relation="usage">
+          <edgelabel>-header_repo_</edgelabel>
+        </childnode>
+      </node>
+      <node id="26">
+        <label>sgns::runtime::binaryen::RuntimeExternalInterface</label>
+        <link refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface"/>
+        <childnode refid="27" relation="public-inheritance">
+        </childnode>
+        <childnode refid="28" relation="usage">
+          <edgelabel>-extension_</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::runtime::binaryen::RuntimeManager</label>
+        <link refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager"/>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-storage_provider_</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>-extension_factory_</edgelabel>
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>-module_factory_</edgelabel>
+        </childnode>
+        <childnode refid="13" relation="usage">
+          <edgelabel>-hasher_</edgelabel>
+        </childnode>
+        <childnode refid="16" relation="usage">
+          <edgelabel>-modules_mutex_</edgelabel>
+        </childnode>
+        <childnode refid="17" relation="usage">
+          <edgelabel>-modules_</edgelabel>
+        </childnode>
+        <childnode refid="25" relation="usage">
+          <edgelabel>-external_interface_</edgelabel>
+        </childnode>
+      </node>
+      <node id="22">
+        <label>sgns::runtime::binaryen::WasmModule</label>
+        <link refid="d9/d10/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module"/>
+      </node>
+      <node id="12">
+        <label>sgns::runtime::binaryen::WasmModuleFactory</label>
+        <link refid="df/dd7/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_factory"/>
+      </node>
+      <node id="31">
+        <label>sgns::storage::changes_trie::ChangesTracker</label>
+        <link refid="d4/d01/classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker"/>
+        <childnode refid="15" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="23">
+        <label>std::map&lt; K, T &gt;</label>
+        <childnode refid="24" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>std::map&lt; sgns::base::Blob&lt; 32 &gt;, std::shared_ptr&lt; sgns::runtime::binaryen::WasmModule &gt; &gt;</label>
+        <childnode refid="18" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="21" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="23" relation="template-instance">
+          <edgelabel>&lt; sgns::base::Blob&lt; 32 &gt;, std::shared_ptr&lt; sgns::runtime::binaryen::WasmModule &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>std::mutex</label>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::shared_ptr&lt; extensions::ExtensionFactory &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; extensions::ExtensionFactory &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="32">
+        <label>std::shared_ptr&lt; sgns::blockchain::BlockHeaderRepository &gt;</label>
+        <childnode refid="33" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::blockchain::BlockHeaderRepository &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="13">
+        <label>std::shared_ptr&lt; sgns::crypto::Hasher &gt;</label>
+        <childnode refid="14" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::crypto::Hasher &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; sgns::runtime::TrieStorageProvider &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::TrieStorageProvider &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="25">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::RuntimeExternalInterface &gt;</label>
+        <childnode refid="26" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::RuntimeExternalInterface &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::RuntimeManager &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::RuntimeManager &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::WasmModule &gt;</label>
+        <childnode refid="22" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::WasmModule &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::WasmModuleFactory &gt;</label>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::WasmModuleFactory &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="30">
+        <label>std::shared_ptr&lt; sgns::storage::changes_trie::ChangesTracker &gt;</label>
+        <childnode refid="31" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::changes_trie::ChangesTracker &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="29">
+        <label>std::unique_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="28">
+        <label>std::unique_ptr&lt; extensions::Extension &gt;</label>
+        <childnode refid="29" relation="template-instance">
+          <edgelabel>&lt; extensions::Extension &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="27">
+        <label>wasm::ShellExternalInterface</label>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/binaryen/runtime_api/core_factory_impl.hpp" line="18" column="3" bodyfile="src/runtime/binaryen/runtime_api/core_factory_impl.hpp" bodystart="18" bodyend="33"/>
+    <listofallmembers>
+      <member refid="d5/dd8/classsgns_1_1runtime_1_1binaryen_1_1_core_factory_impl_1a850b33301fb6a46c7d093035f58cdaee" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::CoreFactoryImpl</scope><name>changes_tracker_</name></member>
+      <member refid="d5/dd8/classsgns_1_1runtime_1_1binaryen_1_1_core_factory_impl_1a6134399c79011097eaf5678684887760" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::CoreFactoryImpl</scope><name>CoreFactoryImpl</name></member>
+      <member refid="d5/dd8/classsgns_1_1runtime_1_1binaryen_1_1_core_factory_impl_1a8c7903ae662b2e791a20ea5c42a09acb" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::CoreFactoryImpl</scope><name>createWithCode</name></member>
+      <member refid="d5/dd8/classsgns_1_1runtime_1_1binaryen_1_1_core_factory_impl_1a8183f3423eaaba9fc2e8db267e8aa4e9" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::CoreFactoryImpl</scope><name>header_repo_</name></member>
+      <member refid="d5/dd8/classsgns_1_1runtime_1_1binaryen_1_1_core_factory_impl_1a1205bc1a202a58858dd36cdedcf39c59" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::CoreFactoryImpl</scope><name>runtime_manager_</name></member>
+      <member refid="d0/d4b/classsgns_1_1runtime_1_1_core_factory_1aaacf832725a4a69ff868b17d511ffbe6" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::CoreFactoryImpl</scope><name>~CoreFactory</name></member>
+      <member refid="d5/dd8/classsgns_1_1runtime_1_1binaryen_1_1_core_factory_impl_1a83a00d06c16a5ca7d80e818ae2e0cba1" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::CoreFactoryImpl</scope><name>~CoreFactoryImpl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

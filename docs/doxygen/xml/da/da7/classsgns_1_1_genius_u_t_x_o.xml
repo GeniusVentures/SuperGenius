@@ -1,0 +1,249 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="da/da7/classsgns_1_1_genius_u_t_x_o" kind="class" language="C++" prot="public">
+    <compoundname>sgns::GeniusUTXO</compoundname>
+    <includes refid="d6/d74/_genius_u_t_x_o_8hpp" local="no">GeniusUTXO.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="da/da7/classsgns_1_1_genius_u_t_x_o_1aa281ed998409dcde0982e0eb809743cc" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+        <definition>base::Hash256 sgns::GeniusUTXO::txid_hash_</definition>
+        <argsstring></argsstring>
+        <name>txid_hash_</name>
+        <qualifiedname>sgns::GeniusUTXO::txid_hash_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusUTXO.hpp" line="58" column="23" bodyfile="src/account/GeniusUTXO.hpp" bodystart="58" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/da7/classsgns_1_1_genius_u_t_x_o_1ac045d807410b08b2bbab1592f2560873" prot="private" static="no" mutable="no">
+        <type>uint32_t</type>
+        <definition>uint32_t sgns::GeniusUTXO::output_idx_</definition>
+        <argsstring></argsstring>
+        <name>output_idx_</name>
+        <qualifiedname>sgns::GeniusUTXO::output_idx_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusUTXO.hpp" line="59" column="23" bodyfile="src/account/GeniusUTXO.hpp" bodystart="59" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/da7/classsgns_1_1_genius_u_t_x_o_1a77a07686b62db8d0d290c52c54c60a60" prot="private" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::GeniusUTXO::amount_</definition>
+        <argsstring></argsstring>
+        <name>amount_</name>
+        <qualifiedname>sgns::GeniusUTXO::amount_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusUTXO.hpp" line="60" column="23" bodyfile="src/account/GeniusUTXO.hpp" bodystart="60" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/da7/classsgns_1_1_genius_u_t_x_o_1a8dd084b9c6a406a7a81b177559704a90" prot="private" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::GeniusUTXO::locked_</definition>
+        <argsstring></argsstring>
+        <name>locked_</name>
+        <qualifiedname>sgns::GeniusUTXO::locked_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusUTXO.hpp" line="61" column="23" bodyfile="src/account/GeniusUTXO.hpp" bodystart="61" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="da/da7/classsgns_1_1_genius_u_t_x_o_1aa2c27028a6e1b45aeff17647e9d5b441" prot="private" static="no" mutable="no">
+        <type><ref refid="d9/dd1/classsgns_1_1_token_i_d" kindref="compound">TokenID</ref></type>
+        <definition>TokenID sgns::GeniusUTXO::token_id_</definition>
+        <argsstring></argsstring>
+        <name>token_id_</name>
+        <qualifiedname>sgns::GeniusUTXO::token_id_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusUTXO.hpp" line="62" column="23" bodyfile="src/account/GeniusUTXO.hpp" bodystart="62" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="da/da7/classsgns_1_1_genius_u_t_x_o_1a86d73aff76e66608d77ac1bb13711ed0" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::GeniusUTXO::GeniusUTXO</definition>
+        <argsstring>(const base::Hash256 &amp;hash, uint32_t previous_index, uint64_t amount, TokenID token_id)</argsstring>
+        <name>GeniusUTXO</name>
+        <qualifiedname>sgns::GeniusUTXO::GeniusUTXO</qualifiedname>
+        <param>
+          <type>const <ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref> &amp;</type>
+          <declname>hash</declname>
+        </param>
+        <param>
+          <type>uint32_t</type>
+          <declname>previous_index</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>amount</declname>
+        </param>
+        <param>
+          <type><ref refid="d9/dd1/classsgns_1_1_token_i_d" kindref="compound">TokenID</ref></type>
+          <declname>token_id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusUTXO.hpp" line="18" column="9" bodyfile="src/account/GeniusUTXO.hpp" bodystart="18" bodyend="25"/>
+      </memberdef>
+      <memberdef kind="function" id="da/da7/classsgns_1_1_genius_u_t_x_o_1a6e6d0975714bf710a158fbff943ad018" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::GeniusUTXO::SetLocked</definition>
+        <argsstring>(const bool locked)</argsstring>
+        <name>SetLocked</name>
+        <qualifiedname>sgns::GeniusUTXO::SetLocked</qualifiedname>
+        <param>
+          <type>const bool</type>
+          <declname>locked</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusUTXO.hpp" line="27" column="14" bodyfile="src/account/GeniusUTXO.hpp" bodystart="27" bodyend="30"/>
+      </memberdef>
+      <memberdef kind="function" id="da/da7/classsgns_1_1_genius_u_t_x_o_1ae332a1876a533f782928231a6c5664d2" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+        <definition>base::Hash256 sgns::GeniusUTXO::GetTxID</definition>
+        <argsstring>() const</argsstring>
+        <name>GetTxID</name>
+        <qualifiedname>sgns::GeniusUTXO::GetTxID</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusUTXO.hpp" line="32" column="23" bodyfile="src/account/GeniusUTXO.hpp" bodystart="32" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="function" id="da/da7/classsgns_1_1_genius_u_t_x_o_1a3e21557e65af625a498c16a816dfb6a8" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>uint32_t</type>
+        <definition>uint32_t sgns::GeniusUTXO::GetOutputIdx</definition>
+        <argsstring>() const</argsstring>
+        <name>GetOutputIdx</name>
+        <qualifiedname>sgns::GeniusUTXO::GetOutputIdx</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusUTXO.hpp" line="37" column="18" bodyfile="src/account/GeniusUTXO.hpp" bodystart="37" bodyend="40"/>
+      </memberdef>
+      <memberdef kind="function" id="da/da7/classsgns_1_1_genius_u_t_x_o_1a6e6a84687b1b30de698cf002c428cada" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::GeniusUTXO::GetAmount</definition>
+        <argsstring>() const</argsstring>
+        <name>GetAmount</name>
+        <qualifiedname>sgns::GeniusUTXO::GetAmount</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusUTXO.hpp" line="42" column="18" bodyfile="src/account/GeniusUTXO.hpp" bodystart="42" bodyend="45"/>
+      </memberdef>
+      <memberdef kind="function" id="da/da7/classsgns_1_1_genius_u_t_x_o_1adf69042be30fc4aacc0f57b726c450bf" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::GeniusUTXO::GetLock</definition>
+        <argsstring>() const</argsstring>
+        <name>GetLock</name>
+        <qualifiedname>sgns::GeniusUTXO::GetLock</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusUTXO.hpp" line="47" column="14" bodyfile="src/account/GeniusUTXO.hpp" bodystart="47" bodyend="50"/>
+      </memberdef>
+      <memberdef kind="function" id="da/da7/classsgns_1_1_genius_u_t_x_o_1a8757668a30c7397e24580df4a99fc372" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d9/dd1/classsgns_1_1_token_i_d" kindref="compound">TokenID</ref></type>
+        <definition>TokenID sgns::GeniusUTXO::GetTokenID</definition>
+        <argsstring>() const</argsstring>
+        <name>GetTokenID</name>
+        <qualifiedname>sgns::GeniusUTXO::GetTokenID</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusUTXO.hpp" line="52" column="17" bodyfile="src/account/GeniusUTXO.hpp" bodystart="52" bodyend="55"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="5">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::GeniusUTXO</label>
+        <link refid="da/da7/classsgns_1_1_genius_u_t_x_o"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-token_id_</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::TokenID</label>
+        <link refid="d9/dd1/classsgns_1_1_token_i_d"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::array&lt; uint8_t, 32 &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; uint8_t, 32 &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/account/GeniusUTXO.hpp" line="15" column="5" bodyfile="src/account/GeniusUTXO.hpp" bodystart="16" bodyend="63"/>
+    <listofallmembers>
+      <member refid="da/da7/classsgns_1_1_genius_u_t_x_o_1a77a07686b62db8d0d290c52c54c60a60" prot="private" virt="non-virtual"><scope>sgns::GeniusUTXO</scope><name>amount_</name></member>
+      <member refid="da/da7/classsgns_1_1_genius_u_t_x_o_1a86d73aff76e66608d77ac1bb13711ed0" prot="public" virt="non-virtual"><scope>sgns::GeniusUTXO</scope><name>GeniusUTXO</name></member>
+      <member refid="da/da7/classsgns_1_1_genius_u_t_x_o_1a6e6a84687b1b30de698cf002c428cada" prot="public" virt="non-virtual"><scope>sgns::GeniusUTXO</scope><name>GetAmount</name></member>
+      <member refid="da/da7/classsgns_1_1_genius_u_t_x_o_1adf69042be30fc4aacc0f57b726c450bf" prot="public" virt="non-virtual"><scope>sgns::GeniusUTXO</scope><name>GetLock</name></member>
+      <member refid="da/da7/classsgns_1_1_genius_u_t_x_o_1a3e21557e65af625a498c16a816dfb6a8" prot="public" virt="non-virtual"><scope>sgns::GeniusUTXO</scope><name>GetOutputIdx</name></member>
+      <member refid="da/da7/classsgns_1_1_genius_u_t_x_o_1a8757668a30c7397e24580df4a99fc372" prot="public" virt="non-virtual"><scope>sgns::GeniusUTXO</scope><name>GetTokenID</name></member>
+      <member refid="da/da7/classsgns_1_1_genius_u_t_x_o_1ae332a1876a533f782928231a6c5664d2" prot="public" virt="non-virtual"><scope>sgns::GeniusUTXO</scope><name>GetTxID</name></member>
+      <member refid="da/da7/classsgns_1_1_genius_u_t_x_o_1a8dd084b9c6a406a7a81b177559704a90" prot="private" virt="non-virtual"><scope>sgns::GeniusUTXO</scope><name>locked_</name></member>
+      <member refid="da/da7/classsgns_1_1_genius_u_t_x_o_1ac045d807410b08b2bbab1592f2560873" prot="private" virt="non-virtual"><scope>sgns::GeniusUTXO</scope><name>output_idx_</name></member>
+      <member refid="da/da7/classsgns_1_1_genius_u_t_x_o_1a6e6d0975714bf710a158fbff943ad018" prot="public" virt="non-virtual"><scope>sgns::GeniusUTXO</scope><name>SetLocked</name></member>
+      <member refid="da/da7/classsgns_1_1_genius_u_t_x_o_1aa2c27028a6e1b45aeff17647e9d5b441" prot="private" virt="non-virtual"><scope>sgns::GeniusUTXO</scope><name>token_id_</name></member>
+      <member refid="da/da7/classsgns_1_1_genius_u_t_x_o_1aa281ed998409dcde0982e0eb809743cc" prot="private" virt="non-virtual"><scope>sgns::GeniusUTXO</scope><name>txid_hash_</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

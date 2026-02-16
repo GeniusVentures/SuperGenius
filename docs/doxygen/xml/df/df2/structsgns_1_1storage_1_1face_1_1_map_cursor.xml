@@ -1,0 +1,253 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor" kind="struct" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::storage::face::MapCursor</compoundname>
+    <includes refid="d9/d4b/map__cursor_8hpp" local="no">map_cursor.hpp</includes>
+    <templateparamlist>
+      <param>
+        <type>typename K</type>
+      </param>
+      <param>
+        <type>typename V</type>
+      </param>
+    </templateparamlist>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1aa0ad20c2b901c2ee1a8a8a0be0f169c0" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::storage::face::MapCursor&lt; K, V &gt;::~MapCursor</definition>
+        <argsstring>()=default</argsstring>
+        <name>~MapCursor</name>
+        <qualifiedname>sgns::storage::face::MapCursor::~MapCursor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/map_cursor.hpp" line="17" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1ab94b4d14a0f9a9a071db04994f554b4b" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::storage::face::MapCursor&lt; K, V &gt;::seekToFirst</definition>
+        <argsstring>()=0</argsstring>
+        <name>seekToFirst</name>
+        <qualifiedname>sgns::storage::face::MapCursor::seekToFirst</qualifiedname>
+        <reimplementedby refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a1ca1a15047a7ce5e68e443a9b7c9fb29">seekToFirst</reimplementedby>
+        <reimplementedby refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a443517b65d395359220b9bd2ff2df8aa">seekToFirst</reimplementedby>
+        <briefdescription>
+<para>Same as std::begin(...);. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/map_cursor.hpp" line="22" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1a1ee1f250e632122582d02f410369f8e2" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::storage::face::MapCursor&lt; K, V &gt;::seek</definition>
+        <argsstring>(const K &amp;key)=0</argsstring>
+        <name>seek</name>
+        <qualifiedname>sgns::storage::face::MapCursor::seek</qualifiedname>
+        <reimplementedby refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1afa06d59a068abdf0a0e1e589f7f54ad4">seek</reimplementedby>
+        <reimplementedby refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a71b4cad27369888bbc98742b97032c73">seek</reimplementedby>
+        <param>
+          <type>const K &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Find given key and seek iterator to this key. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/map_cursor.hpp" line="27" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1a849a708a4a8bcd9e004f9b8ea62283a7" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::storage::face::MapCursor&lt; K, V &gt;::seekToLast</definition>
+        <argsstring>()=0</argsstring>
+        <name>seekToLast</name>
+        <qualifiedname>sgns::storage::face::MapCursor::seekToLast</qualifiedname>
+        <reimplementedby refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a5d1bfd58bfa010aae1682d9f132a79b2">seekToLast</reimplementedby>
+        <reimplementedby refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a7eaec60bcd0bc688c6bd76f8a8d12870">seekToLast</reimplementedby>
+        <briefdescription>
+<para>Same as std::rbegin(...);, e.g. points to the last valid element. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/map_cursor.hpp" line="32" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1ae440e958a9172cf9661e91f65f67fc4f" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>bool</type>
+        <definition>virtual bool sgns::storage::face::MapCursor&lt; K, V &gt;::isValid</definition>
+        <argsstring>() const =0</argsstring>
+        <name>isValid</name>
+        <qualifiedname>sgns::storage::face::MapCursor::isValid</qualifiedname>
+        <reimplementedby refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a8a941c3fa46ef99a949fd91f3c288e2f">isValid</reimplementedby>
+        <reimplementedby refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1afa380e4cbc228e3a29e9ec8477759571">isValid</reimplementedby>
+        <briefdescription>
+<para>Is iterator valid? </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>true if iterator points to the element of map, false otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/map_cursor.hpp" line="38" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1ae6e709b813b7b837eeb0507e91e995e5" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::storage::face::MapCursor&lt; K, V &gt;::next</definition>
+        <argsstring>()=0</argsstring>
+        <name>next</name>
+        <qualifiedname>sgns::storage::face::MapCursor::next</qualifiedname>
+        <reimplementedby refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a7639639792227b9da0023a003204797e">next</reimplementedby>
+        <reimplementedby refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1ad509ab8479771ac69c7ec7093834b8da">next</reimplementedby>
+        <briefdescription>
+<para>Make step forward. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/map_cursor.hpp" line="43" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1ab00e624a68d1c1a107fcb91dd53d97b3" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::storage::face::MapCursor&lt; K, V &gt;::prev</definition>
+        <argsstring>()=0</argsstring>
+        <name>prev</name>
+        <qualifiedname>sgns::storage::face::MapCursor::prev</qualifiedname>
+        <reimplementedby refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a6350014de21e2ee474202398b2f5ec3d">prev</reimplementedby>
+        <reimplementedby refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a649125281ef41defd54a54da117e4034">prev</reimplementedby>
+        <briefdescription>
+<para>Make step backwards. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/map_cursor.hpp" line="48" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1a4924be6694aef0f87174cd235f4f21ae" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; K &gt;</type>
+        <definition>virtual outcome::result&lt; K &gt; sgns::storage::face::MapCursor&lt; K, V &gt;::key</definition>
+        <argsstring>() const =0</argsstring>
+        <name>key</name>
+        <qualifiedname>sgns::storage::face::MapCursor::key</qualifiedname>
+        <reimplementedby refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1a34861fb7dba5becd8f2bbb12ac5c838b">key</reimplementedby>
+        <reimplementedby refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1acd35e423ed9a53c8cc25adcdc20b9b60">key</reimplementedby>
+        <briefdescription>
+<para>Getter for key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>key </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/map_cursor.hpp" line="54" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1a75161503b4cee69b0b4723dbe4febf66" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; V &gt;</type>
+        <definition>virtual outcome::result&lt; V &gt; sgns::storage::face::MapCursor&lt; K, V &gt;::value</definition>
+        <argsstring>() const =0</argsstring>
+        <name>value</name>
+        <qualifiedname>sgns::storage::face::MapCursor::value</qualifiedname>
+        <reimplementedby refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor_1af68caff11e3e0bd891bfc4225bc02b2a">value</reimplementedby>
+        <reimplementedby refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor_1a69f5f593e36879511c5f1eac284afac1">value</reimplementedby>
+        <briefdescription>
+<para>Getter for value. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>value </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/face/map_cursor.hpp" line="60" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>An abstraction over generic map cursor. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>K</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key type </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>V</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::storage::face::MapCursor&lt; Buffer, Buffer &gt;</label>
+        <link refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor"/>
+        <childnode refid="1" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::storage::face::MapCursor&lt; K, V &gt;</label>
+        <link refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor"/>
+      </node>
+      <node id="4">
+        <label>sgns::storage::face::MapCursor&lt; base::Buffer, base::Buffer &gt;</label>
+        <link refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor"/>
+        <childnode refid="1" relation="template-instance">
+          <edgelabel>&lt; base::Buffer, base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::rocksdb::Cursor</label>
+        <link refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::trie::SuperGeniusTrieCursor</label>
+        <link refid="d2/d7f/classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::storage::face::MapCursor&lt; K, V &gt;</label>
+        <link refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/face/map_cursor.hpp" line="16" column="3" bodyfile="src/storage/face/map_cursor.hpp" bodystart="16" bodyend="61"/>
+    <listofallmembers>
+      <member refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1ae440e958a9172cf9661e91f65f67fc4f" prot="public" virt="pure-virtual"><scope>sgns::storage::face::MapCursor</scope><name>isValid</name></member>
+      <member refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1a4924be6694aef0f87174cd235f4f21ae" prot="public" virt="pure-virtual"><scope>sgns::storage::face::MapCursor</scope><name>key</name></member>
+      <member refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1ae6e709b813b7b837eeb0507e91e995e5" prot="public" virt="pure-virtual"><scope>sgns::storage::face::MapCursor</scope><name>next</name></member>
+      <member refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1ab00e624a68d1c1a107fcb91dd53d97b3" prot="public" virt="pure-virtual"><scope>sgns::storage::face::MapCursor</scope><name>prev</name></member>
+      <member refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1a1ee1f250e632122582d02f410369f8e2" prot="public" virt="pure-virtual"><scope>sgns::storage::face::MapCursor</scope><name>seek</name></member>
+      <member refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1ab94b4d14a0f9a9a071db04994f554b4b" prot="public" virt="pure-virtual"><scope>sgns::storage::face::MapCursor</scope><name>seekToFirst</name></member>
+      <member refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1a849a708a4a8bcd9e004f9b8ea62283a7" prot="public" virt="pure-virtual"><scope>sgns::storage::face::MapCursor</scope><name>seekToLast</name></member>
+      <member refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1a75161503b4cee69b0b4723dbe4febf66" prot="public" virt="pure-virtual"><scope>sgns::storage::face::MapCursor</scope><name>value</name></member>
+      <member refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor_1aa0ad20c2b901c2ee1a8a8a0be0f169c0" prot="public" virt="virtual"><scope>sgns::storage::face::MapCursor</scope><name>~MapCursor</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

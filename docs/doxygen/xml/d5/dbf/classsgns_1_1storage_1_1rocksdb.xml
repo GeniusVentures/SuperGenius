@@ -1,0 +1,1084 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/dbf/classsgns_1_1storage_1_1rocksdb" kind="class" language="C++" prot="public">
+    <compoundname>sgns::storage::rocksdb</compoundname>
+    <basecompoundref refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage" prot="public" virt="non-virtual">sgns::storage::face::GenericStorage&lt; Buffer, Buffer &gt;</basecompoundref>
+    <includes refid="d1/d07/rocksdb_8hpp" local="no">rocksdb.hpp</includes>
+    <innerclass refid="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch" prot="public">sgns::storage::rocksdb::Batch</innerclass>
+    <innerclass refid="d1/d14/classsgns_1_1storage_1_1rocksdb_1_1_cursor" prot="public">sgns::storage::rocksdb::Cursor</innerclass>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a4c81a1024edb1d6c7cd81361de6b4db8" prot="public" static="no">
+        <type>::ROCKSDB_NAMESPACE::Iterator</type>
+        <definition>using sgns::storage::rocksdb::Iterator = ::ROCKSDB_NAMESPACE::Iterator</definition>
+        <argsstring></argsstring>
+        <name>Iterator</name>
+        <qualifiedname>sgns::storage::rocksdb::Iterator</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="26" column="9" bodyfile="src/storage/rocksdb/rocksdb.hpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a468da9bdf288ed7ca5a9e91dd0c60480" prot="public" static="no">
+        <type>::ROCKSDB_NAMESPACE::Options</type>
+        <definition>using sgns::storage::rocksdb::Options = ::ROCKSDB_NAMESPACE::Options</definition>
+        <argsstring></argsstring>
+        <name>Options</name>
+        <qualifiedname>sgns::storage::rocksdb::Options</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="27" column="9" bodyfile="src/storage/rocksdb/rocksdb.hpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a407019abe6ea6dcf20c8941909512967" prot="public" static="no">
+        <type>::ROCKSDB_NAMESPACE::ReadOptions</type>
+        <definition>using sgns::storage::rocksdb::ReadOptions = ::ROCKSDB_NAMESPACE::ReadOptions</definition>
+        <argsstring></argsstring>
+        <name>ReadOptions</name>
+        <qualifiedname>sgns::storage::rocksdb::ReadOptions</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="28" column="9" bodyfile="src/storage/rocksdb/rocksdb.hpp" bodystart="28" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a301a7c55b4016f3bc36e6e6a00fb68c8" prot="public" static="no">
+        <type>::ROCKSDB_NAMESPACE::WriteOptions</type>
+        <definition>using sgns::storage::rocksdb::WriteOptions = ::ROCKSDB_NAMESPACE::WriteOptions</definition>
+        <argsstring></argsstring>
+        <name>WriteOptions</name>
+        <qualifiedname>sgns::storage::rocksdb::WriteOptions</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="29" column="9" bodyfile="src/storage/rocksdb/rocksdb.hpp" bodystart="29" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a637f04462eed6959d2de4d3ef6f44f19" prot="public" static="no">
+        <type>::ROCKSDB_NAMESPACE::DB</type>
+        <definition>using sgns::storage::rocksdb::DB = ::ROCKSDB_NAMESPACE::DB</definition>
+        <argsstring></argsstring>
+        <name>DB</name>
+        <qualifiedname>sgns::storage::rocksdb::DB</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="30" column="9" bodyfile="src/storage/rocksdb/rocksdb.hpp" bodystart="30" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a0c62d4a12443a094d04b1f1c9c84d7b9" prot="public" static="no">
+        <type>::ROCKSDB_NAMESPACE::Status</type>
+        <definition>using sgns::storage::rocksdb::Status = ::ROCKSDB_NAMESPACE::Status</definition>
+        <argsstring></argsstring>
+        <name>Status</name>
+        <qualifiedname>sgns::storage::rocksdb::Status</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="31" column="9" bodyfile="src/storage/rocksdb/rocksdb.hpp" bodystart="31" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a1492da459c197a6587932a81c3f48423" prot="public" static="no">
+        <type>::ROCKSDB_NAMESPACE::Slice</type>
+        <definition>using sgns::storage::rocksdb::Slice = ::ROCKSDB_NAMESPACE::Slice</definition>
+        <argsstring></argsstring>
+        <name>Slice</name>
+        <qualifiedname>sgns::storage::rocksdb::Slice</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="32" column="9" bodyfile="src/storage/rocksdb/rocksdb.hpp" bodystart="32" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a2c93b11da8a6ebd31ca7512ca2c86b41" prot="public" static="no">
+        <type>std::map&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref>, <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt;</type>
+        <definition>using sgns::storage::rocksdb::QueryResult = std::map&lt;Buffer, Buffer&gt;</definition>
+        <argsstring></argsstring>
+        <name>QueryResult</name>
+        <qualifiedname>sgns::storage::rocksdb::QueryResult</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="33" column="9" bodyfile="src/storage/rocksdb/rocksdb.hpp" bodystart="33" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1acad76d16fd17bc57044d10d18b36bb9a" prot="public" static="no">
+        <type>std::pair&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref>, <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt;</type>
+        <definition>using sgns::storage::rocksdb::KeyValuePair = std::pair&lt;Buffer, Buffer&gt;</definition>
+        <argsstring></argsstring>
+        <name>KeyValuePair</name>
+        <qualifiedname>sgns::storage::rocksdb::KeyValuePair</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="34" column="9" bodyfile="src/storage/rocksdb/rocksdb.hpp" bodystart="34" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a5d8153c8a888ce3e11e1b383f87d60c8" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a637f04462eed6959d2de4d3ef6f44f19" kindref="member">DB</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;DB&gt; sgns::storage::rocksdb::db_</definition>
+        <argsstring></argsstring>
+        <name>db_</name>
+        <qualifiedname>sgns::storage::rocksdb::db_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="111" column="30" bodyfile="src/storage/rocksdb/rocksdb.hpp" bodystart="111" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1ac3d098c7e87bca4776b0119df74bd0fd" prot="private" static="no" mutable="no">
+        <type><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a407019abe6ea6dcf20c8941909512967" kindref="member">ReadOptions</ref></type>
+        <definition>ReadOptions sgns::storage::rocksdb::ro_</definition>
+        <argsstring></argsstring>
+        <name>ro_</name>
+        <qualifiedname>sgns::storage::rocksdb::ro_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="112" column="34" bodyfile="src/storage/rocksdb/rocksdb.hpp" bodystart="112" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a2e7539a5d303bd280dd8a574f6604678" prot="private" static="no" mutable="no">
+        <type><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a301a7c55b4016f3bc36e6e6a00fb68c8" kindref="member">WriteOptions</ref></type>
+        <definition>WriteOptions sgns::storage::rocksdb::wo_</definition>
+        <argsstring></argsstring>
+        <name>wo_</name>
+        <qualifiedname>sgns::storage::rocksdb::wo_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="113" column="34" bodyfile="src/storage/rocksdb/rocksdb.hpp" bodystart="113" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a887ed6aacb28210b454f71acc859fa43" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::storage::rocksdb::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::storage::rocksdb::logger_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="114" column="34" bodyfile="src/storage/rocksdb/rocksdb.hpp" bodystart="114" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1af7364bd0d13b6553b5e512ec47184980" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a468da9bdf288ed7ca5a9e91dd0c60480" kindref="member">Options</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Options&gt; sgns::storage::rocksdb::options_</definition>
+        <argsstring></argsstring>
+        <name>options_</name>
+        <qualifiedname>sgns::storage::rocksdb::options_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="115" column="25" bodyfile="src/storage/rocksdb/rocksdb.hpp" bodystart="115" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a1b18fe835b15b5d5aa30ced2d5513ceb" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::storage::rocksdb::path_</definition>
+        <argsstring></argsstring>
+        <name>path_</name>
+        <qualifiedname>sgns::storage::rocksdb::path_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="116" column="34" bodyfile="src/storage/rocksdb/rocksdb.hpp" bodystart="116" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1afe5441e0945f6df3efc24899d0e74bb9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::rocksdb::~rocksdb</definition>
+        <argsstring>() override</argsstring>
+        <name>~rocksdb</name>
+        <qualifiedname>sgns::storage::rocksdb::~rocksdb</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="36" column="9" bodyfile="src/storage/rocksdb/rocksdb.cpp" bodystart="20" bodyend="20"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a718f819cbcb72a4c918d331e14fa7dcf" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::storage::rocksdb::setReadOptions</definition>
+        <argsstring>(ReadOptions ro)</argsstring>
+        <name>setReadOptions</name>
+        <qualifiedname>sgns::storage::rocksdb::setReadOptions</qualifiedname>
+        <param>
+          <type><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a407019abe6ea6dcf20c8941909512967" kindref="member">ReadOptions</ref></type>
+          <declname>ro</declname>
+        </param>
+        <briefdescription>
+<para>Set read options, which are used in. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="see"><para><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1abbd51767a3338a64b3db846bf3a22c16" kindref="member">rocksdb::get</ref> </para>
+</simplesect>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>ro</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>options </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="57" column="14" bodyfile="src/storage/rocksdb/rocksdb.cpp" bodystart="102" bodyend="105"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a913015f58da9a0c0150f150ee4a41133" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::storage::rocksdb::setWriteOptions</definition>
+        <argsstring>(WriteOptions wo)</argsstring>
+        <name>setWriteOptions</name>
+        <qualifiedname>sgns::storage::rocksdb::setWriteOptions</qualifiedname>
+        <param>
+          <type><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a301a7c55b4016f3bc36e6e6a00fb68c8" kindref="member">WriteOptions</ref></type>
+          <declname>wo</declname>
+        </param>
+        <briefdescription>
+<para>Set write options, which are used in. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="see"><para><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1adb3aff8f23568bd166c2df9e70a2f1d2" kindref="member">rocksdb::put</ref> </para>
+</simplesect>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>wo</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>options </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="63" column="14" bodyfile="src/storage/rocksdb/rocksdb.cpp" bodystart="107" bodyend="110"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a8c990ea95ebeee5fd0abf5b1ecd65456" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>std::unique_ptr&lt; <ref refid="d0/dbf/namespacesgns_1_1storage_1af3943c7b4511cc2ca91cfcac7f94fac3" kindref="member">BufferMapCursor</ref> &gt;</type>
+        <definition>std::unique_ptr&lt; BufferMapCursor &gt; sgns::storage::rocksdb::cursor</definition>
+        <argsstring>() override</argsstring>
+        <name>cursor</name>
+        <qualifiedname>sgns::storage::rocksdb::cursor</qualifiedname>
+        <reimplements refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable_1a44ca82af98f642669b5237f535b58001">cursor</reimplements>
+        <briefdescription>
+<para>Returns new key-value iterator. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>kv iterator </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="65" column="25" bodyfile="src/storage/rocksdb/rocksdb.cpp" bodystart="91" bodyend="95"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a255eca48e3786f29e7aad0ae1879a2af" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>std::unique_ptr&lt; <ref refid="d0/dbf/namespacesgns_1_1storage_1a5919619e4b0d178dbbbffbc8bcf1fb7d" kindref="member">BufferBatch</ref> &gt;</type>
+        <definition>std::unique_ptr&lt; BufferBatch &gt; sgns::storage::rocksdb::batch</definition>
+        <argsstring>() override</argsstring>
+        <name>batch</name>
+        <qualifiedname>sgns::storage::rocksdb::batch</qualifiedname>
+        <reimplements refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable_1af8f2ceafd524ec1a2180b3694f541fda">batch</reimplements>
+        <briefdescription>
+<para>Creates new Write <ref refid="d8/d2c/classsgns_1_1storage_1_1rocksdb_1_1_batch" kindref="compound">Batch</ref> - an object, which can be used to efficiently write bulk data. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="67" column="25" bodyfile="src/storage/rocksdb/rocksdb.cpp" bodystart="97" bodyend="100"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1abbd51767a3338a64b3db846bf3a22c16" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; Buffer &gt; sgns::storage::rocksdb::get</definition>
+        <argsstring>(const Buffer &amp;key) const override</argsstring>
+        <name>get</name>
+        <qualifiedname>sgns::storage::rocksdb::get</qualifiedname>
+        <reimplements refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a0aeb44c506c0f66a5d7bf3f3be4baebe">get</reimplements>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Get value by key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>K </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>V </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="69" column="25" bodyfile="src/storage/rocksdb/rocksdb.cpp" bodystart="112" bodyend="129"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a641035624043197b9baf08b3a36beaf5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a2c93b11da8a6ebd31ca7512ca2c86b41" kindref="member">QueryResult</ref> &gt;</type>
+        <definition>outcome::result&lt; rocksdb::QueryResult &gt; sgns::storage::rocksdb::query</definition>
+        <argsstring>(const Buffer &amp;keyPrefix) const</argsstring>
+        <name>query</name>
+        <qualifiedname>sgns::storage::rocksdb::query</qualifiedname>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>keyPrefix</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="71" column="25" bodyfile="src/storage/rocksdb/rocksdb.cpp" bodystart="131" bodyend="154"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a2e369bf0cf319362e98153558f41eb61" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a2c93b11da8a6ebd31ca7512ca2c86b41" kindref="member">QueryResult</ref> &gt;</type>
+        <definition>outcome::result&lt; rocksdb::QueryResult &gt; sgns::storage::rocksdb::query</definition>
+        <argsstring>(const std::string &amp;prefix_base, const std::string &amp;middle_part, const std::string &amp;remainder_prefix) const</argsstring>
+        <name>query</name>
+        <qualifiedname>sgns::storage::rocksdb::query</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>prefix_base</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>middle_part</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>remainder_prefix</declname>
+        </param>
+        <briefdescription>
+<para>Queries with a middle part that can be a wildcard, negated string or normal string. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">prefix_base</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The base prefix to query </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">middle_part</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Either a string (normal query), &apos;*&apos; or !string </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">remainder_prefix</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The remainder part of the query prefix </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>List of query results </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="80" column="25" bodyfile="src/storage/rocksdb/rocksdb.cpp" bodystart="156" bodyend="207"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1ac97834c7ce02ce1fe31f220b90d91ff1" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>bool</type>
+        <definition>bool sgns::storage::rocksdb::contains</definition>
+        <argsstring>(const Buffer &amp;key) const override</argsstring>
+        <name>contains</name>
+        <qualifiedname>sgns::storage::rocksdb::contains</qualifiedname>
+        <reimplements refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a0d7d1047789a450de21caff78afc5c37">contains</reimplements>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Returns true if given key-value binding exists in the storage. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>K </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if key has value, false otherwise. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="84" column="15" bodyfile="src/storage/rocksdb/rocksdb.cpp" bodystart="209" bodyend="214"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1acd1731393890033964295c54c938cff7" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>bool</type>
+        <definition>bool sgns::storage::rocksdb::empty</definition>
+        <argsstring>() const override</argsstring>
+        <name>empty</name>
+        <qualifiedname>sgns::storage::rocksdb::empty</qualifiedname>
+        <reimplements refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a829c8fbd3e864503defcaa43c8c2699b">empty</reimplements>
+        <briefdescription>
+<para>Returns true if the storage is empty. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="86" column="14" bodyfile="src/storage/rocksdb/rocksdb.cpp" bodystart="216" bodyend="221"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1adb3aff8f23568bd166c2df9e70a2f1d2" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::rocksdb::put</definition>
+        <argsstring>(const Buffer &amp;key, const Buffer &amp;value) override</argsstring>
+        <name>put</name>
+        <qualifiedname>sgns::storage::rocksdb::put</qualifiedname>
+        <reimplements refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a6c94f5ac466050295a32f93aeb5a0e8c">put</reimplements>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+<para>Store value by key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>result containing void if put successful, error otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="88" column="25" bodyfile="src/storage/rocksdb/rocksdb.cpp" bodystart="223" bodyend="232"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1af6c5466057458531799d25a412c34b98" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::rocksdb::put</definition>
+        <argsstring>(const Buffer &amp;key, Buffer &amp;&amp;value) override</argsstring>
+        <name>put</name>
+        <qualifiedname>sgns::storage::rocksdb::put</qualifiedname>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;&amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="91" column="25" bodyfile="src/storage/rocksdb/rocksdb.cpp" bodystart="234" bodyend="238"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1aa08bc5bf21f634b350ce1242a9eefbe5" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::storage::rocksdb::remove</definition>
+        <argsstring>(const Buffer &amp;key) override</argsstring>
+        <name>remove</name>
+        <qualifiedname>sgns::storage::rocksdb::remove</qualifiedname>
+        <reimplements refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1a13a83e4a2fa9540c366e277871701ac3">remove</reimplements>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+<para>Remove value by key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>K </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>error code if error happened </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="93" column="25" bodyfile="src/storage/rocksdb/rocksdb.cpp" bodystart="240" bodyend="249"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a23b9b096bd601ab101803431eb352b0f" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::storage::rocksdb::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::storage::rocksdb::GetName</qualifiedname>
+        <reimplements refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="95" column="21" bodyfile="src/storage/rocksdb/rocksdb.hpp" bodystart="95" bodyend="98"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1aaeae841cf8fede555c24860863c47ffb" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a637f04462eed6959d2de4d3ef6f44f19" kindref="member">DB</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; DB &gt; sgns::storage::rocksdb::getDB</definition>
+        <argsstring>() const</argsstring>
+        <name>getDB</name>
+        <qualifiedname>sgns::storage::rocksdb::getDB</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="100" column="26" bodyfile="src/storage/rocksdb/rocksdb.hpp" bodystart="100" bodyend="103"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a9f6c4fbbc1cf26decf452d1a99d2b8a0" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; <ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1acad76d16fd17bc57044d10d18b36bb9a" kindref="member">KeyValuePair</ref> &gt;</type>
+        <definition>std::vector&lt; rocksdb::KeyValuePair &gt; sgns::storage::rocksdb::GetAll</definition>
+        <argsstring>() const</argsstring>
+        <name>GetAll</name>
+        <qualifiedname>sgns::storage::rocksdb::GetAll</qualifiedname>
+        <briefdescription>
+<para>Gets all key value pairs on rocksdb. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="108" column="21" bodyfile="src/storage/rocksdb/rocksdb.cpp" bodystart="251" bodyend="266"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a854c6acc35ec78f8f80ff591694f6058" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; <ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb" kindref="compound">rocksdb</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; rocksdb &gt; &gt; sgns::storage::rocksdb::create</definition>
+        <argsstring>(std::string_view path, const Options &amp;options=Options())</argsstring>
+        <name>create</name>
+        <qualifiedname>sgns::storage::rocksdb::create</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>path</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a468da9bdf288ed7ca5a9e91dd0c60480" kindref="member">Options</ref> &amp;</type>
+          <declname>options</declname>
+          <defval><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a468da9bdf288ed7ca5a9e91dd0c60480" kindref="member">Options</ref>()</defval>
+        </param>
+        <briefdescription>
+<para>Factory method to create an instance of rocksdb class. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>filesystem path where database is going to be </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>options</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>rocksdb options, such as caching, logging, etc. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>instance of rocksdb </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="44" column="32" bodyfile="src/storage/rocksdb/rocksdb.cpp" bodystart="22" bodyend="76"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a573ccf7ca5216eb8e157f063df8f7c4c" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; <ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb" kindref="compound">rocksdb</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; rocksdb &gt; &gt; sgns::storage::rocksdb::create</definition>
+        <argsstring>(const std::shared_ptr&lt; DB &gt; &amp;db)</argsstring>
+        <name>create</name>
+        <qualifiedname>sgns::storage::rocksdb::create</qualifiedname>
+        <param>
+          <type>const std::shared_ptr&lt; <ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a637f04462eed6959d2de4d3ef6f44f19" kindref="member">DB</ref> &gt; &amp;</type>
+          <declname>db</declname>
+        </param>
+        <briefdescription>
+<para>Factory method to create an instance of rocksdb class. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>db</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>pointer to rocksdb database instance </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.hpp" line="51" column="32" bodyfile="src/storage/rocksdb/rocksdb.cpp" bodystart="78" bodyend="89"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>An implementation of PersistentBufferMap interface, which uses rocksdb as underlying storage. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>BufferStorage</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+        <childnode refid="19" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="18">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="15">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::storage::face::BatchWriteMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+        <childnode refid="14" relation="public-inheritance">
+        </childnode>
+        <childnode refid="15" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="17">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="19">
+        <label>sgns::storage::face::GenericStorage&lt; K, V &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="20" relation="public-inheritance">
+        </childnode>
+        <childnode refid="21" relation="public-inheritance">
+        </childnode>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="4">
+        <label>sgns::storage::face::Iterable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="8">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::face::ReadOnlyMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="20">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="6">
+        <label>sgns::storage::face::Readable&lt; Buffer, Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="13">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="12">
+        <label>sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="13" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="1">
+        <label>sgns::storage::rocksdb</label>
+        <link refid="d5/dbf/classsgns_1_1storage_1_1rocksdb"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>BufferStorage</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+        <childnode refid="19" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="18">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="24">
+        <label>T</label>
+      </node>
+      <node id="15">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::storage::face::BatchWriteMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+        <childnode refid="14" relation="public-inheritance">
+        </childnode>
+        <childnode refid="15" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="17">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="19">
+        <label>sgns::storage::face::GenericStorage&lt; K, V &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="20" relation="public-inheritance">
+        </childnode>
+        <childnode refid="21" relation="public-inheritance">
+        </childnode>
+        <childnode refid="18" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="4">
+        <label>sgns::storage::face::Iterable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="8">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::face::ReadOnlyMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="20">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="6">
+        <label>sgns::storage::face::Readable&lt; Buffer, Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="13">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="12">
+        <label>sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="13" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="1">
+        <label>sgns::storage::rocksdb</label>
+        <link refid="d5/dbf/classsgns_1_1storage_1_1rocksdb"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="22" relation="usage">
+          <edgelabel>-db_</edgelabel>
+        </childnode>
+        <childnode refid="25" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="26" relation="usage">
+          <edgelabel>-options_</edgelabel>
+        </childnode>
+        <childnode refid="27" relation="usage">
+          <edgelabel>-path_</edgelabel>
+        </childnode>
+      </node>
+      <node id="28">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="23">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="24" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="22">
+        <label>std::shared_ptr&lt; DB &gt;</label>
+        <childnode refid="23" relation="template-instance">
+          <edgelabel>&lt; DB &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="26">
+        <label>std::shared_ptr&lt; Options &gt;</label>
+        <childnode refid="23" relation="template-instance">
+          <edgelabel>&lt; Options &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="25">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="23" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="27">
+        <label>std::string</label>
+        <childnode refid="28" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/rocksdb/rocksdb.hpp" line="20" column="5" bodyfile="src/storage/rocksdb/rocksdb.hpp" bodystart="21" bodyend="117"/>
+    <listofallmembers>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a255eca48e3786f29e7aad0ae1879a2af" prot="public" virt="virtual"><scope>sgns::storage::rocksdb</scope><name>batch</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1ac97834c7ce02ce1fe31f220b90d91ff1" prot="public" virt="virtual"><scope>sgns::storage::rocksdb</scope><name>contains</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a854c6acc35ec78f8f80ff591694f6058" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>create</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a573ccf7ca5216eb8e157f063df8f7c4c" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>create</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a8c990ea95ebeee5fd0abf5b1ecd65456" prot="public" virt="virtual"><scope>sgns::storage::rocksdb</scope><name>cursor</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a637f04462eed6959d2de4d3ef6f44f19" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>DB</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a5d8153c8a888ce3e11e1b383f87d60c8" prot="private" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>db_</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1acd1731393890033964295c54c938cff7" prot="public" virt="virtual"><scope>sgns::storage::rocksdb</scope><name>empty</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1abbd51767a3338a64b3db846bf3a22c16" prot="public" virt="virtual"><scope>sgns::storage::rocksdb</scope><name>get</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a9f6c4fbbc1cf26decf452d1a99d2b8a0" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>GetAll</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1aaeae841cf8fede555c24860863c47ffb" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>getDB</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a23b9b096bd601ab101803431eb352b0f" prot="public" virt="virtual"><scope>sgns::storage::rocksdb</scope><name>GetName</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a4c81a1024edb1d6c7cd81361de6b4db8" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>Iterator</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1acad76d16fd17bc57044d10d18b36bb9a" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>KeyValuePair</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a887ed6aacb28210b454f71acc859fa43" prot="private" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>logger_</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a468da9bdf288ed7ca5a9e91dd0c60480" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>Options</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1af7364bd0d13b6553b5e512ec47184980" prot="private" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>options_</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a1b18fe835b15b5d5aa30ced2d5513ceb" prot="private" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>path_</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1adb3aff8f23568bd166c2df9e70a2f1d2" prot="public" virt="virtual"><scope>sgns::storage::rocksdb</scope><name>put</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1af6c5466057458531799d25a412c34b98" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>put</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a641035624043197b9baf08b3a36beaf5" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>query</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a2e369bf0cf319362e98153558f41eb61" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>query</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a2c93b11da8a6ebd31ca7512ca2c86b41" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>QueryResult</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a407019abe6ea6dcf20c8941909512967" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>ReadOptions</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1aa08bc5bf21f634b350ce1242a9eefbe5" prot="public" virt="virtual"><scope>sgns::storage::rocksdb</scope><name>remove</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1ac3d098c7e87bca4776b0119df74bd0fd" prot="private" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>ro_</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a718f819cbcb72a4c918d331e14fa7dcf" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>setReadOptions</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a913015f58da9a0c0150f150ee4a41133" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>setWriteOptions</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a1492da459c197a6587932a81c3f48423" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>Slice</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a0c62d4a12443a094d04b1f1c9c84d7b9" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>Status</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a2e7539a5d303bd280dd8a574f6604678" prot="private" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>wo_</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a301a7c55b4016f3bc36e6e6a00fb68c8" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>WriteOptions</name></member>
+      <member refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable_1a09ef385308b209ab00cf72ed42897e01" prot="public" virt="virtual"><scope>sgns::storage::rocksdb</scope><name>~Batchable</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::storage::rocksdb</scope><name>~IComponent</name></member>
+      <member refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable_1ad46259be5d5a46afb966c0ddfb78fa45" prot="public" virt="virtual"><scope>sgns::storage::rocksdb</scope><name>~Iterable</name></member>
+      <member refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable_1a481cee90de071b4bc04fae066e25236f" prot="public" virt="virtual"><scope>sgns::storage::rocksdb</scope><name>~Readable</name></member>
+      <member refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1afe5441e0945f6df3efc24899d0e74bb9" prot="public" virt="non-virtual"><scope>sgns::storage::rocksdb</scope><name>~rocksdb</name></member>
+      <member refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable_1adb986d79f420f5829cae3d6659430a00" prot="public" virt="virtual"><scope>sgns::storage::rocksdb</scope><name>~Writeable</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

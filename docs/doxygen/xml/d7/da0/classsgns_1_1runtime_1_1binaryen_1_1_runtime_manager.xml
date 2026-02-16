@@ -1,0 +1,502 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager" kind="class" language="C++" prot="public">
+    <compoundname>sgns::runtime::binaryen::RuntimeManager</compoundname>
+    <includes refid="d3/d10/runtime__manager_8hpp" local="no">runtime_manager.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a061e444fa2f4a30e84d87d9fe0d8b53d" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>Error</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeManager::Error</qualifiedname>
+        <enumvalue id="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a061e444fa2f4a30e84d87d9fe0d8b53dafa182723eb13bf3ca84ecc09b93ab7de" prot="public">
+          <name>EMPTY_STATE_CODE</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_manager.hpp" line="27" column="5" bodyfile="src/runtime/binaryen/runtime_manager.hpp" bodystart="27" bodyend="27"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1ad6c5aff8b74d9cab795519b4278cbdaf" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::runtime::binaryen::RuntimeManager::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeManager::logger_</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>(&quot;Runtime manager&quot;)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_manager.hpp" line="55" column="18" bodyfile="src/runtime/binaryen/runtime_manager.hpp" bodystart="55" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1aaedb0eea4b5917e7e4ba0fb87d627138" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider" kindref="compound">TrieStorageProvider</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;TrieStorageProvider&gt; sgns::runtime::binaryen::RuntimeManager::storage_provider_</definition>
+        <argsstring></argsstring>
+        <name>storage_provider_</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeManager::storage_provider_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_manager.hpp" line="57" column="21" bodyfile="src/runtime/binaryen/runtime_manager.hpp" bodystart="57" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a6251a3f16e16e331b8fb2565b799155c" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; extensions::ExtensionFactory &gt;</type>
+        <definition>std::shared_ptr&lt;extensions::ExtensionFactory&gt; sgns::runtime::binaryen::RuntimeManager::extension_factory_</definition>
+        <argsstring></argsstring>
+        <name>extension_factory_</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeManager::extension_factory_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_manager.hpp" line="58" column="21" bodyfile="src/runtime/binaryen/runtime_manager.hpp" bodystart="58" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a72877470e190888dc31ac6265d85377b" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="df/dd7/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_factory" kindref="compound">WasmModuleFactory</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;WasmModuleFactory&gt; sgns::runtime::binaryen::RuntimeManager::module_factory_</definition>
+        <argsstring></argsstring>
+        <name>module_factory_</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeManager::module_factory_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_manager.hpp" line="59" column="21" bodyfile="src/runtime/binaryen/runtime_manager.hpp" bodystart="59" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a231fc7f4ca23a35f5d6dbfe998d25719" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher" kindref="compound">crypto::Hasher</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;crypto::Hasher&gt; sgns::runtime::binaryen::RuntimeManager::hasher_</definition>
+        <argsstring></argsstring>
+        <name>hasher_</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeManager::hasher_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_manager.hpp" line="60" column="21" bodyfile="src/runtime/binaryen/runtime_manager.hpp" bodystart="60" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a8e5808f9b62d8fce24517ce9bc44c623" prot="private" static="no" mutable="no">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::runtime::binaryen::RuntimeManager::modules_mutex_</definition>
+        <argsstring></argsstring>
+        <name>modules_mutex_</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeManager::modules_mutex_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_manager.hpp" line="62" column="16" bodyfile="src/runtime/binaryen/runtime_manager.hpp" bodystart="62" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1af2f14e110068848f6ea99711201a4aed" prot="private" static="no" mutable="no">
+        <type>std::map&lt; <ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref>, std::shared_ptr&lt; <ref refid="d9/d10/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module" kindref="compound">WasmModule</ref> &gt; &gt;</type>
+        <definition>std::map&lt;base::Hash256, std::shared_ptr&lt;WasmModule&gt; &gt; sgns::runtime::binaryen::RuntimeManager::modules_</definition>
+        <argsstring></argsstring>
+        <name>modules_</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeManager::modules_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_manager.hpp" line="63" column="14" bodyfile="src/runtime/binaryen/runtime_manager.hpp" bodystart="63" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a9eb1d9fcecbf5b3e679f1bdc76b34165" prot="private" static="yes" mutable="no" thread_local="yes">
+        <type>std::shared_ptr&lt; <ref refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface" kindref="compound">RuntimeExternalInterface</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; RuntimeExternalInterface &gt; sgns::runtime::binaryen::RuntimeManager::external_interface_</definition>
+        <argsstring></argsstring>
+        <name>external_interface_</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeManager::external_interface_</qualifiedname>
+        <initializer>{}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_manager.hpp" line="66" column="9" bodyfile="src/runtime/binaryen/runtime_manager.hpp" bodystart="66" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a2818b6896ca32921b1c4fab1fd4d2044" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::binaryen::RuntimeManager::RuntimeManager</definition>
+        <argsstring>(std::shared_ptr&lt; extensions::ExtensionFactory &gt; extension_factory, std::shared_ptr&lt; WasmModuleFactory &gt; module_factory, std::shared_ptr&lt; TrieStorageProvider &gt; storage_provider, std::shared_ptr&lt; crypto::Hasher &gt; hasher)</argsstring>
+        <name>RuntimeManager</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeManager::RuntimeManager</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; extensions::ExtensionFactory &gt;</type>
+          <declname>extension_factory</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="df/dd7/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_factory" kindref="compound">WasmModuleFactory</ref> &gt;</type>
+          <declname>module_factory</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider" kindref="compound">TrieStorageProvider</ref> &gt;</type>
+          <declname>storage_provider</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="dd/d14/classsgns_1_1crypto_1_1_hasher" kindref="compound">crypto::Hasher</ref> &gt;</type>
+          <declname>hasher</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_manager.hpp" line="29" column="5" bodyfile="src/runtime/binaryen/runtime_manager.cpp" bodystart="24" bodyend="37"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a42c8f7eea65825debc62f7f1b336ca3c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment" kindref="compound">RuntimeEnvironment</ref> &gt;</type>
+        <definition>outcome::result&lt; RuntimeEnvironment &gt; sgns::runtime::binaryen::RuntimeManager::createPersistentRuntimeEnvironment</definition>
+        <argsstring>(const base::Buffer &amp;state_code)</argsstring>
+        <name>createPersistentRuntimeEnvironment</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeManager::createPersistentRuntimeEnvironment</qualifiedname>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>state_code</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_manager.hpp" line="35" column="21" bodyfile="src/runtime/binaryen/runtime_manager.cpp" bodystart="59" bodyend="68"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a64121cd401f6eb358b0fa0ba10dc994e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment" kindref="compound">RuntimeEnvironment</ref> &gt;</type>
+        <definition>outcome::result&lt; RuntimeEnvironment &gt; sgns::runtime::binaryen::RuntimeManager::createEphemeralRuntimeEnvironment</definition>
+        <argsstring>(const base::Buffer &amp;state_code)</argsstring>
+        <name>createEphemeralRuntimeEnvironment</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeManager::createEphemeralRuntimeEnvironment</qualifiedname>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>state_code</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_manager.hpp" line="38" column="21" bodyfile="src/runtime/binaryen/runtime_manager.cpp" bodystart="71" bodyend="75"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a85c14f2fb2f36e31f993caa4020dd7b5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment" kindref="compound">RuntimeEnvironment</ref> &gt;</type>
+        <definition>outcome::result&lt; RuntimeEnvironment &gt; sgns::runtime::binaryen::RuntimeManager::createPersistentRuntimeEnvironmentAt</definition>
+        <argsstring>(const base::Buffer &amp;state_code, const base::Hash256 &amp;state_root)</argsstring>
+        <name>createPersistentRuntimeEnvironmentAt</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeManager::createPersistentRuntimeEnvironmentAt</qualifiedname>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>state_code</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref> &amp;</type>
+          <declname>state_root</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="warning"><para>calling this with an <itemizedlist>
+<listitem><para>state_root older than the current root will reset the storage to an older state once changes are committed </para>
+</listitem>
+</itemizedlist>
+</para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_manager.hpp" line="45" column="21" bodyfile="src/runtime/binaryen/runtime_manager.cpp" bodystart="40" bodyend="49"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1abf97b9514237c8192d1d6cfb4237ac4e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment" kindref="compound">RuntimeEnvironment</ref> &gt;</type>
+        <definition>outcome::result&lt; RuntimeEnvironment &gt; sgns::runtime::binaryen::RuntimeManager::createEphemeralRuntimeEnvironmentAt</definition>
+        <argsstring>(const base::Buffer &amp;state_code, const base::Hash256 &amp;state_root)</argsstring>
+        <name>createEphemeralRuntimeEnvironmentAt</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeManager::createEphemeralRuntimeEnvironmentAt</qualifiedname>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>state_code</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref> &amp;</type>
+          <declname>state_root</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_manager.hpp" line="48" column="21" bodyfile="src/runtime/binaryen/runtime_manager.cpp" bodystart="52" bodyend="56"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1ae3205b05f559fc6287a1b10724110429" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment" kindref="compound">RuntimeEnvironment</ref> &gt;</type>
+        <definition>outcome::result&lt; RuntimeEnvironment &gt; sgns::runtime::binaryen::RuntimeManager::createRuntimeEnvironment</definition>
+        <argsstring>(const base::Buffer &amp;state_code)</argsstring>
+        <name>createRuntimeEnvironment</name>
+        <qualifiedname>sgns::runtime::binaryen::RuntimeManager::createRuntimeEnvironment</qualifiedname>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>state_code</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_manager.hpp" line="52" column="21" bodyfile="src/runtime/binaryen/runtime_manager.cpp" bodystart="77" bodyend="115"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager" kindref="compound">RuntimeManager</ref> is a mechanism to prepare environment for launching execute() function of runtime APIs. It supports in-memory cache to reuse existing environments, avoid hi-load operations. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="12">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="21">
+        <label>K</label>
+      </node>
+      <node id="4">
+        <label>T</label>
+      </node>
+      <node id="17">
+        <label>sgns::base::Blob&lt; size_ &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>sgns::base::Blob&lt; 32 &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="16" relation="public-inheritance">
+        </childnode>
+        <childnode refid="17" relation="template-instance">
+          <edgelabel>&lt; 32 &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::crypto::Hasher</label>
+        <link refid="dd/d14/classsgns_1_1crypto_1_1_hasher"/>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>sgns::runtime::TrieStorageProvider</label>
+        <link refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider"/>
+      </node>
+      <node id="23">
+        <label>sgns::runtime::binaryen::RuntimeExternalInterface</label>
+        <link refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface"/>
+        <childnode refid="24" relation="public-inheritance">
+        </childnode>
+        <childnode refid="25" relation="usage">
+          <edgelabel>-extension_</edgelabel>
+        </childnode>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::binaryen::RuntimeManager</label>
+        <link refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-storage_provider_</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>-extension_factory_</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-module_factory_</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>-hasher_</edgelabel>
+        </childnode>
+        <childnode refid="13" relation="usage">
+          <edgelabel>-modules_mutex_</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="usage">
+          <edgelabel>-modules_</edgelabel>
+        </childnode>
+        <childnode refid="22" relation="usage">
+          <edgelabel>-external_interface_</edgelabel>
+        </childnode>
+      </node>
+      <node id="19">
+        <label>sgns::runtime::binaryen::WasmModule</label>
+        <link refid="d9/d10/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module"/>
+      </node>
+      <node id="9">
+        <label>sgns::runtime::binaryen::WasmModuleFactory</label>
+        <link refid="df/dd7/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_factory"/>
+      </node>
+      <node id="16">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="20">
+        <label>std::map&lt; K, T &gt;</label>
+        <childnode refid="21" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="14">
+        <label>std::map&lt; sgns::base::Blob&lt; 32 &gt;, std::shared_ptr&lt; sgns::runtime::binaryen::WasmModule &gt; &gt;</label>
+        <childnode refid="15" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="18" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="20" relation="template-instance">
+          <edgelabel>&lt; sgns::base::Blob&lt; 32 &gt;, std::shared_ptr&lt; sgns::runtime::binaryen::WasmModule &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="13">
+        <label>std::mutex</label>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::shared_ptr&lt; extensions::ExtensionFactory &gt;</label>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; extensions::ExtensionFactory &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::shared_ptr&lt; sgns::crypto::Hasher &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; sgns::crypto::Hasher &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::shared_ptr&lt; sgns::runtime::TrieStorageProvider &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::TrieStorageProvider &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="22">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::RuntimeExternalInterface &gt;</label>
+        <childnode refid="23" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::RuntimeExternalInterface &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="18">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::WasmModule &gt;</label>
+        <childnode refid="19" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::WasmModule &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::WasmModuleFactory &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::WasmModuleFactory &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="26">
+        <label>std::unique_ptr&lt; T &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="25">
+        <label>std::unique_ptr&lt; extensions::Extension &gt;</label>
+        <childnode refid="26" relation="template-instance">
+          <edgelabel>&lt; extensions::Extension &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="24">
+        <label>wasm::ShellExternalInterface</label>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/binaryen/runtime_manager.hpp" line="25" column="3" bodyfile="src/runtime/binaryen/runtime_manager.hpp" bodystart="25" bodyend="67"/>
+    <listofallmembers>
+      <member refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a64121cd401f6eb358b0fa0ba10dc994e" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeManager</scope><name>createEphemeralRuntimeEnvironment</name></member>
+      <member refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1abf97b9514237c8192d1d6cfb4237ac4e" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeManager</scope><name>createEphemeralRuntimeEnvironmentAt</name></member>
+      <member refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a42c8f7eea65825debc62f7f1b336ca3c" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeManager</scope><name>createPersistentRuntimeEnvironment</name></member>
+      <member refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a85c14f2fb2f36e31f993caa4020dd7b5" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeManager</scope><name>createPersistentRuntimeEnvironmentAt</name></member>
+      <member refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1ae3205b05f559fc6287a1b10724110429" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeManager</scope><name>createRuntimeEnvironment</name></member>
+      <member refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a061e444fa2f4a30e84d87d9fe0d8b53d" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeManager</scope><name>Error</name></member>
+      <member refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a6251a3f16e16e331b8fb2565b799155c" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeManager</scope><name>extension_factory_</name></member>
+      <member refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a9eb1d9fcecbf5b3e679f1bdc76b34165" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeManager</scope><name>external_interface_</name></member>
+      <member refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a231fc7f4ca23a35f5d6dbfe998d25719" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeManager</scope><name>hasher_</name></member>
+      <member refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1ad6c5aff8b74d9cab795519b4278cbdaf" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeManager</scope><name>logger_</name></member>
+      <member refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a72877470e190888dc31ac6265d85377b" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeManager</scope><name>module_factory_</name></member>
+      <member refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1af2f14e110068848f6ea99711201a4aed" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeManager</scope><name>modules_</name></member>
+      <member refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a8e5808f9b62d8fce24517ce9bc44c623" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeManager</scope><name>modules_mutex_</name></member>
+      <member refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1a2818b6896ca32921b1c4fab1fd4d2044" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeManager</scope><name>RuntimeManager</name></member>
+      <member refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager_1aaedb0eea4b5917e7e4ba0fb87d627138" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::RuntimeManager</scope><name>storage_provider_</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

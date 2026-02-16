@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_4261af1259721e3e39e0d2dd7354b511" kind="dir">
+    <compoundname>src/crypto</compoundname>
+    <innerdir refid="dir_cb556418484d362c7791e942321741e3">src/crypto/bip39</innerdir>
+    <innerdir refid="dir_29996793db42d9d65795c30def856817">src/crypto/crypto_store</innerdir>
+    <innerdir refid="dir_440c602ea24b404c1ce445efa2c701e7">src/crypto/ed25519</innerdir>
+    <innerdir refid="dir_587bd937ce34a6958fab9075ca8bf37a">src/crypto/hasher</innerdir>
+    <innerdir refid="dir_0688506dd10da2bf05e9f59c711f9106">src/crypto/keccak</innerdir>
+    <innerdir refid="dir_0d9a001d4004be400314908f4e9bdd1b">src/crypto/pbkdf2</innerdir>
+    <innerdir refid="dir_25eec3bec74cab00f86ed4b5e2c8f7c8">src/crypto/random_generator</innerdir>
+    <innerdir refid="dir_94209739ce9c565386b30eccd857b0cb">src/crypto/secp256k1</innerdir>
+    <innerdir refid="dir_5d58d02fca59986ee5ebe992a52c93e9">src/crypto/sha</innerdir>
+    <innerdir refid="dir_841bca7711e8e17f358c4d0bd5ed609b">src/crypto/sr25519</innerdir>
+    <innerdir refid="dir_b0262cfdf1651c6d86b9cfcd09f4f201">src/crypto/twox</innerdir>
+    <innerdir refid="dir_29024c0a02ea27f690d5e9e9bcce9166">src/crypto/vrf</innerdir>
+    <innerfile refid="d2/db9/crypto__store_8hpp">crypto_store.hpp</innerfile>
+    <innerfile refid="d0/d2a/ed25519__provider_8hpp">ed25519_provider.hpp</innerfile>
+    <innerfile refid="db/dba/ed25519__types_8cpp">ed25519_types.cpp</innerfile>
+    <innerfile refid="d4/d6e/ed25519__types_8hpp">ed25519_types.hpp</innerfile>
+    <innerfile refid="da/d6b/hasher_8hpp">hasher.hpp</innerfile>
+    <innerfile refid="da/df1/random__generator_8hpp">random_generator.hpp</innerfile>
+    <innerfile refid="d2/d17/secp256k1__provider_8hpp">secp256k1_provider.hpp</innerfile>
+    <innerfile refid="d9/d49/secp256k1__types_8hpp">secp256k1_types.hpp</innerfile>
+    <innerfile refid="d2/dbb/sr25519__provider_8hpp">sr25519_provider.hpp</innerfile>
+    <innerfile refid="d8/d40/sr25519__types_8cpp">sr25519_types.cpp</innerfile>
+    <innerfile refid="d2/d9c/sr25519__types_8hpp">sr25519_types.hpp</innerfile>
+    <innerfile refid="de/dc6/vrf__provider_8hpp">vrf_provider.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/"/>
+  </compounddef>
+</doxygen>

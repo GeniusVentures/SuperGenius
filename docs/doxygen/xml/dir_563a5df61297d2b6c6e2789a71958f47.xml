@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_563a5df61297d2b6c6e2789a71958f47" kind="dir">
+    <compoundname>src/proof</compoundname>
+    <innerdir refid="dir_8e45b5d62a447777ec1bf82116832aee">src/proof/circuits</innerdir>
+    <innerfile refid="d7/da6/_genius_assigner_8cpp">GeniusAssigner.cpp</innerfile>
+    <innerfile refid="d1/d19/_genius_assigner_8hpp">GeniusAssigner.hpp</innerfile>
+    <innerfile refid="dc/dfd/_genius_prover_8cpp">GeniusProver.cpp</innerfile>
+    <innerfile refid="d9/d35/_genius_prover_8hpp">GeniusProver.hpp</innerfile>
+    <innerfile refid="dc/d19/_i_basic_proof_8cpp">IBasicProof.cpp</innerfile>
+    <innerfile refid="de/d4a/_i_basic_proof_8hpp">IBasicProof.hpp</innerfile>
+    <innerfile refid="d2/d6c/_nil_file_helper_8hpp">NilFileHelper.hpp</innerfile>
+    <innerfile refid="dc/dc6/_processing_proof_8cpp">ProcessingProof.cpp</innerfile>
+    <innerfile refid="d8/d51/_processing_proof_8hpp">ProcessingProof.hpp</innerfile>
+    <innerfile refid="df/db6/_recursive_transfer_proof_8cpp">RecursiveTransferProof.cpp</innerfile>
+    <innerfile refid="d7/d6d/_recursive_transfer_proof_8hpp">RecursiveTransferProof.hpp</innerfile>
+    <innerfile refid="d5/dcb/_transfer_proof_8cpp">TransferProof.cpp</innerfile>
+    <innerfile refid="d5/d20/_transfer_proof_8hpp">TransferProof.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/proof/"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,76 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/dac/classsgns_1_1runtime_1_1binaryen_1_1_wasm_executor" kind="class" language="C++" prot="public">
+    <compoundname>sgns::runtime::binaryen::WasmExecutor</compoundname>
+    <includes refid="d4/d2e/wasm__executor_8hpp" local="no">wasm_executor.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="dc/dac/classsgns_1_1runtime_1_1binaryen_1_1_wasm_executor_1a37e741866d33938499e11c5c90f0dcba" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>Error</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmExecutor::Error</qualifiedname>
+        <enumvalue id="dc/dac/classsgns_1_1runtime_1_1binaryen_1_1_wasm_executor_1a37e741866d33938499e11c5c90f0dcbaad070f907ce6fbe460b8644bc4e240f6c" prot="public">
+          <name>EXECUTION_ERROR</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_executor.hpp" line="18" column="5" bodyfile="src/runtime/binaryen/wasm_executor.hpp" bodystart="18" bodyend="18"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dc/dac/classsgns_1_1runtime_1_1binaryen_1_1_wasm_executor_1a5abf6397f3d5399e00c5a45a0a596c28" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; wasm::Literal &gt;</type>
+        <definition>outcome::result&lt; wasm::Literal &gt; sgns::runtime::binaryen::WasmExecutor::call</definition>
+        <argsstring>(WasmModuleInstance &amp;module_instance, wasm::Name method_name, const std::vector&lt; wasm::Literal &gt; &amp;args)</argsstring>
+        <name>call</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmExecutor::call</qualifiedname>
+        <param>
+          <type><ref refid="dc/dbb/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_instance" kindref="compound">WasmModuleInstance</ref> &amp;</type>
+          <declname>module_instance</declname>
+        </param>
+        <param>
+          <type>wasm::Name</type>
+          <declname>method_name</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; wasm::Literal &gt; &amp;</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_executor.hpp" line="20" column="21" bodyfile="src/runtime/binaryen/wasm_executor.cpp" bodystart="18" bodyend="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><ref refid="dc/dac/classsgns_1_1runtime_1_1binaryen_1_1_wasm_executor" kindref="compound">WasmExecutor</ref> is the helper to execute export functions from wasm runtime. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="note"><para>This class is implementation detail and should never be used outside this directory </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::runtime::binaryen::WasmExecutor</label>
+        <link refid="dc/dac/classsgns_1_1runtime_1_1binaryen_1_1_wasm_executor"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/binaryen/wasm_executor.hpp" line="16" column="3" bodyfile="src/runtime/binaryen/wasm_executor.hpp" bodystart="16" bodyend="23"/>
+    <listofallmembers>
+      <member refid="dc/dac/classsgns_1_1runtime_1_1binaryen_1_1_wasm_executor_1a5abf6397f3d5399e00c5a45a0a596c28" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmExecutor</scope><name>call</name></member>
+      <member refid="dc/dac/classsgns_1_1runtime_1_1binaryen_1_1_wasm_executor_1a37e741866d33938499e11c5c90f0dcba" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmExecutor</scope><name>Error</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

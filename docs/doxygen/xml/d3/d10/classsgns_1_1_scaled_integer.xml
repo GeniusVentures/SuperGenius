@@ -1,0 +1,891 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d3/d10/classsgns_1_1_scaled_integer" kind="class" language="C++" prot="public">
+    <compoundname>sgns::ScaledInteger</compoundname>
+    <includes refid="d5/daa/_scaled_integer_8hpp" local="no">ScaledInteger.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="d3/d10/classsgns_1_1_scaled_integer_1a0d82dad5d8f9d11a58dec5ae6edbe9b6" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>ParseMode</name>
+        <qualifiedname>sgns::ScaledInteger::ParseMode</qualifiedname>
+        <enumvalue id="d3/d10/classsgns_1_1_scaled_integer_1a0d82dad5d8f9d11a58dec5ae6edbe9b6a2e979835dd62324f5bfe217449ba4974" prot="public">
+          <name>Strict</name>
+          <briefdescription>
+<para>Fail if input has more fractional digits than precision. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d3/d10/classsgns_1_1_scaled_integer_1a0d82dad5d8f9d11a58dec5ae6edbe9b6aa8156810bfee2bd2b44765b9e91db3bd" prot="public">
+          <name>Truncate</name>
+          <briefdescription>
+<para>Drop any extra fractional digits. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>Controls handling of extra fractional digits when parsing. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="33" column="9" bodyfile="src/base/ScaledInteger.hpp" bodystart="34" bodyend="37"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d3/d10/classsgns_1_1_scaled_integer_1a75b855116d74d3d8842686fcb0a79ce9" prot="private" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::ScaledInteger::value_</definition>
+        <argsstring></argsstring>
+        <name>value_</name>
+        <qualifiedname>sgns::ScaledInteger::value_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="199" column="18" bodyfile="src/base/ScaledInteger.hpp" bodystart="199" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" prot="private" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::ScaledInteger::precision_</definition>
+        <argsstring></argsstring>
+        <name>precision_</name>
+        <qualifiedname>sgns::ScaledInteger::precision_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="200" column="18" bodyfile="src/base/ScaledInteger.hpp" bodystart="200" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1af6b748a88a9481d289882e872033d343" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; <ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; ScaledInteger &gt; &gt; sgns::ScaledInteger::New</definition>
+        <argsstring>(uint64_t raw_value, uint64_t precision)</argsstring>
+        <name>New</name>
+        <qualifiedname>sgns::ScaledInteger::New</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>raw_value</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>precision</declname>
+        </param>
+        <briefdescription>
+<para>Create a <ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> from a raw integer and precision. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">raw_value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Integer representation scaled by 10^precision. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">precision</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of decimal places (scale factor). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Outcome containing shared_ptr to <ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> or error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="45" column="32" bodyfile="src/base/ScaledInteger.cpp" bodystart="21" bodyend="25"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1afd17fb43521765a5757d6cd9d8f030e1" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; <ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; ScaledInteger &gt; &gt; sgns::ScaledInteger::New</definition>
+        <argsstring>(double value, uint64_t precision)</argsstring>
+        <name>New</name>
+        <qualifiedname>sgns::ScaledInteger::New</qualifiedname>
+        <param>
+          <type>double</type>
+          <declname>value</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>precision</declname>
+        </param>
+        <briefdescription>
+<para>Create a <ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> from a double and precision. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Double value to convert. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">precision</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of decimal places (scale factor). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Outcome containing shared_ptr to <ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> or error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="53" column="32" bodyfile="src/base/ScaledInteger.cpp" bodystart="27" bodyend="32"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1af778ceca4d2675e9cbe69882cc96f2b2" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; <ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; ScaledInteger &gt; &gt; sgns::ScaledInteger::New</definition>
+        <argsstring>(const std::string &amp;str, uint64_t precision, ParseMode mode=ParseMode::Strict)</argsstring>
+        <name>New</name>
+        <qualifiedname>sgns::ScaledInteger::New</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>str</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>precision</declname>
+        </param>
+        <param>
+          <type><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a0d82dad5d8f9d11a58dec5ae6edbe9b6" kindref="member">ParseMode</ref></type>
+          <declname>mode</declname>
+          <defval><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a0d82dad5d8f9d11a58dec5ae6edbe9b6a2e979835dd62324f5bfe217449ba4974" kindref="member">ParseMode::Strict</ref></defval>
+        </param>
+        <briefdescription>
+<para>Create a <ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> from a string and precision. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">str</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>String representation of the decimal value. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">precision</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of decimal places (scale factor). </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">mode</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Mode for handling extra fractional digits. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Outcome containing shared_ptr to <ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> or error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="62" column="32" bodyfile="src/base/ScaledInteger.cpp" bodystart="34" bodyend="41"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1a09de90f5d865cb2e0b670fae59bd83cc" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; <ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; ScaledInteger &gt; &gt; sgns::ScaledInteger::New</definition>
+        <argsstring>(const std::string &amp;str)</argsstring>
+        <name>New</name>
+        <qualifiedname>sgns::ScaledInteger::New</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>str</declname>
+        </param>
+        <briefdescription>
+<para>Create a <ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> from a decimal string by inferring precision. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">str</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>String representation of the decimal value (e.g., &quot;123.45&quot;). In Strict mode, will fail if more than inferred precision. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Outcome containing shared_ptr to <ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> or error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="72" column="32" bodyfile="src/base/ScaledInteger.cpp" bodystart="43" bodyend="58"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1a048343c2f6eee11bb38610e8df179084" prot="public" static="yes" constexpr="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::ScaledInteger::ScaleFactor</definition>
+        <argsstring>(uint64_t precision)</argsstring>
+        <name>ScaleFactor</name>
+        <qualifiedname>sgns::ScaledInteger::ScaleFactor</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>precision</declname>
+        </param>
+        <briefdescription>
+<para>Compute 10^precision as the scale factor. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">precision</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of decimal places. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Scale factor (10^precision). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="79" column="35" bodyfile="src/base/ScaledInteger.cpp" bodystart="62" bodyend="70"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1af1b23d9d69aa5728fb00b0627a59ab68" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; uint64_t &gt;</type>
+        <definition>outcome::result&lt; uint64_t &gt; sgns::ScaledInteger::FromString</definition>
+        <argsstring>(const std::string &amp;str, uint64_t precision, ParseMode mode=ParseMode::Strict)</argsstring>
+        <name>FromString</name>
+        <qualifiedname>sgns::ScaledInteger::FromString</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>str</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>precision</declname>
+        </param>
+        <param>
+          <type><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a0d82dad5d8f9d11a58dec5ae6edbe9b6" kindref="member">ParseMode</ref></type>
+          <declname>mode</declname>
+          <defval><ref refid="d3/d10/classsgns_1_1_scaled_integer_1a0d82dad5d8f9d11a58dec5ae6edbe9b6a2e979835dd62324f5bfe217449ba4974" kindref="member">ParseMode::Strict</ref></defval>
+        </param>
+        <briefdescription>
+<para>Convert a numeric string to a raw scaled integer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">str</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Numeric string with integer and fractional parts. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">precision</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of decimal places. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">mode</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Mode for handling extra fractional digits. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Outcome containing raw scaled integer or error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="88" column="32" bodyfile="src/base/ScaledInteger.cpp" bodystart="72" bodyend="130"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1af90822d03d552dec3cdb7c9a4c843116" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::ScaledInteger::ToString</definition>
+        <argsstring>(uint64_t value, uint64_t precision)</argsstring>
+        <name>ToString</name>
+        <qualifiedname>sgns::ScaledInteger::ToString</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>value</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>precision</declname>
+        </param>
+        <briefdescription>
+<para>Convert a scaled integer to a string representation. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Raw scaled integer. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">precision</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of decimal places. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>String representation of the decimal value. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="98" column="28" bodyfile="src/base/ScaledInteger.cpp" bodystart="132" bodyend="149"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1a199b0954d15b2476297738e9b7036b71" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; uint64_t &gt;</type>
+        <definition>outcome::result&lt; uint64_t &gt; sgns::ScaledInteger::FromDouble</definition>
+        <argsstring>(double value, uint64_t precision)</argsstring>
+        <name>FromDouble</name>
+        <qualifiedname>sgns::ScaledInteger::FromDouble</qualifiedname>
+        <param>
+          <type>double</type>
+          <declname>value</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>precision</declname>
+        </param>
+        <briefdescription>
+<para>Convert a double to a raw scaled integer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Double value to convert. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">precision</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of decimal places. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Outcome containing raw scaled integer or error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="106" column="32" bodyfile="src/base/ScaledInteger.cpp" bodystart="151" bodyend="162"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1a45e15dfc6f54b9354cb417ea43b7c296" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; uint64_t &gt;</type>
+        <definition>outcome::result&lt; uint64_t &gt; sgns::ScaledInteger::Multiply</definition>
+        <argsstring>(uint64_t a, uint64_t b, uint64_t precision)</argsstring>
+        <name>Multiply</name>
+        <qualifiedname>sgns::ScaledInteger::Multiply</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>a</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>b</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>precision</declname>
+        </param>
+        <briefdescription>
+<para>Multiply two raw scaled integers. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">a</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>First raw scaled integer. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">b</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Second raw scaled integer. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">precision</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of decimal places. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Outcome containing raw scaled integer product or error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="115" column="32" bodyfile="src/base/ScaledInteger.cpp" bodystart="164" bodyend="175"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1a4ce4ba9c6fae092905ac7179ff830558" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; uint64_t &gt;</type>
+        <definition>outcome::result&lt; uint64_t &gt; sgns::ScaledInteger::Divide</definition>
+        <argsstring>(uint64_t a, uint64_t b, uint64_t precision)</argsstring>
+        <name>Divide</name>
+        <qualifiedname>sgns::ScaledInteger::Divide</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>a</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>b</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>precision</declname>
+        </param>
+        <briefdescription>
+<para>Divide two raw scaled integers. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">a</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Dividend as raw scaled integer. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">b</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Divisor as raw scaled integer. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">precision</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of decimal places. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Outcome containing raw scaled integer quotient or error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="124" column="32" bodyfile="src/base/ScaledInteger.cpp" bodystart="177" bodyend="194"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1a37e1fab2465ed9e5836d1730d6e0c015" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; uint64_t &gt;</type>
+        <definition>outcome::result&lt; uint64_t &gt; sgns::ScaledInteger::ConvertPrecision</definition>
+        <argsstring>(uint64_t value, uint64_t from, uint64_t to)</argsstring>
+        <name>ConvertPrecision</name>
+        <qualifiedname>sgns::ScaledInteger::ConvertPrecision</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>value</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>from</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>to</declname>
+        </param>
+        <briefdescription>
+<para>Change the precision of a raw scaled integer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Raw scaled integer at original precision. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">from</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Original number of decimal places. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">to</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Target number of decimal places. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Outcome containing raw scaled integer at new precision or error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="133" column="32" bodyfile="src/base/ScaledInteger.cpp" bodystart="196" bodyend="217"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1a15c7a2c670a3fd35601c2fb8b25a2131" prot="public" static="no" const="yes" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::ScaledInteger::Value</definition>
+        <argsstring>() const noexcept</argsstring>
+        <name>Value</name>
+        <qualifiedname>sgns::ScaledInteger::Value</qualifiedname>
+        <briefdescription>
+<para>Get the raw scaled integer value. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Raw scaled integer. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="139" column="18" bodyfile="src/base/ScaledInteger.cpp" bodystart="219" bodyend="222"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1a75b3fe47571907f1bece3a0b5ba3f360" prot="public" static="no" const="yes" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::ScaledInteger::Precision</definition>
+        <argsstring>() const noexcept</argsstring>
+        <name>Precision</name>
+        <qualifiedname>sgns::ScaledInteger::Precision</qualifiedname>
+        <briefdescription>
+<para>Get the precision (number of decimal places). </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Number of decimal places. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="145" column="18" bodyfile="src/base/ScaledInteger.cpp" bodystart="224" bodyend="227"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1a89f3583be187aabb5c80d562b878c016" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::ScaledInteger::ToString</definition>
+        <argsstring>(bool fixedDecimals=true) const</argsstring>
+        <name>ToString</name>
+        <qualifiedname>sgns::ScaledInteger::ToString</qualifiedname>
+        <param>
+          <type>bool</type>
+          <declname>fixedDecimals</declname>
+          <defval>true</defval>
+        </param>
+        <briefdescription>
+<para>Return this value as a string. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>fixedDecimals</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><itemizedlist>
+<listitem><para>true: always show all fractional digits (pad with zeros up to precision)</para>
+</listitem><listitem><para>false: trim trailing &apos;0&apos;s in the fractional part (and drop the &apos;.&apos; if no fraction remains) </para>
+</listitem></itemizedlist>
+</para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>formatted string </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="154" column="21" bodyfile="src/base/ScaledInteger.cpp" bodystart="229" bodyend="251"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1ab2a4c352c1dcb76a1aada254323f371e" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref> &gt;</type>
+        <definition>outcome::result&lt; ScaledInteger &gt; sgns::ScaledInteger::Add</definition>
+        <argsstring>(const ScaledInteger &amp;other) const</argsstring>
+        <name>Add</name>
+        <qualifiedname>sgns::ScaledInteger::Add</qualifiedname>
+        <param>
+          <type>const <ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Add another <ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> with matching precision. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">other</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> to add. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Outcome containing sum <ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> or error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="161" column="25" bodyfile="src/base/ScaledInteger.cpp" bodystart="253" bodyend="266"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1a5ea98e649e0ca99e20eadccecc0a3b8e" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref> &gt;</type>
+        <definition>outcome::result&lt; ScaledInteger &gt; sgns::ScaledInteger::Subtract</definition>
+        <argsstring>(const ScaledInteger &amp;other) const</argsstring>
+        <name>Subtract</name>
+        <qualifiedname>sgns::ScaledInteger::Subtract</qualifiedname>
+        <param>
+          <type>const <ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Subtract another <ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> with matching precision. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">other</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> to subtract. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Outcome containing difference <ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> or error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="168" column="25" bodyfile="src/base/ScaledInteger.cpp" bodystart="268" bodyend="279"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1a66237e6a6100febca811dda5d2a133d3" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref> &gt;</type>
+        <definition>outcome::result&lt; ScaledInteger &gt; sgns::ScaledInteger::Multiply</definition>
+        <argsstring>(const ScaledInteger &amp;other) const</argsstring>
+        <name>Multiply</name>
+        <qualifiedname>sgns::ScaledInteger::Multiply</qualifiedname>
+        <param>
+          <type>const <ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Multiply by another <ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> with matching precision. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">other</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> to multiply. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Outcome containing product <ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> or error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="175" column="25" bodyfile="src/base/ScaledInteger.cpp" bodystart="281" bodyend="289"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1ad84592e2e5f226e195e06958bffdc164" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref> &gt;</type>
+        <definition>outcome::result&lt; ScaledInteger &gt; sgns::ScaledInteger::Divide</definition>
+        <argsstring>(const ScaledInteger &amp;other) const</argsstring>
+        <name>Divide</name>
+        <qualifiedname>sgns::ScaledInteger::Divide</qualifiedname>
+        <param>
+          <type>const <ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Divide by another <ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> with matching precision. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">other</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> to divide by. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Outcome containing quotient <ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> or error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="182" column="25" bodyfile="src/base/ScaledInteger.cpp" bodystart="291" bodyend="299"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1a5ad0d30aa62440e664e2e75543da5238" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" kindref="member">ScaledInteger</ref> &gt;</type>
+        <definition>outcome::result&lt; ScaledInteger &gt; sgns::ScaledInteger::ConvertPrecision</definition>
+        <argsstring>(uint64_t to) const</argsstring>
+        <name>ConvertPrecision</name>
+        <qualifiedname>sgns::ScaledInteger::ConvertPrecision</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>to</declname>
+        </param>
+        <briefdescription>
+<para>Convert this <ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> to a different precision. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">to</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Target number of decimal places. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Outcome containing new <ref refid="d3/d10/classsgns_1_1_scaled_integer" kindref="compound">ScaledInteger</ref> or error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="189" column="25" bodyfile="src/base/ScaledInteger.cpp" bodystart="301" bodyend="305"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" prot="private" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::ScaledInteger::ScaledInteger</definition>
+        <argsstring>(uint64_t value, uint64_t precision)</argsstring>
+        <name>ScaledInteger</name>
+        <qualifiedname>sgns::ScaledInteger::ScaledInteger</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>value</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>precision</declname>
+        </param>
+        <briefdescription>
+<para>Private constructor storing raw scaled integer and precision. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Raw scaled integer. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">precision</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of decimal places. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/ScaledInteger.hpp" line="197" column="18" bodyfile="src/base/ScaledInteger.cpp" bodystart="60" bodyend="60"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Represents a decimal value using an integer scaled by 10^precision. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Internally stores the decimal as an integer multiplied by 10^precision. Example: raw_value = 12345, precision = 2 =&gt; decimal value 123.45 </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::ScaledInteger</label>
+        <link refid="d3/d10/classsgns_1_1_scaled_integer"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/base/ScaledInteger.hpp" line="26" column="5" bodyfile="src/base/ScaledInteger.hpp" bodystart="27" bodyend="201"/>
+    <listofallmembers>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1ab2a4c352c1dcb76a1aada254323f371e" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>Add</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1a37e1fab2465ed9e5836d1730d6e0c015" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>ConvertPrecision</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1a5ad0d30aa62440e664e2e75543da5238" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>ConvertPrecision</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1a4ce4ba9c6fae092905ac7179ff830558" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>Divide</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1ad84592e2e5f226e195e06958bffdc164" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>Divide</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1a199b0954d15b2476297738e9b7036b71" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>FromDouble</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1af1b23d9d69aa5728fb00b0627a59ab68" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>FromString</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1a45e15dfc6f54b9354cb417ea43b7c296" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>Multiply</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1a66237e6a6100febca811dda5d2a133d3" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>Multiply</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1af6b748a88a9481d289882e872033d343" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>New</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1afd17fb43521765a5757d6cd9d8f030e1" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>New</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1af778ceca4d2675e9cbe69882cc96f2b2" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>New</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1a09de90f5d865cb2e0b670fae59bd83cc" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>New</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1a0d82dad5d8f9d11a58dec5ae6edbe9b6" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>ParseMode</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1a75b3fe47571907f1bece3a0b5ba3f360" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>Precision</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1a12abfe20fa5c02391aef3df5ad003ac6" prot="private" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>precision_</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1a41546320dd64cf978f15315d9018d377" prot="private" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>ScaledInteger</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1a048343c2f6eee11bb38610e8df179084" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>ScaleFactor</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1a5ea98e649e0ca99e20eadccecc0a3b8e" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>Subtract</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1af90822d03d552dec3cdb7c9a4c843116" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>ToString</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1a89f3583be187aabb5c80d562b878c016" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>ToString</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1a15c7a2c670a3fd35601c2fb8b25a2131" prot="public" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>Value</name></member>
+      <member refid="d3/d10/classsgns_1_1_scaled_integer_1a75b855116d74d3d8842686fcb0a79ce9" prot="private" virt="non-virtual"><scope>sgns::ScaledInteger</scope><name>value_</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

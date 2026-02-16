@@ -1,0 +1,107 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dc/dfd/structsgns_1_1_output_dest_info" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::OutputDestInfo</compoundname>
+    <includes refid="d1/dd1/_u_t_x_o_structs_8hpp" local="no">UTXOStructs.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="dc/dfd/structsgns_1_1_output_dest_info_1ae823310281ceda34b4bda58a2b62158b" prot="public" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::OutputDestInfo::encrypted_amount</definition>
+        <argsstring></argsstring>
+        <name>encrypted_amount</name>
+        <qualifiedname>sgns::OutputDestInfo::encrypted_amount</qualifiedname>
+        <briefdescription>
+<para>El Gamal encrypted amount. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOStructs.hpp" line="25" column="21" bodyfile="src/account/UTXOStructs.hpp" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/dfd/structsgns_1_1_output_dest_info_1a3280ea4ad53466ac292d71396f15e0a8" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::OutputDestInfo::dest_address</definition>
+        <argsstring></argsstring>
+        <name>dest_address</name>
+        <qualifiedname>sgns::OutputDestInfo::dest_address</qualifiedname>
+        <briefdescription>
+<para>Destination node address. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOStructs.hpp" line="26" column="21" bodyfile="src/account/UTXOStructs.hpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dc/dfd/structsgns_1_1_output_dest_info_1a3fe002c40b41484acd7da6c1c0b2e26a" prot="public" static="no" mutable="no">
+        <type><ref refid="d9/dd1/classsgns_1_1_token_i_d" kindref="compound">TokenID</ref></type>
+        <definition>TokenID sgns::OutputDestInfo::token_id</definition>
+        <argsstring></argsstring>
+        <name>token_id</name>
+        <qualifiedname>sgns::OutputDestInfo::token_id</qualifiedname>
+        <briefdescription>
+<para>Token identifier. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/UTXOStructs.hpp" line="27" column="21" bodyfile="src/account/UTXOStructs.hpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Single output entry. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::OutputDestInfo</label>
+        <link refid="dc/dfd/structsgns_1_1_output_dest_info"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+dest_address</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+token_id</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::TokenID</label>
+        <link refid="d9/dd1/classsgns_1_1_token_i_d"/>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::array&lt; uint8_t, 32 &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; uint8_t, 32 &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="2">
+        <label>std::string</label>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/account/UTXOStructs.hpp" line="23" column="5" bodyfile="src/account/UTXOStructs.hpp" bodystart="24" bodyend="28"/>
+    <listofallmembers>
+      <member refid="dc/dfd/structsgns_1_1_output_dest_info_1a3280ea4ad53466ac292d71396f15e0a8" prot="public" virt="non-virtual"><scope>sgns::OutputDestInfo</scope><name>dest_address</name></member>
+      <member refid="dc/dfd/structsgns_1_1_output_dest_info_1ae823310281ceda34b4bda58a2b62158b" prot="public" virt="non-virtual"><scope>sgns::OutputDestInfo</scope><name>encrypted_amount</name></member>
+      <member refid="dc/dfd/structsgns_1_1_output_dest_info_1a3fe002c40b41484acd7da6c1c0b2e26a" prot="public" virt="non-virtual"><scope>sgns::OutputDestInfo</scope><name>token_id</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

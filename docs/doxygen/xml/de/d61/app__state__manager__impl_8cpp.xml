@@ -1,0 +1,298 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/d61/app__state__manager__impl_8cpp" kind="file" language="C++">
+    <compoundname>app_state_manager_impl.cpp</compoundname>
+    <includes refid="db/df6/app__state__manager__impl_8hpp" local="yes">application/impl/app_state_manager_impl.hpp</includes>
+    <includes local="no">csignal</includes>
+    <includes local="no">functional</includes>
+    <incdepgraph>
+      <node id="3">
+        <label>application/app_state_manager.hpp</label>
+        <link refid="df/d24/app__state__manager_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/application/impl/app_state_manager_impl.cpp</label>
+        <link refid="de/d61/app__state__manager__impl_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>application/impl/app_state_manager_impl.hpp</label>
+        <link refid="db/df6/app__state__manager__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>condition_variable</label>
+      </node>
+      <node id="10">
+        <label>csignal</label>
+      </node>
+      <node id="4">
+        <label>functional</label>
+      </node>
+      <node id="5">
+        <label>memory</label>
+      </node>
+      <node id="11">
+        <label>mutex</label>
+      </node>
+      <node id="12">
+        <label>queue</label>
+      </node>
+      <node id="14">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="15">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="6">
+        <label>stdexcept</label>
+      </node>
+      <node id="8">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="db/d40/namespacesgns_1_1application">sgns::application</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="db/df6/app__state__manager__impl_8hpp" kindref="compound">application/impl/app_state_manager_impl.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;csignal&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;functional&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="db/d40/namespacesgns_1_1application" kindref="compound">sgns::application</ref><sp/>{</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/>std::weak_ptr&lt;AppStateManager&gt;<sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a9069e4c932261874d3e9c3761200248b" kindref="member">AppStateManagerImpl::wp_to_myself</ref>;</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11" refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a00a563cbee4ea6ed669d42c10f32e743" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a00a563cbee4ea6ed669d42c10f32e743" kindref="member">AppStateManagerImpl::shuttingDownSignalsHandler</ref>(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal">)<sp/>{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>self<sp/>=<sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a9069e4c932261874d3e9c3761200248b" kindref="member">wp_to_myself</ref>.lock())<sp/>{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>self-&gt;shutdown();</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17" refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a1c6c1ba1e59aecbb6923f6f90bdbdf38" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a1c6c1ba1e59aecbb6923f6f90bdbdf38" kindref="member">AppStateManagerImpl::AppStateManagerImpl</ref>()</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a1d61966e31d38d87bcbcf5b9d37b1532" kindref="member">logger_</ref>(<ref refid="d4/dcb/namespacesgns_1_1base" kindref="compound">base</ref>::createLogger(</highlight><highlight class="stringliteral">&quot;Application&quot;</highlight><highlight class="normal">))<sp/>{</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*</highlight></codeline>
+<codeline lineno="20"><highlight class="comment"><sp/><sp/><sp/><sp/>struct<sp/>sigaction<sp/>act<sp/>{};</highlight></codeline>
+<codeline lineno="21"><highlight class="comment"><sp/><sp/><sp/><sp/>memset(&amp;act,<sp/>0,<sp/>sizeof(act));</highlight></codeline>
+<codeline lineno="22"><highlight class="comment"><sp/><sp/><sp/><sp/>act.sa_handler<sp/>=<sp/>shuttingDownSignalsHandler;<sp/><sp/>//<sp/>NOLINT</highlight></codeline>
+<codeline lineno="23"><highlight class="comment"><sp/><sp/><sp/><sp/>sigset_t<sp/>set;<sp/>//<sp/>NOLINT</highlight></codeline>
+<codeline lineno="24"><highlight class="comment"><sp/><sp/><sp/><sp/>sigemptyset(&amp;set);</highlight></codeline>
+<codeline lineno="25"><highlight class="comment"><sp/><sp/><sp/><sp/>sigaddset(&amp;set,<sp/>SIGINT);</highlight></codeline>
+<codeline lineno="26"><highlight class="comment"><sp/><sp/><sp/><sp/>sigaddset(&amp;set,<sp/>SIGTERM);</highlight></codeline>
+<codeline lineno="27"><highlight class="comment"><sp/><sp/><sp/><sp/>sigaddset(&amp;set,<sp/>SIGQUIT);</highlight></codeline>
+<codeline lineno="28"><highlight class="comment"><sp/><sp/><sp/><sp/>act.sa_mask<sp/>=<sp/>set;</highlight></codeline>
+<codeline lineno="29"><highlight class="comment"><sp/><sp/><sp/><sp/>sigaction(SIGINT,<sp/>&amp;act,<sp/>nullptr);</highlight></codeline>
+<codeline lineno="30"><highlight class="comment"><sp/><sp/><sp/><sp/>sigaction(SIGTERM,<sp/>&amp;act,<sp/>nullptr);</highlight></codeline>
+<codeline lineno="31"><highlight class="comment"><sp/><sp/><sp/><sp/>sigaction(SIGQUIT,<sp/>&amp;act,<sp/>nullptr);</highlight></codeline>
+<codeline lineno="32"><highlight class="comment"><sp/><sp/><sp/><sp/>sigprocmask(SIG_UNBLOCK,<sp/>&amp;act.sa_mask,<sp/>nullptr);</highlight></codeline>
+<codeline lineno="33"><highlight class="comment"><sp/><sp/><sp/><sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36" refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ad26a9ce4d9683b4c22a5e5406a2d782d" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ad26a9ce4d9683b4c22a5e5406a2d782d" kindref="member">AppStateManagerImpl::~AppStateManagerImpl</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*</highlight></codeline>
+<codeline lineno="38"><highlight class="comment"><sp/><sp/><sp/><sp/>struct<sp/>sigaction<sp/>act<sp/>{};</highlight></codeline>
+<codeline lineno="39"><highlight class="comment"><sp/><sp/><sp/><sp/>memset(&amp;act,<sp/>0,<sp/>sizeof(act));</highlight></codeline>
+<codeline lineno="40"><highlight class="comment"><sp/><sp/><sp/><sp/>act.sa_handler<sp/>=<sp/>SIG_DFL;<sp/><sp/>//<sp/>NOLINT</highlight></codeline>
+<codeline lineno="41"><highlight class="comment"><sp/><sp/><sp/><sp/>sigset_t<sp/>set;<sp/>//<sp/>NOLINT</highlight></codeline>
+<codeline lineno="42"><highlight class="comment"><sp/><sp/><sp/><sp/>sigemptyset(&amp;set);</highlight></codeline>
+<codeline lineno="43"><highlight class="comment"><sp/><sp/><sp/><sp/>sigaddset(&amp;set,<sp/>SIGINT);</highlight></codeline>
+<codeline lineno="44"><highlight class="comment"><sp/><sp/><sp/><sp/>sigaddset(&amp;set,<sp/>SIGTERM);</highlight></codeline>
+<codeline lineno="45"><highlight class="comment"><sp/><sp/><sp/><sp/>sigaddset(&amp;set,<sp/>SIGQUIT);</highlight></codeline>
+<codeline lineno="46"><highlight class="comment"><sp/><sp/><sp/><sp/>act.sa_mask<sp/>=<sp/>set;</highlight></codeline>
+<codeline lineno="47"><highlight class="comment"><sp/><sp/><sp/><sp/>sigaction(SIGINT,<sp/>&amp;act,<sp/>nullptr);</highlight></codeline>
+<codeline lineno="48"><highlight class="comment"><sp/><sp/><sp/><sp/>sigaction(SIGTERM,<sp/>&amp;act,<sp/>nullptr);</highlight></codeline>
+<codeline lineno="49"><highlight class="comment"><sp/><sp/><sp/><sp/>sigaction(SIGQUIT,<sp/>&amp;act,<sp/>nullptr);</highlight></codeline>
+<codeline lineno="50"><highlight class="comment"><sp/><sp/><sp/><sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"></highlight></codeline>
+<codeline lineno="53" refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a7453dd93d81e5bd938fa087f85eb6ae4" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a7453dd93d81e5bd938fa087f85eb6ae4" kindref="member">AppStateManagerImpl::reset</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/>std::lock_guard<sp/>lg(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a5a0fd642af8902c2c659ed0dffa39665" kindref="member">mutex_</ref>);</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">while</highlight><highlight class="normal"><sp/>(<sp/>!<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a57e97ebc55a80904437b73f3a29e2e88" kindref="member">prepare_</ref>.empty()<sp/>)</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a57e97ebc55a80904437b73f3a29e2e88" kindref="member">prepare_</ref>.pop();</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">while</highlight><highlight class="normal"><sp/>(<sp/>!<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a45079659da731c8e49971a9e4132edd1" kindref="member">launch_</ref>.empty()<sp/>)</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a45079659da731c8e49971a9e4132edd1" kindref="member">launch_</ref>.pop();</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">while</highlight><highlight class="normal"><sp/>(<sp/>!<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a9b560a7f46623d22fc6380fa4e516219" kindref="member">shutdown_</ref>.empty()<sp/>)</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a9b560a7f46623d22fc6380fa4e516219" kindref="member">shutdown_</ref>.pop();</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>=<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027a95b19f7739b0b7ea7d6b07586be54f36" kindref="member">State::Init</ref>;</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4a934063af24571f4e74fc67271460d" kindref="member">shutdown_requested_</ref><sp/>=<sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"></highlight></codeline>
+<codeline lineno="71" refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ae2896612532647bc06674852d206daaa" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ae2896612532647bc06674852d206daaa" kindref="member">AppStateManagerImpl::atPrepare</ref>(<ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a08df4d681f2b9624643ed6097e6882ed" kindref="member">OnPrepare</ref><sp/>&amp;&amp;cb)<sp/>{</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/>std::lock_guard<sp/>lg(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a5a0fd642af8902c2c659ed0dffa39665" kindref="member">mutex_</ref>);</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>&gt;<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027a95b19f7739b0b7ea7d6b07586be54f36" kindref="member">State::Init</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">throw</highlight><highlight class="normal"><sp/><ref refid="d0/ddd/structsgns_1_1application_1_1_app_state_exception" kindref="compound">AppStateException</ref>(</highlight><highlight class="stringliteral">&quot;adding<sp/>callback<sp/>for<sp/>stage<sp/>&apos;prepare&apos;&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a57e97ebc55a80904437b73f3a29e2e88" kindref="member">prepare_</ref>.emplace(std::move(cb));</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"></highlight></codeline>
+<codeline lineno="79" refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1aa7996ec25bdd26404cac20f0a5946140" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1aa7996ec25bdd26404cac20f0a5946140" kindref="member">AppStateManagerImpl::atLaunch</ref>(<ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1ae45dfda2273189f37c3ae7a904597c8a" kindref="member">OnLaunch</ref><sp/>&amp;&amp;cb)<sp/>{</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/>std::lock_guard<sp/>lg(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a5a0fd642af8902c2c659ed0dffa39665" kindref="member">mutex_</ref>);</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>&gt;<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027abbca3d3cec09f823c699d1e1083207cc" kindref="member">State::ReadyToStart</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">throw</highlight><highlight class="normal"><sp/><ref refid="d0/ddd/structsgns_1_1application_1_1_app_state_exception" kindref="compound">AppStateException</ref>(</highlight><highlight class="stringliteral">&quot;adding<sp/>callback<sp/>for<sp/>stage<sp/>&apos;launch&apos;&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a45079659da731c8e49971a9e4132edd1" kindref="member">launch_</ref>.emplace(std::move(cb));</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"></highlight></codeline>
+<codeline lineno="87" refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1afd139d6c6281c37751244c47a0791a7d" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1afd139d6c6281c37751244c47a0791a7d" kindref="member">AppStateManagerImpl::atShutdown</ref>(<ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1aeedbe0b01ca92bbd2032cd6f5628a7cd" kindref="member">OnShutdown</ref><sp/>&amp;&amp;cb)<sp/>{</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/>std::lock_guard<sp/>lg(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a5a0fd642af8902c2c659ed0dffa39665" kindref="member">mutex_</ref>);</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>&gt;<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027a7b8af977b90a67e053ff2667a26828fe" kindref="member">State::Works</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">throw</highlight><highlight class="normal"><sp/><ref refid="d0/ddd/structsgns_1_1application_1_1_app_state_exception" kindref="compound">AppStateException</ref>(</highlight><highlight class="stringliteral">&quot;adding<sp/>callback<sp/>for<sp/>stage<sp/>&apos;shutdown&apos;&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a9b560a7f46623d22fc6380fa4e516219" kindref="member">shutdown_</ref>.emplace(std::move(cb));</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"></highlight></codeline>
+<codeline lineno="95" refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac0aef26de9df110878056b5e13f1969a" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac0aef26de9df110878056b5e13f1969a" kindref="member">AppStateManagerImpl::doPrepare</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/>std::lock_guard<sp/>lg(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a5a0fd642af8902c2c659ed0dffa39665" kindref="member">mutex_</ref>);</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>!=<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027a95b19f7739b0b7ea7d6b07586be54f36" kindref="member">State::Init</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">throw</highlight><highlight class="normal"><sp/><ref refid="d0/ddd/structsgns_1_1application_1_1_app_state_exception" kindref="compound">AppStateException</ref>(</highlight><highlight class="stringliteral">&quot;running<sp/>stage<sp/>&apos;prepare&apos;&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>=<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027af8199556cf6a62ca9268aa50c99b34a1" kindref="member">State::Prepare</ref>;</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"></highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">while</highlight><highlight class="normal"><sp/>(!<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a57e97ebc55a80904437b73f3a29e2e88" kindref="member">prepare_</ref>.empty())<sp/>{</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;cb<sp/>=<sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a57e97ebc55a80904437b73f3a29e2e88" kindref="member">prepare_</ref>.front();</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>==<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027af8199556cf6a62ca9268aa50c99b34a1" kindref="member">State::Prepare</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>success<sp/>=<sp/>cb();</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!<sp/>success)<sp/>{</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>=<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027a075d9c9ae8c8f1c79c1a1965cd8c5a42" kindref="member">State::ShuttingDown</ref>;</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a57e97ebc55a80904437b73f3a29e2e88" kindref="member">prepare_</ref>.pop();</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"></highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>==<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027af8199556cf6a62ca9268aa50c99b34a1" kindref="member">State::Prepare</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>=<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027abbca3d3cec09f823c699d1e1083207cc" kindref="member">State::ReadyToStart</ref>;</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">else</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1af981827ba7adf78004b97be0f5c95955" kindref="member">shutdown</ref>();</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"></highlight></codeline>
+<codeline lineno="120" refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a41123b1308318ebe4c1078af704c334a" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a41123b1308318ebe4c1078af704c334a" kindref="member">AppStateManagerImpl::doLaunch</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"><sp/><sp/><sp/><sp/>std::lock_guard<sp/>lg(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a5a0fd642af8902c2c659ed0dffa39665" kindref="member">mutex_</ref>);</highlight></codeline>
+<codeline lineno="122"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>!=<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027abbca3d3cec09f823c699d1e1083207cc" kindref="member">State::ReadyToStart</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">throw</highlight><highlight class="normal"><sp/><ref refid="d0/ddd/structsgns_1_1application_1_1_app_state_exception" kindref="compound">AppStateException</ref>(</highlight><highlight class="stringliteral">&quot;running<sp/>stage<sp/>&apos;launch&apos;&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>=<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027ac2efe4bbd13e6cb0db293e72884273c0" kindref="member">State::Starting</ref>;</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"></highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">while</highlight><highlight class="normal"><sp/>(!<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a45079659da731c8e49971a9e4132edd1" kindref="member">launch_</ref>.empty())<sp/>{</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;cb<sp/>=<sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a45079659da731c8e49971a9e4132edd1" kindref="member">launch_</ref>.front();</highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>==<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027ac2efe4bbd13e6cb0db293e72884273c0" kindref="member">State::Starting</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>success<sp/>=<sp/>cb();</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!<sp/>success)<sp/>{</highlight></codeline>
+<codeline lineno="132"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>=<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027a075d9c9ae8c8f1c79c1a1965cd8c5a42" kindref="member">State::ShuttingDown</ref>;</highlight></codeline>
+<codeline lineno="133"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="134"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="135"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a45079659da731c8e49971a9e4132edd1" kindref="member">launch_</ref>.pop();</highlight></codeline>
+<codeline lineno="136"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="137"><highlight class="normal"></highlight></codeline>
+<codeline lineno="138"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>==<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027ac2efe4bbd13e6cb0db293e72884273c0" kindref="member">State::Starting</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="139"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>=<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027a7b8af977b90a67e053ff2667a26828fe" kindref="member">State::Works</ref>;</highlight></codeline>
+<codeline lineno="140"><highlight class="normal"><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">else</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="141"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1af981827ba7adf78004b97be0f5c95955" kindref="member">shutdown</ref>();</highlight></codeline>
+<codeline lineno="142"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="143"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="144"><highlight class="normal"></highlight></codeline>
+<codeline lineno="145" refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a966b5172322bc04df4d475c9bff3c5bc" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a966b5172322bc04df4d475c9bff3c5bc" kindref="member">AppStateManagerImpl::doShutdown</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="146"><highlight class="normal"><sp/><sp/><sp/><sp/>std::lock_guard<sp/>lg(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a5a0fd642af8902c2c659ed0dffa39665" kindref="member">mutex_</ref>);</highlight></codeline>
+<codeline lineno="147"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>==<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027a60fc158447294550bd06428e44a0887c" kindref="member">State::ReadyToStop</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="148"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="149"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="150"><highlight class="normal"></highlight></codeline>
+<codeline lineno="151"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">while</highlight><highlight class="normal"><sp/>(<sp/>!<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a57e97ebc55a80904437b73f3a29e2e88" kindref="member">prepare_</ref>.empty()<sp/>)</highlight></codeline>
+<codeline lineno="152"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="153"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a57e97ebc55a80904437b73f3a29e2e88" kindref="member">prepare_</ref>.pop();</highlight></codeline>
+<codeline lineno="154"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="155"><highlight class="normal"></highlight></codeline>
+<codeline lineno="156"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">while</highlight><highlight class="normal"><sp/>(<sp/>!<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a45079659da731c8e49971a9e4132edd1" kindref="member">launch_</ref>.empty()<sp/>)</highlight></codeline>
+<codeline lineno="157"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="158"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a45079659da731c8e49971a9e4132edd1" kindref="member">launch_</ref>.pop();</highlight></codeline>
+<codeline lineno="159"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="160"><highlight class="normal"></highlight></codeline>
+<codeline lineno="161"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>=<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027a075d9c9ae8c8f1c79c1a1965cd8c5a42" kindref="member">State::ShuttingDown</ref>;</highlight></codeline>
+<codeline lineno="162"><highlight class="normal"></highlight></codeline>
+<codeline lineno="163"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">while</highlight><highlight class="normal"><sp/>(!<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a9b560a7f46623d22fc6380fa4e516219" kindref="member">shutdown_</ref>.empty())<sp/>{</highlight></codeline>
+<codeline lineno="164"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;cb<sp/>=<sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a9b560a7f46623d22fc6380fa4e516219" kindref="member">shutdown_</ref>.front();</highlight></codeline>
+<codeline lineno="165"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>cb();</highlight></codeline>
+<codeline lineno="166"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a9b560a7f46623d22fc6380fa4e516219" kindref="member">shutdown_</ref>.pop();</highlight></codeline>
+<codeline lineno="167"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="168"><highlight class="normal"></highlight></codeline>
+<codeline lineno="169"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>=<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027a60fc158447294550bd06428e44a0887c" kindref="member">State::ReadyToStop</ref>;</highlight></codeline>
+<codeline lineno="170"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="171"><highlight class="normal"></highlight></codeline>
+<codeline lineno="172" refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a92fe06ab3d4fd6fce24c23c4e0bde8fe" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a92fe06ab3d4fd6fce24c23c4e0bde8fe" kindref="member">AppStateManagerImpl::run</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="173"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a9069e4c932261874d3e9c3761200248b" kindref="member">wp_to_myself</ref><sp/>=<sp/>weak_from_this();</highlight></codeline>
+<codeline lineno="174"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a9069e4c932261874d3e9c3761200248b" kindref="member">wp_to_myself</ref>.expired())<sp/>{</highlight></codeline>
+<codeline lineno="175"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">throw</highlight><highlight class="normal"><sp/>std::logic_error(</highlight></codeline>
+<codeline lineno="176"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;AppStateManager<sp/>must<sp/>be<sp/>instantiated<sp/>on<sp/>shared<sp/>pointer<sp/>before<sp/>run&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="177"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="178"><highlight class="normal"></highlight></codeline>
+<codeline lineno="179"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac0aef26de9df110878056b5e13f1969a" kindref="member">doPrepare</ref>();</highlight></codeline>
+<codeline lineno="180"><highlight class="normal"></highlight></codeline>
+<codeline lineno="181"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4696eeb8f757b27135d353611ed8c2d" kindref="member">state_</ref><sp/>==<sp/><ref refid="d4/d75/classsgns_1_1application_1_1_app_state_manager_1a92bffe78275c219ab93baf0d35eb6027abbca3d3cec09f823c699d1e1083207cc" kindref="member">State::ReadyToStart</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="182"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a41123b1308318ebe4c1078af704c334a" kindref="member">doLaunch</ref>();</highlight></codeline>
+<codeline lineno="183"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="184"><highlight class="normal"></highlight></codeline>
+<codeline lineno="185"><highlight class="normal"><sp/><sp/><sp/><sp/>std::unique_lock<sp/>lock(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a130cfe883a525cb76460b70f52ecd496" kindref="member">cv_mutex_</ref>);</highlight></codeline>
+<codeline lineno="186"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a28b5e4129a1600b8f0376e9945bf3522" kindref="member">cv_</ref>.wait(lock,<sp/>[&amp;]<sp/>{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4a934063af24571f4e74fc67271460d" kindref="member">shutdown_requested_</ref>.load();<sp/>});</highlight></codeline>
+<codeline lineno="187"><highlight class="normal"></highlight></codeline>
+<codeline lineno="188"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a966b5172322bc04df4d475c9bff3c5bc" kindref="member">doShutdown</ref>();</highlight></codeline>
+<codeline lineno="189"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="190"><highlight class="normal"></highlight></codeline>
+<codeline lineno="191" refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1af981827ba7adf78004b97be0f5c95955" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1af981827ba7adf78004b97be0f5c95955" kindref="member">AppStateManagerImpl::shutdown</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="192"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1ac4a934063af24571f4e74fc67271460d" kindref="member">shutdown_requested_</ref><sp/>=<sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="193"><highlight class="normal"><sp/><sp/><sp/><sp/>std::lock_guard<sp/>lg(<ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a130cfe883a525cb76460b70f52ecd496" kindref="member">cv_mutex_</ref>);</highlight></codeline>
+<codeline lineno="194"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d0/d18/classsgns_1_1application_1_1_app_state_manager_impl_1a28b5e4129a1600b8f0376e9945bf3522" kindref="member">cv_</ref>.notify_one();</highlight></codeline>
+<codeline lineno="195"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="196"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::application</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/application/impl/app_state_manager_impl.cpp"/>
+  </compounddef>
+</doxygen>

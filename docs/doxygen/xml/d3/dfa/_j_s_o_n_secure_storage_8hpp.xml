@@ -1,0 +1,133 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d3/dfa/_j_s_o_n_secure_storage_8hpp" kind="file" language="C++">
+    <compoundname>JSONSecureStorage.hpp</compoundname>
+    <includes refid="dd/d1a/_i_secure_storage_8hpp" local="yes">../../ISecureStorage.hpp</includes>
+    <includes local="no">rapidjson/document.h</includes>
+    <includedby refid="d6/d6e/_migration3__5__0_to3__5__1_8hpp" local="yes">src/account/Migration3_5_0To3_5_1.hpp</includedby>
+    <includedby refid="d7/d37/_j_s_o_n_secure_storage_8cpp" local="yes">src/local_secure_storage/impl/json/JSONSecureStorage.cpp</includedby>
+    <incdepgraph>
+      <node id="2">
+        <label>../../ISecureStorage.hpp</label>
+        <link refid="dd/d1a/_i_secure_storage_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/local_secure_storage/impl/json/JSONSecureStorage.hpp</label>
+        <link refid="d3/dfa/_j_s_o_n_secure_storage_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="7">
+        <label>rapidjson/document.h</label>
+      </node>
+      <node id="3">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="3">
+        <label>src/account/Migration3_5_0To3_5_1.cpp</label>
+        <link refid="da/d32/_migration3__5__0_to3__5__1_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/account/Migration3_5_0To3_5_1.hpp</label>
+        <link refid="d6/d6e/_migration3__5__0_to3__5__1_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>src/account/MigrationManager.cpp</label>
+        <link refid="d2/d4b/_migration_manager_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/local_secure_storage/impl/json/JSONSecureStorage.cpp</label>
+        <link refid="d7/d37/_j_s_o_n_secure_storage_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/local_secure_storage/impl/json/JSONSecureStorage.hpp</label>
+        <link refid="d3/dfa/_j_s_o_n_secure_storage_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage" prot="public">sgns::JSONSecureStorage</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="date"><para>2024-06-06 </para>
+</simplesect>
+<simplesect kind="author"><para>Henrique A. Klein (<ulink url="mailto:hklein@gnus.ai">hklein@gnus.ai</ulink>) </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#pragma<sp/>once</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dd/d1a/_i_secure_storage_8hpp" kindref="compound">../../ISecureStorage.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;rapidjson/document.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="15"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d1/dc3/namespacerapidjson" kindref="compound">rj</ref><sp/>=<sp/>rapidjson;</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18" refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1ab190943e1bbf8911644ac289a6335b97" kindref="member">JSONSecureStorage</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d5/db7/classsgns_1_1_i_secure_storage" kindref="compound">ISecureStorage</ref></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="21" refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1ab190943e1bbf8911644ac289a6335b97" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1ab190943e1bbf8911644ac289a6335b97" kindref="member">JSONSecureStorage</ref>(<sp/>std::string<sp/>directory<sp/>)<sp/>:<sp/><ref refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1aea6a9574823cc80a0157e52107fc93a4" kindref="member">directory_</ref>(<sp/><ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(<sp/>directory<sp/>)<sp/>)<sp/>{}</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23" refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1a743ac769f870710696b1aaa5ecc1b2d4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1a743ac769f870710696b1aaa5ecc1b2d4" kindref="member">~JSONSecureStorage</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal"><sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;SecureBufferType&gt;<sp/><ref refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1a955ba62ae5be231e6c499eb5ff0a9b27" kindref="member">Load</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;key<sp/>)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1a896bca85596f8c63101bfa8f333fb2c2" kindref="member">Save</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;key,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d5/db7/classsgns_1_1_i_secure_storage_1a5a10a540c9551ccad7d9c8e44cfd14d1" kindref="member">SecureBufferType</ref><sp/>&amp;buffer<sp/>)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;bool&gt;<sp/><ref refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1a1a9df7b28b76e1a799120fe8ff7d79e3" kindref="member">DeleteKey</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;key<sp/>)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31" refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1a5d16972fcdadf19c6977ddfb35a43364" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1a5d16972fcdadf19c6977ddfb35a43364" kindref="member">GetName</ref>()</highlight><highlight class="keyword"><sp/>override</highlight></codeline>
+<codeline lineno="32"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;LocalSecureStorage&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;rj::Document&gt;<sp/><ref refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1a2de93d6be937e7dc082ce043c25fbaa8" kindref="member">LoadJSON</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight></codeline>
+<codeline lineno="38" refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1a87f2cfd636ac2a0da52d004e6ab0b43e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1ab190943e1bbf8911644ac289a6335b97" kindref="member">JSONSecureStorage</ref><sp/>&amp;<ref refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1a87f2cfd636ac2a0da52d004e6ab0b43e" kindref="member">GetInstance</ref>();</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="41" refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1aea6a9574823cc80a0157e52107fc93a4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d4/dd2/classsgns_1_1_j_s_o_n_secure_storage_1aea6a9574823cc80a0157e52107fc93a4" kindref="member">directory_</ref>;</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="43"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="src/local_secure_storage/impl/json/JSONSecureStorage.hpp"/>
+  </compounddef>
+</doxygen>

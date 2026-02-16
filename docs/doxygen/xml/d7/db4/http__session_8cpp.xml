@@ -1,0 +1,271 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/db4/http__session_8cpp" kind="file" language="C++">
+    <compoundname>http_session.cpp</compoundname>
+    <includes refid="df/df4/http__session_8hpp" local="yes">api/transport/impl/http/http_session.hpp</includes>
+    <includes local="no">boost/config.hpp</includes>
+    <includes refid="d5/dda/outcome_8hpp" local="yes">outcome/outcome.hpp</includes>
+    <incdepgraph>
+      <node id="1">
+        <label>src/api/transport/impl/http/http_session.cpp</label>
+        <link refid="d7/db4/http__session_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>api/transport/impl/http/http_session.hpp</label>
+        <link refid="df/df4/http__session_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>api/transport/rpc_io_context.hpp</label>
+        <link refid="d7/db2/rpc__io__context_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>api/transport/session.hpp</label>
+        <link refid="d4/d5e/session_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>boost/asio/buffer.hpp</label>
+      </node>
+      <node id="16">
+        <label>boost/asio/io_context.hpp</label>
+      </node>
+      <node id="10">
+        <label>boost/asio/ip/tcp.hpp</label>
+      </node>
+      <node id="11">
+        <label>boost/asio/read_until.hpp</label>
+      </node>
+      <node id="3">
+        <label>boost/asio/strand.hpp</label>
+      </node>
+      <node id="12">
+        <label>boost/asio/streambuf.hpp</label>
+      </node>
+      <node id="13">
+        <label>boost/asio/write.hpp</label>
+      </node>
+      <node id="4">
+        <label>boost/beast.hpp</label>
+      </node>
+      <node id="22">
+        <label>boost/config.hpp</label>
+      </node>
+      <node id="14">
+        <label>boost/signals2/signal.hpp</label>
+      </node>
+      <node id="5">
+        <label>chrono</label>
+      </node>
+      <node id="6">
+        <label>cstdlib</label>
+      </node>
+      <node id="24">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="7">
+        <label>memory</label>
+      </node>
+      <node id="20">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="21">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="18">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d66/namespacesgns_1_1api">sgns::api</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;<ref refid="df/df4/http__session_8hpp" kindref="compound">api/transport/impl/http/http_session.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/config.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/dda/outcome_8hpp" kindref="compound">outcome/outcome.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d66/namespacesgns_1_1api" kindref="compound">sgns::api</ref><sp/>{</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9" refid="de/d31/classsgns_1_1api_1_1_http_session_1acb63711c01fb7d42bf39fdb26e7d88b8" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1acb63711c01fb7d42bf39fdb26e7d88b8" kindref="member">HttpSession::HttpSession</ref>(<ref refid="db/d02/classsgns_1_1api_1_1_session_1a4764a67d047daedafadc808a341dbae5" kindref="member">Context</ref><sp/>&amp;context,<sp/><ref refid="d9/ddf/structsgns_1_1api_1_1_http_session_1_1_configuration" kindref="compound">Configuration</ref><sp/>config)</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a34dfc444a0877ab9fecec8c50fb5b302" kindref="member">strand_</ref>(<ref refid="d4/da9/namespaceboost" kindref="compound">boost</ref>::asio::make_strand(context)),</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1aec13736742fbcb010f7e457ee3740b08" kindref="member">config_</ref>{config},</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a8d8fbddfb3e5b5abe5ea160d948cb2b6" kindref="member">stream_</ref>(<ref refid="d4/da9/namespaceboost" kindref="compound">boost</ref>::asio::ip::tcp::<ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a393470096225d90e083ae5923ac9beb0" kindref="member">socket</ref>(<ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a34dfc444a0877ab9fecec8c50fb5b302" kindref="member">strand_</ref>))<sp/>{}</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14" refid="de/d31/classsgns_1_1api_1_1_http_session_1aed2220fb92785c7bbc22dbe7079cf9d2" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1aed2220fb92785c7bbc22dbe7079cf9d2" kindref="member">HttpSession::start</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a1822a27ceb629ea5b0195cae4f6aa656" kindref="member">asyncRead</ref>();</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18" refid="de/d31/classsgns_1_1api_1_1_http_session_1ab6ed0e8f276f6a7a002a1216dfd1f1d6" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1ab6ed0e8f276f6a7a002a1216dfd1f1d6" kindref="member">HttpSession::stop</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/>boost::system::error_code<sp/>ec;</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a8d8fbddfb3e5b5abe5ea160d948cb2b6" kindref="member">stream_</ref>.socket().shutdown(Socket::shutdown_both,<sp/>ec);</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/>boost::ignore_unused(ec);</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24" refid="de/d31/classsgns_1_1api_1_1_http_session_1a426137195b8604402b886fac6693a058" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a426137195b8604402b886fac6693a058" kindref="member">HttpSession::makeBadResponse</ref>(std::string_view<sp/><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>,</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/><ref refid="d8/d5b/namespacesgns_1_1version" kindref="compound">version</ref>,</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>keep_alive)<sp/>{</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a2aa907ce0c3c48b2e464b838ef38fc7b" kindref="member">Response&lt;StringBody&gt;</ref><sp/>res{boost::beast::http::status::bad_request,<sp/><ref refid="d8/d5b/namespacesgns_1_1version" kindref="compound">version</ref>};</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/>res.set(boost::beast::http::field::server,<sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1ac541372ea04f128ec1d3a4edd0e95110" kindref="member">kServerName</ref>);</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/>res.set(boost::beast::http::field::content_type,<sp/></highlight><highlight class="stringliteral">&quot;text/html&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/>res.keep_alive(keep_alive);</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/>res.body()<sp/>=<sp/><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/>res.prepare_payload();</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>res;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>Body&gt;</highlight></codeline>
+<codeline lineno="37" refid="de/d31/classsgns_1_1api_1_1_http_session_1aba0404395beef8b134e64553095a8f77" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1ae542bf5f6212cfe49b702ccc8c52d921" kindref="member">HttpSession::handleRequest</ref>(boost::beast::http::request&lt;Body&gt;<sp/>&amp;&amp;req)<sp/>{</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>allow<sp/>only<sp/>POST<sp/>method</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(req.method()<sp/>!=<sp/>boost::beast::http::verb::post)<sp/>{</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a2e31f8394a2d75f08125299b4ef0e90a" kindref="member">asyncWrite</ref>(<ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a426137195b8604402b886fac6693a058" kindref="member">makeBadResponse</ref>(</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;Unsupported<sp/>HTTP-method&quot;</highlight><highlight class="normal">,<sp/>req.version(),<sp/>req.keep_alive()));</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="db/d02/classsgns_1_1api_1_1_session_1abd0a3726505e365e7aa987c5b2b21320" kindref="member">processRequest</ref>(req.body(),<sp/>shared_from_this());</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight></codeline>
+<codeline lineno="47" refid="de/d31/classsgns_1_1api_1_1_http_session_1a1822a27ceb629ea5b0195cae4f6aa656" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a1822a27ceb629ea5b0195cae4f6aa656" kindref="member">HttpSession::asyncRead</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a2e62f795014de2f646a5ade12753f05f" kindref="member">parser_</ref><sp/>=<sp/>std::make_unique&lt;Parser&gt;();</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a2e62f795014de2f646a5ade12753f05f" kindref="member">parser_</ref>-&gt;body_limit(<ref refid="de/d31/classsgns_1_1api_1_1_http_session_1aec13736742fbcb010f7e457ee3740b08" kindref="member">config_</ref>.max_request_size);</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a8d8fbddfb3e5b5abe5ea160d948cb2b6" kindref="member">stream_</ref>.expires_after(<ref refid="de/d31/classsgns_1_1api_1_1_http_session_1aec13736742fbcb010f7e457ee3740b08" kindref="member">config_</ref>.operation_timeout);</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"></highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/>boost::beast::http::async_read(</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a8d8fbddfb3e5b5abe5ea160d948cb2b6" kindref="member">stream_</ref>,</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a1dcc27f8331a951131c6d75b7f167d63" kindref="member">buffer_</ref>,</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a2e62f795014de2f646a5ade12753f05f" kindref="member">parser_</ref>-&gt;get(),</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[self<sp/>=<sp/>shared_from_this()](</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>ec,<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>count)<sp/>{</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>*s<sp/>=<sp/></highlight><highlight class="keyword">dynamic_cast&lt;</highlight><highlight class="normal"><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1acb63711c01fb7d42bf39fdb26e7d88b8" kindref="member">HttpSession</ref><sp/>*</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(self.get());</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>BOOST_ASSERT_MSG(s<sp/>!=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">,<sp/></highlight><highlight class="stringliteral">&quot;cannot<sp/>cast<sp/>to<sp/>HttpSession&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>s-&gt;onRead(ec,<sp/>count);</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"></highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">class</highlight><highlight class="normal"><sp/>Message&gt;</highlight></codeline>
+<codeline lineno="64" refid="de/d31/classsgns_1_1api_1_1_http_session_1a2e31f8394a2d75f08125299b4ef0e90a" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a2e31f8394a2d75f08125299b4ef0e90a" kindref="member">HttpSession::asyncWrite</ref>(Message<sp/>&amp;&amp;<ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>we<sp/>need<sp/>to<sp/>put<sp/>message<sp/>into<sp/>a<sp/>shared<sp/>ptr<sp/>for<sp/>async<sp/>operations</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns_1a28d1086e9c7886336bab065d17b7541f" kindref="member">message_type</ref><sp/>=<sp/></highlight><highlight class="keyword">decltype</highlight><highlight class="normal">(<ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>);</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>m<sp/>=<sp/>std::make_shared&lt;std::decay_t&lt;message_type&gt;&gt;(</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::forward&lt;message_type&gt;(<ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>));</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"></highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>write<sp/>response</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/>boost::beast::http::async_write(</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a8d8fbddfb3e5b5abe5ea160d948cb2b6" kindref="member">stream_</ref>,<sp/>*m,<sp/>[self<sp/>=<sp/>shared_from_this(),<sp/>m](</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>ec,<sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>size)<sp/>{</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>self-&gt;onWrite(ec,<sp/>size,<sp/>m-&gt;need_eof());</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>});</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"></highlight></codeline>
+<codeline lineno="77" refid="de/d31/classsgns_1_1api_1_1_http_session_1a1985cae9f5296bbe722a9fc5fcaf3b2f" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a1985cae9f5296bbe722a9fc5fcaf3b2f" kindref="member">HttpSession::respond</ref>(std::string_view<sp/>response)<sp/>{</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/>StringBody::value_type<sp/>body;</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/>body.assign(response);</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"></highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>size<sp/>=<sp/>body.size();</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"></highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>send<sp/>response</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a2aa907ce0c3c48b2e464b838ef38fc7b" kindref="member">Response&lt;StringBody&gt;</ref><sp/>res(std::piecewise_construct,</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::make_tuple(std::move(body)));</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/>res.set(HttpField::server,<sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1ac541372ea04f128ec1d3a4edd0e95110" kindref="member">kServerName</ref>);</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/>res.set(HttpField::content_type,<sp/></highlight><highlight class="stringliteral">&quot;text/html&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/>res.content_length(size);</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/>res.keep_alive(</highlight><highlight class="keyword">true</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"></highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a2e31f8394a2d75f08125299b4ef0e90a" kindref="member">asyncWrite</ref>(std::move(res));</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"></highlight></codeline>
+<codeline lineno="94" refid="de/d31/classsgns_1_1api_1_1_http_session_1a8da8a5557b22eaceba1c2ecc43579cf7" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a8da8a5557b22eaceba1c2ecc43579cf7" kindref="member">HttpSession::onRead</ref>(boost::system::error_code<sp/>ec,<sp/>std::size_t)<sp/>{</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(ec)<sp/>{</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(HttpError::end_of_stream<sp/>!=<sp/>ec)<sp/>{</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a9d0eba73a3e695c5da5d64c48c3054d8" kindref="member">reportError</ref>(ec,<sp/></highlight><highlight class="stringliteral">&quot;unknown<sp/>error<sp/>occurred&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"></highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1ab6ed0e8f276f6a7a002a1216dfd1f1d6" kindref="member">stop</ref>();</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"></highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1ae542bf5f6212cfe49b702ccc8c52d921" kindref="member">handleRequest</ref>(<ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a2e62f795014de2f646a5ade12753f05f" kindref="member">parser_</ref>-&gt;release());</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"></highlight></codeline>
+<codeline lineno="106" refid="de/d31/classsgns_1_1api_1_1_http_session_1ab0392341545648b4a6a3fd33c871d3f2" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1ab0392341545648b4a6a3fd33c871d3f2" kindref="member">HttpSession::onWrite</ref>(boost::system::error_code<sp/>ec,</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::size_t,</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>should_stop)<sp/>{</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(ec)<sp/>{</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a9d0eba73a3e695c5da5d64c48c3054d8" kindref="member">reportError</ref>(ec,<sp/></highlight><highlight class="stringliteral">&quot;failed<sp/>to<sp/>write<sp/>message&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1ab6ed0e8f276f6a7a002a1216dfd1f1d6" kindref="member">stop</ref>();</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"></highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(should_stop)<sp/>{</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1ab6ed0e8f276f6a7a002a1216dfd1f1d6" kindref="member">stop</ref>();</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"></highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>read<sp/>next<sp/>request</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a1822a27ceb629ea5b0195cae4f6aa656" kindref="member">asyncRead</ref>();</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"></highlight></codeline>
+<codeline lineno="122" refid="de/d31/classsgns_1_1api_1_1_http_session_1a9d0eba73a3e695c5da5d64c48c3054d8" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a9d0eba73a3e695c5da5d64c48c3054d8" kindref="member">HttpSession::reportError</ref>(boost::system::error_code<sp/>ec,</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string_view<sp/><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="de/d31/classsgns_1_1api_1_1_http_session_1a2849f4c59aa3a5d97cae1a34991214f6" kindref="member">logger_</ref>-&gt;error(</highlight><highlight class="stringliteral">&quot;error<sp/>occured:{},<sp/>code:<sp/>{}&quot;</highlight><highlight class="normal">,<sp/><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>,<sp/>ec.<ref refid="db/da6/classsgns_1_1message_1a1c0d801d4625dbcc8a9f40a5c6631b2c" kindref="member">message</ref>());</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="126"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::api</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/api/transport/impl/http/http_session.cpp"/>
+  </compounddef>
+</doxygen>

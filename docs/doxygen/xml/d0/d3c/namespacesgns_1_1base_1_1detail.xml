@@ -1,0 +1,69 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/d3c/namespacesgns_1_1base_1_1detail" kind="namespace" language="C++">
+    <compoundname>sgns::base::detail</compoundname>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d0/d3c/namespacesgns_1_1base_1_1detail_1a8921cde07e17bd0251022123b514d6aa" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>size_t</type>
+            <declname>size</declname>
+            <defname>size</defname>
+          </param>
+          <param>
+            <type>typename uint</type>
+          </param>
+        </templateparamlist>
+        <type>std::array&lt; uint8_t, size &gt;</type>
+        <definition>std::array&lt; uint8_t, size &gt; sgns::base::detail::uint_to_bytes</definition>
+        <argsstring>(uint &amp;&amp;i)</argsstring>
+        <name>uint_to_bytes</name>
+        <qualifiedname>sgns::base::detail::uint_to_bytes</qualifiedname>
+        <param>
+          <type>uint &amp;&amp;</type>
+          <declname>i</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/mp_utils.cpp" line="9" column="16" bodyfile="src/base/mp_utils.cpp" bodystart="9" bodyend="14" declfile="src/base/mp_utils.hpp" declline="11" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d3c/namespacesgns_1_1base_1_1detail_1a3b0d0d4fcfe9c59025f02948ecec339a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>size_t</type>
+            <declname>size</declname>
+            <defname>size</defname>
+          </param>
+          <param>
+            <type>typename uint</type>
+          </param>
+        </templateparamlist>
+        <type>uint</type>
+        <definition>uint sgns::base::detail::bytes_to_uint</definition>
+        <argsstring>(gsl::span&lt; uint8_t, size &gt; bytes)</argsstring>
+        <name>bytes_to_uint</name>
+        <qualifiedname>sgns::base::detail::bytes_to_uint</qualifiedname>
+        <param>
+          <type>gsl::span&lt; uint8_t, size &gt;</type>
+          <declname>bytes</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/mp_utils.cpp" line="17" column="10" bodyfile="src/base/mp_utils.cpp" bodystart="17" bodyend="24" declfile="src/base/mp_utils.hpp" declline="14" declcolumn="10"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/base/mp_utils.cpp" line="7" column="3"/>
+  </compounddef>
+</doxygen>

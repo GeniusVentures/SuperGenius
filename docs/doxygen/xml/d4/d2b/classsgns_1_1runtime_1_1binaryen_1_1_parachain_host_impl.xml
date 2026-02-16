@@ -1,0 +1,481 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/d2b/classsgns_1_1runtime_1_1binaryen_1_1_parachain_host_impl" kind="class" language="C++" prot="public">
+    <compoundname>sgns::runtime::binaryen::ParachainHostImpl</compoundname>
+    <basecompoundref refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api" prot="public" virt="non-virtual">sgns::runtime::binaryen::RuntimeApi</basecompoundref>
+    <basecompoundref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host" prot="public" virt="non-virtual">sgns::runtime::ParachainHost</basecompoundref>
+    <includes refid="d6/d15/parachain__host__impl_8hpp" local="no">parachain_host_impl.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1runtime_1_1binaryen_1_1_parachain_host_impl_1aa8b6e571370d8678160c189af4f7fdff" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::binaryen::ParachainHostImpl::ParachainHostImpl</definition>
+        <argsstring>(const std::shared_ptr&lt; WasmProvider &gt; &amp;wasm_provider, const std::shared_ptr&lt; RuntimeManager &gt; &amp;runtime_manager)</argsstring>
+        <name>ParachainHostImpl</name>
+        <qualifiedname>sgns::runtime::binaryen::ParachainHostImpl::ParachainHostImpl</qualifiedname>
+        <param>
+          <type>const std::shared_ptr&lt; <ref refid="d2/d00/classsgns_1_1runtime_1_1_wasm_provider" kindref="compound">WasmProvider</ref> &gt; &amp;</type>
+          <declname>wasm_provider</declname>
+        </param>
+        <param>
+          <type>const std::shared_ptr&lt; <ref refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager" kindref="compound">RuntimeManager</ref> &gt; &amp;</type>
+          <declname>runtime_manager</declname>
+        </param>
+        <briefdescription>
+<para>Constructor. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>wasm_provider</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>WASM provider instance. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>runtime_manager</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Runtime manager instance. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/parachain_host_impl.hpp" line="16" column="5" bodyfile="src/runtime/binaryen/runtime_api/parachain_host_impl.cpp" bodystart="9" bodyend="12"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1runtime_1_1binaryen_1_1_parachain_host_impl_1aab3d48a15c2dcf6ff153f8a592e851f8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::binaryen::ParachainHostImpl::~ParachainHostImpl</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~ParachainHostImpl</name>
+        <qualifiedname>sgns::runtime::binaryen::ParachainHostImpl::~ParachainHostImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/parachain_host_impl.hpp" line="20" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1runtime_1_1binaryen_1_1_parachain_host_impl_1a371fec63ebcc37a81858d7f31473a475" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1adb711d2970c012206d3d6595e62ebbaa" kindref="member">DutyRoster</ref> &gt;</type>
+        <definition>outcome::result&lt; DutyRoster &gt; sgns::runtime::binaryen::ParachainHostImpl::duty_roster</definition>
+        <argsstring>() override</argsstring>
+        <name>duty_roster</name>
+        <qualifiedname>sgns::runtime::binaryen::ParachainHostImpl::duty_roster</qualifiedname>
+        <reimplements refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1ad61802ff50dfeb8fc7bea17e3b4afa44">duty_roster</reimplements>
+        <briefdescription>
+<para>Calls the ParachainHost_duty_roster function from wasm code. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para><ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1adb711d2970c012206d3d6595e62ebbaa" kindref="member">DutyRoster</ref> structure or error if fails </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/parachain_host_impl.hpp" line="22" column="21" bodyfile="src/runtime/binaryen/runtime_api/parachain_host_impl.cpp" bodystart="14" bodyend="17"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1runtime_1_1binaryen_1_1_parachain_host_impl_1a52d8c5380042a713c623b7a8cc6ecc0f" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; std::vector&lt; <ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1ab29342fe3eedac6b5757202f2dc325f2" kindref="member">ParachainId</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::vector&lt; ParaId &gt; &gt; sgns::runtime::binaryen::ParachainHostImpl::active_parachains</definition>
+        <argsstring>() override</argsstring>
+        <name>active_parachains</name>
+        <qualifiedname>sgns::runtime::binaryen::ParachainHostImpl::active_parachains</qualifiedname>
+        <reimplements refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1acbae32cd0ebc1139a477c3a2dd1756c0">active_parachains</reimplements>
+        <briefdescription>
+<para>Calls the ParachainHost_active_parachains function from wasm code. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>vector of <ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1ab29342fe3eedac6b5757202f2dc325f2" kindref="member">ParachainId</ref> items or error if fails </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/parachain_host_impl.hpp" line="24" column="21" bodyfile="src/runtime/binaryen/runtime_api/parachain_host_impl.cpp" bodystart="19" bodyend="22"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1runtime_1_1binaryen_1_1_parachain_host_impl_1a8f5c0114f7ed328c4887601139c831ed" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; boost::optional&lt; <ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1ac7e6910a71dec3b202c899a4d015b635" kindref="member">Buffer</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; boost::optional&lt; Buffer &gt; &gt; sgns::runtime::binaryen::ParachainHostImpl::parachain_head</definition>
+        <argsstring>(ParachainId id) override</argsstring>
+        <name>parachain_head</name>
+        <qualifiedname>sgns::runtime::binaryen::ParachainHostImpl::parachain_head</qualifiedname>
+        <reimplements refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1a36efc5da7e626c83bd0a3418b29dfda4">parachain_head</reimplements>
+        <param>
+          <type><ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1ab29342fe3eedac6b5757202f2dc325f2" kindref="member">ParachainId</ref></type>
+          <declname>id</declname>
+        </param>
+        <briefdescription>
+<para>Calls the ParachainHost_parachain_head function from wasm code. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>parachain id </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>parachain head or error if fails </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/parachain_host_impl.hpp" line="26" column="21" bodyfile="src/runtime/binaryen/runtime_api/parachain_host_impl.cpp" bodystart="24" bodyend="28"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1runtime_1_1binaryen_1_1_parachain_host_impl_1ab177586adb8cf1dd9b1c8332689c70dd" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; boost::optional&lt; <ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1ac7e6910a71dec3b202c899a4d015b635" kindref="member">Buffer</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; boost::optional&lt; Buffer &gt; &gt; sgns::runtime::binaryen::ParachainHostImpl::parachain_code</definition>
+        <argsstring>(ParachainId id) override</argsstring>
+        <name>parachain_code</name>
+        <qualifiedname>sgns::runtime::binaryen::ParachainHostImpl::parachain_code</qualifiedname>
+        <reimplements refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1acca80ee537435db33a120299ad30955b">parachain_code</reimplements>
+        <param>
+          <type><ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1ab29342fe3eedac6b5757202f2dc325f2" kindref="member">ParachainId</ref></type>
+          <declname>id</declname>
+        </param>
+        <briefdescription>
+<para>Calls the ParachainHost_parachain_code function from wasm code. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>parachain id </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>parachain code or error if fails </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/parachain_host_impl.hpp" line="29" column="21" bodyfile="src/runtime/binaryen/runtime_api/parachain_host_impl.cpp" bodystart="30" bodyend="34"/>
+      </memberdef>
+      <memberdef kind="function" id="d4/d2b/classsgns_1_1runtime_1_1binaryen_1_1_parachain_host_impl_1a936f58415f7c481f42a16a3a87d6b913" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; std::vector&lt; <ref refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1a9c55bd5460286a75e30ebbf15736faba" kindref="member">ValidatorId</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::vector&lt; ValidatorId &gt; &gt; sgns::runtime::binaryen::ParachainHostImpl::validators</definition>
+        <argsstring>() override</argsstring>
+        <name>validators</name>
+        <qualifiedname>sgns::runtime::binaryen::ParachainHostImpl::validators</qualifiedname>
+        <reimplements refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1a02d837bc6ea03484f3695c6ca5f5d4d9">validators</reimplements>
+        <briefdescription>
+<para>reports validators list for given block_id </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>validators list </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/runtime_api/parachain_host_impl.hpp" line="32" column="21" bodyfile="src/runtime/binaryen/runtime_api/parachain_host_impl.cpp" bodystart="36" bodyend="39"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>sgns::runtime::ParachainHost</label>
+        <link refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host"/>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::binaryen::ParachainHostImpl</label>
+        <link refid="d4/d2b/classsgns_1_1runtime_1_1binaryen_1_1_parachain_host_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::binaryen::RuntimeApi</label>
+        <link refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="15">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="24">
+        <label>K</label>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="20">
+        <label>sgns::base::Blob&lt; size_ &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>sgns::base::Blob&lt; 32 &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+        <childnode refid="20" relation="template-instance">
+          <edgelabel>&lt; 32 &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="14">
+        <label>sgns::crypto::Hasher</label>
+        <link refid="dd/d14/classsgns_1_1crypto_1_1_hasher"/>
+        <childnode refid="15" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>sgns::runtime::ParachainHost</label>
+        <link refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host"/>
+      </node>
+      <node id="9">
+        <label>sgns::runtime::TrieStorageProvider</label>
+        <link refid="d7/d99/classsgns_1_1runtime_1_1_trie_storage_provider"/>
+      </node>
+      <node id="31">
+        <label>sgns::runtime::WasmProvider</label>
+        <link refid="d2/d00/classsgns_1_1runtime_1_1_wasm_provider"/>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::binaryen::ParachainHostImpl</label>
+        <link refid="d4/d2b/classsgns_1_1runtime_1_1binaryen_1_1_parachain_host_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="33" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::binaryen::RuntimeApi</label>
+        <link refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-runtime_manager_</edgelabel>
+        </childnode>
+        <childnode refid="30" relation="usage">
+          <edgelabel>-wasm_provider_</edgelabel>
+        </childnode>
+        <childnode refid="32" relation="usage">
+          <edgelabel>-executor_</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="26">
+        <label>sgns::runtime::binaryen::RuntimeExternalInterface</label>
+        <link refid="d1/d75/classsgns_1_1runtime_1_1binaryen_1_1_runtime_external_interface"/>
+        <childnode refid="27" relation="public-inheritance">
+        </childnode>
+        <childnode refid="28" relation="usage">
+          <edgelabel>-extension_</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::runtime::binaryen::RuntimeManager</label>
+        <link refid="d7/da0/classsgns_1_1runtime_1_1binaryen_1_1_runtime_manager"/>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-storage_provider_</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>-extension_factory_</edgelabel>
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>-module_factory_</edgelabel>
+        </childnode>
+        <childnode refid="13" relation="usage">
+          <edgelabel>-hasher_</edgelabel>
+        </childnode>
+        <childnode refid="16" relation="usage">
+          <edgelabel>-modules_mutex_</edgelabel>
+        </childnode>
+        <childnode refid="17" relation="usage">
+          <edgelabel>-modules_</edgelabel>
+        </childnode>
+        <childnode refid="25" relation="usage">
+          <edgelabel>-external_interface_</edgelabel>
+        </childnode>
+      </node>
+      <node id="32">
+        <label>sgns::runtime::binaryen::WasmExecutor</label>
+        <link refid="dc/dac/classsgns_1_1runtime_1_1binaryen_1_1_wasm_executor"/>
+      </node>
+      <node id="22">
+        <label>sgns::runtime::binaryen::WasmModule</label>
+        <link refid="d9/d10/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module"/>
+      </node>
+      <node id="12">
+        <label>sgns::runtime::binaryen::WasmModuleFactory</label>
+        <link refid="df/dd7/classsgns_1_1runtime_1_1binaryen_1_1_wasm_module_factory"/>
+      </node>
+      <node id="19">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="23">
+        <label>std::map&lt; K, T &gt;</label>
+        <childnode refid="24" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>std::map&lt; sgns::base::Blob&lt; 32 &gt;, std::shared_ptr&lt; sgns::runtime::binaryen::WasmModule &gt; &gt;</label>
+        <childnode refid="18" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="21" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="23" relation="template-instance">
+          <edgelabel>&lt; sgns::base::Blob&lt; 32 &gt;, std::shared_ptr&lt; sgns::runtime::binaryen::WasmModule &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>std::mutex</label>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::shared_ptr&lt; extensions::ExtensionFactory &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; extensions::ExtensionFactory &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="13">
+        <label>std::shared_ptr&lt; sgns::crypto::Hasher &gt;</label>
+        <childnode refid="14" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::crypto::Hasher &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; sgns::runtime::TrieStorageProvider &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::TrieStorageProvider &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="30">
+        <label>std::shared_ptr&lt; sgns::runtime::WasmProvider &gt;</label>
+        <childnode refid="31" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::WasmProvider &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="25">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::RuntimeExternalInterface &gt;</label>
+        <childnode refid="26" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::RuntimeExternalInterface &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::RuntimeManager &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::RuntimeManager &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::WasmModule &gt;</label>
+        <childnode refid="22" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::WasmModule &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::shared_ptr&lt; sgns::runtime::binaryen::WasmModuleFactory &gt;</label>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::runtime::binaryen::WasmModuleFactory &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="29">
+        <label>std::unique_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="28">
+        <label>std::unique_ptr&lt; extensions::Extension &gt;</label>
+        <childnode refid="29" relation="template-instance">
+          <edgelabel>&lt; extensions::Extension &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="27">
+        <label>wasm::ShellExternalInterface</label>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/binaryen/runtime_api/parachain_host_impl.hpp" line="9" column="3" bodyfile="src/runtime/binaryen/runtime_api/parachain_host_impl.hpp" bodystart="9" bodyend="33"/>
+    <listofallmembers>
+      <member refid="d4/d2b/classsgns_1_1runtime_1_1binaryen_1_1_parachain_host_impl_1a52d8c5380042a713c623b7a8cc6ecc0f" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>active_parachains</name></member>
+      <member refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1ac7e6910a71dec3b202c899a4d015b635" prot="protected" virt="non-virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>Buffer</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1a6a085102349cc88fbd0099b70bf7e094" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>CallPersistency</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1acfbd16edc772cd082596bed9e6566588" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>createRuntimeEnvironment</name></member>
+      <member refid="d4/d2b/classsgns_1_1runtime_1_1binaryen_1_1_parachain_host_impl_1a371fec63ebcc37a81858d7f31473a475" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>duty_roster</name></member>
+      <member refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1adb711d2970c012206d3d6595e62ebbaa" prot="protected" virt="non-virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>DutyRoster</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1af9734bde832439b75009b3c3b8d19f3d" prot="protected" virt="non-virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>execute</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1ad69effae3d32855dd3ed8d72beb346e5" prot="protected" virt="non-virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>executeAt</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1aef8cd1c4cdd70ce1c52099eef6bd5573" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>executeMaybeAt</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1a1b44a491f5ffd5a2b6a38383e00bce0e" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>executor_</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1af4b70c18825ad6baa9632577739db535" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>logger_</name></member>
+      <member refid="d4/d2b/classsgns_1_1runtime_1_1binaryen_1_1_parachain_host_impl_1ab177586adb8cf1dd9b1c8332689c70dd" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>parachain_code</name></member>
+      <member refid="d4/d2b/classsgns_1_1runtime_1_1binaryen_1_1_parachain_host_impl_1a8f5c0114f7ed328c4887601139c831ed" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>parachain_head</name></member>
+      <member refid="d4/d2b/classsgns_1_1runtime_1_1binaryen_1_1_parachain_host_impl_1aa8b6e571370d8678160c189af4f7fdff" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>ParachainHostImpl</name></member>
+      <member refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1ab29342fe3eedac6b5757202f2dc325f2" prot="protected" virt="non-virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>ParachainId</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1a206146e3ce08b0f7707b28c15892f4a5" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>runtime_manager_</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1a54231e096e02eb06de8d3764468e3624" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>RuntimeApi</name></member>
+      <member refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1a9c55bd5460286a75e30ebbf15736faba" prot="protected" virt="non-virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>ValidatorId</name></member>
+      <member refid="d4/d2b/classsgns_1_1runtime_1_1binaryen_1_1_parachain_host_impl_1a936f58415f7c481f42a16a3a87d6b913" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>validators</name></member>
+      <member refid="dc/d25/classsgns_1_1runtime_1_1binaryen_1_1_runtime_api_1ae5923b27dda9129f8ab8c4fdb011452d" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>wasm_provider_</name></member>
+      <member refid="dd/dc2/classsgns_1_1runtime_1_1_parachain_host_1aa58839b0ef893b1146ba82f7f8f79f34" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>~ParachainHost</name></member>
+      <member refid="d4/d2b/classsgns_1_1runtime_1_1binaryen_1_1_parachain_host_impl_1aab3d48a15c2dcf6ff153f8a592e851f8" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::ParachainHostImpl</scope><name>~ParachainHostImpl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

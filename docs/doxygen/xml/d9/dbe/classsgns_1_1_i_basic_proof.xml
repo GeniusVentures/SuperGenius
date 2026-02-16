@@ -1,0 +1,729 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/dbe/classsgns_1_1_i_basic_proof" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::IBasicProof</compoundname>
+    <derivedcompoundref refid="df/df1/classsgns_1_1_processing_proof" prot="public" virt="non-virtual">sgns::ProcessingProof</derivedcompoundref>
+    <derivedcompoundref refid="d5/d48/classsgns_1_1_transfer_proof" prot="public" virt="non-virtual">sgns::TransferProof</derivedcompoundref>
+    <includes refid="de/d4a/_i_basic_proof_8hpp" local="no">IBasicProof.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="d9/dbe/classsgns_1_1_i_basic_proof_1a11a20e7638850a75abcc2b101a801cea" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>Error</name>
+        <qualifiedname>sgns::IBasicProof::Error</qualifiedname>
+        <enumvalue id="d9/dbe/classsgns_1_1_i_basic_proof_1a11a20e7638850a75abcc2b101a801ceaaed37ceb30665ea11467e944311ffe598" prot="public">
+          <name>INSUFFICIENT_FUNDS</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+<para>Insufficient funds error. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d9/dbe/classsgns_1_1_i_basic_proof_1a11a20e7638850a75abcc2b101a801ceaae4bbd8b2c16c4a017e2f335277f73a88" prot="public">
+          <name>INVALID_PROOF</name>
+          <briefdescription>
+<para>Invalid proof error. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d9/dbe/classsgns_1_1_i_basic_proof_1a11a20e7638850a75abcc2b101a801ceaa664b3fd9b7b05f1412a7d100b3a406f2" prot="public">
+          <name>BYTECODE_NOT_FOUND</name>
+          <briefdescription>
+<para>Bytecode not found error. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d9/dbe/classsgns_1_1_i_basic_proof_1a11a20e7638850a75abcc2b101a801ceaa536ae19f39f97e3f7c3358f0dba0d680" prot="public">
+          <name>INVALID_CIRCUIT</name>
+          <briefdescription>
+<para>Invalid circuit error. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d9/dbe/classsgns_1_1_i_basic_proof_1a11a20e7638850a75abcc2b101a801ceaa2365dab1c2148b442f01558edce7e261" prot="public">
+          <name>INVALID_PROTO_PROOF</name>
+          <briefdescription>
+<para>Invalid protobuf proof error. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d9/dbe/classsgns_1_1_i_basic_proof_1a11a20e7638850a75abcc2b101a801ceaa1b3f1344f78d2de96cb0c8ac354720a7" prot="public">
+          <name>INVALID_PROOF_TYPE</name>
+          <briefdescription>
+<para>Invalid proof type error. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d9/dbe/classsgns_1_1_i_basic_proof_1a11a20e7638850a75abcc2b101a801ceaab671b20e0f6f252d629451c5cc20bf6b" prot="public">
+          <name>UNEXPECTED_PROOF_TYPE</name>
+          <briefdescription>
+<para>Unexpected proof type error. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d9/dbe/classsgns_1_1_i_basic_proof_1a11a20e7638850a75abcc2b101a801ceaad07859bf64bbcc8b497412fe509486a0" prot="public">
+          <name>INVALID_PUBLIC_PARAMETERS</name>
+          <briefdescription>
+<para>Invalid public parameters error. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>Enumeration of error codes used in the proof classes. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="52" column="9" bodyfile="src/proof/IBasicProof.hpp" bodystart="53" bodyend="62"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d9/dbe/classsgns_1_1_i_basic_proof_1a74208ca07598e6fd7fa8b567a7004bfb" prot="public" static="no">
+        <type>std::function&lt; outcome::result&lt; std::pair&lt; boost::json::array, boost::json::array &gt; &gt;(const std::vector&lt; uint8_t &gt; &amp;)&gt;</type>
+        <definition>using sgns::IBasicProof::PublicParamDeserializeFn = std::function&lt;
+           outcome::result&lt;std::pair&lt;boost::json::array, boost::json::array&gt;&gt;( const std::vector&lt;uint8_t&gt; &amp; )&gt;</definition>
+        <argsstring></argsstring>
+        <name>PublicParamDeserializeFn</name>
+        <qualifiedname>sgns::IBasicProof::PublicParamDeserializeFn</qualifiedname>
+        <briefdescription>
+<para>Alias for the de-serializer method type to be implemented in derived classes. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="34" column="9" bodyfile="src/proof/IBasicProof.hpp" bodystart="34" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="protected-static-attrib">
+      <memberdef kind="variable" id="d9/dbe/classsgns_1_1_i_basic_proof_1a077fa173ca9162040ca0cb0ca2f15574" prot="protected" static="yes" mutable="no">
+        <type>std::map&lt; std::string, <ref refid="d9/dbe/classsgns_1_1_i_basic_proof_1a74208ca07598e6fd7fa8b567a7004bfb" kindref="member">PublicParamDeserializeFn</ref> &gt;</type>
+        <definition>std::map&lt;std::string, PublicParamDeserializeFn&gt; sgns::IBasicProof::PublicParamDeSerializers</definition>
+        <argsstring></argsstring>
+        <name>PublicParamDeSerializers</name>
+        <qualifiedname>sgns::IBasicProof::PublicParamDeSerializers</qualifiedname>
+        <briefdescription>
+<para>A map of deserialization functions for public parameters by proof type. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="133" column="32" bodyfile="src/proof/IBasicProof.hpp" bodystart="133" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d9/dbe/classsgns_1_1_i_basic_proof_1ae7a308a7ec04d4c12725e327d0d0d3a1" prot="protected" static="yes" mutable="no">
+        <type>std::map&lt; std::string, std::string &gt;</type>
+        <definition>std::map&lt;std::string, std::string&gt; sgns::IBasicProof::ByteCodeMap</definition>
+        <argsstring></argsstring>
+        <name>ByteCodeMap</name>
+        <qualifiedname>sgns::IBasicProof::ByteCodeMap</qualifiedname>
+        <briefdescription>
+<para>A map of bytecodes associated with each proof type. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="138" column="32" bodyfile="src/proof/IBasicProof.hpp" bodystart="138" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d9/dbe/classsgns_1_1_i_basic_proof_1a0762b077de0f8d7b2bb7a4322bf9f4c2" prot="private" static="no" mutable="no">
+        <type>const std::string</type>
+        <definition>const std::string sgns::IBasicProof::bytecode_payload_</definition>
+        <argsstring></argsstring>
+        <name>bytecode_payload_</name>
+        <qualifiedname>sgns::IBasicProof::bytecode_payload_</qualifiedname>
+        <briefdescription>
+<para>The bytecode generated by the modified clang. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="176" column="27" bodyfile="src/proof/IBasicProof.hpp" bodystart="176" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d9/dbe/classsgns_1_1_i_basic_proof_1a6949373f697d0a371c8788f04f706443" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::IBasicProof::IBasicProof</definition>
+        <argsstring>(std::string bytecode_payload)</argsstring>
+        <name>IBasicProof</name>
+        <qualifiedname>sgns::IBasicProof::IBasicProof</qualifiedname>
+        <param>
+          <type>std::string</type>
+          <declname>bytecode_payload</declname>
+        </param>
+        <briefdescription>
+<para>Constructs a proof and informs the bytecode that will be used. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">bytecode_payload</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Bytecode generated by zkllvm&apos;s modified clang </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="41" column="18" bodyfile="src/proof/IBasicProof.cpp" bodystart="40" bodyend="40"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dbe/classsgns_1_1_i_basic_proof_1a8bb0d3203b7e374206db6afc13ed76fe" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::IBasicProof::~IBasicProof</definition>
+        <argsstring>()=default</argsstring>
+        <name>~IBasicProof</name>
+        <qualifiedname>sgns::IBasicProof::~IBasicProof</qualifiedname>
+        <briefdescription>
+<para>Virtual destructor for <ref refid="d9/dbe/classsgns_1_1_i_basic_proof" kindref="compound">IBasicProof</ref>. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="46" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dbe/classsgns_1_1_i_basic_proof_1a9e7a9d418eb6307f74e75a0414961a5d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::string</type>
+        <definition>virtual std::string sgns::IBasicProof::GetProofType</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetProofType</name>
+        <qualifiedname>sgns::IBasicProof::GetProofType</qualifiedname>
+        <reimplementedby refid="df/df1/classsgns_1_1_processing_proof_1af9e2f2f9ed4307dee3315f53a076af88">GetProofType</reimplementedby>
+        <reimplementedby refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1a50f6d665fb26dd277d3c2cddbc89fd2c">GetProofType</reimplementedby>
+        <reimplementedby refid="d5/d48/classsgns_1_1_transfer_proof_1aafc4e760da2aae6d64a57fc74908edcc">GetProofType</reimplementedby>
+        <briefdescription>
+<para>Pure virtual function to get the proof type. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A string representing the type of proof. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="68" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dbe/classsgns_1_1_i_basic_proof_1a055e700cab818d5169dee923883a38d9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::vector&lt; uint8_t &gt; &gt;</type>
+        <definition>outcome::result&lt; std::vector&lt; uint8_t &gt; &gt; sgns::IBasicProof::GenerateFullProof</definition>
+        <argsstring>()</argsstring>
+        <name>GenerateFullProof</name>
+        <qualifiedname>sgns::IBasicProof::GenerateFullProof</qualifiedname>
+        <briefdescription>
+<para>Generates a full proof using the internal class values. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A protobuf compatible serialized vector of proof data in bytes. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="74" column="25" bodyfile="src/proof/IBasicProof.cpp" bodystart="76" bodyend="82"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d9/dbe/classsgns_1_1_i_basic_proof_1a6624dc7082e4a2b28c6db7b3b1cad86f" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; bool &gt;</type>
+        <definition>outcome::result&lt; bool &gt; sgns::IBasicProof::VerifyFullProof</definition>
+        <argsstring>(const std::vector&lt; uint8_t &gt; &amp;full_proof_data)</argsstring>
+        <name>VerifyFullProof</name>
+        <qualifiedname>sgns::IBasicProof::VerifyFullProof</qualifiedname>
+        <param>
+          <type>const std::vector&lt; uint8_t &gt; &amp;</type>
+          <declname>full_proof_data</declname>
+        </param>
+        <briefdescription>
+<para>Verifies the proof with the public parameters. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">full_proof_data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The protobuf byte vector representing the proof data and public parameters </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>If successful returns the validity of the proof. Otherwise it returns <ref refid="d9/dbe/classsgns_1_1_i_basic_proof_1a11a20e7638850a75abcc2b101a801cea" kindref="member">IBasicProof::Error</ref> </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="81" column="32" bodyfile="src/proof/IBasicProof.cpp" bodystart="95" bodyend="119"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dbe/classsgns_1_1_i_basic_proof_1aa3cc564f0b0ad375af044855b4265e3c" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; bool &gt;</type>
+        <definition>outcome::result&lt; bool &gt; sgns::IBasicProof::VerifyFullProof</definition>
+        <argsstring>(const std::pair&lt; boost::json::array, boost::json::array &gt; &amp;parameters, const SGProof::BaseProofData &amp;proof_data, std::string proof_bytecode)</argsstring>
+        <name>VerifyFullProof</name>
+        <qualifiedname>sgns::IBasicProof::VerifyFullProof</qualifiedname>
+        <param>
+          <type>const std::pair&lt; boost::json::array, boost::json::array &gt; &amp;</type>
+          <declname>parameters</declname>
+        </param>
+        <param>
+          <type>const SGProof::BaseProofData &amp;</type>
+          <declname>proof_data</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>proof_bytecode</declname>
+        </param>
+        <briefdescription>
+<para>Verifies the proof with parameters and bytecode. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">parameters</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Deserialized public parameters and zeroed private parameters. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">proof_data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Proof data to verify. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">proof_bytecode</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Serialized proof bytecode. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>If successful returns the validity of the proof. Otherwise it returns <ref refid="d9/dbe/classsgns_1_1_i_basic_proof_1a11a20e7638850a75abcc2b101a801cea" kindref="member">IBasicProof::Error</ref>. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="89" column="32" bodyfile="src/proof/IBasicProof.cpp" bodystart="121" bodyend="141"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dbe/classsgns_1_1_i_basic_proof_1a2ded047a5404745a7328ee66df5761fa" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>boost::json::object</type>
+        <definition>boost::json::object sgns::IBasicProof::GenerateIntParameter</definition>
+        <argsstring>(uint64_t value)</argsstring>
+        <name>GenerateIntParameter</name>
+        <qualifiedname>sgns::IBasicProof::GenerateIntParameter</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+<para>Generates a JSON object for an integer parameter. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The integer value to be converted to a JSON object. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A JSON object containing the parameter. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="99" column="36" bodyfile="src/proof/IBasicProof.cpp" bodystart="143" bodyend="149"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dbe/classsgns_1_1_i_basic_proof_1a4250adf5b42e430017cba0973a86c877" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>std::size_t</type>
+            <declname>N</declname>
+            <defname>N</defname>
+          </param>
+        </templateparamlist>
+        <type>boost::json::object</type>
+        <definition>static boost::json::object sgns::IBasicProof::GenerateArrayParameter</definition>
+        <argsstring>(const std::array&lt; uint64_t, N &gt; &amp;values)</argsstring>
+        <name>GenerateArrayParameter</name>
+        <qualifiedname>sgns::IBasicProof::GenerateArrayParameter</qualifiedname>
+        <param>
+          <type>const std::array&lt; uint64_t, N &gt; &amp;</type>
+          <declname>values</declname>
+        </param>
+        <briefdescription>
+<para>Generates a JSON object for an array parameter. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">values</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The array of values to be converted to a JSON object. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A JSON object containing the array parameter. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="107" column="36" bodyfile="src/proof/IBasicProof.hpp" bodystart="107" bodyend="120"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dbe/classsgns_1_1_i_basic_proof_1a369e6638a2c0247e80e67af5ea2b4b55" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>boost::json::object</type>
+        <definition>boost::json::object sgns::IBasicProof::GenerateFieldParameter</definition>
+        <argsstring>(uint64_t value)</argsstring>
+        <name>GenerateFieldParameter</name>
+        <qualifiedname>sgns::IBasicProof::GenerateFieldParameter</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+<para>Generates a JSON object for a field parameter. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The field value to be converted to a JSON object. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A JSON object containing the field parameter. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="127" column="36" bodyfile="src/proof/IBasicProof.cpp" bodystart="151" bodyend="157"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="protected-static-func">
+      <memberdef kind="function" id="d9/dbe/classsgns_1_1_i_basic_proof_1a82b0e6eb12aa407abab8cc96f4d7831c" prot="protected" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>static void sgns::IBasicProof::RegisterDeserializer</definition>
+        <argsstring>(const std::string &amp;proof_type, PublicParamDeserializeFn fn)</argsstring>
+        <name>RegisterDeserializer</name>
+        <qualifiedname>sgns::IBasicProof::RegisterDeserializer</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>proof_type</declname>
+        </param>
+        <param>
+          <type><ref refid="d9/dbe/classsgns_1_1_i_basic_proof_1a74208ca07598e6fd7fa8b567a7004bfb" kindref="member">PublicParamDeserializeFn</ref></type>
+          <declname>fn</declname>
+        </param>
+        <briefdescription>
+<para>Registers a deserializer function for a specific proof type. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">proof_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The proof type for which the deserializer is registered. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">fn</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The deserializer function to be registered. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="145" column="21" bodyfile="src/proof/IBasicProof.hpp" bodystart="145" bodyend="148"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dbe/classsgns_1_1_i_basic_proof_1a8760ff952add694d3862deaa3891e3b7" prot="protected" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>static void sgns::IBasicProof::RegisterBytecode</definition>
+        <argsstring>(const std::string &amp;proof_type, std::string bytecode)</argsstring>
+        <name>RegisterBytecode</name>
+        <qualifiedname>sgns::IBasicProof::RegisterBytecode</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>proof_type</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>bytecode</declname>
+        </param>
+        <briefdescription>
+<para>Registers a bytecode for a specific proof type. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">proof_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The proof type for which the bytecode is registered. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">bytecode</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The bytecode to be registered. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="155" column="21" bodyfile="src/proof/IBasicProof.hpp" bodystart="155" bodyend="158"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dbe/classsgns_1_1_i_basic_proof_1a9221a9e975019db2217f75fbe514ad3f" prot="protected" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; SGProof::BaseProofProto &gt;</type>
+        <definition>outcome::result&lt; SGProof::BaseProofProto &gt; sgns::IBasicProof::DeSerializeBaseProof</definition>
+        <argsstring>(const std::vector&lt; uint8_t &gt; &amp;proof_data)</argsstring>
+        <name>DeSerializeBaseProof</name>
+        <qualifiedname>sgns::IBasicProof::DeSerializeBaseProof</qualifiedname>
+        <param>
+          <type>const std::vector&lt; uint8_t &gt; &amp;</type>
+          <declname>proof_data</declname>
+        </param>
+        <briefdescription>
+<para>Deserializes a BaseProofProto from the provided proof data. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">proof_data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The byte vector representing the proof data. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A result containing the deserialized BaseProofProto. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="165" column="32" bodyfile="src/proof/IBasicProof.cpp" bodystart="42" bodyend="50"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="protected-func">
+      <memberdef kind="function" id="d9/dbe/classsgns_1_1_i_basic_proof_1a329ea45325ebab559f33ceb169ebc912" prot="protected" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; std::vector&lt; uint8_t &gt; &gt;</type>
+        <definition>virtual outcome::result&lt; std::vector&lt; uint8_t &gt; &gt; sgns::IBasicProof::SerializeFullProof</definition>
+        <argsstring>(const SGProof::BaseProofData &amp;base_proof_data)=0</argsstring>
+        <name>SerializeFullProof</name>
+        <qualifiedname>sgns::IBasicProof::SerializeFullProof</qualifiedname>
+        <reimplementedby refid="df/df1/classsgns_1_1_processing_proof_1ade6021b920db97896f14e435e0cb9518">SerializeFullProof</reimplementedby>
+        <reimplementedby refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1a0ed0aedf793950219ac3c62abcb834ed">SerializeFullProof</reimplementedby>
+        <reimplementedby refid="d5/d48/classsgns_1_1_transfer_proof_1a88fbb4d497cb321e513166fe4075d249">SerializeFullProof</reimplementedby>
+        <param>
+          <type>const SGProof::BaseProofData &amp;</type>
+          <declname>base_proof_data</declname>
+        </param>
+        <briefdescription>
+<para>Pure virtual function to serialize a full proof using the snark and internal public parameters. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">base_proof_data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The snark that will be embedded on the proof data </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A result containing the serialized full proof data in bytes. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="172" column="33"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d9/dbe/classsgns_1_1_i_basic_proof_1a53df433895b3d36b0b5c05c928017ea0" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; SGProof::BaseProofData &gt;</type>
+        <definition>outcome::result&lt; SGProof::BaseProofData &gt; sgns::IBasicProof::GenerateProof</definition>
+        <argsstring>()</argsstring>
+        <name>GenerateProof</name>
+        <qualifiedname>sgns::IBasicProof::GenerateProof</qualifiedname>
+        <briefdescription>
+<para>Generates the base proof (snark) structure using the internal class data. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A result containing the generated BaseProofData. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="182" column="25" bodyfile="src/proof/IBasicProof.cpp" bodystart="52" bodyend="74"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dbe/classsgns_1_1_i_basic_proof_1a8d7ebf750ea2dd2cc29af2cc71a8f636" prot="private" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::pair&lt; boost::json::array, boost::json::array &gt;</type>
+        <definition>virtual std::pair&lt; boost::json::array, boost::json::array &gt; sgns::IBasicProof::GenerateJsonParameters</definition>
+        <argsstring>()=0</argsstring>
+        <name>GenerateJsonParameters</name>
+        <qualifiedname>sgns::IBasicProof::GenerateJsonParameters</qualifiedname>
+        <reimplementedby refid="df/df1/classsgns_1_1_processing_proof_1ad8306b903bb582592a2e481a2e7e7268">GenerateJsonParameters</reimplementedby>
+        <reimplementedby refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1a77c4881d7e778f8698dc5525a9bce85b">GenerateJsonParameters</reimplementedby>
+        <reimplementedby refid="d5/d48/classsgns_1_1_transfer_proof_1a255d55ced3fc5b2c2a3b977a4f30dcf6">GenerateJsonParameters</reimplementedby>
+        <briefdescription>
+<para>Pure virtual function to generate the parameters in JSON form. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A pair of JSON arrays representing the public and private parameters consecutively </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/IBasicProof.hpp" line="188" column="27"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Base proof class header file. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>This class provides methods for generating full proofs and verifying them, along with virtual methods for derived proofs </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::IBasicProof</label>
+        <link refid="d9/dbe/classsgns_1_1_i_basic_proof"/>
+      </node>
+      <node id="2">
+        <label>sgns::ProcessingProof</label>
+        <link refid="df/df1/classsgns_1_1_processing_proof"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::RecursiveTransferProof</label>
+        <link refid="d3/d2f/classsgns_1_1_recursive_transfer_proof"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::TransferProof</label>
+        <link refid="d5/d48/classsgns_1_1_transfer_proof"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="6">
+        <label>K</label>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::IBasicProof</label>
+        <link refid="d9/dbe/classsgns_1_1_i_basic_proof"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>#PublicParamDeSerializers</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>#ByteCodeMap</edgelabel>
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-bytecode_payload_</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="5">
+        <label>std::map&lt; K, T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::map&lt; std::string, PublicParamDeserializeFn &gt;</label>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; std::string, PublicParamDeserializeFn &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::map&lt; std::string, std::string &gt;</label>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+elements</edgelabel>
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; std::string, std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::string</label>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/proof/IBasicProof.hpp" line="28" column="5" bodyfile="src/proof/IBasicProof.hpp" bodystart="29" bodyend="189"/>
+    <listofallmembers>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a0762b077de0f8d7b2bb7a4322bf9f4c2" prot="private" virt="non-virtual"><scope>sgns::IBasicProof</scope><name>bytecode_payload_</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1ae7a308a7ec04d4c12725e327d0d0d3a1" prot="protected" virt="non-virtual"><scope>sgns::IBasicProof</scope><name>ByteCodeMap</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a9221a9e975019db2217f75fbe514ad3f" prot="protected" virt="non-virtual"><scope>sgns::IBasicProof</scope><name>DeSerializeBaseProof</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a11a20e7638850a75abcc2b101a801cea" prot="public" virt="non-virtual"><scope>sgns::IBasicProof</scope><name>Error</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a4250adf5b42e430017cba0973a86c877" prot="public" virt="non-virtual"><scope>sgns::IBasicProof</scope><name>GenerateArrayParameter</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a369e6638a2c0247e80e67af5ea2b4b55" prot="public" virt="non-virtual"><scope>sgns::IBasicProof</scope><name>GenerateFieldParameter</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a055e700cab818d5169dee923883a38d9" prot="public" virt="non-virtual"><scope>sgns::IBasicProof</scope><name>GenerateFullProof</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a2ded047a5404745a7328ee66df5761fa" prot="public" virt="non-virtual"><scope>sgns::IBasicProof</scope><name>GenerateIntParameter</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a8d7ebf750ea2dd2cc29af2cc71a8f636" prot="private" virt="pure-virtual"><scope>sgns::IBasicProof</scope><name>GenerateJsonParameters</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a53df433895b3d36b0b5c05c928017ea0" prot="private" virt="non-virtual"><scope>sgns::IBasicProof</scope><name>GenerateProof</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a9e7a9d418eb6307f74e75a0414961a5d" prot="public" virt="pure-virtual"><scope>sgns::IBasicProof</scope><name>GetProofType</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a6949373f697d0a371c8788f04f706443" prot="public" virt="non-virtual"><scope>sgns::IBasicProof</scope><name>IBasicProof</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a74208ca07598e6fd7fa8b567a7004bfb" prot="public" virt="non-virtual"><scope>sgns::IBasicProof</scope><name>PublicParamDeserializeFn</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a077fa173ca9162040ca0cb0ca2f15574" prot="protected" virt="non-virtual"><scope>sgns::IBasicProof</scope><name>PublicParamDeSerializers</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a8760ff952add694d3862deaa3891e3b7" prot="protected" virt="non-virtual"><scope>sgns::IBasicProof</scope><name>RegisterBytecode</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a82b0e6eb12aa407abab8cc96f4d7831c" prot="protected" virt="non-virtual"><scope>sgns::IBasicProof</scope><name>RegisterDeserializer</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a329ea45325ebab559f33ceb169ebc912" prot="protected" virt="pure-virtual"><scope>sgns::IBasicProof</scope><name>SerializeFullProof</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a6624dc7082e4a2b28c6db7b3b1cad86f" prot="public" virt="non-virtual"><scope>sgns::IBasicProof</scope><name>VerifyFullProof</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1aa3cc564f0b0ad375af044855b4265e3c" prot="public" virt="non-virtual"><scope>sgns::IBasicProof</scope><name>VerifyFullProof</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a8bb0d3203b7e374206db6afc13ed76fe" prot="public" virt="virtual"><scope>sgns::IBasicProof</scope><name>~IBasicProof</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

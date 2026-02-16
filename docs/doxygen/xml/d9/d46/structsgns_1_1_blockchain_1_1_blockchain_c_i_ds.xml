@@ -1,0 +1,157 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/d46/structsgns_1_1_blockchain_1_1_blockchain_c_i_ds" kind="struct" language="C++" prot="private">
+    <compoundname>sgns::Blockchain::BlockchainCIDs</compoundname>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d9/d46/structsgns_1_1_blockchain_1_1_blockchain_c_i_ds_1ad16ef6be1b71c521f358ddb54e8082eb" prot="public" static="no" mutable="no">
+        <type>std::optional&lt; std::string &gt;</type>
+        <definition>std::optional&lt;std::string&gt; sgns::Blockchain::BlockchainCIDs::genesis_</definition>
+        <argsstring></argsstring>
+        <name>genesis_</name>
+        <qualifiedname>sgns::Blockchain::BlockchainCIDs::genesis_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/Blockchain.hpp" line="173" column="27" bodyfile="src/blockchain/Blockchain.hpp" bodystart="173" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d9/d46/structsgns_1_1_blockchain_1_1_blockchain_c_i_ds_1a991527b5b2b09201bce191944414b096" prot="public" static="no" mutable="no">
+        <type>std::unordered_map&lt; std::string, std::string &gt;</type>
+        <definition>std::unordered_map&lt;std::string, std::string&gt; sgns::Blockchain::BlockchainCIDs::account_creation_</definition>
+        <argsstring></argsstring>
+        <name>account_creation_</name>
+        <qualifiedname>sgns::Blockchain::BlockchainCIDs::account_creation_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/Blockchain.hpp" line="174" column="32" bodyfile="src/blockchain/Blockchain.hpp" bodystart="174" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d9/d46/structsgns_1_1_blockchain_1_1_blockchain_c_i_ds_1ab63b15c12425be7bd4987634ebd8d946" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::Blockchain::BlockchainCIDs::hasGenesis</definition>
+        <argsstring>() const</argsstring>
+        <name>hasGenesis</name>
+        <qualifiedname>sgns::Blockchain::BlockchainCIDs::hasGenesis</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/Blockchain.hpp" line="176" column="18" bodyfile="src/blockchain/Blockchain.hpp" bodystart="176" bodyend="179"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d46/structsgns_1_1_blockchain_1_1_blockchain_c_i_ds_1a6f7bd33303bfad852d9fb2493d9b26af" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::Blockchain::BlockchainCIDs::hasAccount</definition>
+        <argsstring>(const std::string &amp;address) const</argsstring>
+        <name>hasAccount</name>
+        <qualifiedname>sgns::Blockchain::BlockchainCIDs::hasAccount</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>address</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/Blockchain.hpp" line="181" column="18" bodyfile="src/blockchain/Blockchain.hpp" bodystart="181" bodyend="184"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d46/structsgns_1_1_blockchain_1_1_blockchain_c_i_ds_1a347dc09775fb7272a87e66ba2de79d80" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::Blockchain::BlockchainCIDs::hasAnyAccount</definition>
+        <argsstring>() const</argsstring>
+        <name>hasAnyAccount</name>
+        <qualifiedname>sgns::Blockchain::BlockchainCIDs::hasAnyAccount</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/Blockchain.hpp" line="186" column="18" bodyfile="src/blockchain/Blockchain.hpp" bodystart="186" bodyend="189"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d46/structsgns_1_1_blockchain_1_1_blockchain_c_i_ds_1aeed83f5f1742363bde4702ae0af7bba0" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::Blockchain::BlockchainCIDs::isCompleteFor</definition>
+        <argsstring>(const std::string &amp;address) const</argsstring>
+        <name>isCompleteFor</name>
+        <qualifiedname>sgns::Blockchain::BlockchainCIDs::isCompleteFor</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>address</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/Blockchain.hpp" line="191" column="18" bodyfile="src/blockchain/Blockchain.hpp" bodystart="191" bodyend="194"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="6">
+        <label>K</label>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::Blockchain::BlockchainCIDs</label>
+        <link refid="d9/d46/structsgns_1_1_blockchain_1_1_blockchain_c_i_ds"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+account_creation_</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="3">
+        <label>std::string</label>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::unordered_map&lt; K, T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::unordered_map&lt; std::string, std::string &gt;</label>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+elements</edgelabel>
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; std::string, std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/blockchain/Blockchain.hpp" line="171" column="9" bodyfile="src/blockchain/Blockchain.hpp" bodystart="172" bodyend="195"/>
+    <listofallmembers>
+      <member refid="d9/d46/structsgns_1_1_blockchain_1_1_blockchain_c_i_ds_1a991527b5b2b09201bce191944414b096" prot="public" virt="non-virtual"><scope>sgns::Blockchain::BlockchainCIDs</scope><name>account_creation_</name></member>
+      <member refid="d9/d46/structsgns_1_1_blockchain_1_1_blockchain_c_i_ds_1ad16ef6be1b71c521f358ddb54e8082eb" prot="public" virt="non-virtual"><scope>sgns::Blockchain::BlockchainCIDs</scope><name>genesis_</name></member>
+      <member refid="d9/d46/structsgns_1_1_blockchain_1_1_blockchain_c_i_ds_1a6f7bd33303bfad852d9fb2493d9b26af" prot="public" virt="non-virtual"><scope>sgns::Blockchain::BlockchainCIDs</scope><name>hasAccount</name></member>
+      <member refid="d9/d46/structsgns_1_1_blockchain_1_1_blockchain_c_i_ds_1a347dc09775fb7272a87e66ba2de79d80" prot="public" virt="non-virtual"><scope>sgns::Blockchain::BlockchainCIDs</scope><name>hasAnyAccount</name></member>
+      <member refid="d9/d46/structsgns_1_1_blockchain_1_1_blockchain_c_i_ds_1ab63b15c12425be7bd4987634ebd8d946" prot="public" virt="non-virtual"><scope>sgns::Blockchain::BlockchainCIDs</scope><name>hasGenesis</name></member>
+      <member refid="d9/d46/structsgns_1_1_blockchain_1_1_blockchain_c_i_ds_1aeed83f5f1742363bde4702ae0af7bba0" prot="public" virt="non-virtual"><scope>sgns::Blockchain::BlockchainCIDs</scope><name>isCompleteFor</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

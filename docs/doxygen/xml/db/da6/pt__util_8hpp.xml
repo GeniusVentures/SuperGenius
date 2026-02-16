@@ -1,0 +1,110 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="db/da6/pt__util_8hpp" kind="file" language="C++">
+    <compoundname>pt_util.hpp</compoundname>
+    <includes local="no">boost/optional.hpp</includes>
+    <includes refid="db/d30/application_2impl_2config__reader_2error_8hpp" local="yes">application/impl/config_reader/error.hpp</includes>
+    <includedby refid="d1/d90/configuration__storage__impl_8cpp" local="yes">src/application/impl/configuration_storage_impl.cpp</includedby>
+    <includedby refid="df/d89/local__key__storage_8cpp" local="yes">src/application/impl/local_key_storage.cpp</includedby>
+    <incdepgraph>
+      <node id="3">
+        <label>application/impl/config_reader/error.hpp</label>
+        <link refid="db/d30/application_2impl_2config__reader_2error_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/application/impl/config_reader/pt_util.hpp</label>
+        <link refid="db/da6/pt__util_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="5">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="1">
+        <label>src/application/impl/config_reader/pt_util.hpp</label>
+        <link refid="db/da6/pt__util_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>src/application/impl/configuration_storage_impl.cpp</label>
+        <link refid="d1/d90/configuration__storage__impl_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/application/impl/local_key_storage.cpp</label>
+        <link refid="df/d89/local__key__storage_8cpp"/>
+      </node>
+    </invincdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="db/d40/namespacesgns_1_1application">sgns::application</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="db/d40/namespacesgns_1_1application_1a6d5311b61c66f5458485c4f90eb9d69f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>outcome::result&lt; std::decay_t&lt; T &gt; &gt;</type>
+        <definition>outcome::result&lt; std::decay_t&lt; T &gt; &gt; sgns::application::ensure</definition>
+        <argsstring>(boost::optional&lt; T &gt; opt_entry)</argsstring>
+        <name>ensure</name>
+        <qualifiedname>sgns::application::ensure</qualifiedname>
+        <param>
+          <type>boost::optional&lt; T &gt;</type>
+          <declname>opt_entry</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/config_reader/pt_util.hpp" line="11" column="19" bodyfile="src/application/impl/config_reader/pt_util.hpp" bodystart="11" bodyend="16"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_APPLICATION_UTIL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_APPLICATION_UTIL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/optional.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="db/d30/application_2impl_2config__reader_2error_8hpp" kindref="compound">application/impl/config_reader/error.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="db/d40/namespacesgns_1_1application" kindref="compound">sgns::application</ref><sp/>{</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>T&gt;</highlight></codeline>
+<codeline lineno="11" refid="db/d40/namespacesgns_1_1application_1a6d5311b61c66f5458485c4f90eb9d69f" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;std::decay_t&lt;T&gt;&gt;<sp/><ref refid="db/d40/namespacesgns_1_1application_1a6d5311b61c66f5458485c4f90eb9d69f" kindref="member">ensure</ref>(boost::optional&lt;T&gt;<sp/>opt_entry)<sp/>{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!<sp/>opt_entry)<sp/>{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="db/d40/namespacesgns_1_1application_1aeec9e912f01414eb0080fcea28d0608eaf16391370c3f8ee7b594c94f22924c8a" kindref="member">ConfigReaderError::MISSING_ENTRY</ref>;</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>opt_entry.value();</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::application</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_APPLICATION_UTIL_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/application/impl/config_reader/pt_util.hpp"/>
+  </compounddef>
+</doxygen>

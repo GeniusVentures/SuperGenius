@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_cb556418484d362c7791e942321741e3" kind="dir">
+    <compoundname>src/crypto/bip39</compoundname>
+    <innerdir refid="dir_992fd4856b792033fb818793670eda51">src/crypto/bip39/impl</innerdir>
+    <innerdir refid="dir_6799b1796ac5c115d1ae7d5a8f350afd">src/crypto/bip39/wordlist</innerdir>
+    <innerfile refid="d0/d59/bip39__provider_8hpp">bip39_provider.hpp</innerfile>
+    <innerfile refid="de/d20/bip39__types_8hpp">bip39_types.hpp</innerfile>
+    <innerfile refid="d5/d66/dictionary_8cpp">dictionary.cpp</innerfile>
+    <innerfile refid="dc/df7/dictionary_8hpp">dictionary.hpp</innerfile>
+    <innerfile refid="d4/d0c/entropy__accumulator_8cpp">entropy_accumulator.cpp</innerfile>
+    <innerfile refid="d0/da6/entropy__accumulator_8hpp">entropy_accumulator.hpp</innerfile>
+    <innerfile refid="d3/d73/mnemonic_8cpp">mnemonic.cpp</innerfile>
+    <innerfile refid="de/de4/mnemonic_8hpp">mnemonic.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/bip39/"/>
+  </compounddef>
+</doxygen>

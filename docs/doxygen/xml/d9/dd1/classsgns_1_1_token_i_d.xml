@@ -1,0 +1,303 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/dd1/classsgns_1_1_token_i_d" kind="class" language="C++" prot="public">
+    <compoundname>sgns::TokenID</compoundname>
+    <includes refid="df/d5f/_token_i_d_8hpp" local="no">TokenID.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d9/dd1/classsgns_1_1_token_i_d_1a6b9e2dbe831707f53d441a99105043f6" prot="public" static="no">
+        <type>std::array&lt; uint8_t, 32 &gt;</type>
+        <definition>using sgns::TokenID::ByteArray = std::array&lt;uint8_t, 32&gt;</definition>
+        <argsstring></argsstring>
+        <name>ByteArray</name>
+        <qualifiedname>sgns::TokenID::ByteArray</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenID.hpp" line="23" column="9" bodyfile="src/account/TokenID.hpp" bodystart="23" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d9/dd1/classsgns_1_1_token_i_d_1af01b5d58dcebb4e821af73d80c9fa44c" prot="private" static="no" mutable="no">
+        <type><ref refid="d9/dd1/classsgns_1_1_token_i_d_1a6b9e2dbe831707f53d441a99105043f6" kindref="member">ByteArray</ref></type>
+        <definition>ByteArray sgns::TokenID::data_</definition>
+        <argsstring></argsstring>
+        <name>data_</name>
+        <qualifiedname>sgns::TokenID::data_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenID.hpp" line="104" column="19" bodyfile="src/account/TokenID.hpp" bodystart="104" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d9/dd1/classsgns_1_1_token_i_d_1a0640708a11ef72b023e35d94bcf06463" prot="private" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::TokenID::valid_</definition>
+        <argsstring></argsstring>
+        <name>valid_</name>
+        <qualifiedname>sgns::TokenID::valid_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenID.hpp" line="105" column="19" bodyfile="src/account/TokenID.hpp" bodystart="105" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d9/dd1/classsgns_1_1_token_i_d_1a042fdf0f0ed83441c1f357fe574a7384" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::TokenID::TokenID</definition>
+        <argsstring>()</argsstring>
+        <name>TokenID</name>
+        <qualifiedname>sgns::TokenID::TokenID</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenID.hpp" line="25" column="9" bodyfile="src/account/TokenID.hpp" bodystart="25" bodyend="25"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dd1/classsgns_1_1_token_i_d_1a798e6d965cad20a805ef55af90d6f768" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::TokenID::TokenID</definition>
+        <argsstring>(const TokenID &amp;other)=default</argsstring>
+        <name>TokenID</name>
+        <qualifiedname>sgns::TokenID::TokenID</qualifiedname>
+        <param>
+          <type>const TokenID &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenID.hpp" line="27" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dd1/classsgns_1_1_token_i_d_1a8030cb54208972818d2b990157a5ece9" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>const <ref refid="d9/dd1/classsgns_1_1_token_i_d_1a6b9e2dbe831707f53d441a99105043f6" kindref="member">ByteArray</ref> &amp;</type>
+        <definition>const ByteArray &amp; sgns::TokenID::bytes</definition>
+        <argsstring>() const</argsstring>
+        <name>bytes</name>
+        <qualifiedname>sgns::TokenID::bytes</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenID.hpp" line="54" column="25" bodyfile="src/account/TokenID.hpp" bodystart="54" bodyend="57"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dd1/classsgns_1_1_token_i_d_1a6c850d3bebc9b0be4ebcb0986c179ca3" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t sgns::TokenID::size</definition>
+        <argsstring>() const</argsstring>
+        <name>size</name>
+        <qualifiedname>sgns::TokenID::size</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenID.hpp" line="59" column="16" bodyfile="src/account/TokenID.hpp" bodystart="59" bodyend="62"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dd1/classsgns_1_1_token_i_d_1a1daf68bb0f0a33347931935c3d19e837" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::TokenID::operator==</definition>
+        <argsstring>(const TokenID &amp;other) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::TokenID::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="d9/dd1/classsgns_1_1_token_i_d_1a042fdf0f0ed83441c1f357fe574a7384" kindref="member">TokenID</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenID.hpp" line="64" column="14" bodyfile="src/account/TokenID.hpp" bodystart="64" bodyend="67"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dd1/classsgns_1_1_token_i_d_1a43b1c83bf4ec542728dc06df8829f22c" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::TokenID::operator!=</definition>
+        <argsstring>(const TokenID &amp;other) const</argsstring>
+        <name>operator!=</name>
+        <qualifiedname>sgns::TokenID::operator!=</qualifiedname>
+        <param>
+          <type>const <ref refid="d9/dd1/classsgns_1_1_token_i_d_1a042fdf0f0ed83441c1f357fe574a7384" kindref="member">TokenID</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenID.hpp" line="69" column="14" bodyfile="src/account/TokenID.hpp" bodystart="69" bodyend="72"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dd1/classsgns_1_1_token_i_d_1a84c454343bf9c0f4bb46943cb5d2773d" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::TokenID::operator&lt;</definition>
+        <argsstring>(const TokenID &amp;other) const</argsstring>
+        <name>operator&lt;</name>
+        <qualifiedname>sgns::TokenID::operator&lt;</qualifiedname>
+        <param>
+          <type>const <ref refid="d9/dd1/classsgns_1_1_token_i_d_1a042fdf0f0ed83441c1f357fe574a7384" kindref="member">TokenID</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenID.hpp" line="74" column="9" bodyfile="src/account/TokenID.hpp" bodystart="74" bodyend="77"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dd1/classsgns_1_1_token_i_d_1a1484f6fe87186754e20a58a6f2166fd5" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::TokenID::ToHex</definition>
+        <argsstring>() const</argsstring>
+        <name>ToHex</name>
+        <qualifiedname>sgns::TokenID::ToHex</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenID.hpp" line="79" column="21" bodyfile="src/account/TokenID.hpp" bodystart="79" bodyend="87"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dd1/classsgns_1_1_token_i_d_1a572c8752eb8caa8038c4c92d7035f14c" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::TokenID::IsGNUS</definition>
+        <argsstring>() const</argsstring>
+        <name>IsGNUS</name>
+        <qualifiedname>sgns::TokenID::IsGNUS</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenID.hpp" line="89" column="14" bodyfile="src/account/TokenID.hpp" bodystart="89" bodyend="92"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dd1/classsgns_1_1_token_i_d_1a238c04e7f8cd5f42ef4580ec255d3fec" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::TokenID::Equals</definition>
+        <argsstring>(const TokenID &amp;other) const</argsstring>
+        <name>Equals</name>
+        <qualifiedname>sgns::TokenID::Equals</qualifiedname>
+        <param>
+          <type>const <ref refid="d9/dd1/classsgns_1_1_token_i_d_1a042fdf0f0ed83441c1f357fe574a7384" kindref="member">TokenID</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenID.hpp" line="94" column="14" bodyfile="src/account/TokenID.hpp" bodystart="94" bodyend="101"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d9/dd1/classsgns_1_1_token_i_d_1a951821aecf5d13cc8d7ba86e1233576b" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d9/dd1/classsgns_1_1_token_i_d_1a042fdf0f0ed83441c1f357fe574a7384" kindref="member">TokenID</ref></type>
+        <definition>static TokenID sgns::TokenID::FromBytes</definition>
+        <argsstring>(std::initializer_list&lt; uint8_t &gt; list)</argsstring>
+        <name>FromBytes</name>
+        <qualifiedname>sgns::TokenID::FromBytes</qualifiedname>
+        <param>
+          <type>std::initializer_list&lt; uint8_t &gt;</type>
+          <declname>list</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenID.hpp" line="29" column="24" bodyfile="src/account/TokenID.hpp" bodystart="29" bodyend="32"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dd1/classsgns_1_1_token_i_d_1a9d22ca715366eaeca2f9ce0352923405" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d9/dd1/classsgns_1_1_token_i_d_1a042fdf0f0ed83441c1f357fe574a7384" kindref="member">TokenID</ref></type>
+        <definition>static TokenID sgns::TokenID::FromBytes</definition>
+        <argsstring>(const void *data, size_t size)</argsstring>
+        <name>FromBytes</name>
+        <qualifiedname>sgns::TokenID::FromBytes</qualifiedname>
+        <param>
+          <type>const void *</type>
+          <declname>data</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>size</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/TokenID.hpp" line="34" column="24" bodyfile="src/account/TokenID.hpp" bodystart="34" bodyend="52"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="4">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::TokenID</label>
+        <link refid="d9/dd1/classsgns_1_1_token_i_d"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::array&lt; uint8_t, 32 &gt;</label>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; uint8_t, 32 &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/account/TokenID.hpp" line="20" column="5" bodyfile="src/account/TokenID.hpp" bodystart="21" bodyend="106"/>
+    <listofallmembers>
+      <member refid="d9/dd1/classsgns_1_1_token_i_d_1a6b9e2dbe831707f53d441a99105043f6" prot="public" virt="non-virtual"><scope>sgns::TokenID</scope><name>ByteArray</name></member>
+      <member refid="d9/dd1/classsgns_1_1_token_i_d_1a8030cb54208972818d2b990157a5ece9" prot="public" virt="non-virtual"><scope>sgns::TokenID</scope><name>bytes</name></member>
+      <member refid="d9/dd1/classsgns_1_1_token_i_d_1af01b5d58dcebb4e821af73d80c9fa44c" prot="private" virt="non-virtual"><scope>sgns::TokenID</scope><name>data_</name></member>
+      <member refid="d9/dd1/classsgns_1_1_token_i_d_1a238c04e7f8cd5f42ef4580ec255d3fec" prot="public" virt="non-virtual"><scope>sgns::TokenID</scope><name>Equals</name></member>
+      <member refid="d9/dd1/classsgns_1_1_token_i_d_1a951821aecf5d13cc8d7ba86e1233576b" prot="public" virt="non-virtual"><scope>sgns::TokenID</scope><name>FromBytes</name></member>
+      <member refid="d9/dd1/classsgns_1_1_token_i_d_1a9d22ca715366eaeca2f9ce0352923405" prot="public" virt="non-virtual"><scope>sgns::TokenID</scope><name>FromBytes</name></member>
+      <member refid="d9/dd1/classsgns_1_1_token_i_d_1a572c8752eb8caa8038c4c92d7035f14c" prot="public" virt="non-virtual"><scope>sgns::TokenID</scope><name>IsGNUS</name></member>
+      <member refid="d9/dd1/classsgns_1_1_token_i_d_1a43b1c83bf4ec542728dc06df8829f22c" prot="public" virt="non-virtual"><scope>sgns::TokenID</scope><name>operator!=</name></member>
+      <member refid="d9/dd1/classsgns_1_1_token_i_d_1a84c454343bf9c0f4bb46943cb5d2773d" prot="public" virt="non-virtual"><scope>sgns::TokenID</scope><name>operator&lt;</name></member>
+      <member refid="d9/dd1/classsgns_1_1_token_i_d_1a1daf68bb0f0a33347931935c3d19e837" prot="public" virt="non-virtual"><scope>sgns::TokenID</scope><name>operator==</name></member>
+      <member refid="d9/dd1/classsgns_1_1_token_i_d_1a6c850d3bebc9b0be4ebcb0986c179ca3" prot="public" virt="non-virtual"><scope>sgns::TokenID</scope><name>size</name></member>
+      <member refid="d9/dd1/classsgns_1_1_token_i_d_1a1484f6fe87186754e20a58a6f2166fd5" prot="public" virt="non-virtual"><scope>sgns::TokenID</scope><name>ToHex</name></member>
+      <member refid="d9/dd1/classsgns_1_1_token_i_d_1a042fdf0f0ed83441c1f357fe574a7384" prot="public" virt="non-virtual"><scope>sgns::TokenID</scope><name>TokenID</name></member>
+      <member refid="d9/dd1/classsgns_1_1_token_i_d_1a798e6d965cad20a805ef55af90d6f768" prot="public" virt="non-virtual"><scope>sgns::TokenID</scope><name>TokenID</name></member>
+      <member refid="d9/dd1/classsgns_1_1_token_i_d_1a0640708a11ef72b023e35d94bcf06463" prot="private" virt="non-virtual"><scope>sgns::TokenID</scope><name>valid_</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

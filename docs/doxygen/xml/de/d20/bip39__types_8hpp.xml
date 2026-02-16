@@ -1,0 +1,159 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/d20/bip39__types_8hpp" kind="file" language="C++">
+    <compoundname>bip39_types.hpp</compoundname>
+    <includes refid="da/d1d/buffer_8hpp" local="yes">base/buffer.hpp</includes>
+    <includedby refid="d0/d59/bip39__provider_8hpp" local="yes">src/crypto/bip39/bip39_provider.hpp</includedby>
+    <includedby refid="d3/d73/mnemonic_8cpp" local="yes">src/crypto/bip39/mnemonic.cpp</includedby>
+    <incdepgraph>
+      <node id="2">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crypto/bip39/bip39_types.hpp</label>
+        <link refid="de/d20/bip39__types_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="6">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="7">
+        <label>gsl/span</label>
+      </node>
+      <node id="9">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="3">
+        <label>string_view</label>
+      </node>
+      <node id="4">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/crypto/bip39/bip39_provider.hpp</label>
+        <link refid="d0/d59/bip39__provider_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crypto/bip39/bip39_types.hpp</label>
+        <link refid="de/d20/bip39__types_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>src/crypto/bip39/impl/bip39_provider_impl.cpp</label>
+        <link refid="d4/d53/bip39__provider__impl_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/crypto/bip39/impl/bip39_provider_impl.hpp</label>
+        <link refid="da/df8/bip39__provider__impl_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>src/crypto/bip39/mnemonic.cpp</label>
+        <link refid="d3/d73/mnemonic_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/crypto/crypto_store/crypto_store_impl.cpp</label>
+        <link refid="dd/d14/crypto__store__impl_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/crypto/crypto_store/crypto_store_impl.hpp</label>
+        <link refid="d4/d05/crypto__store__impl_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6e/namespacesgns_1_1crypto">sgns::crypto</innernamespace>
+    <innernamespace refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39">sgns::crypto::bip39</innernamespace>
+    <innernamespace refid="d6/dfb/namespacesgns_1_1crypto_1_1bip39_1_1constants">sgns::crypto::bip39::constants</innernamespace>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="d3/d2f/namespacesgns_1_1crypto_1_1bip39_1a543a047169289887fc9c5545af736954" prot="public" static="no">
+        <type>base::Buffer</type>
+        <definition>using sgns::crypto::bip39::Bip39Seed = base::Buffer</definition>
+        <argsstring></argsstring>
+        <name>Bip39Seed</name>
+        <qualifiedname>sgns::crypto::bip39::Bip39Seed</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/bip39_types.hpp" line="13" column="3" bodyfile="src/crypto/bip39/bip39_types.hpp" bodystart="13" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="var">
+      <memberdef kind="variable" id="d6/dfb/namespacesgns_1_1crypto_1_1bip39_1_1constants_1a80e6e1ca84032ffbb598014aad2fbd3b" prot="public" static="no" constexpr="yes" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::crypto::bip39::constants::BIP39_SEED_LEN_512</definition>
+        <argsstring></argsstring>
+        <name>BIP39_SEED_LEN_512</name>
+        <qualifiedname>sgns::crypto::bip39::constants::BIP39_SEED_LEN_512</qualifiedname>
+        <initializer>= 64u</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/bip39_types.hpp" line="10" column="22" bodyfile="src/crypto/bip39/bip39_types.hpp" bodystart="10" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_BIP39_TYPES_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_BIP39_TYPES_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="da/d1d/buffer_8hpp" kindref="compound">base/buffer.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8" refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39" kindref="compound">sgns::crypto::bip39</ref><sp/>{</highlight></codeline>
+<codeline lineno="9" refid="d6/dfb/namespacesgns_1_1crypto_1_1bip39_1_1constants" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d6/dfb/namespacesgns_1_1crypto_1_1bip39_1_1constants" kindref="compound">constants</ref><sp/>{</highlight></codeline>
+<codeline lineno="10" refid="d6/dfb/namespacesgns_1_1crypto_1_1bip39_1_1constants_1a80e6e1ca84032ffbb598014aad2fbd3b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/><ref refid="d6/dfb/namespacesgns_1_1crypto_1_1bip39_1_1constants_1a80e6e1ca84032ffbb598014aad2fbd3b" kindref="member">BIP39_SEED_LEN_512</ref><sp/>=<sp/>64u;</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/>}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>constants</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13" refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39_1a543a047169289887fc9c5545af736954" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39_1a543a047169289887fc9c5545af736954" kindref="member">Bip39Seed</ref><sp/>=<sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref>;</highlight></codeline>
+<codeline lineno="14"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::crypto::bip39</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_BIP39_TYPES_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/crypto/bip39/bip39_types.hpp"/>
+  </compounddef>
+</doxygen>

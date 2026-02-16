@@ -1,0 +1,268 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/d83/classsgns_1_1_android_secure_storage" kind="class" language="C++" prot="public">
+    <compoundname>sgns::AndroidSecureStorage</compoundname>
+    <basecompoundref refid="d9/d71/classsgns_1_1_j_s_o_n_backend" prot="public" virt="non-virtual">sgns::JSONBackend</basecompoundref>
+    <includes refid="de/d2b/_android_8hpp" local="no">Android.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d5/d83/classsgns_1_1_android_secure_storage_1aa0aa6172e0b07b5c5d381b142904e9e6" prot="private" static="no" mutable="no">
+        <type>JavaVM *</type>
+        <definition>JavaVM* sgns::AndroidSecureStorage::jvm_</definition>
+        <argsstring></argsstring>
+        <name>jvm_</name>
+        <qualifiedname>sgns::AndroidSecureStorage::jvm_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Android.hpp" line="28" column="16" bodyfile="src/local_secure_storage/impl/Android.hpp" bodystart="28" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d83/classsgns_1_1_android_secure_storage_1ac34be7785ec5c795577de8b2c4fcefc5" prot="private" static="no" mutable="no">
+        <type>jclass</type>
+        <definition>jclass sgns::AndroidSecureStorage::key_store_helper_class_</definition>
+        <argsstring></argsstring>
+        <name>key_store_helper_class_</name>
+        <qualifiedname>sgns::AndroidSecureStorage::key_store_helper_class_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Android.hpp" line="29" column="17" bodyfile="src/local_secure_storage/impl/Android.hpp" bodystart="29" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d83/classsgns_1_1_android_secure_storage_1a408034922d9c6e73363f9063265184de" prot="private" static="no" mutable="no">
+        <type>jmethodID</type>
+        <definition>jmethodID sgns::AndroidSecureStorage::load_method_</definition>
+        <argsstring></argsstring>
+        <name>load_method_</name>
+        <qualifiedname>sgns::AndroidSecureStorage::load_method_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Android.hpp" line="31" column="19" bodyfile="src/local_secure_storage/impl/Android.hpp" bodystart="31" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d83/classsgns_1_1_android_secure_storage_1aba7773ebbed2be947bc4630126df08e0" prot="private" static="no" mutable="no">
+        <type>jmethodID</type>
+        <definition>jmethodID sgns::AndroidSecureStorage::save_method_</definition>
+        <argsstring></argsstring>
+        <name>save_method_</name>
+        <qualifiedname>sgns::AndroidSecureStorage::save_method_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Android.hpp" line="32" column="19" bodyfile="src/local_secure_storage/impl/Android.hpp" bodystart="32" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d83/classsgns_1_1_android_secure_storage_1a8b5e5a3a1c61bf22784cbed06f611223" prot="private" static="no" mutable="no">
+        <type>jmethodID</type>
+        <definition>jmethodID sgns::AndroidSecureStorage::delete_method_</definition>
+        <argsstring></argsstring>
+        <name>delete_method_</name>
+        <qualifiedname>sgns::AndroidSecureStorage::delete_method_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Android.hpp" line="33" column="19" bodyfile="src/local_secure_storage/impl/Android.hpp" bodystart="33" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d5/d83/classsgns_1_1_android_secure_storage_1a66d7a764a65b2e8697ed648d9ef8e417" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::AndroidSecureStorage::AndroidSecureStorage</definition>
+        <argsstring>(std::string identifier, JavaVM *jvm=nullptr)</argsstring>
+        <name>AndroidSecureStorage</name>
+        <qualifiedname>sgns::AndroidSecureStorage::AndroidSecureStorage</qualifiedname>
+        <param>
+          <type>std::string</type>
+          <declname>identifier</declname>
+        </param>
+        <param>
+          <type>JavaVM *</type>
+          <declname>jvm</declname>
+          <defval>nullptr</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Android.hpp" line="12" column="18" bodyfile="src/local_secure_storage/impl/Android.cpp" bodystart="42" bodyend="82"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d83/classsgns_1_1_android_secure_storage_1afdac784a393c600c9fc90016d8e932ce" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::AndroidSecureStorage::~AndroidSecureStorage</definition>
+        <argsstring>() override</argsstring>
+        <name>~AndroidSecureStorage</name>
+        <qualifiedname>sgns::AndroidSecureStorage::~AndroidSecureStorage</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Android.hpp" line="14" column="9" bodyfile="src/local_secure_storage/impl/Android.cpp" bodystart="84" bodyend="95"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d83/classsgns_1_1_android_secure_storage_1a43ba4764dc2432caaa1ce52aa75ee19e" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::AndroidSecureStorage::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::AndroidSecureStorage::GetName</qualifiedname>
+        <reimplements refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Android.hpp" line="16" column="21" bodyfile="src/local_secure_storage/impl/Android.hpp" bodystart="16" bodyend="19"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d83/classsgns_1_1_android_secure_storage_1a1a855c2314c40dbe447d53cf4f5f4140" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; rapidjson::Document &gt;</type>
+        <definition>outcome::result&lt; rapidjson::Document &gt; sgns::AndroidSecureStorage::LoadJSON</definition>
+        <argsstring>() const override</argsstring>
+        <name>LoadJSON</name>
+        <qualifiedname>sgns::AndroidSecureStorage::LoadJSON</qualifiedname>
+        <reimplements refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1aa20b2995d7c4d206ae8217b08ee94fc1">LoadJSON</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Android.hpp" line="21" column="25" bodyfile="src/local_secure_storage/impl/Android.cpp" bodystart="97" bodyend="141"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d83/classsgns_1_1_android_secure_storage_1a48a47b909539147f6ddb36c45d906ff2" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::AndroidSecureStorage::SaveJSON</definition>
+        <argsstring>(rapidjson::Document document) override</argsstring>
+        <name>SaveJSON</name>
+        <qualifiedname>sgns::AndroidSecureStorage::SaveJSON</qualifiedname>
+        <reimplements refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a7ec4c317139903bcb835bb3d33a4ae07">SaveJSON</reimplements>
+        <param>
+          <type>rapidjson::Document</type>
+          <declname>document</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Android.hpp" line="23" column="25" bodyfile="src/local_secure_storage/impl/Android.cpp" bodystart="143" bodyend="182"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d5/d83/classsgns_1_1_android_secure_storage_1ab367b64d0bc6f10626c5e87283c9bfe3" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>JNIEnv *</type>
+        <definition>JNIEnv * sgns::AndroidSecureStorage::GetJNIEnv</definition>
+        <argsstring>() const</argsstring>
+        <name>GetJNIEnv</name>
+        <qualifiedname>sgns::AndroidSecureStorage::GetJNIEnv</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Android.hpp" line="26" column="16" bodyfile="src/local_secure_storage/impl/Android.cpp" bodystart="184" bodyend="205"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="4">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::AndroidSecureStorage</label>
+        <link refid="d5/d83/classsgns_1_1_android_secure_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::ISecureStorage</label>
+        <link refid="d5/db7/classsgns_1_1_i_secure_storage"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::JSONBackend</label>
+        <link refid="d9/d71/classsgns_1_1_j_s_o_n_backend"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::enable_shared_from_this&lt; ISecureStorage &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="4">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::AndroidSecureStorage</label>
+        <link refid="d5/d83/classsgns_1_1_android_secure_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::ISecureStorage</label>
+        <link refid="d5/db7/classsgns_1_1_i_secure_storage"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::JSONBackend</label>
+        <link refid="d9/d71/classsgns_1_1_j_s_o_n_backend"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::enable_shared_from_this&lt; ISecureStorage &gt;</label>
+      </node>
+    </collaborationgraph>
+    <location file="src/local_secure_storage/impl/Android.hpp" line="9" column="5" bodyfile="src/local_secure_storage/impl/Android.hpp" bodystart="10" bodyend="34"/>
+    <listofallmembers>
+      <member refid="d5/d83/classsgns_1_1_android_secure_storage_1a66d7a764a65b2e8697ed648d9ef8e417" prot="public" virt="non-virtual"><scope>sgns::AndroidSecureStorage</scope><name>AndroidSecureStorage</name></member>
+      <member refid="d5/d83/classsgns_1_1_android_secure_storage_1a8b5e5a3a1c61bf22784cbed06f611223" prot="private" virt="non-virtual"><scope>sgns::AndroidSecureStorage</scope><name>delete_method_</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a041dd45b9e2196bb757d23d2934876e4" prot="public" virt="virtual"><scope>sgns::AndroidSecureStorage</scope><name>DeleteKey</name></member>
+      <member refid="d5/d83/classsgns_1_1_android_secure_storage_1ab367b64d0bc6f10626c5e87283c9bfe3" prot="private" virt="non-virtual"><scope>sgns::AndroidSecureStorage</scope><name>GetJNIEnv</name></member>
+      <member refid="d5/d83/classsgns_1_1_android_secure_storage_1a43ba4764dc2432caaa1ce52aa75ee19e" prot="public" virt="virtual"><scope>sgns::AndroidSecureStorage</scope><name>GetName</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a9e536564914936ba39ee7d67dfa1a316" prot="public" virt="non-virtual"><scope>sgns::AndroidSecureStorage</scope><name>JSONBackend</name></member>
+      <member refid="d5/d83/classsgns_1_1_android_secure_storage_1aa0aa6172e0b07b5c5d381b142904e9e6" prot="private" virt="non-virtual"><scope>sgns::AndroidSecureStorage</scope><name>jvm_</name></member>
+      <member refid="d5/d83/classsgns_1_1_android_secure_storage_1ac34be7785ec5c795577de8b2c4fcefc5" prot="private" virt="non-virtual"><scope>sgns::AndroidSecureStorage</scope><name>key_store_helper_class_</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a40da14b3444d1b03eac8164f59a3c347" prot="public" virt="virtual"><scope>sgns::AndroidSecureStorage</scope><name>Load</name></member>
+      <member refid="d5/d83/classsgns_1_1_android_secure_storage_1a408034922d9c6e73363f9063265184de" prot="private" virt="non-virtual"><scope>sgns::AndroidSecureStorage</scope><name>load_method_</name></member>
+      <member refid="d5/d83/classsgns_1_1_android_secure_storage_1a1a855c2314c40dbe447d53cf4f5f4140" prot="public" virt="virtual"><scope>sgns::AndroidSecureStorage</scope><name>LoadJSON</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a00f62ecffae03504a180358b004d61e4" prot="public" virt="virtual"><scope>sgns::AndroidSecureStorage</scope><name>Save</name></member>
+      <member refid="d5/d83/classsgns_1_1_android_secure_storage_1aba7773ebbed2be947bc4630126df08e0" prot="private" virt="non-virtual"><scope>sgns::AndroidSecureStorage</scope><name>save_method_</name></member>
+      <member refid="d5/d83/classsgns_1_1_android_secure_storage_1a48a47b909539147f6ddb36c45d906ff2" prot="public" virt="virtual"><scope>sgns::AndroidSecureStorage</scope><name>SaveJSON</name></member>
+      <member refid="d5/db7/classsgns_1_1_i_secure_storage_1a5a10a540c9551ccad7d9c8e44cfd14d1" prot="public" virt="non-virtual"><scope>sgns::AndroidSecureStorage</scope><name>SecureBufferType</name></member>
+      <member refid="d5/d83/classsgns_1_1_android_secure_storage_1afdac784a393c600c9fc90016d8e932ce" prot="public" virt="non-virtual"><scope>sgns::AndroidSecureStorage</scope><name>~AndroidSecureStorage</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::AndroidSecureStorage</scope><name>~IComponent</name></member>
+      <member refid="d5/db7/classsgns_1_1_i_secure_storage_1a941b5c4bbea8622d949ef341b129f55c" prot="public" virt="non-virtual"><scope>sgns::AndroidSecureStorage</scope><name>~ISecureStorage</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a8b69c80e8af12d7c16ada35f6ae2d170" prot="public" virt="non-virtual"><scope>sgns::AndroidSecureStorage</scope><name>~JSONBackend</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,49 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/d33/structstd_1_1hash_3_01sgns_1_1base_1_1_wrapper_3_01_t_00_01_tag_01_4_01_4" kind="struct" language="C++" prot="public">
+    <compoundname>std::hash&lt; sgns::base::Wrapper&lt; T, Tag &gt; &gt;</compoundname>
+    <includes refid="d8/d7c/wrapper_8hpp" local="no">wrapper.hpp</includes>
+    <templateparamlist>
+      <param>
+        <type>typename T</type>
+      </param>
+      <param>
+        <type>typename Tag</type>
+      </param>
+    </templateparamlist>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d4/d33/structstd_1_1hash_3_01sgns_1_1base_1_1_wrapper_3_01_t_00_01_tag_01_4_01_4_1a7da8f004817561ffca21e5c3889ce6d6" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::size_t</type>
+        <definition>std::size_t std::hash&lt; sgns::base::Wrapper&lt; T, Tag &gt; &gt;::operator()</definition>
+        <argsstring>(const sgns::base::Wrapper&lt; T, Tag &gt; &amp;w)</argsstring>
+        <name>operator()</name>
+        <qualifiedname>std::hash&lt; sgns::base::Wrapper&lt; T, Tag &gt; &gt;::operator()</qualifiedname>
+        <param>
+          <type>const <ref refid="df/d5a/structsgns_1_1base_1_1_wrapper" kindref="compound">sgns::base::Wrapper</ref>&lt; T, Tag &gt; &amp;</type>
+          <declname>w</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/wrapper.hpp" line="51" column="15" bodyfile="src/base/wrapper.hpp" bodystart="51" bodyend="53"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>std::hash&lt; sgns::base::Wrapper&lt; T, Tag &gt; &gt;</label>
+        <link refid="d4/d33/structstd_1_1hash_3_01sgns_1_1base_1_1_wrapper_3_01_t_00_01_tag_01_4_01_4"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/base/wrapper.hpp" line="50" column="1" bodyfile="src/base/wrapper.hpp" bodystart="50" bodyend="54"/>
+    <listofallmembers>
+      <member refid="d4/d33/structstd_1_1hash_3_01sgns_1_1base_1_1_wrapper_3_01_t_00_01_tag_01_4_01_4_1a7da8f004817561ffca21e5c3889ce6d6" prot="public" virt="non-virtual"><scope>std::hash&lt; sgns::base::Wrapper&lt; T, Tag &gt; &gt;</scope><name>operator()</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

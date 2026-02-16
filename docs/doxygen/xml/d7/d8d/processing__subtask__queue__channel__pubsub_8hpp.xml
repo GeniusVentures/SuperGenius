@@ -1,0 +1,171 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/d8d/processing__subtask__queue__channel__pubsub_8hpp" kind="file" language="C++">
+    <compoundname>processing_subtask_queue_channel_pubsub.hpp</compoundname>
+    <includes local="no">future</includes>
+    <includes refid="d5/dda/outcome_8hpp" local="yes">outcome/outcome.hpp</includes>
+    <includes refid="db/d1c/processing__subtask__queue__channel_8hpp" local="yes">processing/processing_subtask_queue_channel.hpp</includes>
+    <includes local="no">ipfs_pubsub/gossip_pubsub_topic.hpp</includes>
+    <includes refid="d6/da3/logger_8hpp" local="yes">base/logger.hpp</includes>
+    <includedby refid="de/d98/processing__node_8cpp" local="yes">src/processing/processing_node.cpp</includedby>
+    <includedby refid="d8/d6f/processing__subtask__queue__channel__pubsub_8cpp" local="yes">src/processing/processing_subtask_queue_channel_pubsub.cpp</includedby>
+    <incdepgraph>
+      <node id="10">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>processing/processing_subtask_queue_channel.hpp</label>
+        <link refid="db/d1c/processing__subtask__queue__channel_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/processing/processing_subtask_queue_channel_pubsub.hpp</label>
+        <link refid="d7/d8d/processing__subtask__queue__channel__pubsub_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>future</label>
+      </node>
+      <node id="9">
+        <label>ipfs_pubsub/gossip_pubsub_topic.hpp</label>
+      </node>
+      <node id="4">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="8">
+        <label>memory</label>
+      </node>
+      <node id="6">
+        <label>processing/proto/SGProcessing.pb.h</label>
+      </node>
+      <node id="11">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="12">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="7">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/processing/processing_node.cpp</label>
+        <link refid="de/d98/processing__node_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/processing/processing_subtask_queue_channel_pubsub.cpp</label>
+        <link refid="d8/d6f/processing__subtask__queue__channel__pubsub_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/processing/processing_subtask_queue_channel_pubsub.hpp</label>
+        <link refid="d7/d8d/processing__subtask__queue__channel__pubsub_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub" prot="public">sgns::processing::ProcessingSubTaskQueueChannelPubSub</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6a/namespacesgns_1_1processing">sgns::processing</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_CHANNEL_PUBSUB_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_CHANNEL_PUBSUB_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;future&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/dda/outcome_8hpp" kindref="compound">outcome/outcome.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="db/d1c/processing__subtask__queue__channel_8hpp" kindref="compound">processing/processing_subtask_queue_channel.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;ipfs_pubsub/gossip_pubsub_topic.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/da3/logger_8hpp" kindref="compound">base/logger.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal"><ref refid="d4/d75/namespacesgns_1_1ipfs__pubsub" kindref="compound">sgns::ipfs_pubsub</ref>;</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d6a/namespacesgns_1_1processing" kindref="compound">sgns::processing</ref></highlight></codeline>
+<codeline lineno="20"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="23" refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1aaa98909ecce0e0839c31fb6335198298" kindref="member">ProcessingSubTaskQueueChannelPubSub</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel" kindref="compound">ProcessingSubTaskQueueChannel</ref>,</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>std::enable_shared_from_this&lt;ProcessingSubTaskQueueChannelPubSub&gt;</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="27" refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a3478955b999abc9a4eb520f1fa3c5e14" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a3478955b999abc9a4eb520f1fa3c5e14" kindref="member">QueueRequestSink</ref><sp/>=<sp/>std::function&lt;bool(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>SGProcessing::SubTaskQueueRequest<sp/>&amp;<sp/>)&gt;;</highlight></codeline>
+<codeline lineno="28" refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1aa7b21b10922299ee9a6af86c508ec859" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1aa7b21b10922299ee9a6af86c508ec859" kindref="member">QueueUpdateSink</ref><sp/><sp/>=<sp/>std::function&lt;bool(<sp/>SGProcessing::SubTaskQueue<sp/>*<sp/>)&gt;;</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1aaa98909ecce0e0839c31fb6335198298" kindref="member">ProcessingSubTaskQueueChannelPubSub</ref>(<sp/>std::shared_ptr&lt;sgns::ipfs_pubsub::GossipPubSub&gt;<sp/>gossipPubSub,</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;processingQueueChannelId<sp/>);</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a9f4de0350a6d7ae8e6303b8b74a59a82" kindref="member">~ProcessingSubTaskQueueChannelPubSub</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a93e2f7002ecd1a1237cf88a148ed1586" kindref="member">RequestQueueOwnership</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;nodeId<sp/>)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a027b5d104fe2102bd32006b4a6955462" kindref="member">PublishQueue</ref>(<sp/>std::shared_ptr&lt;SGProcessing::SubTaskQueue&gt;<sp/>queue<sp/>)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1af1c81717f423dc437c9521550e0066fb" kindref="member">SetQueueRequestSink</ref>(<sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a3478955b999abc9a4eb520f1fa3c5e14" kindref="member">QueueRequestSink</ref><sp/>queueRequestSink<sp/>);</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"></highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a25bb188ac800c44d597f29aadafbef59" kindref="member">SetQueueUpdateSink</ref>(<sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1aa7b21b10922299ee9a6af86c508ec859" kindref="member">QueueUpdateSink</ref><sp/>queueUpdateSink<sp/>);</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"></highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;std::variant&lt;std::chrono::milliseconds,<sp/>std::shared_future&lt;std::shared_ptr&lt;GossipPubSubTopic::Subscription&gt;&gt;&gt;&gt;<sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a4db369f4446778f84475e61b3c640405" kindref="member">Listen</ref>(</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::milliseconds<sp/>msSubscriptionWaitingDuration<sp/>=<sp/>std::chrono::milliseconds(2000));</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"></highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a8b5d5cee7aedc830d19d79b561318841" kindref="member">GetActiveNodesCount</ref>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"></highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;libp2p::peer::PeerId&gt;<sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1aebfdbbb01a75f1d622d02529f6008599" kindref="member">GetActiveNodes</ref>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"></highlight></codeline>
+<codeline lineno="72"><highlight class="normal"></highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="74" refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a3ac787fc6f094d3f05a86348d3b031b9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;sgns::ipfs_pubsub::GossipPubSubTopic&gt;<sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a3ac787fc6f094d3f05a86348d3b031b9" kindref="member">m_processingQueueChannel</ref>;</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"></highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a1f52aee00af5c81ea7ee7b8083568d24" kindref="member">OnProcessingChannelMessage</ref>(<sp/>boost::optional&lt;const<sp/>sgns::ipfs_pubsub::GossipPubSub::Message<sp/>&amp;&gt;<sp/><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref><sp/>);</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"></highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1ab40fcced0fc2c81b61aa55de3f223b51" kindref="member">HandleSubTaskQueueRequest</ref>(<sp/>SGProcessing::ProcessingChannelMessage<sp/>&amp;channelMesssage<sp/>);</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1ab12f37da8fb9221a43438c47185afd36" kindref="member">HandleSubTaskQueue</ref>(<sp/>SGProcessing::ProcessingChannelMessage<sp/>&amp;channelMesssage<sp/>);</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"></highlight></codeline>
+<codeline lineno="81" refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a8407c49c1b642bc105fd7beb32d22602" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;sgns::ipfs_pubsub::GossipPubSub&gt;<sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a8407c49c1b642bc105fd7beb32d22602" kindref="member">m_gossipPubSub</ref>;</highlight></codeline>
+<codeline lineno="82" refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1abe2558ee4fb7ccd250b06fb5a87e9a90" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;boost::asio::io_context&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1abe2558ee4fb7ccd250b06fb5a87e9a90" kindref="member">m_context</ref>;</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"></highlight></codeline>
+<codeline lineno="84" refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a8e4f027c960f70e1fe5fc6075cb0f89e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;bool(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>SGProcessing::SubTaskQueueRequest<sp/>&amp;<sp/>)&gt;<sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a8e4f027c960f70e1fe5fc6075cb0f89e" kindref="member">m_queueRequestSink</ref>;</highlight></codeline>
+<codeline lineno="85" refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a660af5540dd03090efe232af43c43c0b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;bool(<sp/>SGProcessing::SubTaskQueue<sp/>*<sp/>)&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a660af5540dd03090efe232af43c43c0b" kindref="member">m_queueUpdateSink</ref>;</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"></highlight></codeline>
+<codeline lineno="87" refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a59a2d856497f1b9658c715d9d968267b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref><sp/><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a59a2d856497f1b9658c715d9d968267b" kindref="member">m_logger</ref><sp/>=<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>(<sp/></highlight><highlight class="stringliteral">&quot;ProcessingSubTaskQueueChannelPubSub&quot;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"></highlight></codeline>
+<codeline lineno="89"><highlight class="normal"></highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="91"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_CHANNEL_PUBSUB_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,105 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1" kind="namespace" language="C++">
+    <compoundname>sgns::crypto::secp256k1</compoundname>
+    <innernamespace refid="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants">sgns::crypto::secp256k1::constants</innernamespace>
+    <innernamespace refid="d4/d89/namespacesgns_1_1crypto_1_1secp256k1_1_1ecdsa__verify__error">sgns::crypto::secp256k1::ecdsa_verify_error</innernamespace>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a4252c878ff41e9a1875d0ac3bb5fa636" prot="public" static="no">
+        <type>uint8_t</type>
+        <definition>using sgns::crypto::secp256k1::EcdsaVerifyError = uint8_t</definition>
+        <argsstring></argsstring>
+        <name>EcdsaVerifyError</name>
+        <qualifiedname>sgns::crypto::secp256k1::EcdsaVerifyError</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="14" column="3" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="14" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a7df417d5845ce5b3004e8a1f47b7ef5f" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; <ref refid="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants_1af42287bca52eb3f97351edc3d9e217d6" kindref="member">constants::kCompressedPublicKeySize</ref> &gt;</type>
+        <definition>using sgns::crypto::secp256k1::CompressedPublicKey = base::Blob&lt;constants::kCompressedPublicKeySize&gt;</definition>
+        <argsstring></argsstring>
+        <name>CompressedPublicKey</name>
+        <qualifiedname>sgns::crypto::secp256k1::CompressedPublicKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>compressed form of public key </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="24" column="3" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a0a6a0bd1fd15b8244ca42c73aca20bb0" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; <ref refid="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants_1a605ae52cb1a9917fb6fffeb8e56770de" kindref="member">constants::kUncompressedPublicKeySize</ref> &gt;</type>
+        <definition>using sgns::crypto::secp256k1::UncompressedPublicKey = 
+base::Blob&lt;constants::kUncompressedPublicKeySize&gt;</definition>
+        <argsstring></argsstring>
+        <name>UncompressedPublicKey</name>
+        <qualifiedname>sgns::crypto::secp256k1::UncompressedPublicKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>uncompressed form of public key </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="29" column="3" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="29" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1a64e1be0f423ce6f41330514d62eb15c7" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; <ref refid="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants_1a1492ff71d70b261e12192eced1b4839d" kindref="member">constants::kGeneralPublicKeySize</ref> &gt;</type>
+        <definition>using sgns::crypto::secp256k1::PublicKey = base::Blob&lt;constants::kGeneralPublicKeySize&gt;</definition>
+        <argsstring></argsstring>
+        <name>PublicKey</name>
+        <qualifiedname>sgns::crypto::secp256k1::PublicKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>truncated form of uncompressed public key </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="35" column="3" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="35" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1aa7cc5a710dcf2a1256a753b9a5005f29" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; <ref refid="dc/de3/namespacesgns_1_1crypto_1_1secp256k1_1_1constants_1a105c1359ef9038f5499909ade4814d1c" kindref="member">constants::kCompactSignatureSize</ref> &gt;</type>
+        <definition>using sgns::crypto::secp256k1::RSVSignature = base::Blob&lt;constants::kCompactSignatureSize&gt;</definition>
+        <argsstring></argsstring>
+        <name>RSVSignature</name>
+        <qualifiedname>sgns::crypto::secp256k1::RSVSignature</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><ref refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1" kindref="compound">secp256k1</ref> RSV-signature </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="40" column="3" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="40" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1_1abcf0e108bd6f3bd69a355144a5111105" prot="public" static="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+        <definition>using sgns::crypto::secp256k1::MessageHash = base::Hash256</definition>
+        <argsstring></argsstring>
+        <name>MessageHash</name>
+        <qualifiedname>sgns::crypto::secp256k1::MessageHash</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>32-byte sequence of bytes (presumably blake2s hash) </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1_types.hpp" line="45" column="3" bodyfile="src/crypto/secp256k1_types.hpp" bodystart="45" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/secp256k1_types.hpp" line="6" column="1"/>
+  </compounddef>
+</doxygen>

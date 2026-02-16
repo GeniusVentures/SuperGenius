@@ -1,0 +1,358 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4" kind="class" language="C++" prot="public">
+    <compoundname>std::back_insert_iterator&lt; Buffer &gt;</compoundname>
+    <includes refid="d4/d19/buffer__back__insert__iterator_8hpp" local="no">buffer_back_insert_iterator.hpp</includes>
+    <templateparamlist>
+    </templateparamlist>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a344cfcdea009298391bcc5420589fdbe" prot="public" static="no">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1ad6e7e712590184dd552b0086baab94ce" kindref="member">Buffer::value_type</ref></type>
+        <definition>using std::back_insert_iterator&lt; Buffer &gt;::value_type = Buffer::value_type</definition>
+        <argsstring></argsstring>
+        <name>value_type</name>
+        <qualifiedname>std::back_insert_iterator&lt; Buffer &gt;::value_type</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer_back_insert_iterator.hpp" line="14" column="3" bodyfile="src/base/buffer_back_insert_iterator.hpp" bodystart="14" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a8ffaa013de2e2762158b12e5c3d349bb" prot="public" static="no">
+        <type>typename std::vector&lt; uint8_t &gt;::difference_type</type>
+        <definition>using std::back_insert_iterator&lt; Buffer &gt;::difference_type = typename std::vector&lt;uint8_t&gt;::difference_type</definition>
+        <argsstring></argsstring>
+        <name>difference_type</name>
+        <qualifiedname>std::back_insert_iterator&lt; Buffer &gt;::difference_type</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer_back_insert_iterator.hpp" line="15" column="3" bodyfile="src/base/buffer_back_insert_iterator.hpp" bodystart="15" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a4c5335a9d952ac585649a75c85d0070a" prot="public" static="no">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1a5c90b67809719fc9320dd701f5949661" kindref="member">Buffer::pointer</ref></type>
+        <definition>using std::back_insert_iterator&lt; Buffer &gt;::pointer = Buffer::pointer</definition>
+        <argsstring></argsstring>
+        <name>pointer</name>
+        <qualifiedname>std::back_insert_iterator&lt; Buffer &gt;::pointer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer_back_insert_iterator.hpp" line="16" column="3" bodyfile="src/base/buffer_back_insert_iterator.hpp" bodystart="16" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1ac71c96fc356f9453266c4efbd2043ce6" prot="public" static="no">
+        <type>typename std::vector&lt; uint8_t &gt;::reference</type>
+        <definition>using std::back_insert_iterator&lt; Buffer &gt;::reference = typename std::vector&lt;uint8_t&gt;::reference</definition>
+        <argsstring></argsstring>
+        <name>reference</name>
+        <qualifiedname>std::back_insert_iterator&lt; Buffer &gt;::reference</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer_back_insert_iterator.hpp" line="17" column="3" bodyfile="src/base/buffer_back_insert_iterator.hpp" bodystart="17" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a5434316469989b15ab7bf21c437d4bdb" prot="public" static="no">
+        <type>std::random_access_iterator_tag</type>
+        <definition>using std::back_insert_iterator&lt; Buffer &gt;::iterator_category = std::random_access_iterator_tag</definition>
+        <argsstring></argsstring>
+        <name>iterator_category</name>
+        <qualifiedname>std::back_insert_iterator&lt; Buffer &gt;::iterator_category</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer_back_insert_iterator.hpp" line="18" column="3" bodyfile="src/base/buffer_back_insert_iterator.hpp" bodystart="18" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a8b7099d796d3b1a71c1956f60481fef2" prot="private" static="no" mutable="no">
+        <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+        <definition>Buffer&amp; std::back_insert_iterator&lt; Buffer &gt;::buf_</definition>
+        <argsstring></argsstring>
+        <name>buf_</name>
+        <qualifiedname>std::back_insert_iterator&lt; Buffer &gt;::buf_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer_back_insert_iterator.hpp" line="74" column="10" bodyfile="src/base/buffer_back_insert_iterator.hpp" bodystart="74" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a440633db27515dadc6d1a901e14f5fb0" prot="public" static="no" constexpr="yes" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type>constexpr</type>
+        <definition>std::back_insert_iterator&lt; Buffer &gt;::back_insert_iterator</definition>
+        <argsstring>(Buffer &amp;c)</argsstring>
+        <name>back_insert_iterator</name>
+        <qualifiedname>std::back_insert_iterator&lt; Buffer &gt;::back_insert_iterator</qualifiedname>
+        <param>
+          <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>c</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer_back_insert_iterator.hpp" line="20" column="22" bodyfile="src/base/buffer_back_insert_iterator.hpp" bodystart="20" bodyend="22"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a0be107a3a3867278cccfbb764f5884a4" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>std::back_insert_iterator&lt; Buffer &gt;::back_insert_iterator</definition>
+        <argsstring>(const back_insert_iterator&lt; Buffer &gt; &amp;a)</argsstring>
+        <name>back_insert_iterator</name>
+        <qualifiedname>std::back_insert_iterator&lt; Buffer &gt;::back_insert_iterator</qualifiedname>
+        <param>
+          <type>const back_insert_iterator&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt; &amp;</type>
+          <declname>a</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer_back_insert_iterator.hpp" line="20" column="22" bodyfile="src/base/buffer_back_insert_iterator.hpp" bodystart="23" bodyend="25"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a809a46dbd67a0e0aa66ba8e8055fd11c" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a440633db27515dadc6d1a901e14f5fb0" kindref="member">back_insert_iterator</ref>&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt; &amp;</type>
+        <definition>back_insert_iterator&lt; Buffer &gt; &amp; std::back_insert_iterator&lt; Buffer &gt;::operator=</definition>
+        <argsstring>(const back_insert_iterator&lt; Buffer &gt; &amp;a)</argsstring>
+        <name>operator=</name>
+        <qualifiedname>std::back_insert_iterator&lt; Buffer &gt;::operator=</qualifiedname>
+        <param>
+          <type>const <ref refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a440633db27515dadc6d1a901e14f5fb0" kindref="member">back_insert_iterator</ref>&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt; &amp;</type>
+          <declname>a</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer_back_insert_iterator.hpp" line="26" column="24" bodyfile="src/base/buffer_back_insert_iterator.hpp" bodystart="26" bodyend="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1ae78ed3d25911f8fd05ea87ecbd0039d9" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a440633db27515dadc6d1a901e14f5fb0" kindref="member">back_insert_iterator</ref>&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt; &amp;</type>
+        <definition>back_insert_iterator&lt; Buffer &gt; &amp; std::back_insert_iterator&lt; Buffer &gt;::operator=</definition>
+        <argsstring>(uint8_t value)</argsstring>
+        <name>operator=</name>
+        <qualifiedname>std::back_insert_iterator&lt; Buffer &gt;::operator=</qualifiedname>
+        <param>
+          <type>uint8_t</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer_back_insert_iterator.hpp" line="32" column="3" bodyfile="src/base/buffer_back_insert_iterator.hpp" bodystart="32" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a37ceb3c8a0ba5ac3379068ff8036f05f" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a440633db27515dadc6d1a901e14f5fb0" kindref="member">back_insert_iterator</ref>&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt; &amp;</type>
+        <definition>back_insert_iterator&lt; Buffer &gt; &amp; std::back_insert_iterator&lt; Buffer &gt;::operator=</definition>
+        <argsstring>(uint32_t value)</argsstring>
+        <name>operator=</name>
+        <qualifiedname>std::back_insert_iterator&lt; Buffer &gt;::operator=</qualifiedname>
+        <param>
+          <type>uint32_t</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer_back_insert_iterator.hpp" line="38" column="3" bodyfile="src/base/buffer_back_insert_iterator.hpp" bodystart="38" bodyend="41"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a97990f3802869384a032ea7b820ea660" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a440633db27515dadc6d1a901e14f5fb0" kindref="member">back_insert_iterator</ref>&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt; &amp;</type>
+        <definition>back_insert_iterator&lt; Buffer &gt; &amp; std::back_insert_iterator&lt; Buffer &gt;::operator=</definition>
+        <argsstring>(std::string_view value)</argsstring>
+        <name>operator=</name>
+        <qualifiedname>std::back_insert_iterator&lt; Buffer &gt;::operator=</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer_back_insert_iterator.hpp" line="44" column="3" bodyfile="src/base/buffer_back_insert_iterator.hpp" bodystart="44" bodyend="47"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a008a03654020571999e0cec0794eda05" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a440633db27515dadc6d1a901e14f5fb0" kindref="member">back_insert_iterator</ref>&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt; &amp;</type>
+        <definition>back_insert_iterator&lt; Buffer &gt; &amp; std::back_insert_iterator&lt; Buffer &gt;::operator=</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; s)</argsstring>
+        <name>operator=</name>
+        <qualifiedname>std::back_insert_iterator&lt; Buffer &gt;::operator=</qualifiedname>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer_back_insert_iterator.hpp" line="50" column="3" bodyfile="src/base/buffer_back_insert_iterator.hpp" bodystart="50" bodyend="53"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1acea345096d2653de7f06bbaad7e8232a" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a440633db27515dadc6d1a901e14f5fb0" kindref="member">back_insert_iterator</ref>&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt; &amp;</type>
+        <definition>back_insert_iterator&lt; Buffer &gt; &amp; std::back_insert_iterator&lt; Buffer &gt;::operator=</definition>
+        <argsstring>(const std::vector&lt; uint8_t &gt; &amp;v)</argsstring>
+        <name>operator=</name>
+        <qualifiedname>std::back_insert_iterator&lt; Buffer &gt;::operator=</qualifiedname>
+        <param>
+          <type>const std::vector&lt; uint8_t &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer_back_insert_iterator.hpp" line="56" column="3" bodyfile="src/base/buffer_back_insert_iterator.hpp" bodystart="56" bodyend="59"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a27f354816898b28fcd460c1b753e65a1" prot="public" static="no" constexpr="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a440633db27515dadc6d1a901e14f5fb0" kindref="member">back_insert_iterator</ref> &amp;</type>
+        <definition>back_insert_iterator &amp; std::back_insert_iterator&lt; Buffer &gt;::operator*</definition>
+        <argsstring>()</argsstring>
+        <name>operator*</name>
+        <qualifiedname>std::back_insert_iterator&lt; Buffer &gt;::operator*</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer_back_insert_iterator.hpp" line="61" column="34" bodyfile="src/base/buffer_back_insert_iterator.hpp" bodystart="61" bodyend="63"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a0baeef85444eacfec19bd0456a263d81" prot="public" static="no" constexpr="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a440633db27515dadc6d1a901e14f5fb0" kindref="member">back_insert_iterator</ref> &amp;</type>
+        <definition>back_insert_iterator &amp; std::back_insert_iterator&lt; Buffer &gt;::operator++</definition>
+        <argsstring>()</argsstring>
+        <name>operator++</name>
+        <qualifiedname>std::back_insert_iterator&lt; Buffer &gt;::operator++</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer_back_insert_iterator.hpp" line="65" column="34" bodyfile="src/base/buffer_back_insert_iterator.hpp" bodystart="65" bodyend="67"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a6f3f6f055970a1193f8fa5a96513b317" prot="public" static="no" constexpr="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a440633db27515dadc6d1a901e14f5fb0" kindref="member">back_insert_iterator</ref> &amp;</type>
+        <definition>back_insert_iterator &amp; std::back_insert_iterator&lt; Buffer &gt;::operator++</definition>
+        <argsstring>(int)</argsstring>
+        <name>operator++</name>
+        <qualifiedname>std::back_insert_iterator&lt; Buffer &gt;::operator++</qualifiedname>
+        <param>
+          <type>int</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer_back_insert_iterator.hpp" line="69" column="34" bodyfile="src/base/buffer_back_insert_iterator.hpp" bodystart="69" bodyend="71"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="8">
+        <label>T</label>
+      </node>
+      <node id="3">
+        <label>boost::equality_comparable&lt; Buffer &gt;</label>
+      </node>
+      <node id="4">
+        <label>boost::equality_comparable&lt; gsl::span&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="5">
+        <label>boost::equality_comparable&lt; std::vector&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="2">
+        <label>sgns::base::Buffer</label>
+        <link refid="de/dd5/classsgns_1_1base_1_1_buffer"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>std::back_insert_iterator&lt; Buffer &gt;</label>
+        <link refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-buf_</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::vector&lt; uint8_t &gt;</label>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/base/buffer_back_insert_iterator.hpp" line="12" column="1" bodyfile="src/base/buffer_back_insert_iterator.hpp" bodystart="12" bodyend="75"/>
+    <listofallmembers>
+      <member refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a440633db27515dadc6d1a901e14f5fb0" prot="public" virt="non-virtual"><scope>std::back_insert_iterator&lt; Buffer &gt;</scope><name>back_insert_iterator</name></member>
+      <member refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a0be107a3a3867278cccfbb764f5884a4" prot="public" virt="non-virtual"><scope>std::back_insert_iterator&lt; Buffer &gt;</scope><name>back_insert_iterator</name></member>
+      <member refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a8b7099d796d3b1a71c1956f60481fef2" prot="private" virt="non-virtual"><scope>std::back_insert_iterator&lt; Buffer &gt;</scope><name>buf_</name></member>
+      <member refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a8ffaa013de2e2762158b12e5c3d349bb" prot="public" virt="non-virtual"><scope>std::back_insert_iterator&lt; Buffer &gt;</scope><name>difference_type</name></member>
+      <member refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a5434316469989b15ab7bf21c437d4bdb" prot="public" virt="non-virtual"><scope>std::back_insert_iterator&lt; Buffer &gt;</scope><name>iterator_category</name></member>
+      <member refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a27f354816898b28fcd460c1b753e65a1" prot="public" virt="non-virtual"><scope>std::back_insert_iterator&lt; Buffer &gt;</scope><name>operator*</name></member>
+      <member refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a0baeef85444eacfec19bd0456a263d81" prot="public" virt="non-virtual"><scope>std::back_insert_iterator&lt; Buffer &gt;</scope><name>operator++</name></member>
+      <member refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a6f3f6f055970a1193f8fa5a96513b317" prot="public" virt="non-virtual"><scope>std::back_insert_iterator&lt; Buffer &gt;</scope><name>operator++</name></member>
+      <member refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a809a46dbd67a0e0aa66ba8e8055fd11c" prot="public" virt="non-virtual"><scope>std::back_insert_iterator&lt; Buffer &gt;</scope><name>operator=</name></member>
+      <member refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1ae78ed3d25911f8fd05ea87ecbd0039d9" prot="public" virt="non-virtual"><scope>std::back_insert_iterator&lt; Buffer &gt;</scope><name>operator=</name></member>
+      <member refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a37ceb3c8a0ba5ac3379068ff8036f05f" prot="public" virt="non-virtual"><scope>std::back_insert_iterator&lt; Buffer &gt;</scope><name>operator=</name></member>
+      <member refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a97990f3802869384a032ea7b820ea660" prot="public" virt="non-virtual"><scope>std::back_insert_iterator&lt; Buffer &gt;</scope><name>operator=</name></member>
+      <member refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a008a03654020571999e0cec0794eda05" prot="public" virt="non-virtual"><scope>std::back_insert_iterator&lt; Buffer &gt;</scope><name>operator=</name></member>
+      <member refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1acea345096d2653de7f06bbaad7e8232a" prot="public" virt="non-virtual"><scope>std::back_insert_iterator&lt; Buffer &gt;</scope><name>operator=</name></member>
+      <member refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a4c5335a9d952ac585649a75c85d0070a" prot="public" virt="non-virtual"><scope>std::back_insert_iterator&lt; Buffer &gt;</scope><name>pointer</name></member>
+      <member refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1ac71c96fc356f9453266c4efbd2043ce6" prot="public" virt="non-virtual"><scope>std::back_insert_iterator&lt; Buffer &gt;</scope><name>reference</name></member>
+      <member refid="d9/dfe/classstd_1_1back__insert__iterator_3_01_buffer_01_4_1a344cfcdea009298391bcc5420589fdbe" prot="public" virt="non-virtual"><scope>std::back_insert_iterator&lt; Buffer &gt;</scope><name>value_type</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

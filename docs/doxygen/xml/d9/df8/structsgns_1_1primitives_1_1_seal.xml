@@ -1,0 +1,108 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/df8/structsgns_1_1primitives_1_1_seal" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::primitives::Seal</compoundname>
+    <basecompoundref refid="df/db0/structsgns_1_1primitives_1_1detail_1_1_digest_item_common" prot="public" virt="non-virtual">sgns::primitives::detail::DigestItemCommon</basecompoundref>
+    <includes refid="df/dbf/digest_8hpp" local="no">digest.hpp</includes>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Put a <ref refid="d9/df8/structsgns_1_1primitives_1_1_seal" kindref="compound">Seal</ref> on it. This is only used by native code, and is never seen by runtimes. </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::primitives::Seal</label>
+        <link refid="d9/df8/structsgns_1_1primitives_1_1_seal"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::primitives::detail::DigestItemCommon</label>
+        <link refid="df/db0/structsgns_1_1primitives_1_1detail_1_1_digest_item_common"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="5">
+        <label>T</label>
+      </node>
+      <node id="8">
+        <label>boost::equality_comparable&lt; Buffer &gt;</label>
+      </node>
+      <node id="9">
+        <label>boost::equality_comparable&lt; gsl::span&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="10">
+        <label>boost::equality_comparable&lt; std::vector&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="6">
+        <label>sgns::base::Blob&lt; size_ &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::base::Blob&lt; 4 &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; 4 &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::base::Buffer</label>
+        <link refid="de/dd5/classsgns_1_1base_1_1_buffer"/>
+        <childnode refid="8" relation="public-inheritance">
+        </childnode>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::primitives::Seal</label>
+        <link refid="d9/df8/structsgns_1_1primitives_1_1_seal"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::primitives::detail::DigestItemCommon</label>
+        <link refid="df/db0/structsgns_1_1primitives_1_1detail_1_1_digest_item_common"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+verification_engine_id</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+data</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::vector&lt; uint8_t &gt;</label>
+        <childnode refid="12" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/primitives/digest.hpp" line="74" column="3" bodyfile="src/primitives/digest.hpp" bodystart="74" bodyend="74"/>
+    <listofallmembers>
+      <member refid="df/db0/structsgns_1_1primitives_1_1detail_1_1_digest_item_common_1a5f2daabc089b61b10fe91ce0d3a5772a" prot="public" virt="non-virtual"><scope>sgns::primitives::Seal</scope><name>data</name></member>
+      <member refid="df/db0/structsgns_1_1primitives_1_1detail_1_1_digest_item_common_1a6602c67d6361fb77b3ac7cbcebd11ad3" prot="public" virt="non-virtual"><scope>sgns::primitives::Seal</scope><name>operator!=</name></member>
+      <member refid="df/db0/structsgns_1_1primitives_1_1detail_1_1_digest_item_common_1af212abb13ed9f3b0e3a88cb1d7c9706d" prot="public" virt="non-virtual"><scope>sgns::primitives::Seal</scope><name>operator==</name></member>
+      <member refid="df/db0/structsgns_1_1primitives_1_1detail_1_1_digest_item_common_1ae0e8d3d45f7c31c0a38d75d5a9bb5f2a" prot="public" virt="non-virtual"><scope>sgns::primitives::Seal</scope><name>verification_engine_id</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

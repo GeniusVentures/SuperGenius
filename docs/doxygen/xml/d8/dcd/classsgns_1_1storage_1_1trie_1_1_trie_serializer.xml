@@ -1,0 +1,127 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::storage::trie::TrieSerializer</compoundname>
+    <basecompoundref refid="d1/dbf/class_i_component" prot="public" virt="non-virtual">IComponent</basecompoundref>
+    <derivedcompoundref refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl" prot="public" virt="non-virtual">sgns::storage::trie::TrieSerializerImpl</derivedcompoundref>
+    <includes refid="d9/d67/trie__serializer_8hpp" local="no">trie_serializer.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer_1aee88ae5df61afc427a31de5c712f0c2b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::storage::trie::TrieSerializer::~TrieSerializer</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~TrieSerializer</name>
+        <qualifiedname>sgns::storage::trie::TrieSerializer::~TrieSerializer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/trie_serializer.hpp" line="17" column="8"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer_1aaaf6e9b2511209317772f8ebea9ccb78" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>virtual base::Buffer sgns::storage::trie::TrieSerializer::getEmptyRootHash</definition>
+        <argsstring>() const =0</argsstring>
+        <name>getEmptyRootHash</name>
+        <qualifiedname>sgns::storage::trie::TrieSerializer::getEmptyRootHash</qualifiedname>
+        <reimplementedby refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a7f61945b8d33de70e7d16d3fb60a2e55">getEmptyRootHash</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>root hash of an empty trie </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/trie_serializer.hpp" line="22" column="26"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer_1ab07d300efbd3d1d8235ac0f5fd46fd73" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; base::Buffer &gt; sgns::storage::trie::TrieSerializer::storeTrie</definition>
+        <argsstring>(SuperGeniusTrie &amp;trie)=0</argsstring>
+        <name>storeTrie</name>
+        <qualifiedname>sgns::storage::trie::TrieSerializer::storeTrie</qualifiedname>
+        <reimplementedby refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1ab5887c576680cf975d4cc11943578c2e">storeTrie</reimplementedby>
+        <param>
+          <type><ref refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie" kindref="compound">SuperGeniusTrie</ref> &amp;</type>
+          <declname>trie</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Writes a trie to a storage, recursively storing its nodes. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/trie_serializer.hpp" line="28" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer_1af12e61605b2465e7c9ed31512b5bf13e" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; std::unique_ptr&lt; <ref refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie" kindref="compound">SuperGeniusTrie</ref> &gt; &gt;</type>
+        <definition>virtual outcome::result&lt; std::unique_ptr&lt; SuperGeniusTrie &gt; &gt; sgns::storage::trie::TrieSerializer::retrieveTrie</definition>
+        <argsstring>(const base::Buffer &amp;db_key) const =0</argsstring>
+        <name>retrieveTrie</name>
+        <qualifiedname>sgns::storage::trie::TrieSerializer::retrieveTrie</qualifiedname>
+        <reimplementedby refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl_1a134bf80a9383a52ebe689a3384ada0de">retrieveTrie</reimplementedby>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>db_key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Fetches a trie from the storage. A nullptr is returned in case that there is no entry for provided key. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/trie/serialization/trie_serializer.hpp" line="34" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Serializes <ref refid="d8/d77/classsgns_1_1storage_1_1trie_1_1_super_genius_trie" kindref="compound">SuperGeniusTrie</ref> and stores it in an external storage </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::TrieSerializer</label>
+        <link refid="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::storage::trie::TrieSerializerImpl</label>
+        <link refid="d7/d81/classsgns_1_1storage_1_1trie_1_1_trie_serializer_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::storage::trie::TrieSerializer</label>
+        <link refid="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/storage/trie/serialization/trie_serializer.hpp" line="15" column="3" bodyfile="src/storage/trie/serialization/trie_serializer.hpp" bodystart="15" bodyend="36"/>
+    <listofallmembers>
+      <member refid="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer_1aaaf6e9b2511209317772f8ebea9ccb78" prot="public" virt="pure-virtual"><scope>sgns::storage::trie::TrieSerializer</scope><name>getEmptyRootHash</name></member>
+      <member refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7" prot="public" virt="pure-virtual"><scope>sgns::storage::trie::TrieSerializer</scope><name>GetName</name></member>
+      <member refid="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer_1af12e61605b2465e7c9ed31512b5bf13e" prot="public" virt="pure-virtual"><scope>sgns::storage::trie::TrieSerializer</scope><name>retrieveTrie</name></member>
+      <member refid="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer_1ab07d300efbd3d1d8235ac0f5fd46fd73" prot="public" virt="pure-virtual"><scope>sgns::storage::trie::TrieSerializer</scope><name>storeTrie</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::storage::trie::TrieSerializer</scope><name>~IComponent</name></member>
+      <member refid="d8/dcd/classsgns_1_1storage_1_1trie_1_1_trie_serializer_1aee88ae5df61afc427a31de5c712f0c2b" prot="public" virt="non-virtual"><scope>sgns::storage::trie::TrieSerializer</scope><name>~TrieSerializer</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_bbf56bce9985720f86fc476f3812db24" kind="dir">
+    <compoundname>src/primitives</compoundname>
+    <innerfile refid="d1/de0/apply__result_8hpp">apply_result.hpp</innerfile>
+    <innerfile refid="d5/d4f/author__api__primitives_8hpp">author_api_primitives.hpp</innerfile>
+    <innerfile refid="d2/d45/authority_8hpp">authority.hpp</innerfile>
+    <innerfile refid="d9/db2/block_8hpp">block.hpp</innerfile>
+    <innerfile refid="d1/dce/block__data_8hpp">block_data.hpp</innerfile>
+    <innerfile refid="d7/d72/block__header_8hpp">block_header.hpp</innerfile>
+    <innerfile refid="d9/da1/block__id_8hpp">block_id.hpp</innerfile>
+    <innerfile refid="d9/d68/check__inherents__result_8hpp">check_inherents_result.hpp</innerfile>
+    <innerfile refid="d4/d26/src_2primitives_2common_8hpp">common.hpp</innerfile>
+    <innerfile refid="d9/df3/compact__integer_8hpp">compact_integer.hpp</innerfile>
+    <innerfile refid="df/dbf/digest_8hpp">digest.hpp</innerfile>
+    <innerfile refid="db/dd3/extrinsic_8hpp">extrinsic.hpp</innerfile>
+    <innerfile refid="dc/d77/inherent__data_8cpp">inherent_data.cpp</innerfile>
+    <innerfile refid="d7/dcf/inherent__data_8hpp">inherent_data.hpp</innerfile>
+    <innerfile refid="d6/ddd/justification_8hpp">justification.hpp</innerfile>
+    <innerfile refid="d9/d55/opaque__metadata_8hpp">opaque_metadata.hpp</innerfile>
+    <innerfile refid="d1/dc8/primitives_2parachain__host_8hpp">parachain_host.hpp</innerfile>
+    <innerfile refid="d6/d2c/production__configuration_8hpp">production_configuration.hpp</innerfile>
+    <innerfile refid="d7/d5f/scheduled__change_8hpp">scheduled_change.hpp</innerfile>
+    <innerfile refid="d4/de0/session__key_8hpp">session_key.hpp</innerfile>
+    <innerfile refid="d5/d61/transaction_8hpp">transaction.hpp</innerfile>
+    <innerfile refid="d6/dd7/transaction__validity_8cpp">transaction_validity.cpp</innerfile>
+    <innerfile refid="d0/d4b/transaction__validity_8hpp">transaction_validity.hpp</innerfile>
+    <innerfile refid="d7/dad/version_8hpp">version.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/primitives/"/>
+  </compounddef>
+</doxygen>

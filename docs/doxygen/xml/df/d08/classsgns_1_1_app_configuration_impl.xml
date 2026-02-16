@@ -1,0 +1,803 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/d08/classsgns_1_1_app_configuration_impl" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::AppConfigurationImpl</compoundname>
+    <basecompoundref refid="d6/d85/classsgns_1_1application_1_1_app_configuration" prot="public" virt="non-virtual">sgns::application::AppConfiguration</basecompoundref>
+    <includes refid="d3/d0d/app__config__impl_8hpp" local="no">app_config_impl.hpp</includes>
+    <innerclass refid="dd/df7/structsgns_1_1_app_configuration_impl_1_1_segment_handler" prot="private">sgns::AppConfigurationImpl::SegmentHandler</innerclass>
+    <sectiondef kind="private-type">
+      <memberdef kind="typedef" id="df/d08/classsgns_1_1_app_configuration_impl_1ac9062a56a03b8f4b6b560ee4534e687e" prot="private" static="no">
+        <type>std::unique_ptr&lt; std::FILE, decltype(&amp;std::fclose)&gt;</type>
+        <definition>using sgns::application::AppConfigurationImpl::FilePtr = std::unique_ptr&lt;std::FILE, decltype(&amp;std::fclose)&gt;</definition>
+        <argsstring></argsstring>
+        <name>FilePtr</name>
+        <qualifiedname>sgns::AppConfigurationImpl::FilePtr</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="37" column="5" bodyfile="src/application/impl/app_config_impl.hpp" bodystart="37" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="df/d08/classsgns_1_1_app_configuration_impl_1a6a78566e726ba3a40ea5d898f92753b8" prot="private" static="no" mutable="no">
+        <type>std::array&lt; <ref refid="dd/df7/structsgns_1_1_app_configuration_impl_1_1_segment_handler" kindref="compound">SegmentHandler</ref>, 6 &gt;</type>
+        <definition>std::array&lt;SegmentHandler, 6&gt; sgns::application::AppConfigurationImpl::handlers</definition>
+        <argsstring></argsstring>
+        <name>handlers</name>
+        <qualifiedname>sgns::AppConfigurationImpl::handlers</qualifiedname>
+        <initializer>                    = {
+    <ref refid="dd/df7/structsgns_1_1_app_configuration_impl_1_1_segment_handler" kindref="compound">SegmentHandler</ref>{&quot;general&quot;,    &amp;<ref refid="df/d08/classsgns_1_1_app_configuration_impl_1a13d6b9063629c4266dee8c20245b5ae0" kindref="member">AppConfigurationImpl::parse_general_segment</ref>},
+    <ref refid="dd/df7/structsgns_1_1_app_configuration_impl_1_1_segment_handler" kindref="compound">SegmentHandler</ref>{&quot;blockchain&quot;, &amp;<ref refid="df/d08/classsgns_1_1_app_configuration_impl_1a58bbbbde7f6990429f2d3bb4d977e234" kindref="member">AppConfigurationImpl::parse_blockchain_segment</ref>},
+    <ref refid="dd/df7/structsgns_1_1_app_configuration_impl_1_1_segment_handler" kindref="compound">SegmentHandler</ref>{&quot;storage&quot;,    &amp;<ref refid="df/d08/classsgns_1_1_app_configuration_impl_1a89b4bded531cd93bf50614c35865af0f" kindref="member">AppConfigurationImpl::parse_storage_segment</ref>},
+    <ref refid="dd/df7/structsgns_1_1_app_configuration_impl_1_1_segment_handler" kindref="compound">SegmentHandler</ref>{&quot;authority&quot;,  &amp;<ref refid="df/d08/classsgns_1_1_app_configuration_impl_1a968ecdb40f722a3a6d95cbf29aa1c146" kindref="member">AppConfigurationImpl::parse_authority_segment</ref>},
+    <ref refid="dd/df7/structsgns_1_1_app_configuration_impl_1_1_segment_handler" kindref="compound">SegmentHandler</ref>{&quot;network&quot;,    &amp;<ref refid="df/d08/classsgns_1_1_app_configuration_impl_1ae2817c4c9819c38e366736f12658dfe5" kindref="member">AppConfigurationImpl::parse_network_segment</ref>},
+    <ref refid="dd/df7/structsgns_1_1_app_configuration_impl_1_1_segment_handler" kindref="compound">SegmentHandler</ref>{&quot;additional&quot;, &amp;<ref refid="df/d08/classsgns_1_1_app_configuration_impl_1a9dd06ed0f29b75e36381420f8c4e2610" kindref="member">AppConfigurationImpl::parse_additional_segment</ref>},
+}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="57" column="16" bodyfile="src/application/impl/app_config_impl.hpp" bodystart="57" bodyend="64"/>
+      </memberdef>
+      <memberdef kind="variable" id="df/d08/classsgns_1_1_app_configuration_impl_1a66b3a93366d564191a3d4042e68b4ed3" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">sgns::base::Logger</ref></type>
+        <definition>sgns::base::Logger sgns::application::AppConfigurationImpl::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::AppConfigurationImpl::logger_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="67" column="24" bodyfile="src/application/impl/app_config_impl.hpp" bodystart="67" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="df/d08/classsgns_1_1_app_configuration_impl_1a8f9269df851ab22c056e0406763530aa" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::application::AppConfigurationImpl::rpc_http_host_</definition>
+        <argsstring></argsstring>
+        <name>rpc_http_host_</name>
+        <qualifiedname>sgns::AppConfigurationImpl::rpc_http_host_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="68" column="17" bodyfile="src/application/impl/app_config_impl.hpp" bodystart="68" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="df/d08/classsgns_1_1_app_configuration_impl_1aafce89a5ac7b3d6e0b76715dea8ffdc8" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::application::AppConfigurationImpl::rpc_ws_host_</definition>
+        <argsstring></argsstring>
+        <name>rpc_ws_host_</name>
+        <qualifiedname>sgns::AppConfigurationImpl::rpc_ws_host_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="69" column="17" bodyfile="src/application/impl/app_config_impl.hpp" bodystart="69" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="df/d08/classsgns_1_1_app_configuration_impl_1a8b489be4b3905956ecc392066f34ee3d" prot="private" static="no" mutable="no">
+        <type>uint16_t</type>
+        <definition>uint16_t sgns::application::AppConfigurationImpl::rpc_http_port_</definition>
+        <argsstring></argsstring>
+        <name>rpc_http_port_</name>
+        <qualifiedname>sgns::AppConfigurationImpl::rpc_http_port_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="70" column="14" bodyfile="src/application/impl/app_config_impl.hpp" bodystart="70" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="df/d08/classsgns_1_1_app_configuration_impl_1a077b153d5c0588fd3e8c44032a1fe672" prot="private" static="no" mutable="no">
+        <type>uint16_t</type>
+        <definition>uint16_t sgns::application::AppConfigurationImpl::rpc_ws_port_</definition>
+        <argsstring></argsstring>
+        <name>rpc_ws_port_</name>
+        <qualifiedname>sgns::AppConfigurationImpl::rpc_ws_port_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="71" column="14" bodyfile="src/application/impl/app_config_impl.hpp" bodystart="71" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1a13d6b9063629c4266dee8c20245b5ae0" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::application::AppConfigurationImpl::parse_general_segment</definition>
+        <argsstring>(rapidjson::Value &amp;val)</argsstring>
+        <name>parse_general_segment</name>
+        <qualifiedname>sgns::AppConfigurationImpl::parse_general_segment</qualifiedname>
+        <param>
+          <type>rapidjson::Value &amp;</type>
+          <declname>val</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="40" column="10" bodyfile="src/application/impl/app_config_impl.cpp" bodystart="88" bodyend="92"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1a58bbbbde7f6990429f2d3bb4d977e234" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::application::AppConfigurationImpl::parse_blockchain_segment</definition>
+        <argsstring>(rapidjson::Value &amp;val)</argsstring>
+        <name>parse_blockchain_segment</name>
+        <qualifiedname>sgns::AppConfigurationImpl::parse_blockchain_segment</qualifiedname>
+        <param>
+          <type>rapidjson::Value &amp;</type>
+          <declname>val</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="41" column="10" bodyfile="src/application/impl/app_config_impl.cpp" bodystart="94" bodyend="96"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1a89b4bded531cd93bf50614c35865af0f" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::application::AppConfigurationImpl::parse_storage_segment</definition>
+        <argsstring>(rapidjson::Value &amp;val)</argsstring>
+        <name>parse_storage_segment</name>
+        <qualifiedname>sgns::AppConfigurationImpl::parse_storage_segment</qualifiedname>
+        <param>
+          <type>rapidjson::Value &amp;</type>
+          <declname>val</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="42" column="10" bodyfile="src/application/impl/app_config_impl.cpp" bodystart="98" bodyend="100"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1a968ecdb40f722a3a6d95cbf29aa1c146" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::application::AppConfigurationImpl::parse_authority_segment</definition>
+        <argsstring>(rapidjson::Value &amp;val)</argsstring>
+        <name>parse_authority_segment</name>
+        <qualifiedname>sgns::AppConfigurationImpl::parse_authority_segment</qualifiedname>
+        <param>
+          <type>rapidjson::Value &amp;</type>
+          <declname>val</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="43" column="10" bodyfile="src/application/impl/app_config_impl.cpp" bodystart="102" bodyend="104"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1ae2817c4c9819c38e366736f12658dfe5" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::application::AppConfigurationImpl::parse_network_segment</definition>
+        <argsstring>(rapidjson::Value &amp;val)</argsstring>
+        <name>parse_network_segment</name>
+        <qualifiedname>sgns::AppConfigurationImpl::parse_network_segment</qualifiedname>
+        <param>
+          <type>rapidjson::Value &amp;</type>
+          <declname>val</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="44" column="10" bodyfile="src/application/impl/app_config_impl.cpp" bodystart="106" bodyend="112"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1a9dd06ed0f29b75e36381420f8c4e2610" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::application::AppConfigurationImpl::parse_additional_segment</definition>
+        <argsstring>(rapidjson::Value &amp;val)</argsstring>
+        <name>parse_additional_segment</name>
+        <qualifiedname>sgns::AppConfigurationImpl::parse_additional_segment</qualifiedname>
+        <param>
+          <type>rapidjson::Value &amp;</type>
+          <declname>val</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="45" column="10" bodyfile="src/application/impl/app_config_impl.cpp" bodystart="114" bodyend="116"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1a6587b8d06d21c70f4fc0e39fd65c2def" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::application::AppConfigurationImpl::validate_config</definition>
+        <argsstring>(AppConfiguration::LoadScheme scheme)</argsstring>
+        <name>validate_config</name>
+        <qualifiedname>sgns::AppConfigurationImpl::validate_config</qualifiedname>
+        <param>
+          <type><ref refid="dd/d37/classsgns_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fd" kindref="member">AppConfiguration::LoadScheme</ref></type>
+          <declname>scheme</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="83" column="10" bodyfile="src/application/impl/app_config_impl.cpp" bodystart="118" bodyend="153"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1a6cc7f7040f043eb8af2898972a14f462" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::application::AppConfigurationImpl::read_config_from_file</definition>
+        <argsstring>(const std::string &amp;filepath)</argsstring>
+        <name>read_config_from_file</name>
+        <qualifiedname>sgns::AppConfigurationImpl::read_config_from_file</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>filepath</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="84" column="10" bodyfile="src/application/impl/app_config_impl.cpp" bodystart="155" bodyend="187"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1a96c830542a58e4dda5eb0e2ab1d16db0" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>boost::asio::ip::tcp::endpoint</type>
+        <definition>boost::asio::ip::tcp::endpoint sgns::application::AppConfigurationImpl::get_endpoint_from</definition>
+        <argsstring>(const std::string &amp;host, uint16_t port)</argsstring>
+        <name>get_endpoint_from</name>
+        <qualifiedname>sgns::AppConfigurationImpl::get_endpoint_from</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>host</declname>
+        </param>
+        <param>
+          <type>uint16_t</type>
+          <declname>port</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="90" column="36" bodyfile="src/application/impl/app_config_impl.cpp" bodystart="189" bodyend="202"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1aeab64fe7fb920b87629884b7167e8bd2" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::application::AppConfigurationImpl::load_str</definition>
+        <argsstring>(const rapidjson::Value &amp;val, char const *name, std::string &amp;target)</argsstring>
+        <name>load_str</name>
+        <qualifiedname>sgns::AppConfigurationImpl::load_str</qualifiedname>
+        <param>
+          <type>const rapidjson::Value &amp;</type>
+          <declname>val</declname>
+        </param>
+        <param>
+          <type>char const *</type>
+          <declname>name</declname>
+        </param>
+        <param>
+          <type>std::string &amp;</type>
+          <declname>target</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="86" column="17" bodyfile="src/application/impl/app_config_impl.cpp" bodystart="50" bodyend="59"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1ad4cde05b00c1da654d3bf47f465da26b" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::application::AppConfigurationImpl::load_u16</definition>
+        <argsstring>(const rapidjson::Value &amp;val, char const *name, uint16_t &amp;target)</argsstring>
+        <name>load_u16</name>
+        <qualifiedname>sgns::AppConfigurationImpl::load_u16</qualifiedname>
+        <param>
+          <type>const rapidjson::Value &amp;</type>
+          <declname>val</declname>
+        </param>
+        <param>
+          <type>char const *</type>
+          <declname>name</declname>
+        </param>
+        <param>
+          <type>uint16_t &amp;</type>
+          <declname>target</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="87" column="17" bodyfile="src/application/impl/app_config_impl.cpp" bodystart="72" bodyend="86"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1ad799632c1a656c79b48cb55b822fbf07" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::application::AppConfigurationImpl::load_bool</definition>
+        <argsstring>(const rapidjson::Value &amp;val, char const *name, bool &amp;target)</argsstring>
+        <name>load_bool</name>
+        <qualifiedname>sgns::AppConfigurationImpl::load_bool</qualifiedname>
+        <param>
+          <type>const rapidjson::Value &amp;</type>
+          <declname>val</declname>
+        </param>
+        <param>
+          <type>char const *</type>
+          <declname>name</declname>
+        </param>
+        <param>
+          <type>bool &amp;</type>
+          <declname>target</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="88" column="17" bodyfile="src/application/impl/app_config_impl.cpp" bodystart="61" bodyend="70"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1aa604f51e7f7a333594331adab86561c5" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="df/d08/classsgns_1_1_app_configuration_impl_1ac9062a56a03b8f4b6b560ee4534e687e" kindref="member">FilePtr</ref></type>
+        <definition>AppConfigurationImpl::FilePtr sgns::application::AppConfigurationImpl::open_file</definition>
+        <argsstring>(const std::string &amp;filepath)</argsstring>
+        <name>open_file</name>
+        <qualifiedname>sgns::AppConfigurationImpl::open_file</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>filepath</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="93" column="20" bodyfile="src/application/impl/app_config_impl.cpp" bodystart="44" bodyend="48"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1af47ad0c0d6bbe18536f818e1f405efdf" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::AppConfigurationImpl::AppConfigurationImpl</definition>
+        <argsstring>(base::Logger logger)</argsstring>
+        <name>AppConfigurationImpl</name>
+        <qualifiedname>sgns::AppConfigurationImpl::AppConfigurationImpl</qualifiedname>
+        <param>
+          <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+          <declname>logger</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="96" column="14" bodyfile="src/application/impl/app_config_impl.cpp" bodystart="34" bodyend="42"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1a21a8c1cb17b35aa69f2592566260ea0a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::AppConfigurationImpl::AppConfigurationImpl</definition>
+        <argsstring>(const AppConfigurationImpl &amp;)=delete</argsstring>
+        <name>AppConfigurationImpl</name>
+        <qualifiedname>sgns::AppConfigurationImpl::AppConfigurationImpl</qualifiedname>
+        <param>
+          <type>const AppConfigurationImpl &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="99" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1ac133fe082a4871466b1fd055378141e7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::AppConfigurationImpl::AppConfigurationImpl</definition>
+        <argsstring>(AppConfigurationImpl &amp;&amp;)=default</argsstring>
+        <name>AppConfigurationImpl</name>
+        <qualifiedname>sgns::AppConfigurationImpl::AppConfigurationImpl</qualifiedname>
+        <param>
+          <type>AppConfigurationImpl &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="102" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1a7d69a1a672499efdd66d722f0c77791d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::AppConfigurationImpl::~AppConfigurationImpl</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~AppConfigurationImpl</name>
+        <qualifiedname>sgns::AppConfigurationImpl::~AppConfigurationImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="97" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1ab9401a30393d2f05fdb50f18b2124c00" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="df/d08/classsgns_1_1_app_configuration_impl_1af47ad0c0d6bbe18536f818e1f405efdf" kindref="member">AppConfigurationImpl</ref> &amp;</type>
+        <definition>AppConfigurationImpl &amp; sgns::application::AppConfigurationImpl::operator=</definition>
+        <argsstring>(const AppConfigurationImpl &amp;)=delete</argsstring>
+        <name>operator=</name>
+        <qualifiedname>sgns::AppConfigurationImpl::operator=</qualifiedname>
+        <param>
+          <type>const <ref refid="df/d08/classsgns_1_1_app_configuration_impl_1af47ad0c0d6bbe18536f818e1f405efdf" kindref="member">AppConfigurationImpl</ref> &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="100" column="26"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1af9b5eb03421d211673429276b1025575" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="df/d08/classsgns_1_1_app_configuration_impl_1af47ad0c0d6bbe18536f818e1f405efdf" kindref="member">AppConfigurationImpl</ref> &amp;</type>
+        <definition>AppConfigurationImpl &amp; sgns::application::AppConfigurationImpl::operator=</definition>
+        <argsstring>(AppConfigurationImpl &amp;&amp;)=default</argsstring>
+        <name>operator=</name>
+        <qualifiedname>sgns::AppConfigurationImpl::operator=</qualifiedname>
+        <param>
+          <type><ref refid="df/d08/classsgns_1_1_app_configuration_impl_1af47ad0c0d6bbe18536f818e1f405efdf" kindref="member">AppConfigurationImpl</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="103" column="26"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1aab5d82b4fe1aad9c4cef7d6fde5d5195" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::application::AppConfigurationImpl::initialize_from_args</definition>
+        <argsstring>(AppConfiguration::LoadScheme scheme, int argc, char **argv) override</argsstring>
+        <name>initialize_from_args</name>
+        <qualifiedname>sgns::AppConfigurationImpl::initialize_from_args</qualifiedname>
+        <param>
+          <type><ref refid="dd/d37/classsgns_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fd" kindref="member">AppConfiguration::LoadScheme</ref></type>
+          <declname>scheme</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>argc</declname>
+        </param>
+        <param>
+          <type>char **</type>
+          <declname>argv</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+<para>aggregate data from command line args</para>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="105" column="10" bodyfile="src/application/impl/app_config_impl.cpp" bodystart="204" bodyend="326"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1a0b4ee629da829b54e2f9aa6bad3edc50" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::AppConfigurationImpl::DECLARE_PROPERTY</definition>
+        <argsstring>(std::string, genesis_path)</argsstring>
+        <name>DECLARE_PROPERTY</name>
+        <qualifiedname>sgns::AppConfigurationImpl::DECLARE_PROPERTY</qualifiedname>
+        <param>
+          <type>std::string</type>
+        </param>
+        <param>
+          <type><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a74f0590dc4a3ca6dff738860902ae084" kindref="member">genesis_path</ref></type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="109" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1a7a5c6624277d40f79bb37dd7a015aa81" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::AppConfigurationImpl::DECLARE_PROPERTY</definition>
+        <argsstring>(std::string, keystore_path)</argsstring>
+        <name>DECLARE_PROPERTY</name>
+        <qualifiedname>sgns::AppConfigurationImpl::DECLARE_PROPERTY</qualifiedname>
+        <param>
+          <type>std::string</type>
+        </param>
+        <param>
+          <type><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1ae171adb944dc2748185197774fcab66c" kindref="member">keystore_path</ref></type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="110" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1a24591be458faeb58e1557538e72189c1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::AppConfigurationImpl::DECLARE_PROPERTY</definition>
+        <argsstring>(std::string, rocksdb_path)</argsstring>
+        <name>DECLARE_PROPERTY</name>
+        <qualifiedname>sgns::AppConfigurationImpl::DECLARE_PROPERTY</qualifiedname>
+        <param>
+          <type>std::string</type>
+        </param>
+        <param>
+          <type><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a3f8b01b943d532a7c2c86220f05adbe9" kindref="member">rocksdb_path</ref></type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="111" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1a2756ad28ebee7c5358f0221ed6b0ce75" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::AppConfigurationImpl::DECLARE_PROPERTY</definition>
+        <argsstring>(uint16_t, p2p_port)</argsstring>
+        <name>DECLARE_PROPERTY</name>
+        <qualifiedname>sgns::AppConfigurationImpl::DECLARE_PROPERTY</qualifiedname>
+        <param>
+          <type>uint16_t</type>
+        </param>
+        <param>
+          <type><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a550a82536f6c51016e67da90dffad2c5" kindref="member">p2p_port</ref></type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="112" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1a1d35f819b5224d8f2439ad357a760cc5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::AppConfigurationImpl::DECLARE_PROPERTY</definition>
+        <argsstring>(boost::asio::ip::tcp::endpoint, rpc_http_endpoint)</argsstring>
+        <name>DECLARE_PROPERTY</name>
+        <qualifiedname>sgns::AppConfigurationImpl::DECLARE_PROPERTY</qualifiedname>
+        <param>
+          <type>boost::asio::ip::tcp::endpoint</type>
+        </param>
+        <param>
+          <type><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a208ab523d3876418b9cb162a70d6bc11" kindref="member">rpc_http_endpoint</ref></type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="113" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1a2a3c8b5ef49317e68b2f0cb332cd4619" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::AppConfigurationImpl::DECLARE_PROPERTY</definition>
+        <argsstring>(boost::asio::ip::tcp::endpoint, rpc_ws_endpoint)</argsstring>
+        <name>DECLARE_PROPERTY</name>
+        <qualifiedname>sgns::AppConfigurationImpl::DECLARE_PROPERTY</qualifiedname>
+        <param>
+          <type>boost::asio::ip::tcp::endpoint</type>
+        </param>
+        <param>
+          <type><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a377053229eb79d58cc523e15bd432f94" kindref="member">rpc_ws_endpoint</ref></type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="114" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1ad49814bee57c5bcff0cf27c227db2200" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::AppConfigurationImpl::DECLARE_PROPERTY</definition>
+        <argsstring>(spdlog::level::level_enum, verbosity)</argsstring>
+        <name>DECLARE_PROPERTY</name>
+        <qualifiedname>sgns::AppConfigurationImpl::DECLARE_PROPERTY</qualifiedname>
+        <param>
+          <type>spdlog::level::level_enum</type>
+        </param>
+        <param>
+          <type><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a0fd65b30c9e26763f8c353c26d7e2af3" kindref="member">verbosity</ref></type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="115" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d08/classsgns_1_1_app_configuration_impl_1a796e6322104beb9e6a2abaf5483cd4d8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::AppConfigurationImpl::DECLARE_PROPERTY</definition>
+        <argsstring>(bool, is_only_finalizing)</argsstring>
+        <name>DECLARE_PROPERTY</name>
+        <qualifiedname>sgns::AppConfigurationImpl::DECLARE_PROPERTY</qualifiedname>
+        <param>
+          <type>bool</type>
+        </param>
+        <param>
+          <type><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a90f250f47e21de9fe30e1a40ea428b54" kindref="member">is_only_finalizing</ref></type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/app_config_impl.hpp" line="116" column="5"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::AppConfigurationImpl</label>
+        <link refid="df/d08/classsgns_1_1_app_configuration_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::application::AppConfiguration</label>
+        <link refid="d6/d85/classsgns_1_1application_1_1_app_configuration"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="6">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::AppConfigurationImpl</label>
+        <link refid="df/d08/classsgns_1_1_app_configuration_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-handlers</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-rpc_http_host_</edgelabel>
+          <edgelabel>-rpc_ws_host_</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::application::AppConfiguration</label>
+        <link refid="d6/d85/classsgns_1_1application_1_1_app_configuration"/>
+      </node>
+      <node id="4">
+        <label>sgns::application::AppConfigurationImpl::SegmentHandler</label>
+        <link refid="d0/db1/structsgns_1_1application_1_1_app_configuration_impl_1_1_segment_handler"/>
+      </node>
+      <node id="5">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::array&lt; sgns::application::AppConfigurationImpl::SegmentHandler, 6 &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; sgns::application::AppConfigurationImpl::SegmentHandler, 6 &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::string</label>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/application/impl/app_config_impl.hpp" line="36" column="3" bodyfile="src/application/impl/app_config_impl.hpp" bodystart="36" bodyend="117"/>
+    <listofallmembers>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1af47ad0c0d6bbe18536f818e1f405efdf" prot="public" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>AppConfigurationImpl</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a21a8c1cb17b35aa69f2592566260ea0a" prot="public" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>AppConfigurationImpl</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1ac133fe082a4871466b1fd055378141e7" prot="public" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>AppConfigurationImpl</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a0b4ee629da829b54e2f9aa6bad3edc50" prot="public" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>DECLARE_PROPERTY</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a7a5c6624277d40f79bb37dd7a015aa81" prot="public" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>DECLARE_PROPERTY</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a24591be458faeb58e1557538e72189c1" prot="public" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>DECLARE_PROPERTY</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a2756ad28ebee7c5358f0221ed6b0ce75" prot="public" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>DECLARE_PROPERTY</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a1d35f819b5224d8f2439ad357a760cc5" prot="public" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>DECLARE_PROPERTY</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a2a3c8b5ef49317e68b2f0cb332cd4619" prot="public" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>DECLARE_PROPERTY</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1ad49814bee57c5bcff0cf27c227db2200" prot="public" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>DECLARE_PROPERTY</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a796e6322104beb9e6a2abaf5483cd4d8" prot="public" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>DECLARE_PROPERTY</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1ac9062a56a03b8f4b6b560ee4534e687e" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>FilePtr</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a74f0590dc4a3ca6dff738860902ae084" prot="public" virt="pure-virtual"><scope>sgns::AppConfigurationImpl</scope><name>genesis_path</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a96c830542a58e4dda5eb0e2ab1d16db0" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>get_endpoint_from</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a6a78566e726ba3a40ea5d898f92753b8" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>handlers</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1aab5d82b4fe1aad9c4cef7d6fde5d5195" prot="public" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>initialize_from_args</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a43ad8410249921ee19d5e6df3acd43c3" prot="public" virt="pure-virtual" ambiguityscope="sgns::application::AppConfiguration::"><scope>sgns::AppConfigurationImpl</scope><name>initialize_from_args</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a90f250f47e21de9fe30e1a40ea428b54" prot="public" virt="pure-virtual"><scope>sgns::AppConfigurationImpl</scope><name>is_only_finalizing</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1ae171adb944dc2748185197774fcab66c" prot="public" virt="pure-virtual"><scope>sgns::AppConfigurationImpl</scope><name>keystore_path</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1ad799632c1a656c79b48cb55b822fbf07" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>load_bool</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1aeab64fe7fb920b87629884b7167e8bd2" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>load_str</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1ad4cde05b00c1da654d3bf47f465da26b" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>load_u16</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fd" prot="public" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>LoadScheme</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a66b3a93366d564191a3d4042e68b4ed3" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>logger_</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1aa604f51e7f7a333594331adab86561c5" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>open_file</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1ab9401a30393d2f05fdb50f18b2124c00" prot="public" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>operator=</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1af9b5eb03421d211673429276b1025575" prot="public" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>operator=</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a550a82536f6c51016e67da90dffad2c5" prot="public" virt="pure-virtual"><scope>sgns::AppConfigurationImpl</scope><name>p2p_port</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a9dd06ed0f29b75e36381420f8c4e2610" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>parse_additional_segment</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a968ecdb40f722a3a6d95cbf29aa1c146" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>parse_authority_segment</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a58bbbbde7f6990429f2d3bb4d977e234" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>parse_blockchain_segment</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a13d6b9063629c4266dee8c20245b5ae0" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>parse_general_segment</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1ae2817c4c9819c38e366736f12658dfe5" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>parse_network_segment</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a89b4bded531cd93bf50614c35865af0f" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>parse_storage_segment</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a6cc7f7040f043eb8af2898972a14f462" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>read_config_from_file</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a3f8b01b943d532a7c2c86220f05adbe9" prot="public" virt="pure-virtual"><scope>sgns::AppConfigurationImpl</scope><name>rocksdb_path</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a208ab523d3876418b9cb162a70d6bc11" prot="public" virt="pure-virtual"><scope>sgns::AppConfigurationImpl</scope><name>rpc_http_endpoint</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a8f9269df851ab22c056e0406763530aa" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>rpc_http_host_</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a8b489be4b3905956ecc392066f34ee3d" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>rpc_http_port_</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a377053229eb79d58cc523e15bd432f94" prot="public" virt="pure-virtual"><scope>sgns::AppConfigurationImpl</scope><name>rpc_ws_endpoint</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1aafce89a5ac7b3d6e0b76715dea8ffdc8" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>rpc_ws_host_</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a077b153d5c0588fd3e8c44032a1fe672" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>rpc_ws_port_</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a6587b8d06d21c70f4fc0e39fd65c2def" prot="private" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>validate_config</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a0fd65b30c9e26763f8c353c26d7e2af3" prot="public" virt="pure-virtual"><scope>sgns::AppConfigurationImpl</scope><name>verbosity</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa2dc3a6d43c1eec157ba08df15a5b6ea" prot="public" virt="virtual"><scope>sgns::AppConfigurationImpl</scope><name>~AppConfiguration</name></member>
+      <member refid="df/d08/classsgns_1_1_app_configuration_impl_1a7d69a1a672499efdd66d722f0c77791d" prot="public" virt="non-virtual"><scope>sgns::AppConfigurationImpl</scope><name>~AppConfigurationImpl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

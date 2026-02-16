@@ -1,0 +1,52 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/d99/classsgns_1_1network" kind="class" language="C++" prot="public">
+    <compoundname>sgns::network</compoundname>
+    <includes refid="d6/d67/network_8hpp" local="no">network.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d6/d99/classsgns_1_1network_1a987a4c8e53426588d5270fa1e1605ca8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::network::network</definition>
+        <argsstring>()</argsstring>
+        <name>network</name>
+        <qualifiedname>sgns::network::network</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/network.hpp" line="7" column="5" bodyfile="node/network.cpp" bodystart="2" bodyend="4"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d99/classsgns_1_1network_1a4b0f4e62fd56b2c667efe0fee4817fdc" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::network::~network</definition>
+        <argsstring>()</argsstring>
+        <name>~network</name>
+        <qualifiedname>sgns::network::~network</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/network.hpp" line="8" column="5" bodyfile="node/network.cpp" bodystart="5" bodyend="7"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::network</label>
+        <link refid="d6/d99/classsgns_1_1network"/>
+      </node>
+    </collaborationgraph>
+    <location file="node/network.hpp" line="4" column="1" bodyfile="node/network.hpp" bodystart="5" bodyend="10"/>
+    <listofallmembers>
+      <member refid="d6/d99/classsgns_1_1network_1a987a4c8e53426588d5270fa1e1605ca8" prot="public" virt="non-virtual"><scope>sgns::network</scope><name>network</name></member>
+      <member refid="d6/d99/classsgns_1_1network_1a4b0f4e62fd56b2c667efe0fee4817fdc" prot="public" virt="non-virtual"><scope>sgns::network</scope><name>~network</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

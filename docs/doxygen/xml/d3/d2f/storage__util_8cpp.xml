@@ -1,0 +1,1138 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d3/d2f/storage__util_8cpp" kind="file" language="C++">
+    <compoundname>storage_util.cpp</compoundname>
+    <includes refid="dd/d87/storage__util_8hpp" local="yes">blockchain/impl/storage_util.hpp</includes>
+    <includes refid="db/d1e/src_2blockchain_2impl_2common_8hpp" local="yes">blockchain/impl/common.hpp</includes>
+    <includes refid="d9/da2/database__error_8hpp" local="yes">storage/database_error.hpp</includes>
+    <includes refid="d0/d0e/globaldb_8hpp" local="yes">crdt/globaldb/globaldb.hpp</includes>
+    <includes local="yes">blockchain/impl/proto/SGBlocks.pb.h</includes>
+    <incdepgraph>
+      <node id="13">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="48">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="49" relation="include">
+        </childnode>
+        <childnode refid="50" relation="include">
+        </childnode>
+      </node>
+      <node id="90">
+        <label>blockchain/impl/common.hpp</label>
+        <link refid="db/d1e/src_2blockchain_2impl_2common_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/blockchain/impl/storage_util.cpp</label>
+        <link refid="d3/d2f/storage__util_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="90" relation="include">
+        </childnode>
+        <childnode refid="91" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="93" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>blockchain/impl/storage_util.hpp</label>
+        <link refid="dd/d87/storage__util_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="88" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>crdt/atomic_transaction.hpp</label>
+        <link refid="dd/d8f/atomic__transaction_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="71">
+        <label>crdt/broadcaster.hpp</label>
+        <link refid="d9/d25/broadcaster_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="72" relation="include">
+        </childnode>
+        <childnode refid="73" relation="include">
+        </childnode>
+        <childnode refid="74" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+      </node>
+      <node id="82">
+        <label>crdt/crdt_callback_manager.hpp</label>
+        <link refid="dc/d0f/crdt__callback__manager_8hpp"/>
+        <childnode refid="78" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="80" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+      </node>
+      <node id="79">
+        <label>crdt/crdt_data_filter.hpp</label>
+        <link refid="d9/dc5/crdt__data__filter_8hpp"/>
+        <childnode refid="80" relation="include">
+        </childnode>
+        <childnode refid="78" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="81" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+      </node>
+      <node id="39">
+        <label>crdt/crdt_datastore.hpp</label>
+        <link refid="d5/d29/crdt__datastore_8hpp"/>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="44" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="46" relation="include">
+        </childnode>
+        <childnode refid="47" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="51" relation="include">
+        </childnode>
+        <childnode refid="69" relation="include">
+        </childnode>
+        <childnode refid="71" relation="include">
+        </childnode>
+        <childnode refid="75" relation="include">
+        </childnode>
+        <childnode refid="77" relation="include">
+        </childnode>
+        <childnode refid="79" relation="include">
+        </childnode>
+        <childnode refid="82" relation="include">
+        </childnode>
+        <childnode refid="53" relation="include">
+        </childnode>
+      </node>
+      <node id="69">
+        <label>crdt/crdt_heads.hpp</label>
+        <link refid="dc/d76/crdt__heads_8hpp"/>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="44" relation="include">
+        </childnode>
+        <childnode refid="70" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="53" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+      </node>
+      <node id="77">
+        <label>crdt/crdt_options.hpp</label>
+        <link refid="d0/d2d/crdt__options_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="78" relation="include">
+        </childnode>
+      </node>
+      <node id="51">
+        <label>crdt/crdt_set.hpp</label>
+        <link refid="d4/d2e/crdt__set_8hpp"/>
+        <childnode refid="52" relation="include">
+        </childnode>
+        <childnode refid="53" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+      </node>
+      <node id="75">
+        <label>crdt/dagsyncer.hpp</label>
+        <link refid="d5/db5/dagsyncer_8hpp"/>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="76" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="70" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>crdt/globaldb/globaldb.hpp</label>
+        <link refid="d0/d0e/globaldb_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="77" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="83" relation="include">
+        </childnode>
+      </node>
+      <node id="88">
+        <label>crdt/globaldb/keypair_file_storage.hpp</label>
+        <link refid="d1/d13/keypair__file__storage_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="89" relation="include">
+        </childnode>
+      </node>
+      <node id="83">
+        <label>pubsub_broadcaster_ext.hpp</label>
+        <link refid="d7/db9/pubsub__broadcaster__ext_8hpp"/>
+        <childnode refid="71" relation="include">
+        </childnode>
+        <childnode refid="84" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="74" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="80" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="52" relation="include">
+        </childnode>
+      </node>
+      <node id="84">
+        <label>crdt/graphsync_dagsyncer.hpp</label>
+        <link refid="d6/dea/graphsync__dagsyncer_8hpp"/>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+        <childnode refid="75" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="85" relation="include">
+        </childnode>
+        <childnode refid="86" relation="include">
+        </childnode>
+        <childnode refid="87" relation="include">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>crdt/hierarchical_key.hpp</label>
+        <link refid="d5/dc7/hierarchical__key_8hpp"/>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>primitives/block_id.hpp</label>
+        <link refid="d9/da1/block__id_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>primitives/common.hpp</label>
+        <link refid="d4/d26/src_2primitives_2common_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="68">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="59">
+        <label>storage/buffer_map_types.hpp</label>
+        <link refid="d8/dcc/buffer__map__types_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="60" relation="include">
+        </childnode>
+        <childnode refid="63" relation="include">
+        </childnode>
+      </node>
+      <node id="91">
+        <label>storage/database_error.hpp</label>
+        <link refid="d9/da2/database__error_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="92" relation="include">
+        </childnode>
+      </node>
+      <node id="62">
+        <label>storage/face/batchable.hpp</label>
+        <link refid="de/d87/batchable_8hpp"/>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="63" relation="include">
+        </childnode>
+      </node>
+      <node id="61">
+        <label>storage/face/generic_maps.hpp</label>
+        <link refid="d9/daa/generic__maps_8hpp"/>
+        <childnode refid="62" relation="include">
+        </childnode>
+        <childnode refid="65" relation="include">
+        </childnode>
+        <childnode refid="67" relation="include">
+        </childnode>
+        <childnode refid="64" relation="include">
+        </childnode>
+      </node>
+      <node id="60">
+        <label>storage/face/generic_storage.hpp</label>
+        <link refid="d6/d4e/generic__storage_8hpp"/>
+        <childnode refid="61" relation="include">
+        </childnode>
+        <childnode refid="68" relation="include">
+        </childnode>
+      </node>
+      <node id="65">
+        <label>storage/face/iterable.hpp</label>
+        <link refid="db/d3e/iterable_8hpp"/>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="66" relation="include">
+        </childnode>
+      </node>
+      <node id="66">
+        <label>storage/face/map_cursor.hpp</label>
+        <link refid="d9/d4b/map__cursor_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="67">
+        <label>storage/face/readable.hpp</label>
+        <link refid="d5/dd2/readable_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="63">
+        <label>storage/face/write_batch.hpp</label>
+        <link refid="d2/d76/write__batch_8hpp"/>
+        <childnode refid="64" relation="include">
+        </childnode>
+      </node>
+      <node id="64">
+        <label>storage/face/writeable.hpp</label>
+        <link refid="dc/da4/writeable_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="53">
+        <label>storage/rocksdb/rocksdb.hpp</label>
+        <link refid="d1/d07/rocksdb_8hpp"/>
+        <childnode refid="54" relation="include">
+        </childnode>
+        <childnode refid="55" relation="include">
+        </childnode>
+        <childnode refid="56" relation="include">
+        </childnode>
+        <childnode refid="57" relation="include">
+        </childnode>
+        <childnode refid="58" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="59" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>array</label>
+      </node>
+      <node id="93">
+        <label>blockchain/impl/proto/SGBlocks.pb.h</label>
+      </node>
+      <node id="23">
+        <label>boost/asio/io_context.hpp</label>
+      </node>
+      <node id="46">
+        <label>boost/asio/steady_timer.hpp</label>
+      </node>
+      <node id="6">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="24">
+        <label>boost/filesystem/path.hpp</label>
+      </node>
+      <node id="16">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="7">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="73">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="12">
+        <label>boost/variant.hpp</label>
+      </node>
+      <node id="42">
+        <label>chrono</label>
+      </node>
+      <node id="45">
+        <label>condition_variable</label>
+      </node>
+      <node id="35">
+        <label>crdt/proto/delta.pb.h</label>
+      </node>
+      <node id="14">
+        <label>cstddef</label>
+      </node>
+      <node id="20">
+        <label>cstdint</label>
+      </node>
+      <node id="78">
+        <label>functional</label>
+      </node>
+      <node id="41">
+        <label>future</label>
+      </node>
+      <node id="8">
+        <label>gsl/span</label>
+      </node>
+      <node id="18">
+        <label>iostream</label>
+      </node>
+      <node id="25">
+        <label>ipfs_lite/ipfs/graphsync/impl/graphsync_impl.hpp</label>
+      </node>
+      <node id="26">
+        <label>ipfs_lite/ipfs/graphsync/impl/local_requests.hpp</label>
+      </node>
+      <node id="85">
+        <label>ipfs_lite/ipfs/graphsync/impl/merkledag_bridge_impl.hpp</label>
+      </node>
+      <node id="86">
+        <label>ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp</label>
+      </node>
+      <node id="76">
+        <label>ipfs_lite/ipfs/merkledag/merkledag_service.hpp</label>
+      </node>
+      <node id="47">
+        <label>ipfs_lite/ipld/ipld_node.hpp</label>
+      </node>
+      <node id="27">
+        <label>ipfs_pubsub/gossip_pubsub_topic.hpp</label>
+      </node>
+      <node id="89">
+        <label>libp2p/crypto/key.hpp</label>
+      </node>
+      <node id="87">
+        <label>libp2p/host/host.hpp</label>
+      </node>
+      <node id="10">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="72">
+        <label>libp2p/peer/peer_info.hpp</label>
+      </node>
+      <node id="28">
+        <label>libp2p/protocol/autonat/autonat.hpp</label>
+      </node>
+      <node id="29">
+        <label>libp2p/protocol/holepunch/holepunch_client.hpp</label>
+      </node>
+      <node id="30">
+        <label>libp2p/protocol/holepunch/holepunch_server.hpp</label>
+      </node>
+      <node id="31">
+        <label>libp2p/protocol/identify/identify.hpp</label>
+      </node>
+      <node id="44">
+        <label>map</label>
+      </node>
+      <node id="37">
+        <label>memory</label>
+      </node>
+      <node id="52">
+        <label>mutex</label>
+      </node>
+      <node id="38">
+        <label>optional</label>
+      </node>
+      <node id="36">
+        <label>primitives/cid/cid.hpp</label>
+      </node>
+      <node id="43">
+        <label>queue</label>
+      </node>
+      <node id="81">
+        <label>regex</label>
+      </node>
+      <node id="55">
+        <label>rocksdb/db.h</label>
+      </node>
+      <node id="57">
+        <label>rocksdb/options.h</label>
+      </node>
+      <node id="54">
+        <label>rocksdb/rocksdb_namespace.h</label>
+      </node>
+      <node id="56">
+        <label>rocksdb/slice.h</label>
+      </node>
+      <node id="92">
+        <label>rocksdb/status.h</label>
+      </node>
+      <node id="58">
+        <label>rocksdb/write_batch.h</label>
+      </node>
+      <node id="70">
+        <label>set</label>
+      </node>
+      <node id="40">
+        <label>shared_mutex</label>
+      </node>
+      <node id="49">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="50">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="34">
+        <label>string</label>
+      </node>
+      <node id="4">
+        <label>string_view</label>
+      </node>
+      <node id="74">
+        <label>tuple</label>
+      </node>
+      <node id="80">
+        <label>unordered_map</label>
+      </node>
+      <node id="22">
+        <label>unordered_set</label>
+      </node>
+      <node id="5">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d9/df6/namespacesgns_1_1blockchain">sgns::blockchain</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d3/d2f/storage__util_8cpp_1a3ed7516c72cc47940a901d40a337d2cd" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>OUTCOME_CPP_DEFINE_CATEGORY_3</definition>
+        <argsstring>(sgns::blockchain, KeyValueRepositoryError, e)</argsstring>
+        <name>OUTCOME_CPP_DEFINE_CATEGORY_3</name>
+        <param>
+          <type><ref refid="d9/df6/namespacesgns_1_1blockchain" kindref="compound">sgns::blockchain</ref></type>
+        </param>
+        <param>
+          <type>KeyValueRepositoryError</type>
+        </param>
+        <param>
+          <type>e</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.cpp" line="14" column="1" bodyfile="src/blockchain/impl/storage_util.cpp" bodystart="14" bodyend="21"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/df6/namespacesgns_1_1blockchain_1a72ab292d3fa6c14625356b54787d38d0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::blockchain::putWithPrefix</definition>
+        <argsstring>(crdt::GlobalDB &amp;db, prefix::Prefix prefix, BlockNumber num, Hash256 block_hash, const base::Buffer &amp;value)</argsstring>
+        <name>putWithPrefix</name>
+        <qualifiedname>sgns::blockchain::putWithPrefix</qualifiedname>
+        <param>
+          <type>crdt::GlobalDB &amp;</type>
+          <declname>db</declname>
+        </param>
+        <param>
+          <type><ref refid="d3/d2f/storage__util_8cpp_1affebeb618ce26afa1fa4b7deb2d78f8a" kindref="member">prefix::Prefix</ref></type>
+          <declname>prefix</declname>
+        </param>
+        <param>
+          <type><ref refid="de/d1b/key__value__block__header__repository_8cpp_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref></type>
+          <declname>num</declname>
+        </param>
+        <param>
+          <type><ref refid="de/d1b/key__value__block__header__repository_8cpp_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+          <declname>block_hash</declname>
+        </param>
+        <param>
+          <type>const base::Buffer &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Put an entry to key space prefix and corresponding lookup keys to ID_TO_LOOKUP_KEY space. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>db</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>database to put the entry to </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername><ref refid="d0/d3d/namespacesgns_1_1blockchain_1_1prefix" kindref="compound">prefix</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>keyspace for the entry value </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>num</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>block number that could be used to retrieve the value </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>block_hash</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>block hash that could be used to retrieve the value </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>data to be put to the storage </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>storage error if any </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.cpp" line="24" column="19" bodyfile="src/blockchain/impl/storage_util.cpp" bodystart="24" bodyend="39" declfile="src/blockchain/impl/storage_util.hpp" declline="62" declcolumn="19"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/df6/namespacesgns_1_1blockchain_1a3188966fc39fb0c1b0e1bc6b0235af48" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; base::Buffer &gt;</type>
+        <definition>outcome::result&lt; base::Buffer &gt; sgns::blockchain::getWithPrefix</definition>
+        <argsstring>(crdt::GlobalDB &amp;db, prefix::Prefix prefix, const primitives::BlockId &amp;block_id)</argsstring>
+        <name>getWithPrefix</name>
+        <qualifiedname>sgns::blockchain::getWithPrefix</qualifiedname>
+        <param>
+          <type>crdt::GlobalDB &amp;</type>
+          <declname>db</declname>
+        </param>
+        <param>
+          <type><ref refid="d3/d2f/storage__util_8cpp_1affebeb618ce26afa1fa4b7deb2d78f8a" kindref="member">prefix::Prefix</ref></type>
+          <declname>prefix</declname>
+        </param>
+        <param>
+          <type>const <ref refid="de/d1b/key__value__block__header__repository_8cpp_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>block_id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get an entry from the database. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>db</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>database to get the entry from </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername><ref refid="d0/d3d/namespacesgns_1_1blockchain_1_1prefix" kindref="compound">prefix</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>prefix with which the entry was put into </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>block_id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>id of the block to get entry for </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>encoded entry or error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.cpp" line="42" column="19" bodyfile="src/blockchain/impl/storage_util.cpp" bodystart="42" bodyend="48" declfile="src/blockchain/impl/storage_util.hpp" declline="75" declcolumn="19"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/df6/namespacesgns_1_1blockchain_1ac791bedcf43eee3eda2614fa9f973175" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>base::Buffer</type>
+        <definition>base::Buffer sgns::blockchain::NumberToBuffer</definition>
+        <argsstring>(primitives::BlockNumber n)</argsstring>
+        <name>NumberToBuffer</name>
+        <qualifiedname>sgns::blockchain::NumberToBuffer</qualifiedname>
+        <param>
+          <type><ref refid="de/d1b/key__value__block__header__repository_8cpp_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref></type>
+          <declname>n</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Convert block number into short lookup key (LE representation) for blocks that are in the canonical chain.</para>
+<para>In the current database schema, this kind of key is only used for lookups into an index, NOT for storing header data or others. </para>
+        </detaileddescription>
+        <inbodydescription>
+<para><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> retval;</para>
+<para>Little endian for ( std::size_t i = 0; i &lt; sizeof(primitives::BlockNumber); ++i ) { retval.putUint8(static_cast&lt;uint8_t&gt;((n &gt;&gt; (i * 8)) &amp; 0xffu)) ; } return retval;</para>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.cpp" line="50" column="16" bodyfile="src/blockchain/impl/storage_util.cpp" bodystart="50" bodyend="74" declfile="src/blockchain/impl/storage_util.hpp" declline="87" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/df6/namespacesgns_1_1blockchain_1af9080210fd976de8ce559ae6ac63fea2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>base::Buffer</type>
+        <definition>base::Buffer sgns::blockchain::numberAndHashToLookupKey</definition>
+        <argsstring>(primitives::BlockNumber number, const base::Hash256 &amp;hash)</argsstring>
+        <name>numberAndHashToLookupKey</name>
+        <qualifiedname>sgns::blockchain::numberAndHashToLookupKey</qualifiedname>
+        <param>
+          <type><ref refid="de/d1b/key__value__block__header__repository_8cpp_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref></type>
+          <declname>number</declname>
+        </param>
+        <param>
+          <type>const <ref refid="de/d1b/key__value__block__header__repository_8cpp_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref> &amp;</type>
+          <declname>hash</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Convert number and hash into long lookup key for blocks that are not in the canonical chain. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.cpp" line="76" column="16" bodyfile="src/blockchain/impl/storage_util.cpp" bodystart="76" bodyend="81" declfile="src/blockchain/impl/storage_util.hpp" declline="93" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/df6/namespacesgns_1_1blockchain_1a90dacdf2ef655a2abdc41fb7f9d29bb5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="de/d1b/key__value__block__header__repository_8cpp_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref> &gt;</type>
+        <definition>outcome::result&lt; primitives::BlockNumber &gt; sgns::blockchain::BufferToNumber</definition>
+        <argsstring>(const base::Buffer &amp;key)</argsstring>
+        <name>BufferToNumber</name>
+        <qualifiedname>sgns::blockchain::BufferToNumber</qualifiedname>
+        <param>
+          <type>const base::Buffer &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Converts buffer data to a block number </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.cpp" line="83" column="19" bodyfile="src/blockchain/impl/storage_util.cpp" bodystart="83" bodyend="107" declfile="src/blockchain/impl/storage_util.hpp" declline="99" declcolumn="19"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/df6/namespacesgns_1_1blockchain_1a0cc1bcbfa6448f544ab785b0bcf44a6e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>base::Buffer</type>
+        <definition>base::Buffer sgns::blockchain::prependPrefix</definition>
+        <argsstring>(const base::Buffer &amp;key, prefix::Prefix key_column)</argsstring>
+        <name>prependPrefix</name>
+        <qualifiedname>sgns::blockchain::prependPrefix</qualifiedname>
+        <param>
+          <type>const base::Buffer &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type><ref refid="d3/d2f/storage__util_8cpp_1affebeb618ce26afa1fa4b7deb2d78f8a" kindref="member">prefix::Prefix</ref></type>
+          <declname>key_column</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Concatenate prefix with key. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key buffer </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>key_column</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>prefix keyspace </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>key_column|key </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.cpp" line="109" column="16" bodyfile="src/blockchain/impl/storage_util.cpp" bodystart="109" bodyend="115" declfile="src/blockchain/impl/storage_util.hpp" declline="49" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/df6/namespacesgns_1_1blockchain_1a342d908db3d7971b1e6ef860b5fc0e8b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::blockchain::isNotFoundError</definition>
+        <argsstring>(outcome::result&lt; void &gt; result)</argsstring>
+        <name>isNotFoundError</name>
+        <qualifiedname>sgns::blockchain::isNotFoundError</qualifiedname>
+        <param>
+          <type>outcome::result&lt; void &gt;</type>
+          <declname>result</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>For a persistant map based storage checks whether result should be considered as <computeroutput>NOT FOUND</computeroutput> error </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.cpp" line="117" column="8" bodyfile="src/blockchain/impl/storage_util.cpp" bodystart="117" bodyend="123" declfile="src/blockchain/impl/storage_util.hpp" declline="106" declcolumn="8"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="d3/d2f/storage__util_8cpp_1affebeb618ce26afa1fa4b7deb2d78f8a" prot="public" static="no" strong="no">
+        <type></type>
+        <name>Prefix</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.cpp" line="8" column="1" bodyfile="src/blockchain/impl/storage_util.hpp" bodystart="20" bodyend="35"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="d3/d2f/storage__util_8cpp_1acd215486f70fdf49a6232a104a96ecf3" prot="public" static="no">
+        <type>Blob&lt; 32 &gt;</type>
+        <definition>using sgns::base::Hash256 = Blob&lt;32&gt;</definition>
+        <argsstring></argsstring>
+        <name>Hash256</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.cpp" line="10" column="1" bodyfile="src/base/blob.hpp" bodystart="175" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d3/d2f/storage__util_8cpp_1a8ff366c722ebc39b0e728102c3a55abf" prot="public" static="no">
+        <type>boost::variant&lt; BlockHash, <ref refid="de/d1b/key__value__block__header__repository_8cpp_1a4d41d58038f35d095940e2f3660d7381" kindref="member">BlockNumber</ref> &gt;</type>
+        <definition>using sgns::primitives::BlockId = boost::variant&lt;BlockHash, BlockNumber&gt;</definition>
+        <argsstring></argsstring>
+        <name>BlockId</name>
+        <briefdescription>
+<para>Block id is the variant over BlockHash and <ref refid="de/d1b/key__value__block__header__repository_8cpp_1a4d41d58038f35d095940e2f3660d7381" kindref="member">BlockNumber</ref>. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.cpp" line="11" column="1" bodyfile="src/primitives/block_id.hpp" bodystart="14" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d3/d2f/storage__util_8cpp_1a4d41d58038f35d095940e2f3660d7381" prot="public" static="no">
+        <type>uint64_t</type>
+        <definition>using sgns::primitives::BlockNumber = uint64_t</definition>
+        <argsstring></argsstring>
+        <name>BlockNumber</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/impl/storage_util.cpp" line="12" column="1" bodyfile="src/primitives/common.hpp" bodystart="12" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dd/d87/storage__util_8hpp" kindref="compound">blockchain/impl/storage_util.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="db/d1e/src_2blockchain_2impl_2common_8hpp" kindref="compound">blockchain/impl/common.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d9/da2/database__error_8hpp" kindref="compound">storage/database_error.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d0/d0e/globaldb_8hpp" kindref="compound">crdt/globaldb/globaldb.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;blockchain/impl/proto/SGBlocks.pb.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d0/d3d/namespacesgns_1_1blockchain_1_1prefix_1affebeb618ce26afa1fa4b7deb2d78f8a" kindref="member">sgns::blockchain::prefix::Prefix</ref>;</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">sgns::base::Buffer</ref>;</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">sgns::base::Hash256</ref>;</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">sgns::primitives::BlockId</ref>;</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">sgns::primitives::BlockNumber</ref>;</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14" refid="d3/d2f/storage__util_8cpp_1a3ed7516c72cc47940a901d40a337d2cd" refkind="member"><highlight class="normal"><ref refid="d3/d2f/storage__util_8cpp_1a3ed7516c72cc47940a901d40a337d2cd" kindref="member">OUTCOME_CPP_DEFINE_CATEGORY_3</ref>(<ref refid="d9/df6/namespacesgns_1_1blockchain" kindref="compound">sgns::blockchain</ref>,<sp/>KeyValueRepositoryError,<sp/>e)<sp/>{</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">E<sp/>=<sp/><ref refid="d9/df6/namespacesgns_1_1blockchain_1a11590769a0031f7c9d4250b51039fc2c" kindref="member">sgns::blockchain::KeyValueRepositoryError</ref>;</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">switch</highlight><highlight class="normal"><sp/>(e)<sp/>{</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/>E::INVALID_KEY:</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;Invalid<sp/>storage<sp/>key&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;Unknown<sp/>error&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="21"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d9/df6/namespacesgns_1_1blockchain" kindref="compound">sgns::blockchain</ref><sp/>{</highlight></codeline>
+<codeline lineno="24" refid="d9/df6/namespacesgns_1_1blockchain_1a72ab292d3fa6c14625356b54787d38d0" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d9/df6/namespacesgns_1_1blockchain_1a72ab292d3fa6c14625356b54787d38d0" kindref="member">putWithPrefix</ref>(<ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b" kindref="compound">crdt::GlobalDB</ref><sp/>&amp;db,</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d3d/namespacesgns_1_1blockchain_1_1prefix_1affebeb618ce26afa1fa4b7deb2d78f8a" kindref="member">prefix::Prefix</ref><sp/><ref refid="d0/d3d/namespacesgns_1_1blockchain_1_1prefix" kindref="compound">prefix</ref>,</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">BlockNumber</ref><sp/>num,</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">Hash256</ref><sp/>block_hash,</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;value)<sp/>{</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>block_lookup_key<sp/>=<sp/><ref refid="d9/df6/namespacesgns_1_1blockchain_1af9080210fd976de8ce559ae6ac63fea2" kindref="member">numberAndHashToLookupKey</ref>(num,<sp/>block_hash);</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>value_lookup_key<sp/>=<sp/><ref refid="d9/df6/namespacesgns_1_1blockchain_1a0cc1bcbfa6448f544ab785b0bcf44a6e" kindref="member">prependPrefix</ref>(block_lookup_key,<sp/><ref refid="d0/d3d/namespacesgns_1_1blockchain_1_1prefix" kindref="compound">prefix</ref>);</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>num_to_idx_key<sp/>=</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/df6/namespacesgns_1_1blockchain_1a0cc1bcbfa6448f544ab785b0bcf44a6e" kindref="member">prependPrefix</ref>(<ref refid="d9/df6/namespacesgns_1_1blockchain_1ac791bedcf43eee3eda2614fa9f973175" kindref="member">NumberToBuffer</ref>(num),<sp/><ref refid="d0/d3d/namespacesgns_1_1blockchain_1_1prefix_1affebeb618ce26afa1fa4b7deb2d78f8aad98b290371cfcb5982c2a2667c66593d" kindref="member">Prefix::ID_TO_LOOKUP_KEY</ref>);</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>hash_to_idx_key<sp/>=</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/df6/namespacesgns_1_1blockchain_1a0cc1bcbfa6448f544ab785b0bcf44a6e" kindref="member">prependPrefix</ref>(<ref refid="d9/df6/namespacesgns_1_1blockchain_1a5cbe1e87acec0d220558c16a0eff7b1b" kindref="member">Buffer</ref>{block_hash},<sp/><ref refid="d0/d3d/namespacesgns_1_1blockchain_1_1prefix_1affebeb618ce26afa1fa4b7deb2d78f8aad98b290371cfcb5982c2a2667c66593d" kindref="member">Prefix::ID_TO_LOOKUP_KEY</ref>);</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_OUTCOME_TRYV2(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/>db.<ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a98bc1e1fab5fe08fd72c14145628a555" kindref="member">Put</ref>(<sp/>{<sp/></highlight><highlight class="stringliteral">&quot;num_to_idx_key&quot;</highlight><highlight class="normal"><sp/>},<sp/>block_lookup_key,<sp/>{<sp/></highlight><highlight class="stringliteral">&quot;topic&quot;</highlight><highlight class="normal"><sp/>}<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_OUTCOME_TRYV2(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/>db.<ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a98bc1e1fab5fe08fd72c14145628a555" kindref="member">Put</ref>(<sp/>{<sp/></highlight><highlight class="stringliteral">&quot;hash_to_idx_key&quot;</highlight><highlight class="normal"><sp/>},<sp/>block_lookup_key,<sp/>{<sp/></highlight><highlight class="stringliteral">&quot;topic&quot;</highlight><highlight class="normal"><sp/>}<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/>OUTCOME_TRY(db.<ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1a98bc1e1fab5fe08fd72c14145628a555" kindref="member">Put</ref>(<sp/>{<sp/></highlight><highlight class="stringliteral">&quot;value_lookup_key&quot;</highlight><highlight class="normal"><sp/>},<sp/>value,<sp/>{<sp/></highlight><highlight class="stringliteral">&quot;topic&quot;</highlight><highlight class="normal"><sp/>}<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success();</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="42" refid="d9/df6/namespacesgns_1_1blockchain_1a3188966fc39fb0c1b0e1bc6b0235af48" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;base::Buffer&gt;<sp/><ref refid="d9/df6/namespacesgns_1_1blockchain_1a3188966fc39fb0c1b0e1bc6b0235af48" kindref="member">getWithPrefix</ref>(</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b" kindref="compound">crdt::GlobalDB</ref><sp/>&amp;db,</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d3d/namespacesgns_1_1blockchain_1_1prefix_1affebeb618ce26afa1fa4b7deb2d78f8a" kindref="member">prefix::Prefix</ref><sp/><ref refid="d0/d3d/namespacesgns_1_1blockchain_1_1prefix" kindref="compound">prefix</ref>,</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref><sp/>&amp;block_id)<sp/>{</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/>OUTCOME_TRY((</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;,<sp/>key),<sp/><ref refid="d9/df6/namespacesgns_1_1blockchain_1a70e1b00d356a3aac25e2a73cbeac0a2c" kindref="member">idToBufferKey</ref>(db,<sp/>block_id));</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>db.<ref refid="da/d32/classsgns_1_1crdt_1_1_global_d_b_1afe88361317092f6d0568e5bf2e7e5479" kindref="member">Get</ref>({</highlight><highlight class="stringliteral">&quot;prependPrefix(key,<sp/>prefix)&quot;</highlight><highlight class="normal">});</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight></codeline>
+<codeline lineno="50" refid="d9/df6/namespacesgns_1_1blockchain_1ac791bedcf43eee3eda2614fa9f973175" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/><ref refid="d9/df6/namespacesgns_1_1blockchain_1ac791bedcf43eee3eda2614fa9f973175" kindref="member">NumberToBuffer</ref>(<ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref><sp/>n)<sp/>{</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>TODO(Harrm)<sp/>Figure<sp/>out<sp/>why<sp/>exactly<sp/>it<sp/>is<sp/>this<sp/>way<sp/>in<sp/>substrate</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//BOOST_ASSERT((n<sp/>&amp;<sp/>0xffffffff00000000)<sp/>==<sp/>0);</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/>SGBlocks::BlockID<sp/>blockID;</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/>blockID.set_block_number(n);</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>size<sp/>=<sp/>blockID.ByteSizeLong();</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/>std::vector&lt;uint8_t&gt;<sp/>serialized_proto(<sp/>size<sp/>);</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"></highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/>blockID.SerializeToArray(<sp/>serialized_proto.data(),<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="keywordtype">int</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(serialized_proto.size())<sp/>);</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref>{serialized_proto};</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"></highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//return<sp/>{uint8_t(n<sp/>&gt;&gt;<sp/>24u),</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint8_t((n<sp/>&gt;&gt;<sp/>16u)<sp/>&amp;<sp/>0xffu),</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint8_t((n<sp/>&gt;&gt;<sp/>8u)<sp/>&amp;<sp/>0xffu),</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint8_t(n<sp/>&amp;<sp/>0xffu)};</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"></highlight></codeline>
+<codeline lineno="76" refid="d9/df6/namespacesgns_1_1blockchain_1af9080210fd976de8ce559ae6ac63fea2" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/><ref refid="d9/df6/namespacesgns_1_1blockchain_1af9080210fd976de8ce559ae6ac63fea2" kindref="member">numberAndHashToLookupKey</ref>(<ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref><sp/>number,</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref><sp/>&amp;hash)<sp/>{</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>lookup_key<sp/>=<sp/><ref refid="d9/df6/namespacesgns_1_1blockchain_1ac791bedcf43eee3eda2614fa9f973175" kindref="member">NumberToBuffer</ref>(number);</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/>lookup_key.put(hash);</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>lookup_key;</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"></highlight></codeline>
+<codeline lineno="83" refid="d9/df6/namespacesgns_1_1blockchain_1a90dacdf2ef655a2abdc41fb7f9d29bb5" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;primitives::BlockNumber&gt;<sp/><ref refid="d9/df6/namespacesgns_1_1blockchain_1a90dacdf2ef655a2abdc41fb7f9d29bb5" kindref="member">BufferToNumber</ref>(</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;key)<sp/>{</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(key.<ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1a77edb688fb1bff45a612ee6f03c6bda8" kindref="member">size</ref>()<sp/>&gt;<sp/></highlight><highlight class="keyword">sizeof</highlight><highlight class="normal">(<ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref>))<sp/>{</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<ref refid="d9/df6/namespacesgns_1_1blockchain_1a11590769a0031f7c9d4250b51039fc2ca14eddb1ed548833eb26b0325f17b967e" kindref="member">KeyValueRepositoryError::INVALID_KEY</ref>);</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"></highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/>SGBlocks::BlockID<sp/>blockID;</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"></highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>!blockID.ParseFromArray(<sp/>key.<ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1a90e41ce39977903170d693c11a56ac12" kindref="member">toVector</ref>().data(),<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="keywordtype">int</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(key.<ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1a90e41ce39977903170d693c11a56ac12" kindref="member">toVector</ref>().size())<sp/>)<sp/>)</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::cerr<sp/>&lt;&lt;<sp/></highlight><highlight class="stringliteral">&quot;Failed<sp/>to<sp/>parse<sp/>BlockID<sp/>from<sp/>array.&quot;</highlight><highlight class="normal"><sp/>&lt;&lt;<sp/>std::endl;</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"></highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>blockID.block_number();</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*primitives::BlockNumber<sp/>retval<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="98"><highlight class="comment"></highlight></codeline>
+<codeline lineno="99"><highlight class="comment"><sp/><sp/><sp/><sp/>//Little<sp/>endian</highlight></codeline>
+<codeline lineno="100"><highlight class="comment"><sp/><sp/><sp/><sp/>for<sp/>(<sp/>std::size_t<sp/>i<sp/>=<sp/>0;<sp/>i<sp/>&lt;<sp/>key.size();<sp/>++i<sp/>)</highlight></codeline>
+<codeline lineno="101"><highlight class="comment"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="102"><highlight class="comment"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>retval<sp/>+=<sp/>(key[i]<sp/>&lt;&lt;<sp/>(i<sp/>*<sp/>8));</highlight></codeline>
+<codeline lineno="103"><highlight class="comment"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="104"><highlight class="comment"><sp/><sp/><sp/><sp/>return<sp/>retval;*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//return<sp/>(uint64_t(key[0])<sp/>&lt;&lt;<sp/>24u)<sp/>|<sp/>(uint64_t(key[1])<sp/>&lt;&lt;<sp/>16u)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/><sp/><sp/><sp/><sp/><sp/><sp/>|<sp/>(uint64_t(key[2])<sp/>&lt;&lt;<sp/>8u)<sp/>|<sp/>uint64_t(key[3]);</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"></highlight></codeline>
+<codeline lineno="109" refid="d9/df6/namespacesgns_1_1blockchain_1a0cc1bcbfa6448f544ab785b0bcf44a6e" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/><ref refid="d9/df6/namespacesgns_1_1blockchain_1a0cc1bcbfa6448f544ab785b0bcf44a6e" kindref="member">prependPrefix</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;key,</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d0/d3d/namespacesgns_1_1blockchain_1_1prefix_1affebeb618ce26afa1fa4b7deb2d78f8a" kindref="member">prefix::Prefix</ref><sp/>key_column)<sp/>{</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref>{}</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.<ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1ad2afa1f5006c6d5b25f61df0b4632b83" kindref="member">reserve</ref>(key.<ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1a77edb688fb1bff45a612ee6f03c6bda8" kindref="member">size</ref>()<sp/>+<sp/>1)</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.<ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1a53abe391128d07bdf53fbe8ecfa2667a" kindref="member">putUint8</ref>(key_column)</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.<ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1aa14bc6509f455ff998bf71083e665b01" kindref="member">put</ref>(key);</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"></highlight></codeline>
+<codeline lineno="117" refid="d9/df6/namespacesgns_1_1blockchain_1a342d908db3d7971b1e6ef860b5fc0e8b" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d9/df6/namespacesgns_1_1blockchain_1a342d908db3d7971b1e6ef860b5fc0e8b" kindref="member">isNotFoundError</ref>(outcome::result&lt;void&gt;<sp/>result)<sp/>{</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(result)<sp/>{</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"></highlight></codeline>
+<codeline lineno="122"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>(result.error()<sp/>==<sp/><ref refid="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4baca8c02547a8a3b02382bac3557bcb2280d" kindref="member">storage::DatabaseError::NOT_FOUND</ref>);</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"></highlight></codeline>
+<codeline lineno="125"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::blockchain</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/blockchain/impl/storage_util.cpp"/>
+  </compounddef>
+</doxygen>

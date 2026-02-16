@@ -1,0 +1,259 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/d85/classsgns_1_1application_1_1_app_configuration" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::application::AppConfiguration</compoundname>
+    <derivedcompoundref refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl" prot="public" virt="non-virtual">sgns::application::AppConfigurationImpl</derivedcompoundref>
+    <includes refid="dd/d95/app__config_8hpp" local="no">app_config.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fd" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>LoadScheme</name>
+        <qualifiedname>sgns::application::AppConfiguration::LoadScheme</qualifiedname>
+        <enumvalue id="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fda6bf9973a421615abcc1e5ccc5a9977e9" prot="public">
+          <name>kBlockProducing</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fda872e3f506d23d977bdffb8912d638ea3" prot="public">
+          <name>kValidating</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fda3d5cafbe757a68db854ea87134f51236" prot="public">
+          <name>kFullSyncing</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/app_config.hpp" line="19" column="9" bodyfile="src/application/app_config.hpp" bodystart="20" bodyend="24"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa2dc3a6d43c1eec157ba08df15a5b6ea" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::application::AppConfiguration::~AppConfiguration</definition>
+        <argsstring>()=default</argsstring>
+        <name>~AppConfiguration</name>
+        <qualifiedname>sgns::application::AppConfiguration::~AppConfiguration</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/app_config.hpp" line="26" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d85/classsgns_1_1application_1_1_app_configuration_1a74f0590dc4a3ca6dff738860902ae084" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>const std::string &amp;</type>
+        <definition>virtual const std::string &amp; sgns::application::AppConfiguration::genesis_path</definition>
+        <argsstring>() const =0</argsstring>
+        <name>genesis_path</name>
+        <qualifiedname>sgns::application::AppConfiguration::genesis_path</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>file path with genesis configuration. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/app_config.hpp" line="31" column="36"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d85/classsgns_1_1application_1_1_app_configuration_1ae171adb944dc2748185197774fcab66c" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>const std::string &amp;</type>
+        <definition>virtual const std::string &amp; sgns::application::AppConfiguration::keystore_path</definition>
+        <argsstring>() const =0</argsstring>
+        <name>keystore_path</name>
+        <qualifiedname>sgns::application::AppConfiguration::keystore_path</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>keystore directory path. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/app_config.hpp" line="36" column="36"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d85/classsgns_1_1application_1_1_app_configuration_1a3f8b01b943d532a7c2c86220f05adbe9" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>const std::string &amp;</type>
+        <definition>virtual const std::string &amp; sgns::application::AppConfiguration::rocksdb_path</definition>
+        <argsstring>() const =0</argsstring>
+        <name>rocksdb_path</name>
+        <qualifiedname>sgns::application::AppConfiguration::rocksdb_path</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>rocksdb directory path. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/app_config.hpp" line="41" column="36"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d85/classsgns_1_1application_1_1_app_configuration_1a550a82536f6c51016e67da90dffad2c5" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>uint16_t</type>
+        <definition>virtual uint16_t sgns::application::AppConfiguration::p2p_port</definition>
+        <argsstring>() const =0</argsstring>
+        <name>p2p_port</name>
+        <qualifiedname>sgns::application::AppConfiguration::p2p_port</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>port for peer to peer interactions. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/app_config.hpp" line="46" column="27"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d85/classsgns_1_1application_1_1_app_configuration_1a208ab523d3876418b9cb162a70d6bc11" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>const boost::asio::ip::tcp::endpoint &amp;</type>
+        <definition>virtual const boost::asio::ip::tcp::endpoint &amp; sgns::application::AppConfiguration::rpc_http_endpoint</definition>
+        <argsstring>() const =0</argsstring>
+        <name>rpc_http_endpoint</name>
+        <qualifiedname>sgns::application::AppConfiguration::rpc_http_endpoint</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>endpoint for RPC over HTTP. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/app_config.hpp" line="51" column="55"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d85/classsgns_1_1application_1_1_app_configuration_1a377053229eb79d58cc523e15bd432f94" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>const boost::asio::ip::tcp::endpoint &amp;</type>
+        <definition>virtual const boost::asio::ip::tcp::endpoint &amp; sgns::application::AppConfiguration::rpc_ws_endpoint</definition>
+        <argsstring>() const =0</argsstring>
+        <name>rpc_ws_endpoint</name>
+        <qualifiedname>sgns::application::AppConfiguration::rpc_ws_endpoint</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>endpoint for RPC over Websocket protocol. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/app_config.hpp" line="56" column="55"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d85/classsgns_1_1application_1_1_app_configuration_1a0fd65b30c9e26763f8c353c26d7e2af3" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>spdlog::level::level_enum</type>
+        <definition>virtual spdlog::level::level_enum sgns::application::AppConfiguration::verbosity</definition>
+        <argsstring>() const =0</argsstring>
+        <name>verbosity</name>
+        <qualifiedname>sgns::application::AppConfiguration::verbosity</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>log level (0-trace, 5-only critical, 6-no logs). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/app_config.hpp" line="61" column="44"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d85/classsgns_1_1application_1_1_app_configuration_1a90f250f47e21de9fe30e1a40ea428b54" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>bool</type>
+        <definition>virtual bool sgns::application::AppConfiguration::is_only_finalizing</definition>
+        <argsstring>() const =0</argsstring>
+        <name>is_only_finalizing</name>
+        <qualifiedname>sgns::application::AppConfiguration::is_only_finalizing</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>true if node in only finalizing mode, otherwise false. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/app_config.hpp" line="66" column="23"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d85/classsgns_1_1application_1_1_app_configuration_1a43ad8410249921ee19d5e6df3acd43c3" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>bool</type>
+        <definition>virtual bool sgns::application::AppConfiguration::initialize_from_args</definition>
+        <argsstring>(LoadScheme scheme, int argc, char **argv)=0</argsstring>
+        <name>initialize_from_args</name>
+        <qualifiedname>sgns::application::AppConfiguration::initialize_from_args</qualifiedname>
+        <reimplementedby refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl_1aab5d82b4fe1aad9c4cef7d6fde5d5195">initialize_from_args</reimplementedby>
+        <param>
+          <type><ref refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fd" kindref="member">LoadScheme</ref></type>
+          <declname>scheme</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>argc</declname>
+        </param>
+        <param>
+          <type>char **</type>
+          <declname>argv</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/app_config.hpp" line="68" column="22"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Parse and store application config. </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::application::AppConfiguration</label>
+        <link refid="d6/d85/classsgns_1_1application_1_1_app_configuration"/>
+      </node>
+      <node id="2">
+        <label>sgns::application::AppConfigurationImpl</label>
+        <link refid="d2/d51/classsgns_1_1application_1_1_app_configuration_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::application::AppConfiguration</label>
+        <link refid="d6/d85/classsgns_1_1application_1_1_app_configuration"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/application/app_config.hpp" line="16" column="5" bodyfile="src/application/app_config.hpp" bodystart="17" bodyend="69"/>
+    <listofallmembers>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a74f0590dc4a3ca6dff738860902ae084" prot="public" virt="pure-virtual"><scope>sgns::application::AppConfiguration</scope><name>genesis_path</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a43ad8410249921ee19d5e6df3acd43c3" prot="public" virt="pure-virtual"><scope>sgns::application::AppConfiguration</scope><name>initialize_from_args</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a90f250f47e21de9fe30e1a40ea428b54" prot="public" virt="pure-virtual"><scope>sgns::application::AppConfiguration</scope><name>is_only_finalizing</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1ae171adb944dc2748185197774fcab66c" prot="public" virt="pure-virtual"><scope>sgns::application::AppConfiguration</scope><name>keystore_path</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa8ed1cf9c3b41dde15e961ba39e670fd" prot="public" virt="non-virtual"><scope>sgns::application::AppConfiguration</scope><name>LoadScheme</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a550a82536f6c51016e67da90dffad2c5" prot="public" virt="pure-virtual"><scope>sgns::application::AppConfiguration</scope><name>p2p_port</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a3f8b01b943d532a7c2c86220f05adbe9" prot="public" virt="pure-virtual"><scope>sgns::application::AppConfiguration</scope><name>rocksdb_path</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a208ab523d3876418b9cb162a70d6bc11" prot="public" virt="pure-virtual"><scope>sgns::application::AppConfiguration</scope><name>rpc_http_endpoint</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a377053229eb79d58cc523e15bd432f94" prot="public" virt="pure-virtual"><scope>sgns::application::AppConfiguration</scope><name>rpc_ws_endpoint</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1a0fd65b30c9e26763f8c353c26d7e2af3" prot="public" virt="pure-virtual"><scope>sgns::application::AppConfiguration</scope><name>verbosity</name></member>
+      <member refid="d6/d85/classsgns_1_1application_1_1_app_configuration_1aa2dc3a6d43c1eec157ba08df15a5b6ea" prot="public" virt="virtual"><scope>sgns::application::AppConfiguration</scope><name>~AppConfiguration</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

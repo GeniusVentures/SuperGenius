@@ -1,0 +1,265 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/d0d/classsgns_1_1_i_migration_step" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::IMigrationStep</compoundname>
+    <derivedcompoundref refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0" prot="public" virt="non-virtual">sgns::Migration0_2_0To1_0_0</derivedcompoundref>
+    <derivedcompoundref refid="d0/d09/classsgns_1_1_migration1__0__0_to3__4__0" prot="public" virt="non-virtual">sgns::Migration1_0_0To3_4_0</derivedcompoundref>
+    <derivedcompoundref refid="d1/dd2/classsgns_1_1_migration3__4__0_to3__5__0" prot="public" virt="non-virtual">sgns::Migration3_4_0To3_5_0</derivedcompoundref>
+    <derivedcompoundref refid="dc/dcf/classsgns_1_1_migration3__5__0_to3__5__1" prot="public" virt="non-virtual">sgns::Migration3_5_0To3_5_1</derivedcompoundref>
+    <derivedcompoundref refid="df/da7/classsgns_1_1_migration3__5__1_to3__6__0" prot="public" virt="non-virtual">sgns::Migration3_5_1To3_6_0</derivedcompoundref>
+    <includes refid="d5/da7/_i_migration_step_8hpp" local="no">IMigrationStep.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d5/d0d/classsgns_1_1_i_migration_step_1a665d7bd47cadfb96da753277a9411e34" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::IMigrationStep::~IMigrationStep</definition>
+        <argsstring>()=default</argsstring>
+        <name>~IMigrationStep</name>
+        <qualifiedname>sgns::IMigrationStep::~IMigrationStep</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IMigrationStep.hpp" line="24" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d0d/classsgns_1_1_i_migration_step_1a4d51d8781733028f8b190e8c8f98698e" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::string</type>
+        <definition>virtual std::string sgns::IMigrationStep::FromVersion</definition>
+        <argsstring>() const =0</argsstring>
+        <name>FromVersion</name>
+        <qualifiedname>sgns::IMigrationStep::FromVersion</qualifiedname>
+        <reimplementedby refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a798431352485b54db97b025c643fd7a7">FromVersion</reimplementedby>
+        <reimplementedby refid="d0/d09/classsgns_1_1_migration1__0__0_to3__4__0_1a5cdc505b9cac8808b103f2b227110466">FromVersion</reimplementedby>
+        <reimplementedby refid="d1/dd2/classsgns_1_1_migration3__4__0_to3__5__0_1a402bb1e8be25d505db100c8af85adec2">FromVersion</reimplementedby>
+        <reimplementedby refid="dc/dcf/classsgns_1_1_migration3__5__0_to3__5__1_1a9f1db389ac7ddf61b75f56ce697a2d5c">FromVersion</reimplementedby>
+        <reimplementedby refid="df/da7/classsgns_1_1_migration3__5__1_to3__6__0_1a3481edb18c848ae023be1141987ebad6">FromVersion</reimplementedby>
+        <briefdescription>
+<para>Get the version from which the migration starts. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The source version string. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IMigrationStep.hpp" line="30" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d0d/classsgns_1_1_i_migration_step_1a747197062a83f8379601418301b9b00d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::string</type>
+        <definition>virtual std::string sgns::IMigrationStep::ToVersion</definition>
+        <argsstring>() const =0</argsstring>
+        <name>ToVersion</name>
+        <qualifiedname>sgns::IMigrationStep::ToVersion</qualifiedname>
+        <reimplementedby refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a7c459286684fe4768c4497840cd85457">ToVersion</reimplementedby>
+        <reimplementedby refid="d0/d09/classsgns_1_1_migration1__0__0_to3__4__0_1a7b8f5b5eaf4b2f81f7efd7e47f3c43d4">ToVersion</reimplementedby>
+        <reimplementedby refid="d1/dd2/classsgns_1_1_migration3__4__0_to3__5__0_1a6d3912570089c65b4f75522b0a72fbe8">ToVersion</reimplementedby>
+        <reimplementedby refid="dc/dcf/classsgns_1_1_migration3__5__0_to3__5__1_1aa0e9be869b81ba592e4d92263e23f8af">ToVersion</reimplementedby>
+        <reimplementedby refid="df/da7/classsgns_1_1_migration3__5__1_to3__6__0_1a7a07e8ea0d9225edb8f565871f2a253d">ToVersion</reimplementedby>
+        <briefdescription>
+<para>Get the version to which the migration applies. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The target version string. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IMigrationStep.hpp" line="36" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d0d/classsgns_1_1_i_migration_step_1a2f4b75bcf6ab77751a13666aed6521c5" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::IMigrationStep::Init</definition>
+        <argsstring>()=0</argsstring>
+        <name>Init</name>
+        <qualifiedname>sgns::IMigrationStep::Init</qualifiedname>
+        <reimplementedby refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a08f70d32fabbad498a63b7a7bc4d4454">Init</reimplementedby>
+        <reimplementedby refid="d0/d09/classsgns_1_1_migration1__0__0_to3__4__0_1a41196c0c157499b3ace1df69f50c80fe">Init</reimplementedby>
+        <reimplementedby refid="d1/dd2/classsgns_1_1_migration3__4__0_to3__5__0_1abedc7bea2cbf654e35453eb9d3ec09b0">Init</reimplementedby>
+        <reimplementedby refid="dc/dcf/classsgns_1_1_migration3__5__0_to3__5__1_1a61827db42f6298e2bddc4fc1d283edbe">Init</reimplementedby>
+        <reimplementedby refid="df/da7/classsgns_1_1_migration3__5__1_to3__6__0_1a6c7d0a49d6e668ca87622540552d23a0">Init</reimplementedby>
+        <briefdescription>
+<para>Initializes internal variables after constructor. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Outcome of the operation </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IMigrationStep.hpp" line="42" column="33"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d0d/classsgns_1_1_i_migration_step_1a0a60894e92278118529757890a8864ac" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::IMigrationStep::Apply</definition>
+        <argsstring>()=0</argsstring>
+        <name>Apply</name>
+        <qualifiedname>sgns::IMigrationStep::Apply</qualifiedname>
+        <reimplementedby refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1a7d17ee6e450261c36aea29a79391570b">Apply</reimplementedby>
+        <reimplementedby refid="d0/d09/classsgns_1_1_migration1__0__0_to3__4__0_1a1fbeac72f336b8774c3123f0059c2de3">Apply</reimplementedby>
+        <reimplementedby refid="d1/dd2/classsgns_1_1_migration3__4__0_to3__5__0_1a6c544e556466831e127b2ccd76d6f996">Apply</reimplementedby>
+        <reimplementedby refid="dc/dcf/classsgns_1_1_migration3__5__0_to3__5__1_1a1ce558d6c1cb079dbe445b677f08d571">Apply</reimplementedby>
+        <reimplementedby refid="df/da7/classsgns_1_1_migration3__5__1_to3__6__0_1a47225580c57d11bd1a88923bfdffa84d">Apply</reimplementedby>
+        <briefdescription>
+<para>Execute the migration logic. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Outcome of the operation. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IMigrationStep.hpp" line="47" column="33"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d0d/classsgns_1_1_i_migration_step_1ac6640d48424c9a3b5a7250ee97ffdeed" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::IMigrationStep::ShutDown</definition>
+        <argsstring>()=0</argsstring>
+        <name>ShutDown</name>
+        <qualifiedname>sgns::IMigrationStep::ShutDown</qualifiedname>
+        <reimplementedby refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1ab23462d4cb23e170d90ae80e60f82719">ShutDown</reimplementedby>
+        <reimplementedby refid="d0/d09/classsgns_1_1_migration1__0__0_to3__4__0_1a88aab05a80168577293b08b35bd5b785">ShutDown</reimplementedby>
+        <reimplementedby refid="d1/dd2/classsgns_1_1_migration3__4__0_to3__5__0_1a753ddfd6c60944a777cfaba0f7449cdb">ShutDown</reimplementedby>
+        <reimplementedby refid="dc/dcf/classsgns_1_1_migration3__5__0_to3__5__1_1a2dee69796c6991302e2f584694399c31">ShutDown</reimplementedby>
+        <reimplementedby refid="df/da7/classsgns_1_1_migration3__5__1_to3__6__0_1abe120878c25acf64800218c5ed53a721">ShutDown</reimplementedby>
+        <briefdescription>
+<para>Shuts down internal variables. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Outcome of the operation </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IMigrationStep.hpp" line="53" column="33"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d0d/classsgns_1_1_i_migration_step_1ae6417d85eccbf766b884ea948f96e60e" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; bool &gt;</type>
+        <definition>virtual outcome::result&lt; bool &gt; sgns::IMigrationStep::IsRequired</definition>
+        <argsstring>() const =0</argsstring>
+        <name>IsRequired</name>
+        <qualifiedname>sgns::IMigrationStep::IsRequired</qualifiedname>
+        <reimplementedby refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0_1acfed607131716a51104619954a46d8ae">IsRequired</reimplementedby>
+        <reimplementedby refid="d0/d09/classsgns_1_1_migration1__0__0_to3__4__0_1a624a9f1b7d72a11a43e523246e54dcee">IsRequired</reimplementedby>
+        <reimplementedby refid="d1/dd2/classsgns_1_1_migration3__4__0_to3__5__0_1a57513187b0f5c8bc474070217e81dd74">IsRequired</reimplementedby>
+        <reimplementedby refid="dc/dcf/classsgns_1_1_migration3__5__0_to3__5__1_1aeada855dc16bc55d9852fd4337bd4ace">IsRequired</reimplementedby>
+        <reimplementedby refid="df/da7/classsgns_1_1_migration3__5__1_to3__6__0_1afe2d7b6fc3ba26625456fee4d4beae31">IsRequired</reimplementedby>
+        <briefdescription>
+<para>Check if migration is required. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>outcome::result&lt;bool&gt; true if migration should run; false to skip. On error, returns failure. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IMigrationStep.hpp" line="59" column="33"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d0d/classsgns_1_1_i_migration_step_1a6ca6fe6712c2c461776d60b0014db221" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::tuple&lt; int, int, int &gt;</type>
+        <definition>std::tuple&lt; int, int, int &gt; sgns::IMigrationStep::ParseVersion</definition>
+        <argsstring>(const std::string &amp;version) const</argsstring>
+        <name>ParseVersion</name>
+        <qualifiedname>sgns::IMigrationStep::ParseVersion</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>version</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IMigrationStep.hpp" line="61" column="20" bodyfile="src/account/IMigrationStep.hpp" bodystart="61" bodyend="68"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d0d/classsgns_1_1_i_migration_step_1a7149b634de2e7e1dc85a8fc389aff928" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::IMigrationStep::IsVersionLessThan</definition>
+        <argsstring>(const std::string &amp;lhs, const std::string &amp;rhs) const</argsstring>
+        <name>IsVersionLessThan</name>
+        <qualifiedname>sgns::IMigrationStep::IsVersionLessThan</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>lhs</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/IMigrationStep.hpp" line="70" column="14" bodyfile="src/account/IMigrationStep.hpp" bodystart="70" bodyend="83"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Interface for a migration step between two schema versions. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::IMigrationStep</label>
+        <link refid="d5/d0d/classsgns_1_1_i_migration_step"/>
+      </node>
+      <node id="2">
+        <label>sgns::Migration0_2_0To1_0_0</label>
+        <link refid="d9/d5c/classsgns_1_1_migration0__2__0_to1__0__0"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::Migration1_0_0To3_4_0</label>
+        <link refid="d0/d09/classsgns_1_1_migration1__0__0_to3__4__0"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::Migration3_4_0To3_5_0</label>
+        <link refid="d1/dd2/classsgns_1_1_migration3__4__0_to3__5__0"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::Migration3_5_0To3_5_1</label>
+        <link refid="dc/dcf/classsgns_1_1_migration3__5__0_to3__5__1"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>sgns::Migration3_5_1To3_6_0</label>
+        <link refid="df/da7/classsgns_1_1_migration3__5__1_to3__6__0"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::IMigrationStep</label>
+        <link refid="d5/d0d/classsgns_1_1_i_migration_step"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/account/IMigrationStep.hpp" line="21" column="5" bodyfile="src/account/IMigrationStep.hpp" bodystart="22" bodyend="84"/>
+    <listofallmembers>
+      <member refid="d5/d0d/classsgns_1_1_i_migration_step_1a0a60894e92278118529757890a8864ac" prot="public" virt="pure-virtual"><scope>sgns::IMigrationStep</scope><name>Apply</name></member>
+      <member refid="d5/d0d/classsgns_1_1_i_migration_step_1a4d51d8781733028f8b190e8c8f98698e" prot="public" virt="pure-virtual"><scope>sgns::IMigrationStep</scope><name>FromVersion</name></member>
+      <member refid="d5/d0d/classsgns_1_1_i_migration_step_1a2f4b75bcf6ab77751a13666aed6521c5" prot="public" virt="pure-virtual"><scope>sgns::IMigrationStep</scope><name>Init</name></member>
+      <member refid="d5/d0d/classsgns_1_1_i_migration_step_1ae6417d85eccbf766b884ea948f96e60e" prot="public" virt="pure-virtual"><scope>sgns::IMigrationStep</scope><name>IsRequired</name></member>
+      <member refid="d5/d0d/classsgns_1_1_i_migration_step_1a7149b634de2e7e1dc85a8fc389aff928" prot="public" virt="non-virtual"><scope>sgns::IMigrationStep</scope><name>IsVersionLessThan</name></member>
+      <member refid="d5/d0d/classsgns_1_1_i_migration_step_1a6ca6fe6712c2c461776d60b0014db221" prot="public" virt="non-virtual"><scope>sgns::IMigrationStep</scope><name>ParseVersion</name></member>
+      <member refid="d5/d0d/classsgns_1_1_i_migration_step_1ac6640d48424c9a3b5a7250ee97ffdeed" prot="public" virt="pure-virtual"><scope>sgns::IMigrationStep</scope><name>ShutDown</name></member>
+      <member refid="d5/d0d/classsgns_1_1_i_migration_step_1a747197062a83f8379601418301b9b00d" prot="public" virt="pure-virtual"><scope>sgns::IMigrationStep</scope><name>ToVersion</name></member>
+      <member refid="d5/d0d/classsgns_1_1_i_migration_step_1a665d7bd47cadfb96da753277a9411e34" prot="public" virt="virtual"><scope>sgns::IMigrationStep</scope><name>~IMigrationStep</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

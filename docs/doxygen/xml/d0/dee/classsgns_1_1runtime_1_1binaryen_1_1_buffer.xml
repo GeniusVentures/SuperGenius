@@ -1,0 +1,1275 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer" kind="class" language="C++" prot="public">
+    <compoundname>sgns::runtime::binaryen::Buffer</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">boost::equality_comparable&lt; Buffer &gt;</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">boost::equality_comparable&lt; gsl::span&lt; uint8_t &gt; &gt;</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">boost::equality_comparable&lt; std::vector&lt; uint8_t &gt; &gt;</basecompoundref>
+    <derivedcompoundref refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles" prot="public" virt="non-virtual">sgns::storage::trie::KeyNibbles</derivedcompoundref>
+    <includes refid="da/d1d/buffer_8hpp" local="no">buffer.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1afb1a0d71cf9b90993db927ccdd0566a5" prot="public" static="no">
+        <type>std::vector&lt; uint8_t &gt;::iterator</type>
+        <definition>using sgns::base::Buffer::iterator = std::vector&lt;uint8_t&gt;::iterator</definition>
+        <argsstring></argsstring>
+        <name>iterator</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::iterator</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="21" column="5" bodyfile="src/base/buffer.hpp" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a3b38a736efcc3324631393249ef54ffb" prot="public" static="no">
+        <type>std::vector&lt; uint8_t &gt;::reverse_iterator</type>
+        <definition>using sgns::base::Buffer::reverse_iterator = std::vector&lt;uint8_t&gt;::reverse_iterator</definition>
+        <argsstring></argsstring>
+        <name>reverse_iterator</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::reverse_iterator</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="22" column="5" bodyfile="src/base/buffer.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a145be12c21a8988be5aebedc341d38a1" prot="public" static="no">
+        <type>std::vector&lt; uint8_t &gt;::const_reverse_iterator</type>
+        <definition>using sgns::base::Buffer::const_reverse_iterator = std::vector&lt;uint8_t&gt;::const_reverse_iterator</definition>
+        <argsstring></argsstring>
+        <name>const_reverse_iterator</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::const_reverse_iterator</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="23" column="5" bodyfile="src/base/buffer.hpp" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a09d46fccb30e35520c42851347396fb3" prot="public" static="no">
+        <type>std::vector&lt; uint8_t &gt;::const_iterator</type>
+        <definition>using sgns::base::Buffer::const_iterator = std::vector&lt;uint8_t&gt;::const_iterator</definition>
+        <argsstring></argsstring>
+        <name>const_iterator</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::const_iterator</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="24" column="5" bodyfile="src/base/buffer.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1ad6e7e712590184dd552b0086baab94ce" prot="public" static="no">
+        <type>uint8_t</type>
+        <definition>using sgns::base::Buffer::value_type = uint8_t</definition>
+        <argsstring></argsstring>
+        <name>value_type</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::value_type</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="25" column="5" bodyfile="src/base/buffer.hpp" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a5c90b67809719fc9320dd701f5949661" prot="public" static="no">
+        <type>typename std::vector&lt; uint8_t &gt;::pointer</type>
+        <definition>using sgns::base::Buffer::pointer = typename std::vector&lt;uint8_t&gt;::pointer</definition>
+        <argsstring></argsstring>
+        <name>pointer</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::pointer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="27" column="5" bodyfile="src/base/buffer.hpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1ade53b18a14b9f9ff66b8165cc46831ac" prot="public" static="no">
+        <type>typename std::vector&lt; uint8_t &gt;::const_pointer</type>
+        <definition>using sgns::base::Buffer::const_pointer = typename std::vector&lt;uint8_t&gt;::const_pointer</definition>
+        <argsstring></argsstring>
+        <name>const_pointer</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::const_pointer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="28" column="5" bodyfile="src/base/buffer.hpp" bodystart="28" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a75f31579631c16fee86ce6b3ad228fca" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>std::vector&lt;uint8_t&gt; sgns::base::Buffer::data_</definition>
+        <argsstring></argsstring>
+        <name>data_</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::data_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="248" column="17" bodyfile="src/base/buffer.hpp" bodystart="248" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a5879783576320423620c7bc68c1fe673" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::base::Buffer::Buffer</definition>
+        <argsstring>(size_t size, uint8_t byte)</argsstring>
+        <name>Buffer</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::Buffer</qualifiedname>
+        <param>
+          <type>size_t</type>
+          <declname>size</declname>
+        </param>
+        <param>
+          <type>uint8_t</type>
+          <declname>byte</declname>
+        </param>
+        <briefdescription>
+<para>Allocates a buffer of the given size, filled with a byte value. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername><ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1a77edb688fb1bff45a612ee6f03c6bda8" kindref="member">size</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para><ref refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer" kindref="compound">Buffer</ref> size in bytes. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>byte</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Fill value for all bytes. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="35" column="5" bodyfile="src/base/buffer.cpp" bodystart="115" bodyend="115"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1aeff4c03269381af4bc2cccdf32a1efe8" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::base::Buffer::Buffer</definition>
+        <argsstring>(std::vector&lt; uint8_t &gt; v)</argsstring>
+        <name>Buffer</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::Buffer</qualifiedname>
+        <param>
+          <type>std::vector&lt; uint8_t &gt;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>lvalue construct buffer from a byte vector </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="42" column="14" bodyfile="src/base/buffer.cpp" bodystart="81" bodyend="81"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1ae619f12af508d462aeec54d64658dc93" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::base::Buffer::Buffer</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; s)</argsstring>
+        <name>Buffer</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::Buffer</qualifiedname>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="43" column="14" bodyfile="src/base/buffer.cpp" bodystart="82" bodyend="82"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a0edbf565537295e2851187e52a25cf96" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::base::Buffer::Buffer</definition>
+        <argsstring>(const uint8_t *begin, const uint8_t *end)</argsstring>
+        <name>Buffer</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::Buffer</qualifiedname>
+        <param>
+          <type>const uint8_t *</type>
+          <declname>begin</declname>
+        </param>
+        <param>
+          <type>const uint8_t *</type>
+          <declname>end</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="45" column="5" bodyfile="src/base/buffer.cpp" bodystart="163" bodyend="164"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a28845bbd6344d554b42c2141105f8f6c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::base::Buffer::Buffer</definition>
+        <argsstring>()=default</argsstring>
+        <name>Buffer</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::Buffer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="47" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1aa6b57d73af242ec79a8d8faae7649961" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::base::Buffer::Buffer</definition>
+        <argsstring>(const Buffer &amp;b)=default</argsstring>
+        <name>Buffer</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::Buffer</qualifiedname>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="48" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a362aea48a03704c868cf80fc4d9f3ff7" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::base::Buffer::Buffer</definition>
+        <argsstring>(Buffer &amp;&amp;b) noexcept=default</argsstring>
+        <name>Buffer</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::Buffer</qualifiedname>
+        <param>
+          <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;&amp;</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="49" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a16cb37d2e6ef1747d98fd11b4be563ca" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::base::Buffer::Buffer</definition>
+        <argsstring>(std::initializer_list&lt; uint8_t &gt; b)</argsstring>
+        <name>Buffer</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::Buffer</qualifiedname>
+        <param>
+          <type>std::initializer_list&lt; uint8_t &gt;</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="50" column="5" bodyfile="src/base/buffer.cpp" bodystart="46" bodyend="46"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a16879f0879897879a3f74de6eeb284b7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::base::Buffer::~Buffer</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Buffer</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::~Buffer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="37" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1ad2afa1f5006c6d5b25f61df0b4632b83" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+        <definition>Buffer &amp; sgns::base::Buffer::reserve</definition>
+        <argsstring>(size_t size)</argsstring>
+        <name>reserve</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::reserve</qualifiedname>
+        <param>
+          <type>size_t</type>
+          <declname>size</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="52" column="12" bodyfile="src/base/buffer.cpp" bodystart="170" bodyend="173"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a20478514f0aa87bed284a9d02bee612c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+        <definition>Buffer &amp; sgns::base::Buffer::resize</definition>
+        <argsstring>(size_t size)</argsstring>
+        <name>resize</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::resize</qualifiedname>
+        <param>
+          <type>size_t</type>
+          <declname>size</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="53" column="12" bodyfile="src/base/buffer.cpp" bodystart="175" bodyend="178"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a8058d1947a52d3ed0e9570034f7279f1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+        <definition>Buffer &amp; sgns::base::Buffer::operator=</definition>
+        <argsstring>(const Buffer &amp;other)=default</argsstring>
+        <name>operator=</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::operator=</qualifiedname>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="55" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a45781954a20af7acb475c60850b36a0a" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+        <definition>Buffer &amp; sgns::base::Buffer::operator=</definition>
+        <argsstring>(Buffer &amp;&amp;other) noexcept=default</argsstring>
+        <name>operator=</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::operator=</qualifiedname>
+        <param>
+          <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;&amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="56" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a38c4f8ad8ca09da2974e3635092c9fca" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+        <definition>Buffer &amp; sgns::base::Buffer::operator+=</definition>
+        <argsstring>(const Buffer &amp;other) noexcept</argsstring>
+        <name>operator+=</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::operator+=</qualifiedname>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="58" column="12" bodyfile="src/base/buffer.cpp" bodystart="184" bodyend="186"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a7f1cf80e32f5d48d339a69e021d85fa1" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>uint8_t</type>
+        <definition>uint8_t sgns::base::Buffer::operator[]</definition>
+        <argsstring>(size_t index) const</argsstring>
+        <name>operator[]</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::operator[]</qualifiedname>
+        <param>
+          <type>size_t</type>
+          <declname>index</declname>
+        </param>
+        <briefdescription>
+<para>Accessor of byte elements given an index in the byte array. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>index</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Element index. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="64" column="13" bodyfile="src/base/buffer.cpp" bodystart="68" bodyend="70"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1aca89d603be6b9c0056a4db5dd099e090" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>uint8_t &amp;</type>
+        <definition>uint8_t &amp; sgns::base::Buffer::operator[]</definition>
+        <argsstring>(size_t index)</argsstring>
+        <name>operator[]</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::operator[]</qualifiedname>
+        <param>
+          <type>size_t</type>
+          <declname>index</declname>
+        </param>
+        <briefdescription>
+<para>Accessor of byte elements given an index in the byte array. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>index</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Element index. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="70" column="13" bodyfile="src/base/buffer.cpp" bodystart="72" bodyend="74"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a5991be8b16e06483d0aa5dc26699d6ce" prot="public" static="no" const="yes" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::base::Buffer::operator==</definition>
+        <argsstring>(const Buffer &amp;b) const noexcept</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+<para>Lexicographical comparison of two buffers. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="75" column="10" bodyfile="src/base/buffer.cpp" bodystart="88" bodyend="90"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a9c5398431ade7505db11ad777760a25d" prot="public" static="no" const="yes" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::base::Buffer::operator==</definition>
+        <argsstring>(const std::vector&lt; uint8_t &gt; &amp;b) const noexcept</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::operator==</qualifiedname>
+        <param>
+          <type>const std::vector&lt; uint8_t &gt; &amp;</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+<para>Lexicographical comparison of buffer and vector of bytes. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="80" column="10" bodyfile="src/base/buffer.cpp" bodystart="117" bodyend="119"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a905612a1ebd279f0147e12fc1031cc53" prot="public" static="no" const="yes" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::base::Buffer::operator==</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; s) const noexcept</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::operator==</qualifiedname>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+<para>Lexicographical comparison of buffer and vector of bytes. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="85" column="10" bodyfile="src/base/buffer.cpp" bodystart="121" bodyend="123"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a160f6ad39a55b7ae37b2f195a51774db" prot="public" static="no" const="yes" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::base::Buffer::operator&lt;</definition>
+        <argsstring>(const Buffer &amp;b) const noexcept</argsstring>
+        <name>operator&lt;</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::operator&lt;</qualifiedname>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+<para>Lexicographical comparison of two buffers. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="90" column="5" bodyfile="src/base/buffer.cpp" bodystart="125" bodyend="130"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a698c67bc1af015482347122655533d89" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1afb1a0d71cf9b90993db927ccdd0566a5" kindref="member">iterator</ref></type>
+        <definition>Buffer::iterator sgns::base::Buffer::begin</definition>
+        <argsstring>()</argsstring>
+        <name>begin</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::begin</qualifiedname>
+        <briefdescription>
+<para>Iterator, which points to begin of this buffer. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="95" column="14" bodyfile="src/base/buffer.cpp" bodystart="48" bodyend="50"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1ac696beb6c3a9034631df622a7b5a275d" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a09d46fccb30e35520c42851347396fb3" kindref="member">const_iterator</ref></type>
+        <definition>Buffer::const_iterator sgns::base::Buffer::begin</definition>
+        <argsstring>() const</argsstring>
+        <name>begin</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::begin</qualifiedname>
+        <briefdescription>
+<para>Iterator, which points to begin of this buffer. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="126" column="21" bodyfile="src/base/buffer.cpp" bodystart="92" bodyend="94"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a933c2c5fb7c727505051cc58bd9c3561" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1afb1a0d71cf9b90993db927ccdd0566a5" kindref="member">iterator</ref></type>
+        <definition>Buffer::iterator sgns::base::Buffer::end</definition>
+        <argsstring>()</argsstring>
+        <name>end</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::end</qualifiedname>
+        <briefdescription>
+<para>Iterator, which points to the element next to the last in this buffer. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="101" column="14" bodyfile="src/base/buffer.cpp" bodystart="52" bodyend="54"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a1b4131ee05e3ec5c2bf14c35b6759e30" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a09d46fccb30e35520c42851347396fb3" kindref="member">const_iterator</ref></type>
+        <definition>Buffer::const_iterator sgns::base::Buffer::end</definition>
+        <argsstring>() const</argsstring>
+        <name>end</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::end</qualifiedname>
+        <briefdescription>
+<para>Iterator, which points to the element next to the last in this buffer. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="132" column="21" bodyfile="src/base/buffer.cpp" bodystart="96" bodyend="98"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a71acf960b59bf5c5bfc9b153f67fbe32" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a3b38a736efcc3324631393249ef54ffb" kindref="member">reverse_iterator</ref></type>
+        <definition>Buffer::reverse_iterator sgns::base::Buffer::rbegin</definition>
+        <argsstring>()</argsstring>
+        <name>rbegin</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::rbegin</qualifiedname>
+        <briefdescription>
+<para>Iterator, which points to last of this buffer. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="105" column="22" bodyfile="src/base/buffer.cpp" bodystart="55" bodyend="57"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a24865e1b81c2d4f04d8b2dd67d6c88f6" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a145be12c21a8988be5aebedc341d38a1" kindref="member">const_reverse_iterator</ref></type>
+        <definition>Buffer::const_reverse_iterator sgns::base::Buffer::rbegin</definition>
+        <argsstring>() const</argsstring>
+        <name>rbegin</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::rbegin</qualifiedname>
+        <briefdescription>
+<para>Iterator, which points to last of this buffer. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="115" column="29" bodyfile="src/base/buffer.cpp" bodystart="99" bodyend="101"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a79250cf4f52e249b55113b7c08c61c6c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a3b38a736efcc3324631393249ef54ffb" kindref="member">reverse_iterator</ref></type>
+        <definition>Buffer::reverse_iterator sgns::base::Buffer::rend</definition>
+        <argsstring>()</argsstring>
+        <name>rend</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::rend</qualifiedname>
+        <briefdescription>
+<para>Iterator, which points to the element previous to first in this buffer. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="111" column="22" bodyfile="src/base/buffer.cpp" bodystart="59" bodyend="61"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a230801c18496a5646ec16dfd1b703e47" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a145be12c21a8988be5aebedc341d38a1" kindref="member">const_reverse_iterator</ref></type>
+        <definition>Buffer::const_reverse_iterator sgns::base::Buffer::rend</definition>
+        <argsstring>() const</argsstring>
+        <name>rend</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::rend</qualifiedname>
+        <briefdescription>
+<para>Iterator, which points to the element previous to first in this buffer. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="121" column="29" bodyfile="src/base/buffer.cpp" bodystart="103" bodyend="105"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a77edb688fb1bff45a612ee6f03c6bda8" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t sgns::base::Buffer::size</definition>
+        <argsstring>() const</argsstring>
+        <name>size</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::size</qualifiedname>
+        <briefdescription>
+<para>Getter for size of this buffer. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="137" column="13" bodyfile="src/base/buffer.cpp" bodystart="7" bodyend="9"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a53abe391128d07bdf53fbe8ecfa2667a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+        <definition>Buffer &amp; sgns::base::Buffer::putUint8</definition>
+        <argsstring>(uint8_t n)</argsstring>
+        <name>putUint8</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::putUint8</qualifiedname>
+        <param>
+          <type>uint8_t</type>
+          <declname>n</declname>
+        </param>
+        <briefdescription>
+<para>Put an 8-bit value into this buffer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>n</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Value to append. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>This buffer, suitable for chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="144" column="12" bodyfile="src/base/buffer.cpp" bodystart="63" bodyend="66"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1ad988ec8c0af7e2d107306cee2a8660df" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+        <definition>Buffer &amp; sgns::base::Buffer::putUint32</definition>
+        <argsstring>(uint32_t n)</argsstring>
+        <name>putUint32</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::putUint32</qualifiedname>
+        <param>
+          <type>uint32_t</type>
+          <declname>n</declname>
+        </param>
+        <briefdescription>
+<para>Put a 32-bit value into this buffer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>n</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Value to append (serialized as big-endian). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>This buffer, suitable for chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="151" column="12" bodyfile="src/base/buffer.cpp" bodystart="11" bodyend="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a7490684f4416b9c4eac63351efd66013" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+        <definition>Buffer &amp; sgns::base::Buffer::putUint64</definition>
+        <argsstring>(uint64_t n)</argsstring>
+        <name>putUint64</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::putUint64</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>n</declname>
+        </param>
+        <briefdescription>
+<para>Put a 64-bit value into this buffer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>n</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Value to append (serialized as big-endian). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>This buffer, suitable for chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="158" column="12" bodyfile="src/base/buffer.cpp" bodystart="20" bodyend="31"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1aa14bc6509f455ff998bf71083e665b01" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+        <definition>Buffer &amp; sgns::base::Buffer::put</definition>
+        <argsstring>(std::string_view str)</argsstring>
+        <name>put</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::put</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>str</declname>
+        </param>
+        <briefdescription>
+<para>Put a string into the byte buffer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>str</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Arbitrary string. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>This buffer, suitable for chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="165" column="12" bodyfile="src/base/buffer.cpp" bodystart="139" bodyend="141"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a73bb9783143f9398b9a7610606022c92" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+        <definition>Buffer &amp; sgns::base::Buffer::put</definition>
+        <argsstring>(const std::vector&lt; uint8_t &gt; &amp;v)</argsstring>
+        <name>put</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::put</qualifiedname>
+        <param>
+          <type>const std::vector&lt; uint8_t &gt; &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>Put a vector of bytes into the byte buffer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Arbitrary vector of bytes. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>This buffer, suitable for chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="172" column="12" bodyfile="src/base/buffer.cpp" bodystart="143" bodyend="145"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a4ee57ff9166bac5be93e2a7973fac541" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+        <definition>Buffer &amp; sgns::base::Buffer::put</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; s)</argsstring>
+        <name>put</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::put</qualifiedname>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+<para>Put a sequence of bytes into the byte buffer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Arbitrary span of bytes. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>This buffer, suitable for chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="179" column="12" bodyfile="src/base/buffer.cpp" bodystart="147" bodyend="149"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1aaa4fb1728868056092e3d31e16eef821" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+        <definition>Buffer &amp; sgns::base::Buffer::putBytes</definition>
+        <argsstring>(const uint8_t *begin, const uint8_t *end)</argsstring>
+        <name>putBytes</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::putBytes</qualifiedname>
+        <param>
+          <type>const uint8_t *</type>
+          <declname>begin</declname>
+        </param>
+        <param>
+          <type>const uint8_t *</type>
+          <declname>end</declname>
+        </param>
+        <briefdescription>
+<para>Put an array of bytes bounded by pointers into the byte buffer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername><ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1a698c67bc1af015482347122655533d89" kindref="member">begin</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pointer to the array start. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername><ref refid="de/dd5/classsgns_1_1base_1_1_buffer_1a933c2c5fb7c727505051cc58bd9c3561" kindref="member">end</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pointer to the address after the last element. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>This buffer, suitable for chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="187" column="12" bodyfile="src/base/buffer.cpp" bodystart="151" bodyend="153"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a2c65acb58c6971bc199593ab9a15c37c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+        <definition>Buffer &amp; sgns::base::Buffer::putBuffer</definition>
+        <argsstring>(const Buffer &amp;buf)</argsstring>
+        <name>putBuffer</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::putBuffer</qualifiedname>
+        <param>
+          <type>const <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+          <declname>buf</declname>
+        </param>
+        <briefdescription>
+<para>Put another buffer content at the end of current one. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>buf</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>another buffer </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>this buffer suitable for chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="194" column="12" bodyfile="src/base/buffer.cpp" bodystart="155" bodyend="157"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1ac87efbe0dbdfb2c14a0ed84703f5606e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::base::Buffer::clear</definition>
+        <argsstring>()</argsstring>
+        <name>clear</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::clear</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Clear the contents of the <ref refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer" kindref="compound">Buffer</ref> </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="199" column="10" bodyfile="src/base/buffer.cpp" bodystart="159" bodyend="161"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1abfeab78c054d64ddbddb3a991f71cbb4" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>const uint8_t *</type>
+        <definition>const uint8_t * sgns::base::Buffer::data</definition>
+        <argsstring>() const</argsstring>
+        <name>data</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::data</qualifiedname>
+        <briefdescription>
+<para>getter for raw array of bytes </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="204" column="19" bodyfile="src/base/buffer.cpp" bodystart="107" bodyend="109"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a3ba5454a85a24714ecb718a0bf069210" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>uint8_t *</type>
+        <definition>uint8_t * sgns::base::Buffer::data</definition>
+        <argsstring>()</argsstring>
+        <name>data</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::data</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="205" column="13" bodyfile="src/base/buffer.cpp" bodystart="111" bodyend="113"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a90e41ce39977903170d693c11a56ac12" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>const std::vector&lt; uint8_t &gt; &amp;</type>
+        <definition>const std::vector&lt; uint8_t &gt; &amp; sgns::base::Buffer::toVector</definition>
+        <argsstring>() const</argsstring>
+        <name>toVector</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::toVector</qualifiedname>
+        <briefdescription>
+<para>getter for vector of bytes </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="210" column="23" bodyfile="src/base/buffer.cpp" bodystart="84" bodyend="86"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1acddcfd4c4de0c7464318120a4c8ec24a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; uint8_t &gt; &amp;</type>
+        <definition>std::vector&lt; uint8_t &gt; &amp; sgns::base::Buffer::toVector</definition>
+        <argsstring>()</argsstring>
+        <name>toVector</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::toVector</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="212" column="17" bodyfile="src/base/buffer.cpp" bodystart="166" bodyend="168"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1ae18f000222d470ca6ec9872f11f9b7ef" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref></type>
+        <definition>Buffer sgns::base::Buffer::subbuffer</definition>
+        <argsstring>(size_t offset=0, size_t length=-1) const</argsstring>
+        <name>subbuffer</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::subbuffer</qualifiedname>
+        <param>
+          <type>size_t</type>
+          <declname>offset</declname>
+          <defval>0</defval>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>length</declname>
+          <defval>-1</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Returns a copy of a part of the buffer Works alike subspan() of gsl::span </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="218" column="12" bodyfile="src/base/buffer.cpp" bodystart="180" bodyend="182"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1aaa5a478465865d5711b3a3789daabd33" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::base::Buffer::toHex</definition>
+        <argsstring>() const</argsstring>
+        <name>toHex</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::toHex</qualifiedname>
+        <briefdescription>
+<para>encode bytearray as hex </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>hex-encoded string </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="224" column="17" bodyfile="src/base/buffer.cpp" bodystart="33" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a96181fe5cdc82b680a02eac9a8267673" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::base::Buffer::empty</definition>
+        <argsstring>() const</argsstring>
+        <name>empty</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::empty</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Check if this buffer is empty <simplesect kind="return"><para>true, if buffer is empty, false otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="230" column="10" bodyfile="src/base/buffer.cpp" bodystart="42" bodyend="44"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a88a9d3022f2578e23b964711077641ef" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string_view</type>
+        <definition>std::string_view sgns::base::Buffer::toString</definition>
+        <argsstring>() const</argsstring>
+        <name>toString</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::toString</qualifiedname>
+        <briefdescription>
+<para>return content of bytearray as string </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>Does not ensure correct encoding </para>
+</simplesect>
+<simplesect kind="return"><para>string </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="245" column="22" bodyfile="src/base/buffer.cpp" bodystart="37" bodyend="40"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1abf03ac74ff0c37968afc5d40493f8f28" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt;</type>
+        <definition>outcome::result&lt; Buffer &gt; sgns::base::Buffer::fromHex</definition>
+        <argsstring>(std::string_view hex)</argsstring>
+        <name>fromHex</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::fromHex</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>hex</declname>
+        </param>
+        <briefdescription>
+<para>Construct <ref refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer" kindref="compound">Buffer</ref> from hex string. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>hex</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>hex-encoded string </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>result containing constructed buffer if input string is hex-encoded string. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="238" column="28" bodyfile="src/base/buffer.cpp" bodystart="76" bodyend="79"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1ac9a2f10803816cbd3899fccabaf65a81" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &amp;</type>
+        <definition>Buffer &amp; sgns::base::Buffer::putRange</definition>
+        <argsstring>(const T &amp;begin, const T &amp;end)</argsstring>
+        <name>putRange</name>
+        <qualifiedname>sgns::runtime::binaryen::Buffer::putRange</qualifiedname>
+        <param>
+          <type>const T &amp;</type>
+          <declname>begin</declname>
+        </param>
+        <param>
+          <type>const T &amp;</type>
+          <declname>end</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="251" column="12" bodyfile="src/base/buffer.cpp" bodystart="133" bodyend="137"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Class represents arbitrary (including empty) byte buffer. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>boost::equality_comparable&lt; Buffer &gt;</label>
+      </node>
+      <node id="3">
+        <label>boost::equality_comparable&lt; gsl::span&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="4">
+        <label>boost::equality_comparable&lt; std::vector&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::binaryen::Buffer</label>
+        <link refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::storage::trie::KeyNibbles</label>
+        <link refid="d0/d73/structsgns_1_1storage_1_1trie_1_1_key_nibbles"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="2">
+        <label>boost::equality_comparable&lt; Buffer &gt;</label>
+      </node>
+      <node id="3">
+        <label>boost::equality_comparable&lt; gsl::span&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="4">
+        <label>boost::equality_comparable&lt; std::vector&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::binaryen::Buffer</label>
+        <link refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::vector&lt; uint8_t &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/base/buffer.hpp" line="17" column="3" bodyfile="src/base/buffer.hpp" bodystart="19" bodyend="252"/>
+    <listofallmembers>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a698c67bc1af015482347122655533d89" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>begin</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1ac696beb6c3a9034631df622a7b5a275d" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>begin</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a5879783576320423620c7bc68c1fe673" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>Buffer</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1aeff4c03269381af4bc2cccdf32a1efe8" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>Buffer</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1ae619f12af508d462aeec54d64658dc93" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>Buffer</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a0edbf565537295e2851187e52a25cf96" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>Buffer</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a28845bbd6344d554b42c2141105f8f6c" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>Buffer</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1aa6b57d73af242ec79a8d8faae7649961" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>Buffer</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a362aea48a03704c868cf80fc4d9f3ff7" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>Buffer</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a16cb37d2e6ef1747d98fd11b4be563ca" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>Buffer</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1ac87efbe0dbdfb2c14a0ed84703f5606e" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>clear</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a09d46fccb30e35520c42851347396fb3" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>const_iterator</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1ade53b18a14b9f9ff66b8165cc46831ac" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>const_pointer</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a145be12c21a8988be5aebedc341d38a1" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>const_reverse_iterator</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1abfeab78c054d64ddbddb3a991f71cbb4" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>data</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a3ba5454a85a24714ecb718a0bf069210" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>data</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a75f31579631c16fee86ce6b3ad228fca" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>data_</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a96181fe5cdc82b680a02eac9a8267673" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>empty</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a933c2c5fb7c727505051cc58bd9c3561" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>end</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a1b4131ee05e3ec5c2bf14c35b6759e30" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>end</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1abf03ac74ff0c37968afc5d40493f8f28" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>fromHex</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1afb1a0d71cf9b90993db927ccdd0566a5" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>iterator</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a38c4f8ad8ca09da2974e3635092c9fca" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>operator+=</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a160f6ad39a55b7ae37b2f195a51774db" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>operator&lt;</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a8058d1947a52d3ed0e9570034f7279f1" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>operator=</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a45781954a20af7acb475c60850b36a0a" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>operator=</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a5991be8b16e06483d0aa5dc26699d6ce" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>operator==</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a9c5398431ade7505db11ad777760a25d" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>operator==</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a905612a1ebd279f0147e12fc1031cc53" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>operator==</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a7f1cf80e32f5d48d339a69e021d85fa1" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>operator[]</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1aca89d603be6b9c0056a4db5dd099e090" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>operator[]</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a5c90b67809719fc9320dd701f5949661" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>pointer</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1aa14bc6509f455ff998bf71083e665b01" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>put</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a73bb9783143f9398b9a7610606022c92" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>put</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a4ee57ff9166bac5be93e2a7973fac541" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>put</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a2c65acb58c6971bc199593ab9a15c37c" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>putBuffer</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1aaa4fb1728868056092e3d31e16eef821" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>putBytes</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1ac9a2f10803816cbd3899fccabaf65a81" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>putRange</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1ad988ec8c0af7e2d107306cee2a8660df" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>putUint32</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a7490684f4416b9c4eac63351efd66013" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>putUint64</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a53abe391128d07bdf53fbe8ecfa2667a" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>putUint8</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a71acf960b59bf5c5bfc9b153f67fbe32" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>rbegin</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a24865e1b81c2d4f04d8b2dd67d6c88f6" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>rbegin</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a79250cf4f52e249b55113b7c08c61c6c" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>rend</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a230801c18496a5646ec16dfd1b703e47" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>rend</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1ad2afa1f5006c6d5b25f61df0b4632b83" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>reserve</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a20478514f0aa87bed284a9d02bee612c" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>resize</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a3b38a736efcc3324631393249ef54ffb" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>reverse_iterator</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a77edb688fb1bff45a612ee6f03c6bda8" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>size</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1ae18f000222d470ca6ec9872f11f9b7ef" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>subbuffer</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1aaa5a478465865d5711b3a3789daabd33" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>toHex</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a88a9d3022f2578e23b964711077641ef" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>toString</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a90e41ce39977903170d693c11a56ac12" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>toVector</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1acddcfd4c4de0c7464318120a4c8ec24a" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>toVector</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1ad6e7e712590184dd552b0086baab94ce" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>value_type</name></member>
+      <member refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer_1a16879f0879897879a3f74de6eeb284b7" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::Buffer</scope><name>~Buffer</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

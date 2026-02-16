@@ -1,0 +1,126 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/d9c/classsgns_1_1scale_1_1detail_1_1tuple__impl_1_1_tuple_encoder" kind="class" language="C++" prot="public">
+    <compoundname>sgns::scale::detail::tuple_impl::TupleEncoder</compoundname>
+    <includes refid="d3/d6f/tuple_8hpp" local="no">tuple.hpp</includes>
+    <templateparamlist>
+      <param>
+        <type>class Stream</type>
+      </param>
+      <param>
+        <type>class...</type>
+        <declname>T</declname>
+        <defname>T</defname>
+      </param>
+    </templateparamlist>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d7/d9c/classsgns_1_1scale_1_1detail_1_1tuple__impl_1_1_tuple_encoder_1a091f3ca993b590414dd049d1afbec266" prot="public" static="no">
+        <type>std::tuple&lt; T... &gt;</type>
+        <definition>using sgns::scale::detail::tuple_impl::TupleEncoder&lt; Stream, T &gt;::tuple_type_t = std::tuple&lt;T...&gt;</definition>
+        <argsstring></argsstring>
+        <name>tuple_type_t</name>
+        <qualifiedname>sgns::scale::detail::tuple_impl::TupleEncoder::tuple_type_t</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/tuple.hpp" line="30" column="7" bodyfile="src/scale/detail/tuple.hpp" bodystart="30" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d7/d9c/classsgns_1_1scale_1_1detail_1_1tuple__impl_1_1_tuple_encoder_1a41a1c8d3466380994666ea996cf81636" prot="private" static="no" mutable="no">
+        <type>const <ref refid="d7/d9c/classsgns_1_1scale_1_1detail_1_1tuple__impl_1_1_tuple_encoder_1a091f3ca993b590414dd049d1afbec266" kindref="member">tuple_type_t</ref> &amp;</type>
+        <definition>const tuple_type_t&amp; sgns::scale::detail::tuple_impl::TupleEncoder&lt; Stream, T &gt;::v_</definition>
+        <argsstring></argsstring>
+        <name>v_</name>
+        <qualifiedname>sgns::scale::detail::tuple_impl::TupleEncoder::v_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/tuple.hpp" line="39" column="26" bodyfile="src/scale/detail/tuple.hpp" bodystart="39" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/d9c/classsgns_1_1scale_1_1detail_1_1tuple__impl_1_1_tuple_encoder_1a316218e468e6b4131a64d9f1d26914a7" prot="private" static="no" mutable="no">
+        <type>Stream &amp;</type>
+        <definition>Stream&amp; sgns::scale::detail::tuple_impl::TupleEncoder&lt; Stream, T &gt;::s_</definition>
+        <argsstring></argsstring>
+        <name>s_</name>
+        <qualifiedname>sgns::scale::detail::tuple_impl::TupleEncoder::s_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/tuple.hpp" line="40" column="14" bodyfile="src/scale/detail/tuple.hpp" bodystart="40" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d7/d9c/classsgns_1_1scale_1_1detail_1_1tuple__impl_1_1_tuple_encoder_1abeeead75ce3b8364dfb1fcc8a3c220e8" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::scale::detail::tuple_impl::TupleEncoder&lt; Stream, T &gt;::TupleEncoder</definition>
+        <argsstring>(const tuple_type_t &amp;v, Stream &amp;s)</argsstring>
+        <name>TupleEncoder</name>
+        <qualifiedname>sgns::scale::detail::tuple_impl::TupleEncoder::TupleEncoder</qualifiedname>
+        <param>
+          <type>const <ref refid="d7/d9c/classsgns_1_1scale_1_1detail_1_1tuple__impl_1_1_tuple_encoder_1a091f3ca993b590414dd049d1afbec266" kindref="member">tuple_type_t</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/tuple.hpp" line="31" column="7" bodyfile="src/scale/detail/tuple.hpp" bodystart="31" bodyend="31"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/d9c/classsgns_1_1scale_1_1detail_1_1tuple__impl_1_1_tuple_encoder_1ad906369271965397731ea2dd89a62073" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>uint8_t</type>
+            <declname>index</declname>
+            <defname>index</defname>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void sgns::scale::detail::tuple_impl::TupleEncoder&lt; Stream, T &gt;::apply</definition>
+        <argsstring>()</argsstring>
+        <name>apply</name>
+        <qualifiedname>sgns::scale::detail::tuple_impl::TupleEncoder::apply</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/detail/tuple.hpp" line="34" column="12" bodyfile="src/scale/detail/tuple.hpp" bodystart="34" bodyend="36"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::scale::detail::tuple_impl::TupleEncoder&lt; Stream, T &gt;</label>
+        <link refid="d7/d9c/classsgns_1_1scale_1_1detail_1_1tuple__impl_1_1_tuple_encoder"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/scale/detail/tuple.hpp" line="28" column="5" bodyfile="src/scale/detail/tuple.hpp" bodystart="28" bodyend="41"/>
+    <listofallmembers>
+      <member refid="d7/d9c/classsgns_1_1scale_1_1detail_1_1tuple__impl_1_1_tuple_encoder_1ad906369271965397731ea2dd89a62073" prot="public" virt="non-virtual"><scope>sgns::scale::detail::tuple_impl::TupleEncoder</scope><name>apply</name></member>
+      <member refid="d7/d9c/classsgns_1_1scale_1_1detail_1_1tuple__impl_1_1_tuple_encoder_1a316218e468e6b4131a64d9f1d26914a7" prot="private" virt="non-virtual"><scope>sgns::scale::detail::tuple_impl::TupleEncoder</scope><name>s_</name></member>
+      <member refid="d7/d9c/classsgns_1_1scale_1_1detail_1_1tuple__impl_1_1_tuple_encoder_1a091f3ca993b590414dd049d1afbec266" prot="public" virt="non-virtual"><scope>sgns::scale::detail::tuple_impl::TupleEncoder</scope><name>tuple_type_t</name></member>
+      <member refid="d7/d9c/classsgns_1_1scale_1_1detail_1_1tuple__impl_1_1_tuple_encoder_1abeeead75ce3b8364dfb1fcc8a3c220e8" prot="public" virt="non-virtual"><scope>sgns::scale::detail::tuple_impl::TupleEncoder</scope><name>TupleEncoder</name></member>
+      <member refid="d7/d9c/classsgns_1_1scale_1_1detail_1_1tuple__impl_1_1_tuple_encoder_1a41a1c8d3466380994666ea996cf81636" prot="private" virt="non-virtual"><scope>sgns::scale::detail::tuple_impl::TupleEncoder</scope><name>v_</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

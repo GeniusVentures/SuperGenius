@@ -1,0 +1,222 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/d20/_transfer_proof_8hpp" kind="file" language="C++">
+    <compoundname>TransferProof.hpp</compoundname>
+    <includes local="no">string</includes>
+    <includes local="no">cstdint</includes>
+    <includes local="no">array</includes>
+    <includes local="no">utility</includes>
+    <includes local="no">optional</includes>
+    <includes local="no">boost/json.hpp</includes>
+    <includes local="no">string_view</includes>
+    <includes refid="de/d4a/_i_basic_proof_8hpp" local="yes">IBasicProof.hpp</includes>
+    <includes refid="d6/d9f/_transaction_verifier_circuit_8hpp" local="yes">circuits/TransactionVerifierCircuit.hpp</includes>
+    <includedby refid="d0/dcc/_transaction_manager_8cpp" local="yes">src/account/TransactionManager.cpp</includedby>
+    <includedby refid="d7/d6d/_recursive_transfer_proof_8hpp" local="yes">src/proof/RecursiveTransferProof.hpp</includedby>
+    <includedby refid="d5/dcb/_transfer_proof_8cpp" local="yes">src/proof/TransferProof.cpp</includedby>
+    <incdepgraph>
+      <node id="13">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>IBasicProof.hpp</label>
+        <link refid="de/d4a/_i_basic_proof_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/proof/TransferProof.hpp</label>
+        <link refid="d5/d20/_transfer_proof_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>circuits/TransactionVerifierCircuit.hpp</label>
+        <link refid="d6/d9f/_transaction_verifier_circuit_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>array</label>
+      </node>
+      <node id="7">
+        <label>boost/json.hpp</label>
+      </node>
+      <node id="3">
+        <label>cstdint</label>
+      </node>
+      <node id="14">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="11">
+        <label>memory</label>
+      </node>
+      <node id="6">
+        <label>optional</label>
+      </node>
+      <node id="12">
+        <label>proof/proto/SGProof.pb.h</label>
+      </node>
+      <node id="2">
+        <label>string</label>
+      </node>
+      <node id="8">
+        <label>string_view</label>
+      </node>
+      <node id="5">
+        <label>utility</label>
+      </node>
+      <node id="10">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/account/TransactionManager.cpp</label>
+        <link refid="d0/dcc/_transaction_manager_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/proof/RecursiveTransferProof.cpp</label>
+        <link refid="df/db6/_recursive_transfer_proof_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/proof/RecursiveTransferProof.hpp</label>
+        <link refid="d7/d6d/_recursive_transfer_proof_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>src/proof/TransferProof.cpp</label>
+        <link refid="d5/dcb/_transfer_proof_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/proof/TransferProof.hpp</label>
+        <link refid="d5/d20/_transfer_proof_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d5/d48/classsgns_1_1_transfer_proof" prot="public">sgns::TransferProof</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <briefdescription>
+<para>Derived class for generating and verifying transfer proofs. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="date"><para>2024-09-29 </para>
+</simplesect>
+<simplesect kind="author"><para>Henrique A. Klein (<ulink url="mailto:hklein@gnus.ai">hklein@gnus.ai</ulink>) </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>_TRANSFER_PROOF_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>_TRANSFER_PROOF_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstdint&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;array&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;utility&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;optional&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/json.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string_view&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="de/d4a/_i_basic_proof_8hpp" kindref="compound">IBasicProof.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/d9f/_transaction_verifier_circuit_8hpp" kindref="compound">circuits/TransactionVerifierCircuit.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="22"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="30" refid="d5/d48/classsgns_1_1_transfer_proof" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d5/d48/classsgns_1_1_transfer_proof_1a171beea552c44bdc1b7aee8fb4b3f009" kindref="member">TransferProof</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d9/dbe/classsgns_1_1_i_basic_proof_1a6949373f697d0a371c8788f04f706443" kindref="member">IBasicProof</ref></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">explicit</highlight><highlight class="normal"><sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1a171beea552c44bdc1b7aee8fb4b3f009" kindref="member">TransferProof</ref>(<sp/>uint64_t<sp/>balance,<sp/>uint64_t<sp/>amount,<sp/>std::optional&lt;std::string&gt;<sp/>bytecode<sp/>=<sp/>std::nullopt<sp/>);</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44" refid="d5/d48/classsgns_1_1_transfer_proof_1a457665b332169a64699d6696a0f8784e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1a457665b332169a64699d6696a0f8784e" kindref="member">~TransferProof</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight></codeline>
+<codeline lineno="50" refid="d5/d48/classsgns_1_1_transfer_proof_1aafc4e760da2aae6d64a57fc74908edcc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1aafc4e760da2aae6d64a57fc74908edcc" kindref="member">GetProofType</ref>()</highlight><highlight class="keyword"><sp/>const<sp/>override</highlight></codeline>
+<codeline lineno="51"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::string(<sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1aa0b0c97a308cd5529feb1ef7380548ce" kindref="member">TRANSFER_TYPE_NAME</ref><sp/>);</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>T&gt;</highlight></codeline>
+<codeline lineno="62" refid="d5/d48/classsgns_1_1_transfer_proof_1a14c76bd5019effbfe73016a22a451cc9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>boost::json::object<sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1a14c76bd5019effbfe73016a22a451cc9" kindref="member">GenerateCurveParameter</ref>(<sp/>T<sp/>value<sp/>);</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"></highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">protected</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="65" refid="d5/d48/classsgns_1_1_transfer_proof_1aee582e2bdfb1521efa2c32847d33d0b1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>uint64_t<sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1aee582e2bdfb1521efa2c32847d33d0b1" kindref="member">generator_X_point</ref><sp/>=<sp/>1;<sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="66" refid="d5/d48/classsgns_1_1_transfer_proof_1acbcd0b73fb867337d80f62c3d657683b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>uint64_t<sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1acbcd0b73fb867337d80f62c3d657683b" kindref="member">generator_Y_point</ref><sp/>=<sp/>2;<sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="67" refid="d5/d48/classsgns_1_1_transfer_proof_1ac284b8e2028ab708a5c3c47d5a5a52a7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>uint64_t<sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1ac284b8e2028ab708a5c3c47d5a5a52a7" kindref="member">base_seed</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>12345;<sp/></highlight></codeline>
+<codeline lineno="68" refid="d5/d48/classsgns_1_1_transfer_proof_1a07f96c6a50387dc44c8c0c6993edd0d6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>uint64_t<sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1a07f96c6a50387dc44c8c0c6993edd0d6" kindref="member">provided_totp</ref><sp/><sp/><sp/><sp/><sp/>=<sp/>67890;<sp/></highlight></codeline>
+<codeline lineno="69"><highlight class="normal"></highlight></codeline>
+<codeline lineno="71" refid="d5/d48/classsgns_1_1_transfer_proof_1a43f49fe62315a436fa33e72d338f1087" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::array&lt;uint64_t,<sp/>4&gt;<sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1a43f49fe62315a436fa33e72d338f1087" kindref="member">ranges</ref><sp/>=<sp/>{<sp/>1000,<sp/>2000,<sp/>3000,<sp/>4000<sp/>};</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;std::vector&lt;uint8_t&gt;&gt;<sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1a88fbb4d497cb321e513166fe4075d249" kindref="member">SerializeFullProof</ref>(</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>SGProof::BaseProofData<sp/>&amp;base_proof_data<sp/>)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"></highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::pair&lt;boost::json::array,<sp/>boost::json::array&gt;<sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1a255d55ced3fc5b2c2a3b977a4f30dcf6" kindref="member">GenerateJsonParameters</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"></highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="87" refid="d5/d48/classsgns_1_1_transfer_proof_1ab7201daffdef13b08c5cb0695c450e33" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1ab7201daffdef13b08c5cb0695c450e33" kindref="member">balance_</ref>;<sp/></highlight></codeline>
+<codeline lineno="88" refid="d5/d48/classsgns_1_1_transfer_proof_1a10c6013e5161fa8c5248dd739fd433b7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1a10c6013e5161fa8c5248dd739fd433b7" kindref="member">amount_</ref>;<sp/><sp/></highlight></codeline>
+<codeline lineno="89"><highlight class="normal"></highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>outcome::result&lt;std::pair&lt;boost::json::array,<sp/>boost::json::array&gt;&gt;<sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1ab7fb138710a7776e51fa17e28cff720a" kindref="member">DeSerializePublicParams</ref>(</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;uint8_t&gt;<sp/>&amp;full_proof_data<sp/>);</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"></highlight></codeline>
+<codeline lineno="101" refid="d5/d48/classsgns_1_1_transfer_proof_1aa0b0c97a308cd5529feb1ef7380548ce" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::string_view<sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1aa0b0c97a308cd5529feb1ef7380548ce" kindref="member">TRANSFER_TYPE_NAME</ref><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;Transfer&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"></highlight></codeline>
+<codeline lineno="107" refid="d5/d48/classsgns_1_1_transfer_proof_1a1a26a170b79ee53cef80d05c319ac953" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1a1a26a170b79ee53cef80d05c319ac953" kindref="member">Register</ref>()</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/dbe/classsgns_1_1_i_basic_proof_1a82b0e6eb12aa407abab8cc96f4d7831c" kindref="member">RegisterDeserializer</ref>(<sp/>std::string(<sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1aa0b0c97a308cd5529feb1ef7380548ce" kindref="member">TRANSFER_TYPE_NAME</ref><sp/>),<sp/>&amp;<ref refid="d5/d48/classsgns_1_1_transfer_proof_1ab7fb138710a7776e51fa17e28cff720a" kindref="member">TransferProof::DeSerializePublicParams</ref><sp/>);</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>RELEASE_BYTECODE_CIRCUITS</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/dbe/classsgns_1_1_i_basic_proof_1a8760ff952add694d3862deaa3891e3b7" kindref="member">RegisterBytecode</ref>(<sp/>std::string(<sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1aa0b0c97a308cd5529feb1ef7380548ce" kindref="member">TRANSFER_TYPE_NAME</ref><sp/>),<sp/>std::string(<sp/><ref refid="d6/d9f/_transaction_verifier_circuit_8hpp_1a435ea97dc5707b00a55a49f68ddf5bd9" kindref="member">TransactionCircuit</ref><sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"></highlight><highlight class="preprocessor">#else</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/dbe/classsgns_1_1_i_basic_proof_1a8760ff952add694d3862deaa3891e3b7" kindref="member">RegisterBytecode</ref>(<sp/>std::string(<sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1aa0b0c97a308cd5529feb1ef7380548ce" kindref="member">TRANSFER_TYPE_NAME</ref><sp/>),<sp/>std::string(<sp/><ref refid="d6/d9f/_transaction_verifier_circuit_8hpp_1a435ea97dc5707b00a55a49f68ddf5bd9" kindref="member">TransactionCircuit</ref><sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="115"><highlight class="normal"></highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"></highlight></codeline>
+<codeline lineno="122" refid="d5/d48/classsgns_1_1_transfer_proof_1a0d20c702bbb488b07e773372c0a8112b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1a0d20c702bbb488b07e773372c0a8112b" kindref="member">registered</ref><sp/>=<sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1a1a26a170b79ee53cef80d05c319ac953" kindref="member">Register</ref>();</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="124"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"></highlight></codeline>
+<codeline lineno="126"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/proof/TransferProof.hpp"/>
+  </compounddef>
+</doxygen>

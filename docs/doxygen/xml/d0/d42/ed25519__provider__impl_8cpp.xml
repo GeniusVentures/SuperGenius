@@ -1,0 +1,274 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/d42/ed25519__provider__impl_8cpp" kind="file" language="C++">
+    <compoundname>ed25519_provider_impl.cpp</compoundname>
+    <includes refid="df/d66/ed25519__provider__impl_8hpp" local="yes">crypto/ed25519/ed25519_provider_impl.hpp</includes>
+    <incdepgraph>
+      <node id="9">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crypto/ed25519/ed25519_provider_impl.cpp</label>
+        <link refid="d0/d42/ed25519__provider__impl_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>crypto/ed25519/ed25519_provider_impl.hpp</label>
+        <link refid="df/d66/ed25519__provider__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>crypto/ed25519_provider.hpp</label>
+        <link refid="d0/d2a/ed25519__provider_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>crypto/ed25519_types.hpp</label>
+        <link refid="d4/d6e/ed25519__types_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>array</label>
+      </node>
+      <node id="12">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="10">
+        <label>cstddef</label>
+      </node>
+      <node id="8">
+        <label>ed25519/ed25519.h</label>
+      </node>
+      <node id="4">
+        <label>gsl/span</label>
+      </node>
+      <node id="16">
+        <label>iostream</label>
+      </node>
+      <node id="6">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="18">
+        <label>string</label>
+      </node>
+      <node id="14">
+        <label>string_view</label>
+      </node>
+      <node id="15">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6e/namespacesgns_1_1crypto">sgns::crypto</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d0/d42/ed25519__provider__impl_8cpp_1a5bf89a634df90735b9d17be84b5a6ebb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>OUTCOME_CPP_DEFINE_CATEGORY_3</definition>
+        <argsstring>(sgns::crypto, ED25519ProviderError, e)</argsstring>
+        <name>OUTCOME_CPP_DEFINE_CATEGORY_3</name>
+        <param>
+          <type><ref refid="df/d6e/namespacesgns_1_1crypto" kindref="compound">sgns::crypto</ref></type>
+        </param>
+        <param>
+          <type>ED25519ProviderError</type>
+        </param>
+        <param>
+          <type>e</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/ed25519/ed25519_provider_impl.cpp" line="119" column="1" bodyfile="src/crypto/ed25519/ed25519_provider_impl.cpp" bodystart="119" bodyend="130"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="df/d66/ed25519__provider__impl_8hpp" kindref="compound">crypto/ed25519/ed25519_provider_impl.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d6e/namespacesgns_1_1crypto" kindref="compound">sgns::crypto</ref><sp/>{</highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7" refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl_1a150086df749343bc334abbaf138f8188" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;ED25519Keypair&gt;<sp/><ref refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl_1a150086df749343bc334abbaf138f8188" kindref="member">ED25519ProviderImpl::generateKeypair</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"><sp/><sp/><sp/><sp/>private_key_t<sp/>private_key_low{};</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/><sp/><sp/>public_key_t<sp/>public_key_low{};</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>res<sp/>=<sp/>ed25519_create_keypair(&amp;private_key_low,<sp/>&amp;public_key_low);</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(res<sp/>==<sp/>0)<sp/>{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1ac09a470a8e82a07a225d0f6586381de9a35608bbe961bd678c434278464745798" kindref="member">ED25519ProviderError::FAILED_GENERATE_KEYPAIR</ref>;</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>priv_span<sp/>=<sp/>gsl::make_span&lt;uint8_t&gt;(private_key_low.data,</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280ae6872b1afeb949f2bbfa3d970e428637" kindref="member">constants::ed25519::PRIVKEY_SIZE</ref>);</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>pub_span<sp/>=<sp/>gsl::make_span&lt;uint8_t&gt;(public_key_low.data,</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280a896cc6da5f6479dc9ae56ac71d2af285" kindref="member">constants::ed25519::PUBKEY_SIZE</ref>);</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;private_key_high<sp/>=<sp/><ref refid="d4/dc6/classsgns_1_1base_1_1_blob_1a428f9ec629f74701ccd21d6ceb642d91" kindref="member">ED25519PrivateKey::fromSpan</ref>(priv_span);</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!private_key_high)<sp/>{</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>BOOST_UNREACHABLE_RETURN(<ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" kindref="compound">ED25519Keypair</ref>{});</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;public_key_high<sp/>=<sp/><ref refid="d4/dc6/classsgns_1_1base_1_1_blob_1a428f9ec629f74701ccd21d6ceb642d91" kindref="member">ED25519PublicKey::fromSpan</ref>(pub_span);</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!public_key_high)<sp/>{</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>BOOST_UNREACHABLE_RETURN(<ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" kindref="compound">ED25519Keypair</ref>{});</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" kindref="compound">ED25519Keypair</ref>{private_key_high.value(),<sp/>public_key_high.value()};</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="35" refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl_1a748bb0fc07f28d0fbfe2823da92ded63" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" kindref="compound">ED25519Keypair</ref><sp/><ref refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl_1a150086df749343bc334abbaf138f8188" kindref="member">ED25519ProviderImpl::generateKeypair</ref>(</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a64ab301ce6ac44216464094d4020302b" kindref="member">ED25519Seed</ref><sp/>&amp;seed)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/>private_key_t<sp/>private_key_low{};</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/>public_key_t<sp/>public_key_low{};</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/>std::copy_n(seed.begin(),<sp/><ref refid="d4/dc6/classsgns_1_1base_1_1_blob_1ad7530ca50a4572e4e44244b4d0ffd6f9" kindref="member">ED25519Seed::size</ref>(),<sp/>private_key_low.data);</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>derive<sp/>public<sp/>key</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/>ed25519_derive_public_key(&amp;private_key_low,<sp/>&amp;public_key_low);</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a1cc4b7c855b0b88eef1bfebf6c800a4c" kindref="member">ED25519PrivateKey</ref><sp/>privateKey{seed};</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>pub_span<sp/>=<sp/>gsl::make_span&lt;uint8_t&gt;(public_key_low.data,</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280a896cc6da5f6479dc9ae56ac71d2af285" kindref="member">constants::ed25519::PUBKEY_SIZE</ref>);</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;&amp;public_key_high<sp/>=<sp/><ref refid="d4/dc6/classsgns_1_1base_1_1_blob_1a428f9ec629f74701ccd21d6ceb642d91" kindref="member">ED25519PublicKey::fromSpan</ref>(pub_span);</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!public_key_high)<sp/>{</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>BOOST_UNREACHABLE_RETURN(<ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" kindref="compound">ED25519Keypair</ref>{});</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"></highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" kindref="compound">ED25519Keypair</ref>{privateKey,<sp/>public_key_high.value()};</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"></highlight></codeline>
+<codeline lineno="54" refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl_1a6ca42b19b75d1bf7f41f38de58f33036" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;ED25519Signature&gt;<sp/><ref refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl_1a6ca42b19b75d1bf7f41f38de58f33036" kindref="member">ED25519ProviderImpl::sign</ref>(</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" kindref="compound">ED25519Keypair</ref><sp/>&amp;keypair,<sp/>gsl::span&lt;uint8_t&gt;<sp/><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/>signature_t<sp/>signature_low{};</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/>public_key_t<sp/>public_key{};</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/>private_key_t<sp/>private_key{};</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>private_span<sp/>=<sp/>gsl::make_span&lt;uint8_t&gt;(</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>private_key.data,<sp/><ref refid="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280ae6872b1afeb949f2bbfa3d970e428637" kindref="member">constants::ed25519::PRIVKEY_SIZE</ref>);</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>public_span<sp/>=<sp/>gsl::make_span&lt;uint8_t&gt;(public_key.data,</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280a896cc6da5f6479dc9ae56ac71d2af285" kindref="member">constants::ed25519::PUBKEY_SIZE</ref>);</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/>std::copy_n(keypair.<ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair_1acf091e8afa5d425b1e695fd0841d9042" kindref="member">private_key</ref>.begin(),</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280ae6872b1afeb949f2bbfa3d970e428637" kindref="member">constants::ed25519::PRIVKEY_SIZE</ref>,</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>private_span.begin());</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/>std::copy_n(keypair.<ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair_1a3196dcc90db98ce155a80322007f1df7" kindref="member">public_key</ref>.begin(),</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280a896cc6da5f6479dc9ae56ac71d2af285" kindref="member">constants::ed25519::PUBKEY_SIZE</ref>,</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>public_span.begin());</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"></highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">try</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>ed25519_sign(&amp;signature_low,</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>.data(),</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>.size(),</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;public_key,</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;private_key);</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">catch</highlight><highlight class="normal"><sp/>(...)<sp/>{</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1ac09a470a8e82a07a225d0f6586381de9a404875c749b08213476f194443137658" kindref="member">ED25519ProviderError::SIGN_UNKNOWN_ERROR</ref>;</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"></highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a82ea8f150548110e620c0d92549ffb32" kindref="member">ED25519Signature</ref><sp/>signature{};</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>signature_span<sp/>=<sp/>gsl::make_span&lt;uint8_t&gt;(</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>signature_low.data,<sp/><ref refid="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280a2e58e4cfcd730e315e0145db7ea3a195" kindref="member">constants::ed25519::SIGNATURE_SIZE</ref>);</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/>std::copy_n(signature_span.begin(),</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280a2e58e4cfcd730e315e0145db7ea3a195" kindref="member">constants::ed25519::SIGNATURE_SIZE</ref>,</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>signature.begin());</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"></highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>signature;</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"></highlight></codeline>
+<codeline lineno="90" refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl_1ad7e17c486134e25c5bb558bf520ec454" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;bool&gt;<sp/><ref refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl_1ad7e17c486134e25c5bb558bf520ec454" kindref="member">ED25519ProviderImpl::verify</ref>(</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1a82ea8f150548110e620c0d92549ffb32" kindref="member">ED25519Signature</ref><sp/>&amp;signature,</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>gsl::span&lt;uint8_t&gt;<sp/><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>,</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1aabd48e8fa382c75b453fce43c158f97d" kindref="member">ED25519PublicKey</ref><sp/>&amp;public_key)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/>public_key_t<sp/>public_key_low{};</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/>signature_t<sp/>signature_low{};</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>public_span<sp/>=<sp/>gsl::span&lt;uint8_t&gt;(public_key_low.data,</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280a896cc6da5f6479dc9ae56ac71d2af285" kindref="member">constants::ed25519::PUBKEY_SIZE</ref>);</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>signature_span<sp/>=<sp/>gsl::span&lt;uint8_t&gt;(</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>signature_low.data,<sp/><ref refid="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280a2e58e4cfcd730e315e0145db7ea3a195" kindref="member">constants::ed25519::SIGNATURE_SIZE</ref>);</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"></highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/>std::copy_n(signature.data(),</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280a2e58e4cfcd730e315e0145db7ea3a195" kindref="member">constants::ed25519::SIGNATURE_SIZE</ref>,</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>signature_low.data);</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"></highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/>std::copy_n(public_key.data(),</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280a896cc6da5f6479dc9ae56ac71d2af285" kindref="member">constants::ed25519::PUBKEY_SIZE</ref>,</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>public_key_low.data);</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"></highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">try</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>res<sp/>=<sp/>ed25519_verify(</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;signature_low,<sp/><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>.data(),<sp/><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>.size(),<sp/>&amp;public_key_low);</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>res<sp/>==<sp/>ED25519_SUCCESS;</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">catch</highlight><highlight class="normal"><sp/>(...)<sp/>{</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="df/d6e/namespacesgns_1_1crypto_1ac09a470a8e82a07a225d0f6586381de9a62e240303679002c150f8bb294cbc6f6" kindref="member">ED25519ProviderError::VERIFY_UNKNOWN_ERROR</ref>;</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="117"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::crypto</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="118"><highlight class="normal"></highlight></codeline>
+<codeline lineno="119" refid="d0/d42/ed25519__provider__impl_8cpp_1a5bf89a634df90735b9d17be84b5a6ebb" refkind="member"><highlight class="normal"><ref refid="d0/d58/_account_messenger_8cpp_1a02e728041bc457b75e7166617f4c9c33" kindref="member">OUTCOME_CPP_DEFINE_CATEGORY_3</ref>(<ref refid="df/d6e/namespacesgns_1_1crypto" kindref="compound">sgns::crypto</ref>,<sp/>ED25519ProviderError,<sp/>e)<sp/>{</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="df/d6e/namespacesgns_1_1crypto_1ac09a470a8e82a07a225d0f6586381de9" kindref="member">sgns::crypto::ED25519ProviderError</ref>;</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">switch</highlight><highlight class="normal"><sp/>(e)<sp/>{</highlight></codeline>
+<codeline lineno="122"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/>ED25519ProviderError::FAILED_GENERATE_KEYPAIR:</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;failed<sp/>to<sp/>generate<sp/>keypair,<sp/>maybe<sp/>problems<sp/>with<sp/>random<sp/>source&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/>ED25519ProviderError::SIGN_UNKNOWN_ERROR:</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;failed<sp/>to<sp/>sign<sp/>message,<sp/>unknown<sp/>error<sp/>occured&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/>ED25519ProviderError::VERIFY_UNKNOWN_ERROR:</highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;faield<sp/>to<sp/>verify<sp/>message,<sp/>unknown<sp/>error<sp/>occured&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;unknown<sp/>SR25519ProviderError&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="130"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="src/crypto/ed25519/ed25519_provider_impl.cpp"/>
+  </compounddef>
+</doxygen>

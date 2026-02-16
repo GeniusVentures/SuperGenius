@@ -1,0 +1,640 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/dd2/classsgns_1_1_escrow_release_transaction" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::EscrowReleaseTransaction</compoundname>
+    <basecompoundref refid="d1/d07/classsgns_1_1_i_genius_transactions" prot="public" virt="non-virtual">sgns::IGeniusTransactions</basecompoundref>
+    <includes refid="dc/dd2/_escrow_release_transaction_8hpp" local="no">EscrowReleaseTransaction.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d5/dd2/classsgns_1_1_escrow_release_transaction_1aebff82ae7870441b829a7a4e326a03d8" prot="private" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1ab5ebc7fc374823b9575e303e417424fc" kindref="member">UTXOTxParameters</ref></type>
+        <definition>UTXOTxParameters sgns::EscrowReleaseTransaction::utxo_params_</definition>
+        <argsstring></argsstring>
+        <name>utxo_params_</name>
+        <qualifiedname>sgns::EscrowReleaseTransaction::utxo_params_</qualifiedname>
+        <briefdescription>
+<para>UTXO parameters for the transaction. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowReleaseTransaction.hpp" line="123" column="26" bodyfile="src/account/EscrowReleaseTransaction.hpp" bodystart="123" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/dd2/classsgns_1_1_escrow_release_transaction_1ab8d149aa60db0b0eccd3c099fb0e2821" prot="private" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::EscrowReleaseTransaction::release_amount_</definition>
+        <argsstring></argsstring>
+        <name>release_amount_</name>
+        <qualifiedname>sgns::EscrowReleaseTransaction::release_amount_</qualifiedname>
+        <briefdescription>
+<para>Amount to be released. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowReleaseTransaction.hpp" line="124" column="26" bodyfile="src/account/EscrowReleaseTransaction.hpp" bodystart="124" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/dd2/classsgns_1_1_escrow_release_transaction_1ac28422765b44c61b1bd1d014d5cbe99a" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::EscrowReleaseTransaction::release_address_</definition>
+        <argsstring></argsstring>
+        <name>release_address_</name>
+        <qualifiedname>sgns::EscrowReleaseTransaction::release_address_</qualifiedname>
+        <briefdescription>
+<para>Address to which funds will be released. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowReleaseTransaction.hpp" line="125" column="26" bodyfile="src/account/EscrowReleaseTransaction.hpp" bodystart="125" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/dd2/classsgns_1_1_escrow_release_transaction_1a42654f372b01951508c5dfe436f4d067" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::EscrowReleaseTransaction::escrow_source_</definition>
+        <argsstring></argsstring>
+        <name>escrow_source_</name>
+        <qualifiedname>sgns::EscrowReleaseTransaction::escrow_source_</qualifiedname>
+        <briefdescription>
+<para>Source address of the escrow. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowReleaseTransaction.hpp" line="126" column="26" bodyfile="src/account/EscrowReleaseTransaction.hpp" bodystart="126" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/dd2/classsgns_1_1_escrow_release_transaction_1a98babdecf2624ffad81fea1c070dd922" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::EscrowReleaseTransaction::original_escrow_hash_</definition>
+        <argsstring></argsstring>
+        <name>original_escrow_hash_</name>
+        <qualifiedname>sgns::EscrowReleaseTransaction::original_escrow_hash_</qualifiedname>
+        <briefdescription>
+<para>Original hash of the escrow transaction. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowReleaseTransaction.hpp" line="127" column="26" bodyfile="src/account/EscrowReleaseTransaction.hpp" bodystart="127" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="d5/dd2/classsgns_1_1_escrow_release_transaction_1aa46ebd55e0b271f0379a031dfbec019d" prot="private" static="yes" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::EscrowReleaseTransaction::registered_</definition>
+        <argsstring></argsstring>
+        <name>registered_</name>
+        <qualifiedname>sgns::EscrowReleaseTransaction::registered_</qualifiedname>
+        <initializer>= <ref refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1aedcfba24af4c0a9c1f2f0f84e5c89d1b" kindref="member">Register</ref>()</initializer>
+        <briefdescription>
+<para>Ensures deserializer registration. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowReleaseTransaction.hpp" line="140" column="28" bodyfile="src/account/EscrowReleaseTransaction.hpp" bodystart="140" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d5/dd2/classsgns_1_1_escrow_release_transaction_1aef2ecefe90be4812e2c86caf6f2987b5" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1ada6b90fc0f3dcf173e7c51910f17317f" kindref="member">EscrowReleaseTransaction</ref></type>
+        <definition>EscrowReleaseTransaction sgns::EscrowReleaseTransaction::New</definition>
+        <argsstring>(UTXOTxParameters params, uint64_t release_amount, std::string release_address, std::string escrow_source, std::string original_escrow_hash, SGTransaction::DAGStruct dag)</argsstring>
+        <name>New</name>
+        <qualifiedname>sgns::EscrowReleaseTransaction::New</qualifiedname>
+        <param>
+          <type><ref refid="d2/d2b/namespacesgns_1ab5ebc7fc374823b9575e303e417424fc" kindref="member">UTXOTxParameters</ref></type>
+          <declname>params</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>release_amount</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>release_address</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>escrow_source</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>original_escrow_hash</declname>
+        </param>
+        <param>
+          <type>SGTransaction::DAGStruct</type>
+          <declname>dag</declname>
+        </param>
+        <briefdescription>
+<para>Creates a new <ref refid="d5/dd2/classsgns_1_1_escrow_release_transaction" kindref="compound">EscrowReleaseTransaction</ref>. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>params</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>UTXO transaction parameters. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>release_amount</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Amount to be released. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>release_address</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Address where funds will be sent. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>escrow_source</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Source of the escrow. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>original_escrow_hash</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Original hash of the escrow transaction. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>dag</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>DAG structure containing transaction metadata. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>An instance of <ref refid="d5/dd2/classsgns_1_1_escrow_release_transaction" kindref="compound">EscrowReleaseTransaction</ref>. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowReleaseTransaction.hpp" line="34" column="41" bodyfile="src/account/EscrowReleaseTransaction.cpp" bodystart="30" bodyend="45"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dd2/classsgns_1_1_escrow_release_transaction_1aaab737277572ef5ba49c4cd7a97053e3" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1ada6b90fc0f3dcf173e7c51910f17317f" kindref="member">EscrowReleaseTransaction</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; EscrowReleaseTransaction &gt; sgns::EscrowReleaseTransaction::DeSerializeByteVector</definition>
+        <argsstring>(const std::vector&lt; uint8_t &gt; &amp;data)</argsstring>
+        <name>DeSerializeByteVector</name>
+        <qualifiedname>sgns::EscrowReleaseTransaction::DeSerializeByteVector</qualifiedname>
+        <param>
+          <type>const std::vector&lt; uint8_t &gt; &amp;</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+<para>Deserializes a byte vector into an <ref refid="d5/dd2/classsgns_1_1_escrow_release_transaction" kindref="compound">EscrowReleaseTransaction</ref>. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Serialized transaction data. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A shared pointer to an <ref refid="d5/dd2/classsgns_1_1_escrow_release_transaction" kindref="compound">EscrowReleaseTransaction</ref> instance. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowReleaseTransaction.hpp" line="47" column="32" bodyfile="src/account/EscrowReleaseTransaction.cpp" bodystart="76" bodyend="119"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d5/dd2/classsgns_1_1_escrow_release_transaction_1a68ed1fcf6a2634cc8c55dd9560970828" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::EscrowReleaseTransaction::~EscrowReleaseTransaction</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~EscrowReleaseTransaction</name>
+        <qualifiedname>sgns::EscrowReleaseTransaction::~EscrowReleaseTransaction</qualifiedname>
+        <briefdescription>
+<para>Destructor. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowReleaseTransaction.hpp" line="52" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dd2/classsgns_1_1_escrow_release_transaction_1a0855709b5f3ae7932cc40890244df4bd" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>std::vector&lt; uint8_t &gt; sgns::EscrowReleaseTransaction::SerializeByteVector</definition>
+        <argsstring>() override</argsstring>
+        <name>SerializeByteVector</name>
+        <qualifiedname>sgns::EscrowReleaseTransaction::SerializeByteVector</qualifiedname>
+        <reimplements refid="d1/d07/classsgns_1_1_i_genius_transactions_1a13a85bfa2911ff2327ffcc81260a9fc4">SerializeByteVector</reimplements>
+        <briefdescription>
+<para>Serializes the transaction to a byte vector. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A vector of bytes representing the serialized transaction. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowReleaseTransaction.hpp" line="59" column="21" bodyfile="src/account/EscrowReleaseTransaction.cpp" bodystart="47" bodyend="74"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dd2/classsgns_1_1_escrow_release_transaction_1aede9dc861d8d8309a2d13c767909fa9b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d2/d2b/namespacesgns_1ab5ebc7fc374823b9575e303e417424fc" kindref="member">UTXOTxParameters</ref></type>
+        <definition>UTXOTxParameters sgns::EscrowReleaseTransaction::GetUTXOParameters</definition>
+        <argsstring>() const</argsstring>
+        <name>GetUTXOParameters</name>
+        <qualifiedname>sgns::EscrowReleaseTransaction::GetUTXOParameters</qualifiedname>
+        <briefdescription>
+<para>Gets the UTXO parameters. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The UTXO parameters of the transaction. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowReleaseTransaction.hpp" line="66" column="26" bodyfile="src/account/EscrowReleaseTransaction.cpp" bodystart="121" bodyend="124"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dd2/classsgns_1_1_escrow_release_transaction_1a9f5e8e0197824519fcf2446433ee3507" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::EscrowReleaseTransaction::GetReleaseAmount</definition>
+        <argsstring>() const</argsstring>
+        <name>GetReleaseAmount</name>
+        <qualifiedname>sgns::EscrowReleaseTransaction::GetReleaseAmount</qualifiedname>
+        <briefdescription>
+<para>Gets the release amount. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The amount to be released. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowReleaseTransaction.hpp" line="73" column="18" bodyfile="src/account/EscrowReleaseTransaction.cpp" bodystart="126" bodyend="129"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dd2/classsgns_1_1_escrow_release_transaction_1a5eed452deae85157b3c2f0158ecf0a35" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::EscrowReleaseTransaction::GetReleaseAddress</definition>
+        <argsstring>() const</argsstring>
+        <name>GetReleaseAddress</name>
+        <qualifiedname>sgns::EscrowReleaseTransaction::GetReleaseAddress</qualifiedname>
+        <briefdescription>
+<para>Gets the release address. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The address where funds will be released. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowReleaseTransaction.hpp" line="80" column="21" bodyfile="src/account/EscrowReleaseTransaction.cpp" bodystart="131" bodyend="134"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dd2/classsgns_1_1_escrow_release_transaction_1abd74822b75533d36467ba7a52d145157" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::EscrowReleaseTransaction::GetEscrowSource</definition>
+        <argsstring>() const</argsstring>
+        <name>GetEscrowSource</name>
+        <qualifiedname>sgns::EscrowReleaseTransaction::GetEscrowSource</qualifiedname>
+        <briefdescription>
+<para>Gets the escrow source. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The source address of the escrow. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowReleaseTransaction.hpp" line="87" column="21" bodyfile="src/account/EscrowReleaseTransaction.cpp" bodystart="136" bodyend="139"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dd2/classsgns_1_1_escrow_release_transaction_1a50ecec0c478ad26bc228a520773f6eb7" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::EscrowReleaseTransaction::GetOriginalEscrowHash</definition>
+        <argsstring>() const</argsstring>
+        <name>GetOriginalEscrowHash</name>
+        <qualifiedname>sgns::EscrowReleaseTransaction::GetOriginalEscrowHash</qualifiedname>
+        <briefdescription>
+<para>Gets the original escrow hash. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The original hash of the escrow transaction. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowReleaseTransaction.hpp" line="94" column="21" bodyfile="src/account/EscrowReleaseTransaction.cpp" bodystart="141" bodyend="144"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dd2/classsgns_1_1_escrow_release_transaction_1a941c391cf89861a26916c618a62fafa8" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::EscrowReleaseTransaction::GetTransactionSpecificPath</definition>
+        <argsstring>() const override</argsstring>
+        <name>GetTransactionSpecificPath</name>
+        <qualifiedname>sgns::EscrowReleaseTransaction::GetTransactionSpecificPath</qualifiedname>
+        <reimplements refid="d1/d07/classsgns_1_1_i_genius_transactions_1a53e60bc5badda3cc6df0c57561e14acb">GetTransactionSpecificPath</reimplements>
+        <briefdescription>
+<para>Gets the transaction-specific path. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A string representing the transaction path. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowReleaseTransaction.hpp" line="101" column="21" bodyfile="src/account/EscrowReleaseTransaction.cpp" bodystart="146" bodyend="149"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dd2/classsgns_1_1_escrow_release_transaction_1aa4eefb3b3570603e804ac1b979e06729" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>std::unordered_set&lt; std::string &gt;</type>
+        <definition>std::unordered_set&lt; std::string &gt; sgns::EscrowReleaseTransaction::GetTopics</definition>
+        <argsstring>() const override</argsstring>
+        <name>GetTopics</name>
+        <qualifiedname>sgns::EscrowReleaseTransaction::GetTopics</qualifiedname>
+        <reimplements refid="d1/d07/classsgns_1_1_i_genius_transactions_1aea8074c464dcd1e2e15ac9196a4c9e09">GetTopics</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowReleaseTransaction.hpp" line="103" column="28" bodyfile="src/account/EscrowReleaseTransaction.cpp" bodystart="151" bodyend="156"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d5/dd2/classsgns_1_1_escrow_release_transaction_1ada6b90fc0f3dcf173e7c51910f17317f" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::EscrowReleaseTransaction::EscrowReleaseTransaction</definition>
+        <argsstring>(UTXOTxParameters params, uint64_t release_amount, std::string release_address, std::string escrow_source, std::string original_escrow_hash, SGTransaction::DAGStruct dag)</argsstring>
+        <name>EscrowReleaseTransaction</name>
+        <qualifiedname>sgns::EscrowReleaseTransaction::EscrowReleaseTransaction</qualifiedname>
+        <param>
+          <type><ref refid="d2/d2b/namespacesgns_1ab5ebc7fc374823b9575e303e417424fc" kindref="member">UTXOTxParameters</ref></type>
+          <declname>params</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>release_amount</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>release_address</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>escrow_source</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>original_escrow_hash</declname>
+        </param>
+        <param>
+          <type>SGTransaction::DAGStruct</type>
+          <declname>dag</declname>
+        </param>
+        <briefdescription>
+<para>Private constructor. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>params</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>UTXO transaction parameters. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>release_amount</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Amount to be released. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>release_address</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Address where funds will be sent. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>original_escrow_hash</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Original hash of the escrow transaction. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>escrow_source</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Source address of the escrow. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>dag</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>DAG structure containing transaction metadata. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowReleaseTransaction.hpp" line="116" column="9" bodyfile="src/account/EscrowReleaseTransaction.cpp" bodystart="15" bodyend="28"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="d5/dd2/classsgns_1_1_escrow_release_transaction_1aedcfba24af4c0a9c1f2f0f84e5c89d1b" prot="private" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>static bool sgns::EscrowReleaseTransaction::Register</definition>
+        <argsstring>()</argsstring>
+        <name>Register</name>
+        <qualifiedname>sgns::EscrowReleaseTransaction::Register</qualifiedname>
+        <briefdescription>
+<para>Registers the deserializer for the escrow release transaction. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>True if registration is successful. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/EscrowReleaseTransaction.hpp" line="134" column="21" bodyfile="src/account/EscrowReleaseTransaction.hpp" bodystart="134" bodyend="138"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Represents a transaction used to release funds from an escrow. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>This transaction holds the UTXO parameters, the amount to be released, the release address, the escrow source, and the original escrow hash. </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::EscrowReleaseTransaction</label>
+        <link refid="d5/dd2/classsgns_1_1_escrow_release_transaction"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::IGeniusTransactions</label>
+        <link refid="d1/d07/classsgns_1_1_i_genius_transactions"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="7">
+        <label>K</label>
+      </node>
+      <node id="8">
+        <label>T</label>
+      </node>
+      <node id="11">
+        <label>T1</label>
+      </node>
+      <node id="12">
+        <label>T2</label>
+      </node>
+      <node id="1">
+        <label>sgns::EscrowReleaseTransaction</label>
+        <link refid="d5/dd2/classsgns_1_1_escrow_release_transaction"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-utxo_params_</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-escrow_source_</edgelabel>
+          <edgelabel>-original_escrow_hash_</edgelabel>
+          <edgelabel>-release_address_</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::IGeniusTransactions</label>
+        <link refid="d1/d07/classsgns_1_1_i_genius_transactions"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+deserializers_map</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-transaction_type</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="10">
+        <label>std::pair&lt; T1, T2 &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>+second_type</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::pair&lt; std::vector&lt; InputUTXOInfo &gt;, std::vector&lt; OutputDestInfo &gt; &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; std::vector&lt; InputUTXOInfo &gt;, std::vector&lt; OutputDestInfo &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::string</label>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::unordered_map&lt; K, T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::unordered_map&lt; std::string, TransactionDeserializeFn &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; std::string, TransactionDeserializeFn &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/account/EscrowReleaseTransaction.hpp" line="20" column="5" bodyfile="src/account/EscrowReleaseTransaction.hpp" bodystart="21" bodyend="141"/>
+    <listofallmembers>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1acd74bf05f2e8b0123163806c90071c57" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>CheckDAGSignatureLegacy</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1ab13efbfe0444411e9d4e19725157de25" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>CheckHash</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1af5e62c217af069a76213a9b7812ab626" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>CheckSignature</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a3b9fef5951e36dc7f31128247fdbc59e" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>dag_st</name></member>
+      <member refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1aaab737277572ef5ba49c4cd7a97053e3" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>DeSerializeByteVector</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a7fc888000de3d0c758a125ca485ce4a1" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>DeSerializeDAGStruct</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a884eebd98dc345a622b165f9ce9b60e1" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>DeSerializeDAGStruct</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a82f860ff9ae3149788d7a31cffc82529" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>deserializers_map</name></member>
+      <member refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1a42654f372b01951508c5dfe436f4d067" prot="private" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>escrow_source_</name></member>
+      <member refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1ada6b90fc0f3dcf173e7c51910f17317f" prot="private" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>EscrowReleaseTransaction</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a61846445efa8aa09b7291655e981cf65" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>FillHash</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a9800478402d0ecbd38493d3b5789f9a9" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>GetDeSerializers</name></member>
+      <member refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1abd74822b75533d36467ba7a52d145157" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>GetEscrowSource</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1ab78d8716ceaf368ddd888e91ac84deb3" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>GetHash</name></member>
+      <member refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1a50ecec0c478ad26bc228a520773f6eb7" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>GetOriginalEscrowHash</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1af8cd3ed709b329dfccd519d1bf178424" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>GetProofFullPath</name></member>
+      <member refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1a5eed452deae85157b3c2f0158ecf0a35" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>GetReleaseAddress</name></member>
+      <member refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1a9f5e8e0197824519fcf2446433ee3507" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>GetReleaseAmount</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a3eaa922b6192d8342a08c7ea66cbafbc" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>GetSrcAddress</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1aead0ba189578cd0a323ba56b1367f470" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>GetTimestamp</name></member>
+      <member refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1aa4eefb3b3570603e804ac1b979e06729" prot="public" virt="virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>GetTopics</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a0f2963348939f103af3404a653a9f91b" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>GetTransactionFullPath</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a47d69eafb82280cd7de3f2c268054494" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>GetTransactionFullPath</name></member>
+      <member refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1a941c391cf89861a26916c618a62fafa8" prot="public" virt="virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>GetTransactionSpecificPath</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a836b1a1080b24f6f9fd220332b3b5b24" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>GetType</name></member>
+      <member refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1aede9dc861d8d8309a2d13c767909fa9b" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>GetUTXOParameters</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a75f5591823eb6eaaf612e6bdfb5aae94" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>IGeniusTransactions</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a771a632131b46b4a001a5fe829607b18" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>MakeSignature</name></member>
+      <member refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1aef2ecefe90be4812e2c86caf6f2987b5" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>New</name></member>
+      <member refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1a98babdecf2624ffad81fea1c070dd922" prot="private" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>original_escrow_hash_</name></member>
+      <member refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1aedcfba24af4c0a9c1f2f0f84e5c89d1b" prot="private" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>Register</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a773fcfb15ae0aebdf628f8603dc326e1" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>RegisterDeserializer</name></member>
+      <member refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1aa46ebd55e0b271f0379a031dfbec019d" prot="private" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>registered_</name></member>
+      <member refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1ac28422765b44c61b1bd1d014d5cbe99a" prot="private" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>release_address_</name></member>
+      <member refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1ab8d149aa60db0b0eccd3c099fb0e2821" prot="private" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>release_amount_</name></member>
+      <member refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1a0855709b5f3ae7932cc40890244df4bd" prot="public" virt="virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>SerializeByteVector</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a543616dd7f86c5df91fa91716aca10b2" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>SetDAGWithType</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1aeacfba89da66740c2b37b4bbf7110863" prot="private" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>transaction_type</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a320ffd126b7cd6483894894bf7147afb" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>TransactionDeserializeFn</name></member>
+      <member refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1aebff82ae7870441b829a7a4e326a03d8" prot="private" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>utxo_params_</name></member>
+      <member refid="d5/dd2/classsgns_1_1_escrow_release_transaction_1a68ed1fcf6a2634cc8c55dd9560970828" prot="public" virt="non-virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>~EscrowReleaseTransaction</name></member>
+      <member refid="d1/d07/classsgns_1_1_i_genius_transactions_1a99ca00e5f73c9ea483ebf83513bd8063" prot="public" virt="virtual"><scope>sgns::EscrowReleaseTransaction</scope><name>~IGeniusTransactions</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

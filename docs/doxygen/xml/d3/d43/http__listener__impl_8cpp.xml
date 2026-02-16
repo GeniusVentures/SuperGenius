@@ -1,0 +1,271 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d3/d43/http__listener__impl_8cpp" kind="file" language="C++">
+    <compoundname>http_listener_impl.cpp</compoundname>
+    <includes refid="d0/d4a/http__listener__impl_8hpp" local="yes">api/transport/impl/http/http_listener_impl.hpp</includes>
+    <includes local="no">boost/asio.hpp</includes>
+    <includes local="no">utility</includes>
+    <incdepgraph>
+      <node id="1">
+        <label>src/api/transport/impl/http/http_listener_impl.cpp</label>
+        <link refid="d3/d43/http__listener__impl_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>api/transport/impl/http/http_listener_impl.hpp</label>
+        <link refid="d0/d4a/http__listener__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>api/transport/impl/http/http_session.hpp</label>
+        <link refid="df/df4/http__session_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>api/transport/listener.hpp</label>
+        <link refid="df/d31/listener_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>api/transport/rpc_io_context.hpp</label>
+        <link refid="d7/db2/rpc__io__context_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>api/transport/session.hpp</label>
+        <link refid="d4/d5e/session_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>application/app_state_manager.hpp</label>
+        <link refid="df/d24/app__state__manager_8hpp"/>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>boost/asio.hpp</label>
+      </node>
+      <node id="11">
+        <label>boost/asio/buffer.hpp</label>
+      </node>
+      <node id="7">
+        <label>boost/asio/io_context.hpp</label>
+      </node>
+      <node id="4">
+        <label>boost/asio/ip/tcp.hpp</label>
+      </node>
+      <node id="12">
+        <label>boost/asio/read_until.hpp</label>
+      </node>
+      <node id="17">
+        <label>boost/asio/strand.hpp</label>
+      </node>
+      <node id="13">
+        <label>boost/asio/streambuf.hpp</label>
+      </node>
+      <node id="14">
+        <label>boost/asio/write.hpp</label>
+      </node>
+      <node id="18">
+        <label>boost/beast.hpp</label>
+      </node>
+      <node id="15">
+        <label>boost/signals2/signal.hpp</label>
+      </node>
+      <node id="19">
+        <label>chrono</label>
+      </node>
+      <node id="20">
+        <label>cstdlib</label>
+      </node>
+      <node id="25">
+        <label>functional</label>
+      </node>
+      <node id="5">
+        <label>memory</label>
+      </node>
+      <node id="22">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="23">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="26">
+        <label>stdexcept</label>
+      </node>
+      <node id="9">
+        <label>string</label>
+      </node>
+      <node id="28">
+        <label>utility</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d66/namespacesgns_1_1api">sgns::api</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d0/d4a/http__listener__impl_8hpp" kindref="compound">api/transport/impl/http/http_listener_impl.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/asio.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;utility&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d66/namespacesgns_1_1api" kindref="compound">sgns::api</ref><sp/>{</highlight></codeline>
+<codeline lineno="8" refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a90addb4fb2b0bd55467dc23e369a9e3f" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a90addb4fb2b0bd55467dc23e369a9e3f" kindref="member">HttpListenerImpl::HttpListenerImpl</ref>(</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;application::AppStateManager&gt;<sp/>&amp;app_state_manager,</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;Context&gt;<sp/>context,</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d5/d93/structsgns_1_1api_1_1_listener_1_1_configuration" kindref="compound">Configuration</ref><sp/>listener_config,</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/ddf/structsgns_1_1api_1_1_http_session_1_1_configuration" kindref="compound">SessionImpl::Configuration</ref><sp/>session_config)</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a2f5423f3aaea267e6c54389344152fd0" kindref="member">context_</ref>{<ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(context)},</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a0f642af0aa6cf22aba81c3060fe36e98" kindref="member">config_</ref>{<ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(listener_config)},</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a0663e3daf855a8a5fe23d9531a905ff6" kindref="member">session_config_</ref>{session_config}<sp/>{</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/>BOOST_ASSERT(app_state_manager);</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/>app_state_manager-&gt;takeControl(*</highlight><highlight class="keyword">this</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20" refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1afc307e9b19004373dbd39a4ab2639383" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1afc307e9b19004373dbd39a4ab2639383" kindref="member">HttpListenerImpl::prepare</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">try</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a5381f8d39c9f96dfc908096c9cfe3ec5" kindref="member">acceptor_</ref><sp/>=<sp/>std::make_unique&lt;Acceptor&gt;(*<ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a2f5423f3aaea267e6c54389344152fd0" kindref="member">context_</ref>,<sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a0f642af0aa6cf22aba81c3060fe36e98" kindref="member">config_</ref>.endpoint);</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">catch</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::wrapexcept&lt;boost::system::system_error&gt;<sp/>&amp;exception)<sp/>{</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a8c20c59267b9c2dfdf8bd39812f557b9" kindref="member">logger_</ref>-&gt;critical(</highlight><highlight class="stringliteral">&quot;Failed<sp/>to<sp/>prepare<sp/>of<sp/>listener:<sp/>can&apos;t<sp/>{}&quot;</highlight><highlight class="normal">,</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>exception.what());</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">catch</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::exception<sp/>&amp;exception)<sp/>{</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a8c20c59267b9c2dfdf8bd39812f557b9" kindref="member">logger_</ref>-&gt;critical(</highlight><highlight class="stringliteral">&quot;Exception<sp/>at<sp/>preparing<sp/>of<sp/>listener:<sp/>{}&quot;</highlight><highlight class="normal">,</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>exception.what());</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/>boost::system::error_code<sp/>ec;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a5381f8d39c9f96dfc908096c9cfe3ec5" kindref="member">acceptor_</ref>-&gt;set_option(boost::asio::socket_base::reuse_address(</highlight><highlight class="keyword">true</highlight><highlight class="normal">),<sp/>ec);</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(ec)<sp/>{</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a8c20c59267b9c2dfdf8bd39812f557b9" kindref="member">logger_</ref>-&gt;error(</highlight><highlight class="stringliteral">&quot;Failed<sp/>to<sp/>set<sp/>`reuse<sp/>address`<sp/>option<sp/>to<sp/>acceptor&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="42" refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1ae1d9e53281a0b38d2143f103d457b560" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1ae1d9e53281a0b38d2143f103d457b560" kindref="member">HttpListenerImpl::start</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/>assert(<ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a5381f8d39c9f96dfc908096c9cfe3ec5" kindref="member">acceptor_</ref>);</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!<ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a5381f8d39c9f96dfc908096c9cfe3ec5" kindref="member">acceptor_</ref>-&gt;is_open())<sp/>{</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a8c20c59267b9c2dfdf8bd39812f557b9" kindref="member">logger_</ref>-&gt;error(</highlight><highlight class="stringliteral">&quot;error:<sp/>trying<sp/>to<sp/>start<sp/>on<sp/>non<sp/>opened<sp/>acceptor&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1aba60643f18547ae6148bc93d8fe123ba" kindref="member">acceptOnce</ref>();</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"></highlight></codeline>
+<codeline lineno="54" refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1adae52440a8b3cdd330faafbdd1fb6f56" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1adae52440a8b3cdd330faafbdd1fb6f56" kindref="member">HttpListenerImpl::stop</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/>assert(<ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a5381f8d39c9f96dfc908096c9cfe3ec5" kindref="member">acceptor_</ref>);</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a5381f8d39c9f96dfc908096c9cfe3ec5" kindref="member">acceptor_</ref>-&gt;cancel();</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight></codeline>
+<codeline lineno="60" refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a1201c469d6d9d2085faf68db581db007" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a1201c469d6d9d2085faf68db581db007" kindref="member">HttpListenerImpl::setHandlerForNewSession</ref>(</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d3f/classsgns_1_1api_1_1_listener_1a46eee029b2ad2b539a0a22182adf9370" kindref="member">NewSessionHandler</ref><sp/>&amp;&amp;on_new_session)<sp/>{</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1ab25a405963a0958224ef2dbc6c32c60e" kindref="member">on_new_session_</ref><sp/>=</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::make_unique&lt;NewSessionHandler&gt;(std::move(on_new_session));</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"></highlight></codeline>
+<codeline lineno="66" refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1aba60643f18547ae6148bc93d8fe123ba" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1aba60643f18547ae6148bc93d8fe123ba" kindref="member">HttpListenerImpl::acceptOnce</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a07e55f2a3341f8db7b105690b529b874" kindref="member">new_session_</ref><sp/>=<sp/>std::make_shared&lt;SessionImpl&gt;(*<ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a2f5423f3aaea267e6c54389344152fd0" kindref="member">context_</ref>,<sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a0663e3daf855a8a5fe23d9531a905ff6" kindref="member">session_config_</ref>);</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"></highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>on_accept<sp/>=<sp/>[wp<sp/>=<sp/>weak_from_this()](boost::system::error_code<sp/>ec)<sp/>{</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>self<sp/>=<sp/>wp.lock())<sp/>{</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!<sp/>ec)<sp/>{</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(self-&gt;on_new_session_)<sp/>{</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>(*self-&gt;on_new_session_)(self-&gt;new_session_);</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>self-&gt;new_session_-&gt;start();</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"></highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(self-&gt;acceptor_-&gt;is_open())<sp/>{</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>continue<sp/>to<sp/>accept<sp/>until<sp/>acceptor<sp/>is<sp/>ready</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>self-&gt;acceptOnce();</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"></highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a5381f8d39c9f96dfc908096c9cfe3ec5" kindref="member">acceptor_</ref>-&gt;async_accept(<ref refid="db/de6/classsgns_1_1api_1_1_http_listener_impl_1a07e55f2a3341f8db7b105690b529b874" kindref="member">new_session_</ref>-&gt;socket(),<sp/>std::move(on_accept));</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"></highlight></codeline>
+<codeline lineno="88"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::api</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/api/transport/impl/http/http_listener_impl.cpp"/>
+  </compounddef>
+</doxygen>

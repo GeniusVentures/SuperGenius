@@ -1,0 +1,355 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/df1/classsgns_1_1_processing_proof" kind="class" language="C++" prot="public">
+    <compoundname>sgns::ProcessingProof</compoundname>
+    <basecompoundref refid="d9/dbe/classsgns_1_1_i_basic_proof" prot="public" virt="non-virtual">sgns::IBasicProof</basecompoundref>
+    <includes refid="d8/d51/_processing_proof_8hpp" local="no">ProcessingProof.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="df/df1/classsgns_1_1_processing_proof_1ac2b08ba7d1e487c6b489519d1b75f8fe" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::ProcessingProof::subtask_id_m</definition>
+        <argsstring></argsstring>
+        <name>subtask_id_m</name>
+        <qualifiedname>sgns::ProcessingProof::subtask_id_m</qualifiedname>
+        <briefdescription>
+<para>Subtask identifier associated with the processing proof. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/ProcessingProof.hpp" line="56" column="21" bodyfile="src/proof/ProcessingProof.hpp" bodystart="56" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="df/df1/classsgns_1_1_processing_proof_1ac990c025275622e9c6835aeff9e98037" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>std::string_view</type>
+        <definition>std::string_view sgns::ProcessingProof::PROCESSING_TYPE_NAME</definition>
+        <argsstring></argsstring>
+        <name>PROCESSING_TYPE_NAME</name>
+        <qualifiedname>sgns::ProcessingProof::PROCESSING_TYPE_NAME</qualifiedname>
+        <initializer>= &quot;Processing&quot;</initializer>
+        <briefdescription>
+<para>Constant representing the processing proof type name. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/ProcessingProof.hpp" line="83" column="43" bodyfile="src/proof/ProcessingProof.hpp" bodystart="83" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="df/df1/classsgns_1_1_processing_proof_1ae316443005309cfff066d003d52ce08a" prot="private" static="yes" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::ProcessingProof::registered</definition>
+        <argsstring></argsstring>
+        <name>registered</name>
+        <qualifiedname>sgns::ProcessingProof::registered</qualifiedname>
+        <initializer>= <ref refid="df/df1/classsgns_1_1_processing_proof_1af600161308a235f85b0a342cb7380586" kindref="member">Register</ref>()</initializer>
+        <briefdescription>
+<para>Static variable to ensure registration happens on inclusion of header file. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/ProcessingProof.hpp" line="99" column="28" bodyfile="src/proof/ProcessingProof.hpp" bodystart="99" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="df/df1/classsgns_1_1_processing_proof_1a3c19d231b65f83c44de0da53c50012be" prot="public" static="no" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::ProcessingProof::ProcessingProof</definition>
+        <argsstring>(std::string subtask_id)</argsstring>
+        <name>ProcessingProof</name>
+        <qualifiedname>sgns::ProcessingProof::ProcessingProof</qualifiedname>
+        <param>
+          <type>std::string</type>
+          <declname>subtask_id</declname>
+        </param>
+        <briefdescription>
+<para>Constructor for the <ref refid="df/df1/classsgns_1_1_processing_proof" kindref="compound">ProcessingProof</ref> class. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">subtask_id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Subtask identifier used in proof context. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/ProcessingProof.hpp" line="35" column="18" bodyfile="src/proof/ProcessingProof.hpp" bodystart="35" bodyend="39"/>
+      </memberdef>
+      <memberdef kind="function" id="df/df1/classsgns_1_1_processing_proof_1ad29d4a7d6659c9266b5471b97caeaaa7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::ProcessingProof::~ProcessingProof</definition>
+        <argsstring>()=default</argsstring>
+        <name>~ProcessingProof</name>
+        <qualifiedname>sgns::ProcessingProof::~ProcessingProof</qualifiedname>
+        <briefdescription>
+<para>Destructor for the <ref refid="df/df1/classsgns_1_1_processing_proof" kindref="compound">ProcessingProof</ref> class. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/ProcessingProof.hpp" line="44" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="df/df1/classsgns_1_1_processing_proof_1af9e2f2f9ed4307dee3315f53a076af88" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::ProcessingProof::GetProofType</definition>
+        <argsstring>() const override</argsstring>
+        <name>GetProofType</name>
+        <qualifiedname>sgns::ProcessingProof::GetProofType</qualifiedname>
+        <reimplements refid="d9/dbe/classsgns_1_1_i_basic_proof_1a9e7a9d418eb6307f74e75a0414961a5d">GetProofType</reimplements>
+        <briefdescription>
+<para>Retrieves the type of proof for processings. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A string representing the type of the proof. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/ProcessingProof.hpp" line="50" column="21" bodyfile="src/proof/ProcessingProof.hpp" bodystart="50" bodyend="53"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="df/df1/classsgns_1_1_processing_proof_1ade6021b920db97896f14e435e0cb9518" prot="private" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; std::vector&lt; uint8_t &gt; &gt;</type>
+        <definition>outcome::result&lt; std::vector&lt; uint8_t &gt; &gt; sgns::ProcessingProof::SerializeFullProof</definition>
+        <argsstring>(const SGProof::BaseProofData &amp;base_proof_data) override</argsstring>
+        <name>SerializeFullProof</name>
+        <qualifiedname>sgns::ProcessingProof::SerializeFullProof</qualifiedname>
+        <reimplements refid="d9/dbe/classsgns_1_1_i_basic_proof_1a329ea45325ebab559f33ceb169ebc912">SerializeFullProof</reimplements>
+        <param>
+          <type>const SGProof::BaseProofData &amp;</type>
+          <declname>base_proof_data</declname>
+        </param>
+        <briefdescription>
+<para>Serializes the full proof data and parameters. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">base_proof_data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The base proof data to be appended to the public parameters </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A result containing the serialized full proof in bytes. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/ProcessingProof.hpp" line="63" column="25" bodyfile="src/proof/ProcessingProof.cpp" bodystart="20" bodyend="24"/>
+      </memberdef>
+      <memberdef kind="function" id="df/df1/classsgns_1_1_processing_proof_1ad8306b903bb582592a2e481a2e7e7268" prot="private" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>std::pair&lt; boost::json::array, boost::json::array &gt;</type>
+        <definition>std::pair&lt; boost::json::array, boost::json::array &gt; sgns::ProcessingProof::GenerateJsonParameters</definition>
+        <argsstring>() override</argsstring>
+        <name>GenerateJsonParameters</name>
+        <qualifiedname>sgns::ProcessingProof::GenerateJsonParameters</qualifiedname>
+        <reimplements refid="d9/dbe/classsgns_1_1_i_basic_proof_1a8d7ebf750ea2dd2cc29af2cc71a8f636">GenerateJsonParameters</reimplements>
+        <briefdescription>
+<para>Generates the parameters in JSON array form. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A pair of public and private JSON arrays, respectively. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/ProcessingProof.hpp" line="70" column="19" bodyfile="src/proof/ProcessingProof.cpp" bodystart="26" bodyend="32"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="df/df1/classsgns_1_1_processing_proof_1af7dc6ffab191b97386d6bcd1bf92f704" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::pair&lt; boost::json::array, boost::json::array &gt; &gt;</type>
+        <definition>outcome::result&lt; std::pair&lt; boost::json::array, boost::json::array &gt; &gt; sgns::ProcessingProof::DeSerializePublicParams</definition>
+        <argsstring>(const std::vector&lt; uint8_t &gt; &amp;full_proof_data)</argsstring>
+        <name>DeSerializePublicParams</name>
+        <qualifiedname>sgns::ProcessingProof::DeSerializePublicParams</qualifiedname>
+        <param>
+          <type>const std::vector&lt; uint8_t &gt; &amp;</type>
+          <declname>full_proof_data</declname>
+        </param>
+        <briefdescription>
+<para>Deserializes public parameters from the provided proof data. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">full_proof_data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The byte vector representing the full proof data. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A result containing a pair of JSON arrays with the public parameters and empty private parameters </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/ProcessingProof.hpp" line="77" column="32" bodyfile="src/proof/ProcessingProof.cpp" bodystart="34" bodyend="41"/>
+      </memberdef>
+      <memberdef kind="function" id="df/df1/classsgns_1_1_processing_proof_1af600161308a235f85b0a342cb7380586" prot="private" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>static bool sgns::ProcessingProof::Register</definition>
+        <argsstring>()</argsstring>
+        <name>Register</name>
+        <qualifiedname>sgns::ProcessingProof::Register</qualifiedname>
+        <briefdescription>
+<para>Registers the deserializer and bytecode for the processing proof type. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A boolean indicating successful registration. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/ProcessingProof.hpp" line="89" column="28" bodyfile="src/proof/ProcessingProof.hpp" bodystart="89" bodyend="94"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A class for generating and verifying processing proofs. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><verbatim>         ProcessingProof is a derived class from IBasicProof, providing the specific
+         implementation for handling processing of funds proof generation and verification.
+</verbatim> </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::IBasicProof</label>
+        <link refid="d9/dbe/classsgns_1_1_i_basic_proof"/>
+      </node>
+      <node id="1">
+        <label>sgns::ProcessingProof</label>
+        <link refid="df/df1/classsgns_1_1_processing_proof"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="7">
+        <label>K</label>
+      </node>
+      <node id="8">
+        <label>T</label>
+      </node>
+      <node id="2">
+        <label>sgns::IBasicProof</label>
+        <link refid="d9/dbe/classsgns_1_1_i_basic_proof"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>#PublicParamDeSerializers</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>#ByteCodeMap</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-bytecode_payload_</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::ProcessingProof</label>
+        <link refid="df/df1/classsgns_1_1_processing_proof"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-subtask_id_m</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>-PROCESSING_TYPE_NAME</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="11">
+        <label>std::basic_string_view&lt; Char &gt;</label>
+      </node>
+      <node id="6">
+        <label>std::map&lt; K, T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::map&lt; std::string, PublicParamDeserializeFn &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; std::string, PublicParamDeserializeFn &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::map&lt; std::string, std::string &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+elements</edgelabel>
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; std::string, std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::string</label>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::string_view</label>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/proof/ProcessingProof.hpp" line="28" column="5" bodyfile="src/proof/ProcessingProof.hpp" bodystart="29" bodyend="100"/>
+    <listofallmembers>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a0762b077de0f8d7b2bb7a4322bf9f4c2" prot="private" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>bytecode_payload_</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1ae7a308a7ec04d4c12725e327d0d0d3a1" prot="protected" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>ByteCodeMap</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a9221a9e975019db2217f75fbe514ad3f" prot="protected" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>DeSerializeBaseProof</name></member>
+      <member refid="df/df1/classsgns_1_1_processing_proof_1af7dc6ffab191b97386d6bcd1bf92f704" prot="private" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>DeSerializePublicParams</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a11a20e7638850a75abcc2b101a801cea" prot="public" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>Error</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a4250adf5b42e430017cba0973a86c877" prot="public" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>GenerateArrayParameter</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a369e6638a2c0247e80e67af5ea2b4b55" prot="public" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>GenerateFieldParameter</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a055e700cab818d5169dee923883a38d9" prot="public" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>GenerateFullProof</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a2ded047a5404745a7328ee66df5761fa" prot="public" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>GenerateIntParameter</name></member>
+      <member refid="df/df1/classsgns_1_1_processing_proof_1ad8306b903bb582592a2e481a2e7e7268" prot="private" virt="virtual"><scope>sgns::ProcessingProof</scope><name>GenerateJsonParameters</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a53df433895b3d36b0b5c05c928017ea0" prot="private" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>GenerateProof</name></member>
+      <member refid="df/df1/classsgns_1_1_processing_proof_1af9e2f2f9ed4307dee3315f53a076af88" prot="public" virt="virtual"><scope>sgns::ProcessingProof</scope><name>GetProofType</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a6949373f697d0a371c8788f04f706443" prot="public" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>IBasicProof</name></member>
+      <member refid="df/df1/classsgns_1_1_processing_proof_1ac990c025275622e9c6835aeff9e98037" prot="private" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>PROCESSING_TYPE_NAME</name></member>
+      <member refid="df/df1/classsgns_1_1_processing_proof_1a3c19d231b65f83c44de0da53c50012be" prot="public" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>ProcessingProof</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a74208ca07598e6fd7fa8b567a7004bfb" prot="public" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>PublicParamDeserializeFn</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a077fa173ca9162040ca0cb0ca2f15574" prot="protected" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>PublicParamDeSerializers</name></member>
+      <member refid="df/df1/classsgns_1_1_processing_proof_1af600161308a235f85b0a342cb7380586" prot="private" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>Register</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a8760ff952add694d3862deaa3891e3b7" prot="protected" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>RegisterBytecode</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a82b0e6eb12aa407abab8cc96f4d7831c" prot="protected" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>RegisterDeserializer</name></member>
+      <member refid="df/df1/classsgns_1_1_processing_proof_1ae316443005309cfff066d003d52ce08a" prot="private" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>registered</name></member>
+      <member refid="df/df1/classsgns_1_1_processing_proof_1ade6021b920db97896f14e435e0cb9518" prot="private" virt="virtual"><scope>sgns::ProcessingProof</scope><name>SerializeFullProof</name></member>
+      <member refid="df/df1/classsgns_1_1_processing_proof_1ac2b08ba7d1e487c6b489519d1b75f8fe" prot="private" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>subtask_id_m</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a6624dc7082e4a2b28c6db7b3b1cad86f" prot="public" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>VerifyFullProof</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1aa3cc564f0b0ad375af044855b4265e3c" prot="public" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>VerifyFullProof</name></member>
+      <member refid="d9/dbe/classsgns_1_1_i_basic_proof_1a8bb0d3203b7e374206db6afc13ed76fe" prot="public" virt="virtual"><scope>sgns::ProcessingProof</scope><name>~IBasicProof</name></member>
+      <member refid="df/df1/classsgns_1_1_processing_proof_1ad29d4a7d6659c9266b5471b97caeaaa7" prot="public" virt="non-virtual"><scope>sgns::ProcessingProof</scope><name>~ProcessingProof</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

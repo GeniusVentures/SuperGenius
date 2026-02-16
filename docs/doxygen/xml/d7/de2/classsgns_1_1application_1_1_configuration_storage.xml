@@ -1,0 +1,266 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/de2/classsgns_1_1application_1_1_configuration_storage" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::application::ConfigurationStorage</compoundname>
+    <basecompoundref refid="d1/dbf/class_i_component" prot="public" virt="non-virtual">IComponent</basecompoundref>
+    <derivedcompoundref refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl" prot="public" virt="non-virtual">sgns::application::ConfigurationStorageImpl</derivedcompoundref>
+    <includes refid="d1/d83/configuration__storage_8hpp" local="no">configuration_storage.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a5ef0ee183f63afff0551bf71da92615e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::application::ConfigurationStorage::~ConfigurationStorage</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~ConfigurationStorage</name>
+        <qualifiedname>sgns::application::ConfigurationStorage::~ConfigurationStorage</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/configuration_storage.hpp" line="20" column="8"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/de2/classsgns_1_1application_1_1_configuration_storage_1af3604b6873822b48594eddee1b4fb025" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>const std::string &amp;</type>
+        <definition>virtual const std::string &amp; sgns::application::ConfigurationStorage::name</definition>
+        <argsstring>() const =0</argsstring>
+        <name>name</name>
+        <qualifiedname>sgns::application::ConfigurationStorage::name</qualifiedname>
+        <reimplementedby refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1ac6cf31cc7a9498d017ff0a3e5aa4da62">name</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/configuration_storage.hpp" line="22" column="35"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a1b93ab2ac4714aa4431e5abb8f93cf65" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>const std::string &amp;</type>
+        <definition>virtual const std::string &amp; sgns::application::ConfigurationStorage::id</definition>
+        <argsstring>() const =0</argsstring>
+        <name>id</name>
+        <qualifiedname>sgns::application::ConfigurationStorage::id</qualifiedname>
+        <reimplementedby refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1aa19325e59709a89106c1c461542748f0">id</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/configuration_storage.hpp" line="24" column="35"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a79a805498872dff06d3b60b79d35bfd2" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>const std::string &amp;</type>
+        <definition>virtual const std::string &amp; sgns::application::ConfigurationStorage::chainType</definition>
+        <argsstring>() const =0</argsstring>
+        <name>chainType</name>
+        <qualifiedname>sgns::application::ConfigurationStorage::chainType</qualifiedname>
+        <reimplementedby refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1af60ad0af95e7b0eb6395a6418e152421">chainType</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/configuration_storage.hpp" line="26" column="35"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/de2/classsgns_1_1application_1_1_configuration_storage_1ac967cac7384da26af08e3e01edba5bcc" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>network::PeerList</type>
+        <definition>virtual network::PeerList sgns::application::ConfigurationStorage::getBootNodes</definition>
+        <argsstring>() const =0</argsstring>
+        <name>getBootNodes</name>
+        <qualifiedname>sgns::application::ConfigurationStorage::getBootNodes</qualifiedname>
+        <reimplementedby refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a1d17cb8e6256059d116e2b1a129cd71d">getBootNodes</reimplementedby>
+        <briefdescription>
+<para>Return ids of peer nodes of the current node. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/configuration_storage.hpp" line="29" column="35"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a37b697566a7faab3fe9ba2af421ba600" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>const std::vector&lt; std::pair&lt; std::string, size_t &gt; &gt; &amp;</type>
+        <definition>virtual const std::vector&lt; std::pair&lt; std::string, size_t &gt; &gt; &amp; sgns::application::ConfigurationStorage::telemetryEndpoints</definition>
+        <argsstring>() const =0</argsstring>
+        <name>telemetryEndpoints</name>
+        <qualifiedname>sgns::application::ConfigurationStorage::telemetryEndpoints</qualifiedname>
+        <reimplementedby refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a80b9a325cfc80c45f007e6bfc1fa8b8c">telemetryEndpoints</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/configuration_storage.hpp" line="31" column="35"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a71f55d85f870cb600c54eee2c330c4f2" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>const std::string &amp;</type>
+        <definition>virtual const std::string &amp; sgns::application::ConfigurationStorage::protocolId</definition>
+        <argsstring>() const =0</argsstring>
+        <name>protocolId</name>
+        <qualifiedname>sgns::application::ConfigurationStorage::protocolId</qualifiedname>
+        <reimplementedby refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a1f855e633a60ffbc4af4ad76d373f078">protocolId</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/configuration_storage.hpp" line="33" column="35"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a07c22bf95d8f8b003de112d51bffd8eb" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>const std::map&lt; std::string, std::string &gt; &amp;</type>
+        <definition>virtual const std::map&lt; std::string, std::string &gt; &amp; sgns::application::ConfigurationStorage::properties</definition>
+        <argsstring>() const =0</argsstring>
+        <name>properties</name>
+        <qualifiedname>sgns::application::ConfigurationStorage::properties</qualifiedname>
+        <reimplementedby refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a41c603fa474417054cbe52eb62a40e11">properties</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/configuration_storage.hpp" line="35" column="32"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/de2/classsgns_1_1application_1_1_configuration_storage_1af7f60ed37720bdf9518d5b772f604e13" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>boost::optional&lt; std::reference_wrapper&lt; const std::string &gt; &gt;</type>
+        <definition>virtual boost::optional&lt; std::reference_wrapper&lt; const std::string &gt; &gt; sgns::application::ConfigurationStorage::getProperty</definition>
+        <argsstring>(const std::string &amp;property) const =0</argsstring>
+        <name>getProperty</name>
+        <qualifiedname>sgns::application::ConfigurationStorage::getProperty</qualifiedname>
+        <reimplementedby refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a30afb0b8b57225301ee7921e5fd7cfaa">getProperty</reimplementedby>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>property</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/configuration_storage.hpp" line="37" column="33"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a6f8b973c1abb9eacfed2c8363612f353" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>const std::set&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &gt; &amp;</type>
+        <definition>virtual const std::set&lt; primitives::BlockHash &gt; &amp; sgns::application::ConfigurationStorage::forkBlocks</definition>
+        <argsstring>() const =0</argsstring>
+        <name>forkBlocks</name>
+        <qualifiedname>sgns::application::ConfigurationStorage::forkBlocks</qualifiedname>
+        <reimplementedby refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a62bb63ab0cd6cc3b6e4321d1ec3a344d">forkBlocks</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/configuration_storage.hpp" line="40" column="32"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a038495de9dd6af399bd82ea4d445a30c" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>const std::set&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &gt; &amp;</type>
+        <definition>virtual const std::set&lt; primitives::BlockHash &gt; &amp; sgns::application::ConfigurationStorage::badBlocks</definition>
+        <argsstring>() const =0</argsstring>
+        <name>badBlocks</name>
+        <qualifiedname>sgns::application::ConfigurationStorage::badBlocks</qualifiedname>
+        <reimplementedby refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a0d3b414747b8486889af66c2bb90b4c5">badBlocks</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/configuration_storage.hpp" line="42" column="32"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/de2/classsgns_1_1application_1_1_configuration_storage_1ad9528d8c470a6322c98d5e354b52d6db" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>boost::optional&lt; std::string &gt;</type>
+        <definition>virtual boost::optional&lt; std::string &gt; sgns::application::ConfigurationStorage::verificationEngine</definition>
+        <argsstring>() const =0</argsstring>
+        <name>verificationEngine</name>
+        <qualifiedname>sgns::application::ConfigurationStorage::verificationEngine</qualifiedname>
+        <reimplementedby refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1a6ea1716061c88ac9e6dfdfc221ebffcf">verificationEngine</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/configuration_storage.hpp" line="44" column="33"/>
+      </memberdef>
+      <memberdef kind="function" id="d7/de2/classsgns_1_1application_1_1_configuration_storage_1aa932a25a08fc6535e8f88f32a7ca3f9f" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="db/d40/namespacesgns_1_1application_1a8d33b5b411fb63cf4d022159053924a5" kindref="member">GenesisRawConfig</ref></type>
+        <definition>virtual GenesisRawConfig sgns::application::ConfigurationStorage::getGenesis</definition>
+        <argsstring>() const =0</argsstring>
+        <name>getGenesis</name>
+        <qualifiedname>sgns::application::ConfigurationStorage::getGenesis</qualifiedname>
+        <reimplementedby refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl_1abf20ffe79e9edde0b2aadd06fcb6b7cc">getGenesis</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>genesis block of the chain </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/configuration_storage.hpp" line="49" column="34"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Stores configuration of a sgns application and provides convenience methods for accessing config parameters </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::application::ConfigurationStorage</label>
+        <link refid="d7/de2/classsgns_1_1application_1_1_configuration_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::application::ConfigurationStorageImpl</label>
+        <link refid="df/d60/classsgns_1_1application_1_1_configuration_storage_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::application::ConfigurationStorage</label>
+        <link refid="d7/de2/classsgns_1_1application_1_1_configuration_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/application/configuration_storage.hpp" line="18" column="3" bodyfile="src/application/configuration_storage.hpp" bodystart="18" bodyend="50"/>
+    <listofallmembers>
+      <member refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a038495de9dd6af399bd82ea4d445a30c" prot="public" virt="pure-virtual"><scope>sgns::application::ConfigurationStorage</scope><name>badBlocks</name></member>
+      <member refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a79a805498872dff06d3b60b79d35bfd2" prot="public" virt="pure-virtual"><scope>sgns::application::ConfigurationStorage</scope><name>chainType</name></member>
+      <member refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a6f8b973c1abb9eacfed2c8363612f353" prot="public" virt="pure-virtual"><scope>sgns::application::ConfigurationStorage</scope><name>forkBlocks</name></member>
+      <member refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1ac967cac7384da26af08e3e01edba5bcc" prot="public" virt="pure-virtual"><scope>sgns::application::ConfigurationStorage</scope><name>getBootNodes</name></member>
+      <member refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1aa932a25a08fc6535e8f88f32a7ca3f9f" prot="public" virt="pure-virtual"><scope>sgns::application::ConfigurationStorage</scope><name>getGenesis</name></member>
+      <member refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7" prot="public" virt="pure-virtual"><scope>sgns::application::ConfigurationStorage</scope><name>GetName</name></member>
+      <member refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1af7f60ed37720bdf9518d5b772f604e13" prot="public" virt="pure-virtual"><scope>sgns::application::ConfigurationStorage</scope><name>getProperty</name></member>
+      <member refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a1b93ab2ac4714aa4431e5abb8f93cf65" prot="public" virt="pure-virtual"><scope>sgns::application::ConfigurationStorage</scope><name>id</name></member>
+      <member refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1af3604b6873822b48594eddee1b4fb025" prot="public" virt="pure-virtual"><scope>sgns::application::ConfigurationStorage</scope><name>name</name></member>
+      <member refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a07c22bf95d8f8b003de112d51bffd8eb" prot="public" virt="pure-virtual"><scope>sgns::application::ConfigurationStorage</scope><name>properties</name></member>
+      <member refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a71f55d85f870cb600c54eee2c330c4f2" prot="public" virt="pure-virtual"><scope>sgns::application::ConfigurationStorage</scope><name>protocolId</name></member>
+      <member refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a37b697566a7faab3fe9ba2af421ba600" prot="public" virt="pure-virtual"><scope>sgns::application::ConfigurationStorage</scope><name>telemetryEndpoints</name></member>
+      <member refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1ad9528d8c470a6322c98d5e354b52d6db" prot="public" virt="pure-virtual"><scope>sgns::application::ConfigurationStorage</scope><name>verificationEngine</name></member>
+      <member refid="d7/de2/classsgns_1_1application_1_1_configuration_storage_1a5ef0ee183f63afff0551bf71da92615e" prot="public" virt="non-virtual"><scope>sgns::application::ConfigurationStorage</scope><name>~ConfigurationStorage</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::application::ConfigurationStorage</scope><name>~IComponent</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

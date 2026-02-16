@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_94209739ce9c565386b30eccd857b0cb" kind="dir">
+    <compoundname>src/crypto/secp256k1</compoundname>
+    <innerfile refid="d5/db3/secp256k1__provider__impl_8cpp">secp256k1_provider_impl.cpp</innerfile>
+    <innerfile refid="d3/ddb/secp256k1__provider__impl_8hpp">secp256k1_provider_impl.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/secp256k1/"/>
+  </compounddef>
+</doxygen>

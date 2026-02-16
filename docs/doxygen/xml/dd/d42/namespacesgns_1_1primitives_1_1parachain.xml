@@ -1,0 +1,213 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/d42/namespacesgns_1_1primitives_1_1parachain" kind="namespace" language="C++">
+    <compoundname>sgns::primitives::parachain</compoundname>
+    <innerclass refid="d9/d91/structsgns_1_1primitives_1_1parachain_1_1_relay" prot="public">sgns::primitives::parachain::Relay</innerclass>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="dd/d42/namespacesgns_1_1primitives_1_1parachain_1af77fd397e09e5808e4fc788ebe8c7f04" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; 32 &gt;</type>
+        <definition>using sgns::primitives::parachain::ValidatorId = base::Blob&lt;32&gt;</definition>
+        <argsstring></argsstring>
+        <name>ValidatorId</name>
+        <qualifiedname>sgns::primitives::parachain::ValidatorId</qualifiedname>
+        <briefdescription>
+<para><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1af77fd397e09e5808e4fc788ebe8c7f04" kindref="member">ValidatorId</ref> primitive is an ed25519 or sr25519 public key. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/parachain_host.hpp" line="17" column="3" bodyfile="src/primitives/parachain_host.hpp" bodystart="17" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a69a3305a38fab362c69a2665cc45b89f" prot="public" static="no">
+        <type>uint32_t</type>
+        <definition>using sgns::primitives::parachain::ParaId = uint32_t</definition>
+        <argsstring></argsstring>
+        <name>ParaId</name>
+        <qualifiedname>sgns::primitives::parachain::ParaId</qualifiedname>
+        <briefdescription>
+<para>ParachainId primitive is an uint32_t. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/parachain_host.hpp" line="22" column="3" bodyfile="src/primitives/parachain_host.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a7dd0ee24a141426092c2511b35714c97" prot="public" static="no">
+        <type><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a69a3305a38fab362c69a2665cc45b89f" kindref="member">ParaId</ref></type>
+        <definition>using sgns::primitives::parachain::Parachain = ParaId</definition>
+        <argsstring></argsstring>
+        <name>Parachain</name>
+        <qualifiedname>sgns::primitives::parachain::Parachain</qualifiedname>
+        <briefdescription>
+<para><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a7dd0ee24a141426092c2511b35714c97" kindref="member">Parachain</ref> primitive. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/parachain_host.hpp" line="33" column="3" bodyfile="src/primitives/parachain_host.hpp" bodystart="33" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a274cc9cb70d6cfa21cc152b03c7756d4" prot="public" static="no">
+        <type>boost::variant&lt; <ref refid="d9/d91/structsgns_1_1primitives_1_1parachain_1_1_relay" kindref="compound">Relay</ref>, <ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a7dd0ee24a141426092c2511b35714c97" kindref="member">Parachain</ref> &gt;</type>
+        <definition>using sgns::primitives::parachain::Chain = boost::variant&lt;Relay, Parachain&gt;</definition>
+        <argsstring></argsstring>
+        <name>Chain</name>
+        <qualifiedname>sgns::primitives::parachain::Chain</qualifiedname>
+        <briefdescription>
+<para><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a274cc9cb70d6cfa21cc152b03c7756d4" kindref="member">Chain</ref> primitive. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/parachain_host.hpp" line="38" column="3" bodyfile="src/primitives/parachain_host.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/d42/namespacesgns_1_1primitives_1_1parachain_1ae3b6d3a71137641e26ceeae872e7fb44" prot="public" static="no">
+        <type>std::vector&lt; <ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a274cc9cb70d6cfa21cc152b03c7756d4" kindref="member">Chain</ref> &gt;</type>
+        <definition>using sgns::primitives::parachain::DutyRoster = std::vector&lt;Chain&gt;</definition>
+        <argsstring></argsstring>
+        <name>DutyRoster</name>
+        <qualifiedname>sgns::primitives::parachain::DutyRoster</qualifiedname>
+        <briefdescription>
+<para><ref refid="dd/d42/namespacesgns_1_1primitives_1_1parachain_1ae3b6d3a71137641e26ceeae872e7fb44" kindref="member">DutyRoster</ref> primitive. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/parachain_host.hpp" line="43" column="3" bodyfile="src/primitives/parachain_host.hpp" bodystart="43" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a2b7b93cb3c3004a665a2b23fbefa792d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::parachain::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const Relay &amp;v)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::primitives::parachain::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d9/d91/structsgns_1_1primitives_1_1parachain_1_1_relay" kindref="compound">Relay</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>outputs <ref refid="d9/d91/structsgns_1_1primitives_1_1parachain_1_1_relay" kindref="compound">Relay</ref> instance to stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>reference to stream </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to output </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/parachain_host.hpp" line="54" column="3" bodyfile="src/primitives/parachain_host.hpp" bodystart="54" bodyend="56"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d42/namespacesgns_1_1primitives_1_1parachain_1a7f1f3be47b26d3d1c2d6c829156a5c14" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::primitives::parachain::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, Relay &amp;v)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::primitives::parachain::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="d9/d91/structsgns_1_1primitives_1_1parachain_1_1_relay" kindref="compound">Relay</ref> &amp;</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+<para>decodes <ref refid="d9/d91/structsgns_1_1primitives_1_1parachain_1_1_relay" kindref="compound">Relay</ref> instance from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>reference to stream </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>v</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to decode </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/parachain_host.hpp" line="67" column="10" bodyfile="src/primitives/parachain_host.hpp" bodystart="67" bodyend="69"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/primitives/parachain_host.hpp" line="13" column="1"/>
+  </compounddef>
+</doxygen>

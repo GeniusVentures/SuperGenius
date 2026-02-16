@@ -1,0 +1,107 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage" kind="class" language="C++" prot="public">
+    <compoundname>sgns::crdt::KeyPairFileStorage</compoundname>
+    <includes refid="d1/d13/keypair__file__storage_8hpp" local="no">keypair_file_storage.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a439c3479ec33fdd6099028f0a0d5a4d8" prot="private" static="no" mutable="no">
+        <type>boost::filesystem::path</type>
+        <definition>boost::filesystem::path sgns::crdt::KeyPairFileStorage::m_keyPath</definition>
+        <argsstring></argsstring>
+        <name>m_keyPath</name>
+        <qualifiedname>sgns::crdt::KeyPairFileStorage::m_keyPath</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/keypair_file_storage.hpp" line="19" column="29" bodyfile="src/crdt/globaldb/keypair_file_storage.hpp" bodystart="19" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a7cf8fe152b11e69dd2b670c59ebaf76d" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">sgns::base::Logger</ref></type>
+        <definition>sgns::base::Logger sgns::crdt::KeyPairFileStorage::m_logger</definition>
+        <argsstring></argsstring>
+        <name>m_logger</name>
+        <qualifiedname>sgns::crdt::KeyPairFileStorage::m_logger</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">sgns::base::createLogger</ref>(&quot;KeyPairFileStorage&quot;)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/keypair_file_storage.hpp" line="20" column="24" bodyfile="src/crdt/globaldb/keypair_file_storage.hpp" bodystart="20" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a226dd56c8c1e710b80596d22240e7a8b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crdt::KeyPairFileStorage::KeyPairFileStorage</definition>
+        <argsstring>(boost::filesystem::path keyPath)</argsstring>
+        <name>KeyPairFileStorage</name>
+        <qualifiedname>sgns::crdt::KeyPairFileStorage::KeyPairFileStorage</qualifiedname>
+        <param>
+          <type>boost::filesystem::path</type>
+          <declname>keyPath</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/keypair_file_storage.hpp" line="14" column="5" bodyfile="src/crdt/globaldb/keypair_file_storage.cpp" bodystart="26" bodyend="36"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a690661841bd08971f1f9b62bab6dd4ac" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; libp2p::crypto::KeyPair &gt;</type>
+        <definition>outcome::result&lt; libp2p::crypto::KeyPair &gt; sgns::crdt::KeyPairFileStorage::GetKeyPair</definition>
+        <argsstring>() const</argsstring>
+        <name>GetKeyPair</name>
+        <qualifiedname>sgns::crdt::KeyPairFileStorage::GetKeyPair</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/keypair_file_storage.hpp" line="16" column="22" bodyfile="src/crdt/globaldb/keypair_file_storage.cpp" bodystart="38" bodyend="145"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="4">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::crdt::KeyPairFileStorage</label>
+        <link refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-m_logger</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crdt/globaldb/keypair_file_storage.hpp" line="11" column="1" bodyfile="src/crdt/globaldb/keypair_file_storage.hpp" bodystart="12" bodyend="21"/>
+    <listofallmembers>
+      <member refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a690661841bd08971f1f9b62bab6dd4ac" prot="public" virt="non-virtual"><scope>sgns::crdt::KeyPairFileStorage</scope><name>GetKeyPair</name></member>
+      <member refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a226dd56c8c1e710b80596d22240e7a8b" prot="public" virt="non-virtual"><scope>sgns::crdt::KeyPairFileStorage</scope><name>KeyPairFileStorage</name></member>
+      <member refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a439c3479ec33fdd6099028f0a0d5a4d8" prot="private" virt="non-virtual"><scope>sgns::crdt::KeyPairFileStorage</scope><name>m_keyPath</name></member>
+      <member refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a7cf8fe152b11e69dd2b670c59ebaf76d" prot="private" virt="non-virtual"><scope>sgns::crdt::KeyPairFileStorage</scope><name>m_logger</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

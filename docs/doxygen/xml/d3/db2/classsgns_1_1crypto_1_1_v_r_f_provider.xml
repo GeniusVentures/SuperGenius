@@ -1,0 +1,209 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::crypto::VRFProvider</compoundname>
+    <basecompoundref refid="d1/dbf/class_i_component" prot="public" virt="non-virtual">IComponent</basecompoundref>
+    <derivedcompoundref refid="da/d25/classsgns_1_1crypto_1_1_v_r_f_provider_impl" prot="public" virt="non-virtual">sgns::crypto::VRFProviderImpl</derivedcompoundref>
+    <includes refid="de/dc6/vrf__provider_8hpp" local="no">vrf_provider.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider_1a53887622f4039b93b6c8d8fb43e9aa7c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crypto::VRFProvider::~VRFProvider</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~VRFProvider</name>
+        <qualifiedname>sgns::crypto::VRFProvider::~VRFProvider</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/vrf_provider.hpp" line="16" column="8"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider_1a200ad01e7591b95a61d283c49bd45fab" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair" kindref="compound">SR25519Keypair</ref></type>
+        <definition>virtual SR25519Keypair sgns::crypto::VRFProvider::generateKeypair</definition>
+        <argsstring>() const =0</argsstring>
+        <name>generateKeypair</name>
+        <qualifiedname>sgns::crypto::VRFProvider::generateKeypair</qualifiedname>
+        <reimplementedby refid="da/d25/classsgns_1_1crypto_1_1_v_r_f_provider_impl_1a1d00f65b72267ee66afccfe8be14d29e">generateKeypair</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Generates random keypair for signing the message </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/vrf_provider.hpp" line="21" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider_1ad7d3fb8f768b6c03a3ccd1ea236b23fc" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>boost::optional&lt; <ref refid="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output" kindref="compound">VRFOutput</ref> &gt;</type>
+        <definition>virtual boost::optional&lt; VRFOutput &gt; sgns::crypto::VRFProvider::sign</definition>
+        <argsstring>(const base::Buffer &amp;msg, const SR25519Keypair &amp;keypair, const VRFThreshold &amp;threshold) const =0</argsstring>
+        <name>sign</name>
+        <qualifiedname>sgns::crypto::VRFProvider::sign</qualifiedname>
+        <reimplementedby refid="da/d25/classsgns_1_1crypto_1_1_v_r_f_provider_impl_1a8a8a59f194dc798d5dfa060623c259fa">sign</reimplementedby>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>msg</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair" kindref="compound">SR25519Keypair</ref> &amp;</type>
+          <declname>keypair</declname>
+        </param>
+        <param>
+          <type>const <ref refid="df/d6e/namespacesgns_1_1crypto_1a8a4a63297ed3f41b909d3f14c068c6c4" kindref="member">VRFThreshold</ref> &amp;</type>
+          <declname>threshold</declname>
+        </param>
+        <briefdescription>
+<para>Sign message using the given keypair and threshold. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>msg</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Message bytes. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>keypair</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>SR25519 keypair. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>threshold</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>VRF threshold. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Optional VRF output if threshold satisfied. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/vrf_provider.hpp" line="30" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider_1a81af48eb41a5f2e68fdb1fb65d516816" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="d5/d9f/structsgns_1_1crypto_1_1_v_r_f_verify_output" kindref="compound">VRFVerifyOutput</ref></type>
+        <definition>virtual VRFVerifyOutput sgns::crypto::VRFProvider::verify</definition>
+        <argsstring>(const base::Buffer &amp;msg, const VRFOutput &amp;output, const SR25519PublicKey &amp;public_key, const VRFThreshold &amp;threshold) const =0</argsstring>
+        <name>verify</name>
+        <qualifiedname>sgns::crypto::VRFProvider::verify</qualifiedname>
+        <reimplementedby refid="da/d25/classsgns_1_1crypto_1_1_v_r_f_provider_impl_1afed8128585cf8abcf0de67330b385a9a">verify</reimplementedby>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>msg</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output" kindref="compound">VRFOutput</ref> &amp;</type>
+          <declname>output</declname>
+        </param>
+        <param>
+          <type>const <ref refid="df/d6e/namespacesgns_1_1crypto_1ac763dcc567072893f82795e8d546ba88" kindref="member">SR25519PublicKey</ref> &amp;</type>
+          <declname>public_key</declname>
+        </param>
+        <param>
+          <type>const <ref refid="df/d6e/namespacesgns_1_1crypto_1a8a4a63297ed3f41b909d3f14c068c6c4" kindref="member">VRFThreshold</ref> &amp;</type>
+          <declname>threshold</declname>
+        </param>
+        <briefdescription>
+<para>Verify VRF output against message and public key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>msg</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Message bytes. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>output</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>VRF output to verify. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>public_key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Public key to verify against. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>threshold</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>VRF threshold. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Verification output. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/vrf_provider.hpp" line="43" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>SR25519 based verifiable random function implementation </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::crypto::VRFProvider</label>
+        <link refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::crypto::VRFProviderImpl</label>
+        <link refid="da/d25/classsgns_1_1crypto_1_1_v_r_f_provider_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::crypto::VRFProvider</label>
+        <link refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crypto/vrf_provider.hpp" line="14" column="3" bodyfile="src/crypto/vrf_provider.hpp" bodystart="14" bodyend="47"/>
+    <listofallmembers>
+      <member refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider_1a200ad01e7591b95a61d283c49bd45fab" prot="public" virt="pure-virtual"><scope>sgns::crypto::VRFProvider</scope><name>generateKeypair</name></member>
+      <member refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7" prot="public" virt="pure-virtual"><scope>sgns::crypto::VRFProvider</scope><name>GetName</name></member>
+      <member refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider_1ad7d3fb8f768b6c03a3ccd1ea236b23fc" prot="public" virt="pure-virtual"><scope>sgns::crypto::VRFProvider</scope><name>sign</name></member>
+      <member refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider_1a81af48eb41a5f2e68fdb1fb65d516816" prot="public" virt="pure-virtual"><scope>sgns::crypto::VRFProvider</scope><name>verify</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::crypto::VRFProvider</scope><name>~IComponent</name></member>
+      <member refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider_1a53887622f4039b93b6c8d8fb43e9aa7c" prot="public" virt="non-virtual"><scope>sgns::crypto::VRFProvider</scope><name>~VRFProvider</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

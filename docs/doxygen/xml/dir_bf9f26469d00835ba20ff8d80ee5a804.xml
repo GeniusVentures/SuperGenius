@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_bf9f26469d00835ba20ff8d80ee5a804" kind="dir">
+    <compoundname>src/runtime</compoundname>
+    <innerdir refid="dir_44958365c35f3f985315b67acf2c9cfa">src/runtime/binaryen</innerdir>
+    <innerdir refid="dir_395f0e28b55cbd9fd75290c88db061f9">src/runtime/common</innerdir>
+    <innerdir refid="dir_5d90716f0df58d57cb5f51974505d33f">src/runtime/dummy</innerdir>
+    <innerfile refid="d7/d89/block__builder_8hpp">block_builder.hpp</innerfile>
+    <innerfile refid="da/d47/core_8hpp">core.hpp</innerfile>
+    <innerfile refid="da/d13/core__factory_8hpp">core_factory.hpp</innerfile>
+    <innerfile refid="d7/d22/finality__api_8hpp">finality_api.hpp</innerfile>
+    <innerfile refid="da/d24/metadata_8hpp">metadata.hpp</innerfile>
+    <innerfile refid="d2/d48/offchain__worker_8hpp">offchain_worker.hpp</innerfile>
+    <innerfile refid="d9/d3c/runtime_2parachain__host_8hpp">parachain_host.hpp</innerfile>
+    <innerfile refid="d8/dec/production__api_8hpp">production_api.hpp</innerfile>
+    <innerfile refid="d9/dcb/tagged__transaction__queue_8hpp">tagged_transaction_queue.hpp</innerfile>
+    <innerfile refid="df/dcd/trie__storage__provider_8hpp">trie_storage_provider.hpp</innerfile>
+    <innerfile refid="d1/d64/runtime_2types_8hpp">types.hpp</innerfile>
+    <innerfile refid="d4/dc2/wasm__memory_8hpp">wasm_memory.hpp</innerfile>
+    <innerfile refid="d5/d32/wasm__provider_8hpp">wasm_provider.hpp</innerfile>
+    <innerfile refid="d4/d08/wasm__result_8hpp">wasm_result.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/runtime/"/>
+  </compounddef>
+</doxygen>

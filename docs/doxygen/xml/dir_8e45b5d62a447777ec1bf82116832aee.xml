@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_8e45b5d62a447777ec1bf82116832aee" kind="dir">
+    <compoundname>src/proof/circuits</compoundname>
+    <innerfile refid="dc/d87/_recursive_transaction_circuit_8hpp">RecursiveTransactionCircuit.hpp</innerfile>
+    <innerfile refid="d6/d9f/_transaction_verifier_circuit_8hpp">TransactionVerifierCircuit.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/proof/circuits/"/>
+  </compounddef>
+</doxygen>

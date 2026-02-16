@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_d3006fc2371888d9e891ce71a5a277b2" kind="dir">
+    <compoundname>src/api/transport/impl/http</compoundname>
+    <innerfile refid="d3/d43/http__listener__impl_8cpp">http_listener_impl.cpp</innerfile>
+    <innerfile refid="d0/d4a/http__listener__impl_8hpp">http_listener_impl.hpp</innerfile>
+    <innerfile refid="d7/db4/http__session_8cpp">http_session.cpp</innerfile>
+    <innerfile refid="df/df4/http__session_8hpp">http_session.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/api/transport/impl/http/"/>
+  </compounddef>
+</doxygen>

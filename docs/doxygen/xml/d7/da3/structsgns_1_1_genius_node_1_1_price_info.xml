@@ -1,0 +1,51 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/da3/structsgns_1_1_genius_node_1_1_price_info" kind="struct" language="C++" prot="private">
+    <compoundname>sgns::GeniusNode::PriceInfo</compoundname>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d7/da3/structsgns_1_1_genius_node_1_1_price_info_1a2397f2fd64acb62d95ce226eecf00775" prot="public" static="no" mutable="no">
+        <type>double</type>
+        <definition>double sgns::GeniusNode::PriceInfo::price</definition>
+        <argsstring></argsstring>
+        <name>price</name>
+        <qualifiedname>sgns::GeniusNode::PriceInfo::price</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusNode.hpp" line="323" column="64" bodyfile="src/account/GeniusNode.hpp" bodystart="323" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d7/da3/structsgns_1_1_genius_node_1_1_price_info_1a264e97a037317ea3bb0781d776a492df" prot="public" static="no" mutable="no">
+        <type>std::chrono::time_point&lt; std::chrono::system_clock &gt;</type>
+        <definition>std::chrono::time_point&lt;std::chrono::system_clock&gt; sgns::GeniusNode::PriceInfo::lastUpdate</definition>
+        <argsstring></argsstring>
+        <name>lastUpdate</name>
+        <qualifiedname>sgns::GeniusNode::PriceInfo::lastUpdate</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/GeniusNode.hpp" line="324" column="37" bodyfile="src/account/GeniusNode.hpp" bodystart="324" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::GeniusNode::PriceInfo</label>
+        <link refid="d7/da3/structsgns_1_1_genius_node_1_1_price_info"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/account/GeniusNode.hpp" line="321" column="9" bodyfile="src/account/GeniusNode.hpp" bodystart="322" bodyend="325"/>
+    <listofallmembers>
+      <member refid="d7/da3/structsgns_1_1_genius_node_1_1_price_info_1a264e97a037317ea3bb0781d776a492df" prot="public" virt="non-virtual"><scope>sgns::GeniusNode::PriceInfo</scope><name>lastUpdate</name></member>
+      <member refid="d7/da3/structsgns_1_1_genius_node_1_1_price_info_1a2397f2fd64acb62d95ce226eecf00775" prot="public" virt="non-virtual"><scope>sgns::GeniusNode::PriceInfo</scope><name>price</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

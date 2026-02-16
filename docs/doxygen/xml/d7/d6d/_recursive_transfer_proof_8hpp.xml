@@ -1,0 +1,407 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/d6d/_recursive_transfer_proof_8hpp" kind="file" language="C++">
+    <compoundname>RecursiveTransferProof.hpp</compoundname>
+    <includes local="no">string</includes>
+    <includes local="no">cstdint</includes>
+    <includes local="no">array</includes>
+    <includes local="no">utility</includes>
+    <includes local="no">boost/json.hpp</includes>
+    <includes local="no">string_view</includes>
+    <includes refid="d9/d35/_genius_prover_8hpp" local="yes">GeniusProver.hpp</includes>
+    <includes refid="de/d4a/_i_basic_proof_8hpp" local="yes">IBasicProof.hpp</includes>
+    <includes refid="d5/d20/_transfer_proof_8hpp" local="yes">TransferProof.hpp</includes>
+    <includes refid="dc/d87/_recursive_transaction_circuit_8hpp" local="yes">circuits/RecursiveTransactionCircuit.hpp</includes>
+    <includedby refid="df/db6/_recursive_transfer_proof_8cpp" local="yes">src/proof/RecursiveTransferProof.cpp</includedby>
+    <incdepgraph>
+      <node id="27">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>GeniusAssigner.hpp</label>
+        <link refid="d1/d19/_genius_assigner_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>GeniusProver.hpp</label>
+        <link refid="d9/d35/_genius_prover_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+      <node id="41">
+        <label>IBasicProof.hpp</label>
+        <link refid="de/d4a/_i_basic_proof_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="44" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/proof/RecursiveTransferProof.hpp</label>
+        <link refid="d7/d6d/_recursive_transfer_proof_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+      </node>
+      <node id="45">
+        <label>TransferProof.hpp</label>
+        <link refid="d5/d20/_transfer_proof_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="46" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="47" relation="include">
+        </childnode>
+      </node>
+      <node id="48">
+        <label>circuits/RecursiveTransactionCircuit.hpp</label>
+        <link refid="dc/d87/_recursive_transaction_circuit_8hpp"/>
+      </node>
+      <node id="47">
+        <label>circuits/TransactionVerifierCircuit.hpp</label>
+        <link refid="d6/d9f/_transaction_verifier_circuit_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>array</label>
+      </node>
+      <node id="9">
+        <label>boost/filesystem.hpp</label>
+      </node>
+      <node id="10">
+        <label>boost/filesystem/path.hpp</label>
+      </node>
+      <node id="6">
+        <label>boost/json.hpp</label>
+      </node>
+      <node id="11">
+        <label>boost/log/trivial.hpp</label>
+      </node>
+      <node id="12">
+        <label>boost/test/unit_test.hpp</label>
+      </node>
+      <node id="3">
+        <label>cstdint</label>
+      </node>
+      <node id="14">
+        <label>cstdio</label>
+      </node>
+      <node id="28">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="43">
+        <label>memory</label>
+      </node>
+      <node id="25">
+        <label>nil/blueprint/assigner.hpp</label>
+      </node>
+      <node id="26">
+        <label>nil/blueprint/utils/satisfiability_check.hpp</label>
+      </node>
+      <node id="24">
+        <label>nil/crypto3/algebra/curves/bls12.hpp</label>
+      </node>
+      <node id="22">
+        <label>nil/crypto3/algebra/curves/pallas.hpp</label>
+      </node>
+      <node id="23">
+        <label>nil/crypto3/algebra/fields/arithmetic_params/pallas.hpp</label>
+      </node>
+      <node id="40">
+        <label>nil/crypto3/hash/keccak.hpp</label>
+      </node>
+      <node id="39">
+        <label>nil/crypto3/marshalling/zk/types/commitments/lpc.hpp</label>
+      </node>
+      <node id="29">
+        <label>nil/crypto3/marshalling/zk/types/placeholder/proof.hpp</label>
+      </node>
+      <node id="21">
+        <label>nil/crypto3/marshalling/zk/types/plonk/assignment_table.hpp</label>
+      </node>
+      <node id="20">
+        <label>nil/crypto3/marshalling/zk/types/plonk/constraint_system.hpp</label>
+      </node>
+      <node id="30">
+        <label>nil/crypto3/math/algorithms/calculate_domain_set.hpp</label>
+      </node>
+      <node id="31">
+        <label>nil/crypto3/multiprecision/cpp_int.hpp</label>
+      </node>
+      <node id="19">
+        <label>nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp</label>
+      </node>
+      <node id="18">
+        <label>nil/crypto3/zk/snark/arithmetization/plonk/params.hpp</label>
+      </node>
+      <node id="32">
+        <label>nil/crypto3/zk/snark/systems/plonk/placeholder/detail/placeholder_policy.hpp</label>
+      </node>
+      <node id="33">
+        <label>nil/crypto3/zk/snark/systems/plonk/placeholder/params.hpp</label>
+      </node>
+      <node id="34">
+        <label>nil/crypto3/zk/snark/systems/plonk/placeholder/preprocessor.hpp</label>
+      </node>
+      <node id="35">
+        <label>nil/crypto3/zk/snark/systems/plonk/placeholder/profiling.hpp</label>
+      </node>
+      <node id="36">
+        <label>nil/crypto3/zk/snark/systems/plonk/placeholder/proof.hpp</label>
+      </node>
+      <node id="37">
+        <label>nil/crypto3/zk/snark/systems/plonk/placeholder/prover.hpp</label>
+      </node>
+      <node id="38">
+        <label>nil/crypto3/zk/snark/systems/plonk/placeholder/verifier.hpp</label>
+      </node>
+      <node id="17">
+        <label>nil/marshalling/endianness.hpp</label>
+      </node>
+      <node id="16">
+        <label>nil/marshalling/field_type.hpp</label>
+      </node>
+      <node id="15">
+        <label>nil/marshalling/status_type.hpp</label>
+      </node>
+      <node id="46">
+        <label>optional</label>
+      </node>
+      <node id="44">
+        <label>proof/proto/SGProof.pb.h</label>
+      </node>
+      <node id="2">
+        <label>string</label>
+      </node>
+      <node id="7">
+        <label>string_view</label>
+      </node>
+      <node id="5">
+        <label>utility</label>
+      </node>
+      <node id="42">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/proof/RecursiveTransferProof.cpp</label>
+        <link refid="df/db6/_recursive_transfer_proof_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/proof/RecursiveTransferProof.hpp</label>
+        <link refid="d7/d6d/_recursive_transfer_proof_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d3/d2f/classsgns_1_1_recursive_transfer_proof" prot="public">sgns::RecursiveTransferProof</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <briefdescription>
+<para>Header file of the RecursiveTransferProof. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="date"><para>2025-01-29 </para>
+</simplesect>
+<simplesect kind="author"><para>Henrique A. Klein (<ulink url="mailto:hklein@gnus.ai">hklein@gnus.ai</ulink>) </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>_RECURSIVE_TRANSFER_PROOF_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>_RECURSIVE_TRANSFER_PROOF_HPP_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstdint&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;array&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;utility&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/json.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string_view&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d9/d35/_genius_prover_8hpp" kindref="compound">GeniusProver.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="de/d4a/_i_basic_proof_8hpp" kindref="compound">IBasicProof.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/d20/_transfer_proof_8hpp" kindref="compound">TransferProof.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dc/d87/_recursive_transaction_circuit_8hpp" kindref="compound">circuits/RecursiveTransactionCircuit.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="24"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="32" refid="d3/d2f/classsgns_1_1_recursive_transfer_proof" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1ab80d646594f5eec039892bfa350b3b9e" kindref="member">RecursiveTransferProof</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="d5/d48/classsgns_1_1_transfer_proof_1a171beea552c44bdc1b7aee8fb4b3f009" kindref="member">TransferProof</ref></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">explicit</highlight><highlight class="normal"><sp/><ref refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1ab80d646594f5eec039892bfa350b3b9e" kindref="member">RecursiveTransferProof</ref>(<sp/>uint64_t<sp/>balance,<sp/>uint64_t<sp/>amount,<sp/><ref refid="da/da5/classsgns_1_1_genius_prover_1aff0bce9e1e752f92570db61f8c10107e" kindref="member">GeniusProver::ProofSnarkType</ref><sp/>snark<sp/>);</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46" refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1a9f211f5b49cc35a6fb11a5d6b6d7d6af" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1a9f211f5b49cc35a6fb11a5d6b6d7d6af" kindref="member">~RecursiveTransferProof</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="52" refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1a50f6d665fb26dd277d3c2cddbc89fd2c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1a50f6d665fb26dd277d3c2cddbc89fd2c" kindref="member">GetProofType</ref>()</highlight><highlight class="keyword"><sp/>const<sp/>override</highlight></codeline>
+<codeline lineno="53"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::string(<sp/><ref refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1ad406c2236bf62aa177da1bcdcb9fd371" kindref="member">RECURSIVE_TRANSFER_TYPE_NAME</ref><sp/>);</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">protected</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="63" refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1a0ed0aedf793950219ac3c62abcb834ed" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;std::vector&lt;uint8_t&gt;&gt;<sp/><ref refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1a0ed0aedf793950219ac3c62abcb834ed" kindref="member">SerializeFullProof</ref>(</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>SGProof::BaseProofData<sp/>&amp;base_proof_data<sp/>)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"></highlight></codeline>
+<codeline lineno="70" refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1a77c4881d7e778f8698dc5525a9bce85b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::pair&lt;boost::json::array,<sp/>boost::json::array&gt;<sp/><ref refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1a77c4881d7e778f8698dc5525a9bce85b" kindref="member">GenerateJsonParameters</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"></highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"></highlight></codeline>
+<codeline lineno="79" refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1a3771b8bc4a071ddc12a63761b4cd0cc1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>outcome::result&lt;std::pair&lt;boost::json::array,<sp/>boost::json::array&gt;&gt;<sp/><ref refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1a3771b8bc4a071ddc12a63761b4cd0cc1" kindref="member">DeSerializePublicParams</ref>(</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;uint8_t&gt;<sp/>&amp;full_proof_data<sp/>);</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"></highlight></codeline>
+<codeline lineno="85" refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1ad406c2236bf62aa177da1bcdcb9fd371" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::string_view<sp/><ref refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1ad406c2236bf62aa177da1bcdcb9fd371" kindref="member">RECURSIVE_TRANSFER_TYPE_NAME</ref><sp/>=<sp/></highlight><highlight class="stringliteral">&quot;RecursiveTransfer&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"></highlight></codeline>
+<codeline lineno="91" refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1af7094306562f1c6abe00b4c65a2b7bbb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1af7094306562f1c6abe00b4c65a2b7bbb" kindref="member">Register</ref>()</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/dbe/classsgns_1_1_i_basic_proof_1a82b0e6eb12aa407abab8cc96f4d7831c" kindref="member">RegisterDeserializer</ref>(<sp/>std::string(<sp/><ref refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1ad406c2236bf62aa177da1bcdcb9fd371" kindref="member">RECURSIVE_TRANSFER_TYPE_NAME</ref><sp/>),<sp/>&amp;<ref refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1a3771b8bc4a071ddc12a63761b4cd0cc1" kindref="member">RecursiveTransferProof::DeSerializePublicParams</ref><sp/>);</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>RELEASE_BYTECODE_CIRCUITS</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/dbe/classsgns_1_1_i_basic_proof_1a8760ff952add694d3862deaa3891e3b7" kindref="member">RegisterBytecode</ref>(<sp/>std::string(<sp/><ref refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1ad406c2236bf62aa177da1bcdcb9fd371" kindref="member">RECURSIVE_TRANSFER_TYPE_NAME</ref><sp/>),<sp/>std::string(<sp/><ref refid="dc/d87/_recursive_transaction_circuit_8hpp_1ab731b444a2d8a6b7aac3e98aeb48148d" kindref="member">RecursiveTransactionCircuit</ref><sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"></highlight><highlight class="preprocessor">#else</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d9/dbe/classsgns_1_1_i_basic_proof_1a8760ff952add694d3862deaa3891e3b7" kindref="member">RegisterBytecode</ref>(<sp/>std::string(<sp/><ref refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1ad406c2236bf62aa177da1bcdcb9fd371" kindref="member">RECURSIVE_TRANSFER_TYPE_NAME</ref><sp/>),<sp/>std::string(<sp/><ref refid="dc/d87/_recursive_transaction_circuit_8hpp_1ab731b444a2d8a6b7aac3e98aeb48148d" kindref="member">RecursiveTransactionCircuit</ref><sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="99"><highlight class="normal"></highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"></highlight></codeline>
+<codeline lineno="106" refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1a2c6098719c0c6514d09f7f83febb5908" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1a2c6098719c0c6514d09f7f83febb5908" kindref="member">registered</ref><sp/>=<sp/><ref refid="d3/d2f/classsgns_1_1_recursive_transfer_proof_1af7094306562f1c6abe00b4c65a2b7bbb" kindref="member">Register</ref>();</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="108"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"></highlight></codeline>
+<codeline lineno="110"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/proof/RecursiveTransferProof.hpp"/>
+  </compounddef>
+</doxygen>

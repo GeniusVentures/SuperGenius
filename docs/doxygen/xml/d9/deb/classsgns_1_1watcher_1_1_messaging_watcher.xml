@@ -1,0 +1,322 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher" kind="class" language="C++" prot="public">
+    <compoundname>sgns::watcher::MessagingWatcher</compoundname>
+    <derivedcompoundref refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher" prot="public" virt="non-virtual">sgns::evmwatcher::EvmMessagingWatcher</derivedcompoundref>
+    <includes refid="d9/da3/messaging__watcher_8hpp" local="no">messaging_watcher.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a4ffcee76e2e73d98589885408cfba57e" prot="public" static="no">
+        <type>std::function&lt; void(const std::string &amp;)&gt;</type>
+        <definition>using sgns::watcher::MessagingWatcher::MessageCallback = std::function&lt;void(const std::string &amp;)&gt;</definition>
+        <argsstring></argsstring>
+        <name>MessageCallback</name>
+        <qualifiedname>sgns::watcher::MessagingWatcher::MessageCallback</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/messaging_watcher.hpp" line="14" column="9" bodyfile="src/watcher/messaging_watcher.hpp" bodystart="14" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="protected-attrib">
+      <memberdef kind="variable" id="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a4692d3293117111d3256053e9c5be37a" prot="protected" static="no" mutable="no">
+        <type><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a4ffcee76e2e73d98589885408cfba57e" kindref="member">MessageCallback</ref></type>
+        <definition>MessageCallback sgns::watcher::MessagingWatcher::messageCallback</definition>
+        <argsstring></argsstring>
+        <name>messageCallback</name>
+        <qualifiedname>sgns::watcher::MessagingWatcher::messageCallback</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/messaging_watcher.hpp" line="30" column="25" bodyfile="src/watcher/messaging_watcher.hpp" bodystart="30" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a564631bff21e68e44020f76834203495" prot="protected" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::watcher::MessagingWatcher::running</definition>
+        <argsstring></argsstring>
+        <name>running</name>
+        <qualifiedname>sgns::watcher::MessagingWatcher::running</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/messaging_watcher.hpp" line="34" column="14" bodyfile="src/watcher/messaging_watcher.hpp" bodystart="34" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a43dac8ac3576d41a2cad59c5de0cce72" prot="protected" static="no" mutable="yes">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::watcher::MessagingWatcher::running_mutex</definition>
+        <argsstring></argsstring>
+        <name>running_mutex</name>
+        <qualifiedname>sgns::watcher::MessagingWatcher::running_mutex</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/messaging_watcher.hpp" line="35" column="28" bodyfile="src/watcher/messaging_watcher.hpp" bodystart="35" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a3b89299a5d50f7539fcb3799570baca0" prot="protected" static="no" mutable="no">
+        <type>boost::thread</type>
+        <definition>boost::thread sgns::watcher::MessagingWatcher::watcherThread</definition>
+        <argsstring></argsstring>
+        <name>watcherThread</name>
+        <qualifiedname>sgns::watcher::MessagingWatcher::watcherThread</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/messaging_watcher.hpp" line="36" column="23" bodyfile="src/watcher/messaging_watcher.hpp" bodystart="36" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a64d7fea1ee2928106b8fa3e9d765b8fb" prot="private" static="yes" mutable="no">
+        <type>std::vector&lt; std::shared_ptr&lt; <ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a3dafcb831d68544a3d72399d7237157b" kindref="member">MessagingWatcher</ref> &gt; &gt;</type>
+        <definition>std::vector&lt; std::shared_ptr&lt; MessagingWatcher &gt; &gt; sgns::watcher::MessagingWatcher::m_watchers</definition>
+        <argsstring></argsstring>
+        <name>m_watchers</name>
+        <qualifiedname>sgns::watcher::MessagingWatcher::m_watchers</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/messaging_watcher.hpp" line="43" column="28" bodyfile="src/watcher/messaging_watcher.hpp" bodystart="43" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a8bccba48716d42227f29c3af51ceb96d" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::watcher::MessagingWatcher::~MessagingWatcher</definition>
+        <argsstring>()=default</argsstring>
+        <name>~MessagingWatcher</name>
+        <qualifiedname>sgns::watcher::MessagingWatcher::~MessagingWatcher</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/messaging_watcher.hpp" line="16" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1ad3eebc535cfe454e6f04af04be24574a" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::watcher::MessagingWatcher::startWatching</definition>
+        <argsstring>()</argsstring>
+        <name>startWatching</name>
+        <qualifiedname>sgns::watcher::MessagingWatcher::startWatching</qualifiedname>
+        <reimplementedby refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a38b79d823bc72434a986b583c2d62afe">startWatching</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/messaging_watcher.hpp" line="18" column="22" bodyfile="src/watcher/messaging_watcher.cpp" bodystart="14" bodyend="20"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a070742650711d2e74dd97e7746a9c0c8" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::watcher::MessagingWatcher::stopWatching</definition>
+        <argsstring>()</argsstring>
+        <name>stopWatching</name>
+        <qualifiedname>sgns::watcher::MessagingWatcher::stopWatching</qualifiedname>
+        <reimplementedby refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher_1a4ccd2db5ccbf8ed35791b147a90fa5d4">stopWatching</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/messaging_watcher.hpp" line="19" column="22" bodyfile="src/watcher/messaging_watcher.cpp" bodystart="22" bodyend="31"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1acae0398c853569da510bcda71aa5c36d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::watcher::MessagingWatcher::isRunning</definition>
+        <argsstring>() const</argsstring>
+        <name>isRunning</name>
+        <qualifiedname>sgns::watcher::MessagingWatcher::isRunning</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/messaging_watcher.hpp" line="21" column="14" bodyfile="src/watcher/messaging_watcher.cpp" bodystart="57" bodyend="60"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1af3c7797a7b1847a58ed15d2223a982a8" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::watcher::MessagingWatcher::addWatcher</definition>
+        <argsstring>(const std::shared_ptr&lt; MessagingWatcher &gt; &amp;newWatcher)</argsstring>
+        <name>addWatcher</name>
+        <qualifiedname>sgns::watcher::MessagingWatcher::addWatcher</qualifiedname>
+        <param>
+          <type>const std::shared_ptr&lt; <ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a3dafcb831d68544a3d72399d7237157b" kindref="member">MessagingWatcher</ref> &gt; &amp;</type>
+          <declname>newWatcher</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/messaging_watcher.hpp" line="24" column="21" bodyfile="src/watcher/messaging_watcher.cpp" bodystart="33" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1aa37dcd91910d193f8f09d89b09f7eb5e" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::watcher::MessagingWatcher::startAll</definition>
+        <argsstring>()</argsstring>
+        <name>startAll</name>
+        <qualifiedname>sgns::watcher::MessagingWatcher::startAll</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/messaging_watcher.hpp" line="25" column="21" bodyfile="src/watcher/messaging_watcher.cpp" bodystart="37" bodyend="41"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1ad436e4c641413ca69b2d2fecec453bee" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::watcher::MessagingWatcher::stopAll</definition>
+        <argsstring>()</argsstring>
+        <name>stopAll</name>
+        <qualifiedname>sgns::watcher::MessagingWatcher::stopAll</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/messaging_watcher.hpp" line="26" column="21" bodyfile="src/watcher/messaging_watcher.cpp" bodystart="43" bodyend="47"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="protected-func">
+      <memberdef kind="function" id="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a3dafcb831d68544a3d72399d7237157b" prot="protected" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::watcher::MessagingWatcher::MessagingWatcher</definition>
+        <argsstring>(MessageCallback callback)</argsstring>
+        <name>MessagingWatcher</name>
+        <qualifiedname>sgns::watcher::MessagingWatcher::MessagingWatcher</qualifiedname>
+        <param>
+          <type><ref refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a4ffcee76e2e73d98589885408cfba57e" kindref="member">MessageCallback</ref></type>
+          <declname>callback</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/messaging_watcher.hpp" line="32" column="18" bodyfile="src/watcher/messaging_watcher.cpp" bodystart="10" bodyend="12"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a77d51f3f83c65ec24680094471c68bf9" prot="protected" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::watcher::MessagingWatcher::watch</definition>
+        <argsstring>()</argsstring>
+        <name>watch</name>
+        <qualifiedname>sgns::watcher::MessagingWatcher::watch</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/watcher/messaging_watcher.hpp" line="39" column="22" bodyfile="src/watcher/messaging_watcher.cpp" bodystart="49" bodyend="55"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::evmwatcher::EvmMessagingWatcher</label>
+        <link refid="d6/d4c/classsgns_1_1evmwatcher_1_1_evm_messaging_watcher"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::watcher::MessagingWatcher</label>
+        <link refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="6">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::watcher::MessagingWatcher</label>
+        <link refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>#running_mutex</edgelabel>
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-m_watchers</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::mutex</label>
+      </node>
+      <node id="5">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::shared_ptr&lt; sgns::watcher::MessagingWatcher &gt;</label>
+        <childnode refid="1" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; sgns::watcher::MessagingWatcher &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::vector&lt; std::shared_ptr&lt; sgns::watcher::MessagingWatcher &gt; &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; std::shared_ptr&lt; sgns::watcher::MessagingWatcher &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/watcher/messaging_watcher.hpp" line="11" column="5" bodyfile="src/watcher/messaging_watcher.hpp" bodystart="12" bodyend="44"/>
+    <listofallmembers>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1af3c7797a7b1847a58ed15d2223a982a8" prot="public" virt="non-virtual"><scope>sgns::watcher::MessagingWatcher</scope><name>addWatcher</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1acae0398c853569da510bcda71aa5c36d" prot="public" virt="non-virtual"><scope>sgns::watcher::MessagingWatcher</scope><name>isRunning</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a64d7fea1ee2928106b8fa3e9d765b8fb" prot="private" virt="non-virtual"><scope>sgns::watcher::MessagingWatcher</scope><name>m_watchers</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a4ffcee76e2e73d98589885408cfba57e" prot="public" virt="non-virtual"><scope>sgns::watcher::MessagingWatcher</scope><name>MessageCallback</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a4692d3293117111d3256053e9c5be37a" prot="protected" virt="non-virtual"><scope>sgns::watcher::MessagingWatcher</scope><name>messageCallback</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a3dafcb831d68544a3d72399d7237157b" prot="protected" virt="non-virtual"><scope>sgns::watcher::MessagingWatcher</scope><name>MessagingWatcher</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a564631bff21e68e44020f76834203495" prot="protected" virt="non-virtual"><scope>sgns::watcher::MessagingWatcher</scope><name>running</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a43dac8ac3576d41a2cad59c5de0cce72" prot="protected" virt="non-virtual"><scope>sgns::watcher::MessagingWatcher</scope><name>running_mutex</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1aa37dcd91910d193f8f09d89b09f7eb5e" prot="public" virt="non-virtual"><scope>sgns::watcher::MessagingWatcher</scope><name>startAll</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1ad3eebc535cfe454e6f04af04be24574a" prot="public" virt="virtual"><scope>sgns::watcher::MessagingWatcher</scope><name>startWatching</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1ad436e4c641413ca69b2d2fecec453bee" prot="public" virt="non-virtual"><scope>sgns::watcher::MessagingWatcher</scope><name>stopAll</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a070742650711d2e74dd97e7746a9c0c8" prot="public" virt="virtual"><scope>sgns::watcher::MessagingWatcher</scope><name>stopWatching</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a77d51f3f83c65ec24680094471c68bf9" prot="protected" virt="virtual"><scope>sgns::watcher::MessagingWatcher</scope><name>watch</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a3b89299a5d50f7539fcb3799570baca0" prot="protected" virt="non-virtual"><scope>sgns::watcher::MessagingWatcher</scope><name>watcherThread</name></member>
+      <member refid="d9/deb/classsgns_1_1watcher_1_1_messaging_watcher_1a8bccba48716d42227f29c3af51ceb96d" prot="public" virt="virtual"><scope>sgns::watcher::MessagingWatcher</scope><name>~MessagingWatcher</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

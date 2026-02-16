@@ -1,0 +1,147 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::crypto::VRFOutput</compoundname>
+    <includes refid="d2/d9c/sr25519__types_8hpp" local="no">sr25519_types.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output_1ac6a5db219419a997843e098111ac9365" prot="public" static="no" mutable="no">
+        <type><ref refid="df/d6e/namespacesgns_1_1crypto_1afe805a44a422a48a8430397044d4ad65" kindref="member">VRFPreOutput</ref></type>
+        <definition>VRFPreOutput sgns::crypto::VRFOutput::output</definition>
+        <argsstring></argsstring>
+        <name>output</name>
+        <qualifiedname>sgns::crypto::VRFOutput::output</qualifiedname>
+        <initializer>{}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="51" column="18" bodyfile="src/crypto/sr25519_types.hpp" bodystart="51" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output_1a78ff4c62a423d02615124bbff46d95be" prot="public" static="no" mutable="no">
+        <type><ref refid="df/d6e/namespacesgns_1_1crypto_1a89d6cd58cac07dcde92ca7c1575c6600" kindref="member">VRFProof</ref></type>
+        <definition>VRFProof sgns::crypto::VRFOutput::proof</definition>
+        <argsstring></argsstring>
+        <name>proof</name>
+        <qualifiedname>sgns::crypto::VRFOutput::proof</qualifiedname>
+        <initializer>{}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="53" column="14" bodyfile="src/crypto/sr25519_types.hpp" bodystart="53" bodyend="53"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output_1a3f973fce0625923e2bb4868bb70fb152" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crypto::VRFOutput::operator==</definition>
+        <argsstring>(const VRFOutput &amp;other) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::crypto::VRFOutput::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output" kindref="compound">VRFOutput</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="55" column="10" bodyfile="src/crypto/sr25519_types.cpp" bodystart="5" bodyend="7"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output_1acb1324a6a9e83699206301e6e698b4af" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crypto::VRFOutput::operator!=</definition>
+        <argsstring>(const VRFOutput &amp;other) const</argsstring>
+        <name>operator!=</name>
+        <qualifiedname>sgns::crypto::VRFOutput::operator!=</qualifiedname>
+        <param>
+          <type>const <ref refid="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output" kindref="compound">VRFOutput</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="56" column="10" bodyfile="src/crypto/sr25519_types.cpp" bodystart="8" bodyend="10"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="friend">
+      <memberdef kind="friend" id="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output_1a4af49ba9a7d4e85dcaff26b66152f166" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::ostream &amp;</type>
+        <definition>std::ostream &amp; operator&lt;&lt;</definition>
+        <argsstring>(std::ostream &amp;out, const VRFOutput &amp;test_struct)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::crypto::VRFOutput::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>std::ostream &amp;</type>
+          <declname>out</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output" kindref="compound">VRFOutput</ref> &amp;</type>
+          <declname>test_struct</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="58" column="12" bodyfile="src/crypto/sr25519_types.hpp" bodystart="58" bodyend="72"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Output of a verifiable random function. Consists of pre-output, which is an internal representation of the generated random value, and the proof to this value that servers as the verification of its randomness. </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="4">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::crypto::VRFOutput</label>
+        <link refid="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+output</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+proof</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::array&lt; uint8_t, constants::sr25519::vrf::OUTPUT_SIZE &gt;</label>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; uint8_t, constants::sr25519::vrf::OUTPUT_SIZE &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::array&lt; uint8_t, constants::sr25519::vrf::PROOF_SIZE &gt;</label>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; uint8_t, constants::sr25519::vrf::PROOF_SIZE &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crypto/sr25519_types.hpp" line="49" column="3" bodyfile="src/crypto/sr25519_types.hpp" bodystart="49" bodyend="74"/>
+    <listofallmembers>
+      <member refid="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output_1acb1324a6a9e83699206301e6e698b4af" prot="public" virt="non-virtual"><scope>sgns::crypto::VRFOutput</scope><name>operator!=</name></member>
+      <member refid="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output_1a4af49ba9a7d4e85dcaff26b66152f166" prot="public" virt="non-virtual"><scope>sgns::crypto::VRFOutput</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output_1a3f973fce0625923e2bb4868bb70fb152" prot="public" virt="non-virtual"><scope>sgns::crypto::VRFOutput</scope><name>operator==</name></member>
+      <member refid="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output_1ac6a5db219419a997843e098111ac9365" prot="public" virt="non-virtual"><scope>sgns::crypto::VRFOutput</scope><name>output</name></member>
+      <member refid="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output_1a78ff4c62a423d02615124bbff46d95be" prot="public" virt="non-virtual"><scope>sgns::crypto::VRFOutput</scope><name>proof</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

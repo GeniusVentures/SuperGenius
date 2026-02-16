@@ -1,0 +1,1002 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/d6e/namespacesgns_1_1crypto" kind="namespace" language="C++">
+    <compoundname>sgns::crypto</compoundname>
+    <innerclass refid="d7/d94/classsgns_1_1crypto_1_1_bip39_provider" prot="public">sgns::crypto::Bip39Provider</innerclass>
+    <innerclass refid="d8/d29/classsgns_1_1crypto_1_1_bip39_provider_impl" prot="public">sgns::crypto::Bip39ProviderImpl</innerclass>
+    <innerclass refid="da/d52/classsgns_1_1crypto_1_1_crypto_store" prot="public">sgns::crypto::CryptoStore</innerclass>
+    <innerclass refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl" prot="public">sgns::crypto::CryptoStoreImpl</innerclass>
+    <innerclass refid="d6/dae/classsgns_1_1crypto_1_1_e_d25519_provider_impl" prot="public">sgns::crypto::ED25519ProviderImpl</innerclass>
+    <innerclass refid="da/d5d/classsgns_1_1crypto_1_1_e_d25519_provider" prot="public">sgns::crypto::ED25519Provider</innerclass>
+    <innerclass refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" prot="public">sgns::crypto::ED25519Keypair</innerclass>
+    <innerclass refid="dd/d14/classsgns_1_1crypto_1_1_hasher" prot="public">sgns::crypto::Hasher</innerclass>
+    <innerclass refid="db/db8/classsgns_1_1crypto_1_1_hasher_impl" prot="public">sgns::crypto::HasherImpl</innerclass>
+    <innerclass refid="de/d3b/classsgns_1_1crypto_1_1_pbkdf2_provider_impl" prot="public">sgns::crypto::Pbkdf2ProviderImpl</innerclass>
+    <innerclass refid="d2/d06/classsgns_1_1crypto_1_1_pbkdf2_provider" prot="public">sgns::crypto::Pbkdf2Provider</innerclass>
+    <innerclass refid="dc/db1/classsgns_1_1crypto_1_1_secp256k1_provider_impl" prot="public">sgns::crypto::Secp256k1ProviderImpl</innerclass>
+    <innerclass refid="d6/d6e/classsgns_1_1crypto_1_1_secp256k1_provider" prot="public">sgns::crypto::Secp256k1Provider</innerclass>
+    <innerclass refid="d3/d11/classsgns_1_1crypto_1_1_s_r25519_provider_impl" prot="public">sgns::crypto::SR25519ProviderImpl</innerclass>
+    <innerclass refid="df/d78/classsgns_1_1crypto_1_1_s_r25519_provider" prot="public">sgns::crypto::SR25519Provider</innerclass>
+    <innerclass refid="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output" prot="public">sgns::crypto::VRFOutput</innerclass>
+    <innerclass refid="d5/d9f/structsgns_1_1crypto_1_1_v_r_f_verify_output" prot="public">sgns::crypto::VRFVerifyOutput</innerclass>
+    <innerclass refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair" prot="public">sgns::crypto::SR25519Keypair</innerclass>
+    <innerclass refid="da/d25/classsgns_1_1crypto_1_1_v_r_f_provider_impl" prot="public">sgns::crypto::VRFProviderImpl</innerclass>
+    <innerclass refid="d3/db2/classsgns_1_1crypto_1_1_v_r_f_provider" prot="public">sgns::crypto::VRFProvider</innerclass>
+    <innernamespace refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39">sgns::crypto::bip39</innernamespace>
+    <innernamespace refid="dc/d16/namespacesgns_1_1crypto_1_1store">sgns::crypto::store</innernamespace>
+    <innernamespace refid="d3/d4a/namespacesgns_1_1crypto_1_1key__types">sgns::crypto::key_types</innernamespace>
+    <innernamespace refid="d8/dc7/namespacesgns_1_1crypto_1_1constants">sgns::crypto::constants</innernamespace>
+    <innernamespace refid="dd/dc8/namespacesgns_1_1crypto_1_1secp256k1">sgns::crypto::secp256k1</innernamespace>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="df/d6e/namespacesgns_1_1crypto_1a4d550f469256ec94e9df388bb42b90d5" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>CryptoStoreError</name>
+        <qualifiedname>sgns::crypto::CryptoStoreError</qualifiedname>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a4d550f469256ec94e9df388bb42b90d5a484b3b734bc7bc1e4d1ed198c819c764" prot="public">
+          <name>WRONG_KEYFILE_NAME</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a4d550f469256ec94e9df388bb42b90d5a7c533d7f863a1bf314b152119d9c6e02" prot="public">
+          <name>UNSUPPORTED_KEY_TYPE</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a4d550f469256ec94e9df388bb42b90d5a97293aa05e8f23be159ca63108a47175" prot="public">
+          <name>UNSUPPORTED_CRYPTO_TYPE</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a4d550f469256ec94e9df388bb42b90d5abf0ca2da14be0bfb44a59a9ac412a3ad" prot="public">
+          <name>NOT_REGULAR_FILE</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a4d550f469256ec94e9df388bb42b90d5a458f6e5bcde019eb6cf70e15857eaf7f" prot="public">
+          <name>FAILED_OPEN_FILE</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a4d550f469256ec94e9df388bb42b90d5a48e1bb432ad476a5c37be4c8e714ea20" prot="public">
+          <name>FILE_DOESNT_EXIST</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a4d550f469256ec94e9df388bb42b90d5a8d34bd615de0f53be5638aa1e72c37a9" prot="public">
+          <name>INVALID_FILE_FORMAT</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a4d550f469256ec94e9df388bb42b90d5aac43c2e4f6f867f81634db6e79dfcef9" prot="public">
+          <name>INCONSISTENT_KEYFILE</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a4d550f469256ec94e9df388bb42b90d5a8428033b5172e625d38a4e0ba4a5ebaf" prot="public">
+          <name>WRONG_SEED_SIZE</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a4d550f469256ec94e9df388bb42b90d5a1f14ca382a4431d278aba810e59070c1" prot="public">
+          <name>KEY_NOT_FOUND</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a4d550f469256ec94e9df388bb42b90d5adadbf64bd4eda124dcd7543d7171aaef" prot="public">
+          <name>KEYS_PATH_IS_NOT_DIRECTORY</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a4d550f469256ec94e9df388bb42b90d5a9dab3bcd59270bbf692cfac1acba90e1" prot="public">
+          <name>FAILED_CREATE_KEYS_DIRECTORY</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="24" column="3" bodyfile="src/crypto/crypto_store/crypto_store_impl.hpp" bodystart="24" bodyend="37"/>
+      </memberdef>
+      <memberdef kind="enum" id="df/d6e/namespacesgns_1_1crypto_1a58ae925e068bb6db59e927121e7e54d7" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>KeyTypeError</name>
+        <qualifiedname>sgns::crypto::KeyTypeError</qualifiedname>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a58ae925e068bb6db59e927121e7e54d7a7c533d7f863a1bf314b152119d9c6e02" prot="public">
+          <name>UNSUPPORTED_KEY_TYPE</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a58ae925e068bb6db59e927121e7e54d7a7559f591641a29bb77d9a21d3ec67dba" prot="public">
+          <name>UNSUPPORTED_KEY_TYPE_ID</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/key_type.hpp" line="7" column="3" bodyfile="src/crypto/crypto_store/key_type.hpp" bodystart="7" bodyend="10"/>
+      </memberdef>
+      <memberdef kind="enum" id="df/d6e/namespacesgns_1_1crypto_1ac09a470a8e82a07a225d0f6586381de9" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>ED25519ProviderError</name>
+        <qualifiedname>sgns::crypto::ED25519ProviderError</qualifiedname>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1ac09a470a8e82a07a225d0f6586381de9a35608bbe961bd678c434278464745798" prot="public">
+          <name>FAILED_GENERATE_KEYPAIR</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1ac09a470a8e82a07a225d0f6586381de9a404875c749b08213476f194443137658" prot="public">
+          <name>SIGN_UNKNOWN_ERROR</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1ac09a470a8e82a07a225d0f6586381de9a62e240303679002c150f8bb294cbc6f6" prot="public">
+          <name>VERIFY_UNKNOWN_ERROR</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/ed25519_provider.hpp" line="10" column="3" bodyfile="src/crypto/ed25519_provider.hpp" bodystart="10" bodyend="16"/>
+      </memberdef>
+      <memberdef kind="enum" id="df/d6e/namespacesgns_1_1crypto_1a25ee58a80b612c97e177e2950f4c6b24" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>Pbkdf2ProviderError</name>
+        <qualifiedname>sgns::crypto::Pbkdf2ProviderError</qualifiedname>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a25ee58a80b612c97e177e2950f4c6b24ab182e31e35b257932d7948328f3bfc6a" prot="public">
+          <name>KEY_DERIVATION_FAILED</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/pbkdf2/pbkdf2_provider.hpp" line="10" column="3" bodyfile="src/crypto/pbkdf2/pbkdf2_provider.hpp" bodystart="10" bodyend="10"/>
+      </memberdef>
+      <memberdef kind="enum" id="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034f" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>Secp256k1ProviderError</name>
+        <qualifiedname>sgns::crypto::Secp256k1ProviderError</qualifiedname>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034faf295a0c3e37c94f078e1c5476479132d" prot="public">
+          <name>INVALID_ARGUMENT</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034fa05eb477ffbbc9913ce06c150ff6c0c85" prot="public">
+          <name>INVALID_V_VALUE</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034fa891dbe09d89473d23fd56ce6cfc2e648" prot="public">
+          <name>INVALID_R_OR_S_VALUE</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034fad0eb6b378baae0b4b64c2933674e61fc" prot="public">
+          <name>INVALID_SIGNATURE</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1a59e8587d732983142a406e2bfb47034faa5ae556eafda7b1b2942433cd519c000" prot="public">
+          <name>RECOVERY_FAILED</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1/secp256k1_provider_impl.hpp" line="9" column="3" bodyfile="src/crypto/secp256k1/secp256k1_provider_impl.hpp" bodystart="9" bodyend="15"/>
+      </memberdef>
+      <memberdef kind="enum" id="df/d6e/namespacesgns_1_1crypto_1aaa548ea7717609969eddf6f8f24afdf3" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>SR25519ProviderError</name>
+        <qualifiedname>sgns::crypto::SR25519ProviderError</qualifiedname>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1aaa548ea7717609969eddf6f8f24afdf3a404875c749b08213476f194443137658" prot="public">
+          <name>SIGN_UNKNOWN_ERROR</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="df/d6e/namespacesgns_1_1crypto_1aaa548ea7717609969eddf6f8f24afdf3a62e240303679002c150f8bb294cbc6f6" prot="public">
+          <name>VERIFY_UNKNOWN_ERROR</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>sr25519 provider error codes </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_provider.hpp" line="16" column="3" bodyfile="src/crypto/sr25519_provider.hpp" bodystart="16" bodyend="21"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1a065c72781d1aef6b2eac0479d8a8f9e1" prot="public" static="no">
+        <type>boost::filesystem::directory_iterator</type>
+        <definition>using sgns::crypto::DirectoryIterator = boost::filesystem::directory_iterator</definition>
+        <argsstring></argsstring>
+        <name>DirectoryIterator</name>
+        <qualifiedname>sgns::crypto::DirectoryIterator</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.cpp" line="10" column="3" bodyfile="src/crypto/crypto_store/crypto_store_impl.cpp" bodystart="10" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" prot="public" static="no">
+        <type>uint32_t</type>
+        <definition>using sgns::crypto::KeyTypeId = uint32_t</definition>
+        <argsstring></argsstring>
+        <name>KeyTypeId</name>
+        <qualifiedname>sgns::crypto::KeyTypeId</qualifiedname>
+        <briefdescription>
+<para>Key type identifier. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/key_type.hpp" line="15" column="3" bodyfile="src/crypto/crypto_store/key_type.hpp" bodystart="15" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1a1cc4b7c855b0b88eef1bfebf6c800a4c" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; <ref refid="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280ae6872b1afeb949f2bbfa3d970e428637" kindref="member">constants::ed25519::PRIVKEY_SIZE</ref> &gt;</type>
+        <definition>using sgns::crypto::ED25519PrivateKey = base::Blob&lt;constants::ed25519::PRIVKEY_SIZE&gt;</definition>
+        <argsstring></argsstring>
+        <name>ED25519PrivateKey</name>
+        <qualifiedname>sgns::crypto::ED25519PrivateKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/ed25519_types.hpp" line="21" column="3" bodyfile="src/crypto/ed25519_types.hpp" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1aabd48e8fa382c75b453fce43c158f97d" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; <ref refid="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280a896cc6da5f6479dc9ae56ac71d2af285" kindref="member">constants::ed25519::PUBKEY_SIZE</ref> &gt;</type>
+        <definition>using sgns::crypto::ED25519PublicKey = base::Blob&lt;constants::ed25519::PUBKEY_SIZE&gt;</definition>
+        <argsstring></argsstring>
+        <name>ED25519PublicKey</name>
+        <qualifiedname>sgns::crypto::ED25519PublicKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/ed25519_types.hpp" line="22" column="3" bodyfile="src/crypto/ed25519_types.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1a82ea8f150548110e620c0d92549ffb32" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; <ref refid="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280a2e58e4cfcd730e315e0145db7ea3a195" kindref="member">constants::ed25519::SIGNATURE_SIZE</ref> &gt;</type>
+        <definition>using sgns::crypto::ED25519Signature = base::Blob&lt;constants::ed25519::SIGNATURE_SIZE&gt;</definition>
+        <argsstring></argsstring>
+        <name>ED25519Signature</name>
+        <qualifiedname>sgns::crypto::ED25519Signature</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/ed25519_types.hpp" line="44" column="3" bodyfile="src/crypto/ed25519_types.hpp" bodystart="44" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1a64ab301ce6ac44216464094d4020302b" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; <ref refid="dc/de6/namespacesgns_1_1crypto_1_1constants_1_1ed25519_1a8bea1108f59e95ec16af13db6101d280a01600721e692bc0cbd6e4aea46e1158e" kindref="member">constants::ed25519::SEED_SIZE</ref> &gt;</type>
+        <definition>using sgns::crypto::ED25519Seed = base::Blob&lt;constants::ed25519::SEED_SIZE&gt;</definition>
+        <argsstring></argsstring>
+        <name>ED25519Seed</name>
+        <qualifiedname>sgns::crypto::ED25519Seed</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/ed25519_types.hpp" line="46" column="3" bodyfile="src/crypto/ed25519_types.hpp" bodystart="46" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1a18589156f32ea35b0b954d807b16e899" prot="public" static="no">
+        <type>libp2p::crypto::random::RandomGenerator</type>
+        <definition>using sgns::crypto::RandomGenerator = libp2p::crypto::random::RandomGenerator</definition>
+        <argsstring></argsstring>
+        <name>RandomGenerator</name>
+        <qualifiedname>sgns::crypto::RandomGenerator</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/random_generator.hpp" line="7" column="3" bodyfile="src/crypto/random_generator.hpp" bodystart="7" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1af5b689e8f731b918be933cd0a6ba8db4" prot="public" static="no">
+        <type>libp2p::crypto::random::CSPRNG</type>
+        <definition>using sgns::crypto::CSPRNG = libp2p::crypto::random::CSPRNG</definition>
+        <argsstring></argsstring>
+        <name>CSPRNG</name>
+        <qualifiedname>sgns::crypto::CSPRNG</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/random_generator.hpp" line="8" column="3" bodyfile="src/crypto/random_generator.hpp" bodystart="8" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1a0577db6f373d5a263cb432a910b10216" prot="public" static="no">
+        <type>libp2p::crypto::random::BoostRandomGenerator</type>
+        <definition>using sgns::crypto::BoostRandomGenerator = libp2p::crypto::random::BoostRandomGenerator</definition>
+        <argsstring></argsstring>
+        <name>BoostRandomGenerator</name>
+        <qualifiedname>sgns::crypto::BoostRandomGenerator</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/random_generator/boost_generator.hpp" line="8" column="5" bodyfile="src/crypto/random_generator/boost_generator.hpp" bodystart="8" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1afe805a44a422a48a8430397044d4ad65" prot="public" static="no">
+        <type>std::array&lt; uint8_t, <ref refid="df/d05/namespacesgns_1_1crypto_1_1constants_1_1sr25519_1_1vrf_1aee9c70f0446e34d0dbd0f93b69ff2ce5a187d6c92af680abedbe2346f446055f8" kindref="member">constants::sr25519::vrf::OUTPUT_SIZE</ref> &gt;</type>
+        <definition>using sgns::crypto::VRFPreOutput = 
+std::array&lt;uint8_t, constants::sr25519::vrf::OUTPUT_SIZE&gt;</definition>
+        <argsstring></argsstring>
+        <name>VRFPreOutput</name>
+        <qualifiedname>sgns::crypto::VRFPreOutput</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="38" column="3" bodyfile="src/crypto/sr25519_types.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1a8a4a63297ed3f41b909d3f14c068c6c4" prot="public" static="no">
+        <type>boost::multiprecision::uint128_t</type>
+        <definition>using sgns::crypto::VRFThreshold = boost::multiprecision::uint128_t</definition>
+        <argsstring></argsstring>
+        <name>VRFThreshold</name>
+        <qualifiedname>sgns::crypto::VRFThreshold</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="40" column="3" bodyfile="src/crypto/sr25519_types.hpp" bodystart="40" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1a89d6cd58cac07dcde92ca7c1575c6600" prot="public" static="no">
+        <type>std::array&lt; uint8_t, <ref refid="df/d05/namespacesgns_1_1crypto_1_1constants_1_1sr25519_1_1vrf_1aee9c70f0446e34d0dbd0f93b69ff2ce5ab1e2fb3dd62cdecd9f187f910aa0e35e" kindref="member">constants::sr25519::vrf::PROOF_SIZE</ref> &gt;</type>
+        <definition>using sgns::crypto::VRFProof = std::array&lt;uint8_t, constants::sr25519::vrf::PROOF_SIZE&gt;</definition>
+        <argsstring></argsstring>
+        <name>VRFProof</name>
+        <qualifiedname>sgns::crypto::VRFProof</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="41" column="3" bodyfile="src/crypto/sr25519_types.hpp" bodystart="41" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1a633b411985472167a972b86d3a40efa6" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; <ref refid="df/d1c/namespacesgns_1_1crypto_1_1constants_1_1sr25519_1a2bc5a05be7bb8b57c8d3b2abc9c18e36a8665678820b9a286ab1ab556cc1f6782" kindref="member">constants::sr25519::SECRET_SIZE</ref> &gt;</type>
+        <definition>using sgns::crypto::SR25519SecretKey = base::Blob&lt;constants::sr25519::SECRET_SIZE&gt;</definition>
+        <argsstring></argsstring>
+        <name>SR25519SecretKey</name>
+        <qualifiedname>sgns::crypto::SR25519SecretKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="92" column="3" bodyfile="src/crypto/sr25519_types.hpp" bodystart="92" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1ac763dcc567072893f82795e8d546ba88" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; <ref refid="df/d1c/namespacesgns_1_1crypto_1_1constants_1_1sr25519_1a2bc5a05be7bb8b57c8d3b2abc9c18e36a20a32a93173ee39a8a0113e5df0eaae4" kindref="member">constants::sr25519::PUBLIC_SIZE</ref> &gt;</type>
+        <definition>using sgns::crypto::SR25519PublicKey = base::Blob&lt;constants::sr25519::PUBLIC_SIZE&gt;</definition>
+        <argsstring></argsstring>
+        <name>SR25519PublicKey</name>
+        <qualifiedname>sgns::crypto::SR25519PublicKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="94" column="3" bodyfile="src/crypto/sr25519_types.hpp" bodystart="94" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1ac4cbbe40768a209e8418d7f7ada91072" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; <ref refid="df/d1c/namespacesgns_1_1crypto_1_1constants_1_1sr25519_1a2bc5a05be7bb8b57c8d3b2abc9c18e36a36c7bd6828a683083fd86d1a1303667d" kindref="member">constants::sr25519::SEED_SIZE</ref> &gt;</type>
+        <definition>using sgns::crypto::SR25519Seed = base::Blob&lt;constants::sr25519::SEED_SIZE&gt;</definition>
+        <argsstring></argsstring>
+        <name>SR25519Seed</name>
+        <qualifiedname>sgns::crypto::SR25519Seed</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="96" column="3" bodyfile="src/crypto/sr25519_types.hpp" bodystart="96" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1a3c286bf798825fe50e04ccf0295a1932" prot="public" static="no">
+        <type><ref refid="d4/dc6/classsgns_1_1base_1_1_blob" kindref="compound">base::Blob</ref>&lt; <ref refid="df/d1c/namespacesgns_1_1crypto_1_1constants_1_1sr25519_1a2bc5a05be7bb8b57c8d3b2abc9c18e36a5632eb6fd738538c55a65bfa30dc7b02" kindref="member">constants::sr25519::SIGNATURE_SIZE</ref> &gt;</type>
+        <definition>using sgns::crypto::SR25519Signature = base::Blob&lt;constants::sr25519::SIGNATURE_SIZE&gt;</definition>
+        <argsstring></argsstring>
+        <name>SR25519Signature</name>
+        <qualifiedname>sgns::crypto::SR25519Signature</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="119" column="3" bodyfile="src/crypto/sr25519_types.hpp" bodystart="119" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1a13f0ff8307c68dd02b7474681fffbe98" prot="public" static="no">
+        <type>Blob&lt; 16 &gt;</type>
+        <definition>using sgns::base::Hash128 = Blob&lt;16&gt;</definition>
+        <argsstring></argsstring>
+        <name>Hash128</name>
+        <qualifiedname>sgns::crypto::Hash128</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/hasher/hasher_impl.cpp" line="15" column="3" bodyfile="src/base/blob.hpp" bodystart="174" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1acd215486f70fdf49a6232a104a96ecf3" prot="public" static="no">
+        <type>Blob&lt; 32 &gt;</type>
+        <definition>using sgns::base::Hash256 = Blob&lt;32&gt;</definition>
+        <argsstring></argsstring>
+        <name>Hash256</name>
+        <qualifiedname>sgns::crypto::Hash256</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/hasher/hasher_impl.cpp" line="16" column="3" bodyfile="src/base/blob.hpp" bodystart="175" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="df/d6e/namespacesgns_1_1crypto_1a6fcc14244fc08a51e93f6c85d24f3562" prot="public" static="no">
+        <type>Blob&lt; 8 &gt;</type>
+        <definition>using sgns::base::Hash64 = Blob&lt;8&gt;</definition>
+        <argsstring></argsstring>
+        <name>Hash64</name>
+        <qualifiedname>sgns::crypto::Hash64</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/hasher/hasher_impl.cpp" line="17" column="3" bodyfile="src/base/blob.hpp" bodystart="173" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1a0711291b5cef76a92d6d4382938fd411" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::ostream &amp;</type>
+        <definition>std::ostream &amp; sgns::crypto::operator&lt;&lt;</definition>
+        <argsstring>(std::ostream &amp;out, const CryptoStoreError &amp;test_struct)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::crypto::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>std::ostream &amp;</type>
+          <declname>out</declname>
+        </param>
+        <param>
+          <type>const <ref refid="df/d6e/namespacesgns_1_1crypto_1a4d550f469256ec94e9df388bb42b90d5" kindref="member">CryptoStoreError</ref> &amp;</type>
+          <declname>test_struct</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="39" column="10" bodyfile="src/crypto/crypto_store/crypto_store_impl.hpp" bodystart="39" bodyend="42"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1aaa9bb4a8867db446c1635823e68e338d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crypto::isSupportedKeyType</definition>
+        <argsstring>(KeyTypeId k)</argsstring>
+        <name>isSupportedKeyType</name>
+        <qualifiedname>sgns::crypto::isSupportedKeyType</qualifiedname>
+        <param>
+          <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+          <declname>k</declname>
+        </param>
+        <briefdescription>
+<para>checks whether key type value is supported </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>k</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key type value </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if supported, false otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/key_type.cpp" line="11" column="8" bodyfile="src/crypto/crypto_store/key_type.cpp" bodystart="11" bodyend="21" declfile="src/crypto/crypto_store/key_type.hpp" declline="42" declcolumn="8"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1ad754bdff68aafc997e3d1e76e5057856" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::crypto::decodeKeyTypeId</definition>
+        <argsstring>(KeyTypeId param)</argsstring>
+        <name>decodeKeyTypeId</name>
+        <qualifiedname>sgns::crypto::decodeKeyTypeId</qualifiedname>
+        <param>
+          <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+          <declname>param</declname>
+        </param>
+        <briefdescription>
+<para>makes string representation of <ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref> </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>param</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>param key type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>string representation of key type value </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/key_type.cpp" line="23" column="15" bodyfile="src/crypto/crypto_store/key_type.cpp" bodystart="23" bodyend="36" declfile="src/crypto/crypto_store/key_type.hpp" declline="35" declcolumn="15"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1a7ff2aec07367e8405c8505737ee944c2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; int &gt;</type>
+        <definition>outcome::result&lt; int &gt; sgns::crypto::validateRecoveryId</definition>
+        <argsstring>(int v)</argsstring>
+        <name>validateRecoveryId</name>
+        <qualifiedname>sgns::crypto::validateRecoveryId</qualifiedname>
+        <param>
+          <type>int</type>
+          <declname>v</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/secp256k1/secp256k1_provider_impl.cpp" line="51" column="19" bodyfile="src/crypto/secp256k1/secp256k1_provider_impl.cpp" bodystart="51" bodyend="71"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1a6af465e58a4956eb5164f6c400a1a6ed" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+        <definition>base::Hash256 sgns::crypto::sha256</definition>
+        <argsstring>(std::string_view input)</argsstring>
+        <name>sha256</name>
+        <qualifiedname>sgns::crypto::sha256</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>input</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Take a SHA-256 hash from string <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>input</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>to be hashed </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>hashed bytes </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sha/sha256.cpp" line="9" column="19" bodyfile="src/crypto/sha/sha256.cpp" bodystart="9" bodyend="13" declfile="src/crypto/sha/sha256.hpp" declline="15" declcolumn="17"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1aa8b926395147f6b4be6b248dc337ab42" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+        <definition>base::Hash256 sgns::crypto::sha256</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; input)</argsstring>
+        <name>sha256</name>
+        <qualifiedname>sgns::crypto::sha256</qualifiedname>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>input</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Take a SHA-256 hash from bytes <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>input</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>to be hashed </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>hashed bytes </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sha/sha256.cpp" line="15" column="19" bodyfile="src/crypto/sha/sha256.cpp" bodystart="15" bodyend="26" declfile="src/crypto/sha/sha256.hpp" declline="22" declcolumn="17"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1a468cf73de793bd2f1a8a5bedfe26b380" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; uint8_t &gt;</type>
+        <definition>std::vector&lt; uint8_t &gt; sgns::crypto::sha256</definition>
+        <argsstring>(const void *data, size_t dataSize)</argsstring>
+        <name>sha256</name>
+        <qualifiedname>sgns::crypto::sha256</qualifiedname>
+        <param>
+          <type>const void *</type>
+          <declname>data</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>dataSize</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sha/sha256.cpp" line="28" column="17" bodyfile="src/crypto/sha/sha256.cpp" bodystart="28" bodyend="40" declfile="src/crypto/sha/sha256.hpp" declline="24" declcolumn="15"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1ac0dedd60d94047abec80ba0488720718" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_encoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::crypto::operator&lt;&lt;</definition>
+        <argsstring>(Stream &amp;s, const VRFOutput &amp;o)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::crypto::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output" kindref="compound">VRFOutput</ref> &amp;</type>
+          <declname>o</declname>
+        </param>
+        <briefdescription>
+<para>outputs object of type <ref refid="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output" kindref="compound">VRFOutput</ref> to stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>output stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>o</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to output </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="130" column="3" bodyfile="src/crypto/sr25519_types.hpp" bodystart="130" bodyend="132"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1a722db30757de1ef3fe2e5975ddccf606" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>class Stream</type>
+          </param>
+          <param>
+            <type>typename</type>
+            <defval>std::enable_if_t&lt;Stream::is_decoder_stream&gt;</defval>
+          </param>
+        </templateparamlist>
+        <type>Stream &amp;</type>
+        <definition>Stream &amp; sgns::crypto::operator&gt;&gt;</definition>
+        <argsstring>(Stream &amp;s, VRFOutput &amp;o)</argsstring>
+        <name>operator&gt;&gt;</name>
+        <qualifiedname>sgns::crypto::operator&gt;&gt;</qualifiedname>
+        <param>
+          <type>Stream &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type><ref refid="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output" kindref="compound">VRFOutput</ref> &amp;</type>
+          <declname>o</declname>
+        </param>
+        <briefdescription>
+<para>decodes object of type <ref refid="d0/d8e/structsgns_1_1crypto_1_1_v_r_f_output" kindref="compound">VRFOutput</ref> from stream </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>Stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>input stream type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>stream reference </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>o</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value to output </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>reference to stream </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="143" column="10" bodyfile="src/crypto/sr25519_types.hpp" bodystart="143" bodyend="145"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1a4b20ab50c70e28b440f26dc3370ef455" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crypto::make_twox64</definition>
+        <argsstring>(const uint8_t *in, uint32_t len, uint8_t *out)</argsstring>
+        <name>make_twox64</name>
+        <qualifiedname>sgns::crypto::make_twox64</qualifiedname>
+        <param>
+          <type>const uint8_t *</type>
+          <declname>in</declname>
+        </param>
+        <param>
+          <type>uint32_t</type>
+          <declname>len</declname>
+        </param>
+        <param>
+          <type>uint8_t *</type>
+          <declname>out</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/twox/twox.cpp" line="6" column="8" bodyfile="src/crypto/twox/twox.cpp" bodystart="6" bodyend="9"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1a72d85c7f8f997b4f6262ea5042922bee" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a6fcc14244fc08a51e93f6c85d24f3562" kindref="member">base::Hash64</ref></type>
+        <definition>base::Hash64 sgns::crypto::make_twox64</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; buf)</argsstring>
+        <name>make_twox64</name>
+        <qualifiedname>sgns::crypto::make_twox64</qualifiedname>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>buf</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/twox/twox.cpp" line="11" column="16" bodyfile="src/crypto/twox/twox.cpp" bodystart="11" bodyend="15" declfile="src/crypto/twox/twox.hpp" declline="8" declcolumn="18"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1a45b2e0565959be955dd02608eea6a846" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crypto::make_twox128</definition>
+        <argsstring>(const uint8_t *in, uint32_t len, uint8_t *out)</argsstring>
+        <name>make_twox128</name>
+        <qualifiedname>sgns::crypto::make_twox128</qualifiedname>
+        <param>
+          <type>const uint8_t *</type>
+          <declname>in</declname>
+        </param>
+        <param>
+          <type>uint32_t</type>
+          <declname>len</declname>
+        </param>
+        <param>
+          <type>uint8_t *</type>
+          <declname>out</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/twox/twox.cpp" line="17" column="8" bodyfile="src/crypto/twox/twox.cpp" bodystart="17" bodyend="21"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1aa74a30287da71356cec776d00e41aa6a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a13f0ff8307c68dd02b7474681fffbe98" kindref="member">base::Hash128</ref></type>
+        <definition>base::Hash128 sgns::crypto::make_twox128</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; buf)</argsstring>
+        <name>make_twox128</name>
+        <qualifiedname>sgns::crypto::make_twox128</qualifiedname>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>buf</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/twox/twox.cpp" line="23" column="17" bodyfile="src/crypto/twox/twox.cpp" bodystart="23" bodyend="27" declfile="src/crypto/twox/twox.hpp" declline="10" declcolumn="19"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1a237c0c015c8ca17a9f316e5a84feeb3a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crypto::make_twox256</definition>
+        <argsstring>(const uint8_t *in, uint32_t len, uint8_t *out)</argsstring>
+        <name>make_twox256</name>
+        <qualifiedname>sgns::crypto::make_twox256</qualifiedname>
+        <param>
+          <type>const uint8_t *</type>
+          <declname>in</declname>
+        </param>
+        <param>
+          <type>uint32_t</type>
+          <declname>len</declname>
+        </param>
+        <param>
+          <type>uint8_t *</type>
+          <declname>out</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/twox/twox.cpp" line="29" column="8" bodyfile="src/crypto/twox/twox.cpp" bodystart="29" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d6e/namespacesgns_1_1crypto_1a7aade05096bd9646ece215600e888e70" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1acd215486f70fdf49a6232a104a96ecf3" kindref="member">base::Hash256</ref></type>
+        <definition>base::Hash256 sgns::crypto::make_twox256</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; buf)</argsstring>
+        <name>make_twox256</name>
+        <qualifiedname>sgns::crypto::make_twox256</qualifiedname>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>buf</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/twox/twox.cpp" line="37" column="17" bodyfile="src/crypto/twox/twox.cpp" bodystart="37" bodyend="41" declfile="src/crypto/twox/twox.hpp" declline="12" declcolumn="19"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/bip39/bip39_provider.hpp" line="6" column="1"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,190 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/d07/class_c_component_factory" kind="class" language="C++" prot="public">
+    <compoundname>CComponentFactory</compoundname>
+    <basecompoundref refid="d0/d47/class_i_component_factory" prot="public" virt="non-virtual">IComponentFactory</basecompoundref>
+    <includes refid="d3/d74/_c_component_factory_8hpp" local="no">CComponentFactory.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="df/d07/class_c_component_factory_1a95b0845cb1ad2fe6ad922d1be4a8c11b" prot="private" static="no" mutable="no">
+        <type>std::unordered_map&lt; std::string, std::shared_ptr&lt; <ref refid="d1/dbf/class_i_component" kindref="compound">IComponent</ref> &gt; &gt;</type>
+        <definition>std::unordered_map&lt;std::string, std::shared_ptr&lt;IComponent&gt; &gt; CComponentFactory::ComponentTable</definition>
+        <argsstring></argsstring>
+        <name>ComponentTable</name>
+        <qualifiedname>CComponentFactory::ComponentTable</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/singleton/CComponentFactory.hpp" line="19" column="24" bodyfile="src/singleton/CComponentFactory.hpp" bodystart="19" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="df/d07/class_c_component_factory_1a8d3f11114af80c1f63beb2cf8a4d9ead" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>CComponentFactory::SINGLETON</definition>
+        <argsstring>(CComponentFactory)</argsstring>
+        <name>SINGLETON</name>
+        <qualifiedname>CComponentFactory::SINGLETON</qualifiedname>
+        <param>
+          <type><ref refid="df/d07/class_c_component_factory" kindref="compound">CComponentFactory</ref></type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/singleton/CComponentFactory.hpp" line="16" column="5"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="df/d07/class_c_component_factory_1a271de54756a5a68b276568d3c2ae8f10" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void CComponentFactory::Register</definition>
+        <argsstring>(std::shared_ptr&lt; IComponent &gt; component, const std::string &amp;type, const boost::optional&lt; std::string &gt; &amp;variant=boost::none) override</argsstring>
+        <name>Register</name>
+        <qualifiedname>CComponentFactory::Register</qualifiedname>
+        <reimplements refid="d0/d47/class_i_component_factory_1a4d5503839211e0705144838e4c255f11">Register</reimplements>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d1/dbf/class_i_component" kindref="compound">IComponent</ref> &gt;</type>
+          <declname>component</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>type</declname>
+        </param>
+        <param>
+          <type>const boost::optional&lt; std::string &gt; &amp;</type>
+          <declname>variant</declname>
+          <defval>boost::none</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/singleton/CComponentFactory.hpp" line="22" column="10" bodyfile="src/singleton/CComponentFactory.cpp" bodystart="10" bodyend="28"/>
+      </memberdef>
+      <memberdef kind="function" id="df/d07/class_c_component_factory_1a813c77f491916e3344885cb2c0b06250" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; <ref refid="d1/dbf/class_i_component" kindref="compound">IComponent</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; IComponent &gt; &gt; CComponentFactory::GetComponent</definition>
+        <argsstring>(const std::string &amp;type, const boost::optional&lt; std::string &gt; &amp;variant=boost::none) override</argsstring>
+        <name>GetComponent</name>
+        <qualifiedname>CComponentFactory::GetComponent</qualifiedname>
+        <reimplements refid="d0/d47/class_i_component_factory_1a76a5b78e02974e8460e8c9f1b78e7547">GetComponent</reimplements>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>type</declname>
+        </param>
+        <param>
+          <type>const boost::optional&lt; std::string &gt; &amp;</type>
+          <declname>variant</declname>
+          <defval>boost::none</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/singleton/CComponentFactory.hpp" line="26" column="21" bodyfile="src/singleton/CComponentFactory.cpp" bodystart="30" bodyend="46"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>CComponentFactory</label>
+        <link refid="df/d07/class_c_component_factory"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>IComponentFactory</label>
+        <link refid="d0/d47/class_i_component_factory"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>CComponentFactory</label>
+        <link refid="df/d07/class_c_component_factory"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-ComponentTable</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="2">
+        <label>IComponentFactory</label>
+        <link refid="d0/d47/class_i_component_factory"/>
+      </node>
+      <node id="11">
+        <label>K</label>
+      </node>
+      <node id="9">
+        <label>T</label>
+      </node>
+      <node id="5">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; IComponent &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; IComponent &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::string</label>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::unordered_map&lt; K, T &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::unordered_map&lt; std::string, std::shared_ptr&lt; IComponent &gt; &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; std::string, std::shared_ptr&lt; IComponent &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/singleton/CComponentFactory.hpp" line="14" column="1" bodyfile="src/singleton/CComponentFactory.hpp" bodystart="15" bodyend="28"/>
+    <listofallmembers>
+      <member refid="df/d07/class_c_component_factory_1a95b0845cb1ad2fe6ad922d1be4a8c11b" prot="private" virt="non-virtual"><scope>CComponentFactory</scope><name>ComponentTable</name></member>
+      <member refid="df/d07/class_c_component_factory_1a813c77f491916e3344885cb2c0b06250" prot="public" virt="virtual"><scope>CComponentFactory</scope><name>GetComponent</name></member>
+      <member refid="df/d07/class_c_component_factory_1a271de54756a5a68b276568d3c2ae8f10" prot="public" virt="virtual"><scope>CComponentFactory</scope><name>Register</name></member>
+      <member refid="df/d07/class_c_component_factory_1a8d3f11114af80c1f63beb2cf8a4d9ead" prot="private" virt="non-virtual"><scope>CComponentFactory</scope><name>SINGLETON</name></member>
+      <member refid="d0/d47/class_i_component_factory_1a3a1f0852dc2cb3faada797df5e7123db" prot="public" virt="virtual"><scope>CComponentFactory</scope><name>~IComponentFactory</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

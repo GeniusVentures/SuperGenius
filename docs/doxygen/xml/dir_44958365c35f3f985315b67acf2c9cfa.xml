@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_44958365c35f3f985315b67acf2c9cfa" kind="dir">
+    <compoundname>src/runtime/binaryen</compoundname>
+    <innerdir refid="dir_509a1948808cab808dd95e7e2f078748">src/runtime/binaryen/module</innerdir>
+    <innerdir refid="dir_2b85916d314e49a6760a923b752c9952">src/runtime/binaryen/runtime_api</innerdir>
+    <innerfile refid="d1/d6f/runtime__environment_8cpp">runtime_environment.cpp</innerfile>
+    <innerfile refid="d7/dac/runtime__environment_8hpp">runtime_environment.hpp</innerfile>
+    <innerfile refid="df/d4e/runtime__external__interface_8cpp">runtime_external_interface.cpp</innerfile>
+    <innerfile refid="d0/d78/runtime__external__interface_8hpp">runtime_external_interface.hpp</innerfile>
+    <innerfile refid="da/dc5/runtime__manager_8cpp">runtime_manager.cpp</innerfile>
+    <innerfile refid="d3/d10/runtime__manager_8hpp">runtime_manager.hpp</innerfile>
+    <innerfile refid="d9/db1/wasm__executor_8cpp">wasm_executor.cpp</innerfile>
+    <innerfile refid="d4/d2e/wasm__executor_8hpp">wasm_executor.hpp</innerfile>
+    <innerfile refid="d8/d89/wasm__memory__impl_8cpp">wasm_memory_impl.cpp</innerfile>
+    <innerfile refid="d8/dfb/wasm__memory__impl_8hpp">wasm_memory_impl.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/runtime/binaryen/"/>
+  </compounddef>
+</doxygen>

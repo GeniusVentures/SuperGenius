@@ -1,0 +1,88 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/ddf/structsgns_1_1api_1_1_http_session_1_1_configuration" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::api::HttpSession::Configuration</compoundname>
+    <includes refid="df/df4/http__session_8hpp" local="no">http_session.hpp</includes>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="d9/ddf/structsgns_1_1api_1_1_http_session_1_1_configuration_1aa29d870ae657b6c205cd5376e12a5458" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::api::HttpSession::Configuration::kDefaultRequestSize</definition>
+        <argsstring></argsstring>
+        <name>kDefaultRequestSize</name>
+        <qualifiedname>sgns::api::HttpSession::Configuration::kDefaultRequestSize</qualifiedname>
+        <initializer>= 10000u</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="37" column="31" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="37" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d9/ddf/structsgns_1_1api_1_1_http_session_1_1_configuration_1a1f025332a20a4b750114a2e5a2e95558" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="db/d02/classsgns_1_1api_1_1_session_1ade6442f88ca08387c1e733fef6f54655" kindref="member">Duration</ref></type>
+        <definition>Duration sgns::api::HttpSession::Configuration::kDefaultTimeout</definition>
+        <argsstring></argsstring>
+        <name>kDefaultTimeout</name>
+        <qualifiedname>sgns::api::HttpSession::Configuration::kDefaultTimeout</qualifiedname>
+        <initializer>= std::chrono::seconds(30)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="38" column="33" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="38" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d9/ddf/structsgns_1_1api_1_1_http_session_1_1_configuration_1a42e0b2ed7b23c7280240e600d3368e47" prot="public" static="no" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::api::HttpSession::Configuration::max_request_size</definition>
+        <argsstring></argsstring>
+        <name>max_request_size</name>
+        <qualifiedname>sgns::api::HttpSession::Configuration::max_request_size</qualifiedname>
+        <initializer>{<ref refid="d9/ddf/structsgns_1_1api_1_1_http_session_1_1_configuration_1aa29d870ae657b6c205cd5376e12a5458" kindref="member">kDefaultRequestSize</ref>}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="40" column="14" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="40" bodyend="40"/>
+      </memberdef>
+      <memberdef kind="variable" id="d9/ddf/structsgns_1_1api_1_1_http_session_1_1_configuration_1a33f85c0bfde324f76aa641e0bea804eb" prot="public" static="no" mutable="no">
+        <type><ref refid="db/d02/classsgns_1_1api_1_1_session_1ade6442f88ca08387c1e733fef6f54655" kindref="member">Duration</ref></type>
+        <definition>Duration sgns::api::HttpSession::Configuration::operation_timeout</definition>
+        <argsstring></argsstring>
+        <name>operation_timeout</name>
+        <qualifiedname>sgns::api::HttpSession::Configuration::operation_timeout</qualifiedname>
+        <initializer>{<ref refid="d9/ddf/structsgns_1_1api_1_1_http_session_1_1_configuration_1a1f025332a20a4b750114a2e5a2e95558" kindref="member">kDefaultTimeout</ref>}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/http/http_session.hpp" line="41" column="16" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="41" bodyend="41"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::api::HttpSession::Configuration</label>
+        <link refid="d9/ddf/structsgns_1_1api_1_1_http_session_1_1_configuration"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/api/transport/impl/http/http_session.hpp" line="36" column="5" bodyfile="src/api/transport/impl/http/http_session.hpp" bodystart="36" bodyend="42"/>
+    <listofallmembers>
+      <member refid="d9/ddf/structsgns_1_1api_1_1_http_session_1_1_configuration_1aa29d870ae657b6c205cd5376e12a5458" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession::Configuration</scope><name>kDefaultRequestSize</name></member>
+      <member refid="d9/ddf/structsgns_1_1api_1_1_http_session_1_1_configuration_1a1f025332a20a4b750114a2e5a2e95558" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession::Configuration</scope><name>kDefaultTimeout</name></member>
+      <member refid="d9/ddf/structsgns_1_1api_1_1_http_session_1_1_configuration_1a42e0b2ed7b23c7280240e600d3368e47" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession::Configuration</scope><name>max_request_size</name></member>
+      <member refid="d9/ddf/structsgns_1_1api_1_1_http_session_1_1_configuration_1a33f85c0bfde324f76aa641e0bea804eb" prot="public" virt="non-virtual"><scope>sgns::api::HttpSession::Configuration</scope><name>operation_timeout</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,333 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/dda/keypair__file__storage_8cpp" kind="file" language="C++">
+    <compoundname>keypair_file_storage.cpp</compoundname>
+    <includes refid="d1/d13/keypair__file__storage_8hpp" local="yes">crdt/globaldb/keypair_file_storage.hpp</includes>
+    <includes local="no">fstream</includes>
+    <includes local="no">libp2p/crypto/key_marshaller/key_marshaller_impl.hpp</includes>
+    <includes local="no">libp2p/crypto/key_validator/key_validator_impl.hpp</includes>
+    <includes local="no">libp2p/crypto/protobuf/protobuf_key.hpp</includes>
+    <includes local="no">libp2p/peer/peer_id.hpp</includes>
+    <includes local="no">libp2p/peer/peer_address.hpp</includes>
+    <includes local="no">libp2p/crypto/random_generator/boost_generator.hpp</includes>
+    <includes local="no">libp2p/crypto/crypto_provider/crypto_provider_impl.hpp</includes>
+    <includes local="no">libp2p/crypto/ed25519_provider/ed25519_provider_impl.hpp</includes>
+    <includes local="no">libp2p/crypto/rsa_provider/rsa_provider_impl.hpp</includes>
+    <includes local="no">libp2p/crypto/secp256k1_provider/secp256k1_provider_impl.hpp</includes>
+    <includes local="no">libp2p/crypto/ecdsa_provider/ecdsa_provider_impl.hpp</includes>
+    <includes local="no">libp2p/crypto/hmac_provider/hmac_provider_impl.hpp</includes>
+    <incdepgraph>
+      <node id="5">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crdt/globaldb/keypair_file_storage.cpp</label>
+        <link refid="d7/dda/keypair__file__storage_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>crdt/globaldb/keypair_file_storage.hpp</label>
+        <link refid="d1/d13/keypair__file__storage_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>boost/filesystem/path.hpp</label>
+      </node>
+      <node id="10">
+        <label>fstream</label>
+      </node>
+      <node id="17">
+        <label>libp2p/crypto/crypto_provider/crypto_provider_impl.hpp</label>
+      </node>
+      <node id="21">
+        <label>libp2p/crypto/ecdsa_provider/ecdsa_provider_impl.hpp</label>
+      </node>
+      <node id="18">
+        <label>libp2p/crypto/ed25519_provider/ed25519_provider_impl.hpp</label>
+      </node>
+      <node id="22">
+        <label>libp2p/crypto/hmac_provider/hmac_provider_impl.hpp</label>
+      </node>
+      <node id="9">
+        <label>libp2p/crypto/key.hpp</label>
+      </node>
+      <node id="11">
+        <label>libp2p/crypto/key_marshaller/key_marshaller_impl.hpp</label>
+      </node>
+      <node id="12">
+        <label>libp2p/crypto/key_validator/key_validator_impl.hpp</label>
+      </node>
+      <node id="13">
+        <label>libp2p/crypto/protobuf/protobuf_key.hpp</label>
+      </node>
+      <node id="16">
+        <label>libp2p/crypto/random_generator/boost_generator.hpp</label>
+      </node>
+      <node id="19">
+        <label>libp2p/crypto/rsa_provider/rsa_provider_impl.hpp</label>
+      </node>
+      <node id="20">
+        <label>libp2p/crypto/secp256k1_provider/secp256k1_provider_impl.hpp</label>
+      </node>
+      <node id="4">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="15">
+        <label>libp2p/peer/peer_address.hpp</label>
+      </node>
+      <node id="14">
+        <label>libp2p/peer/peer_id.hpp</label>
+      </node>
+      <node id="6">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="7">
+        <label>spdlog/spdlog.h</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d4/dd0/namespacesgns_1_1crdt">sgns::crdt</innernamespace>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="d4/dd0/namespacesgns_1_1crdt_1a2df47dd45fa08ff06d2a699aec8d610d" prot="public" static="no">
+        <type>libp2p::crypto::CryptoProviderImpl</type>
+        <definition>using sgns::crdt::CryptoProvider = libp2p::crypto::CryptoProviderImpl</definition>
+        <argsstring></argsstring>
+        <name>CryptoProvider</name>
+        <qualifiedname>sgns::crdt::CryptoProvider</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/keypair_file_storage.cpp" line="20" column="5" bodyfile="src/crdt/globaldb/keypair_file_storage.cpp" bodystart="20" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d4/dd0/namespacesgns_1_1crdt_1a9204c704939b1de2f9206c2a603b82c3" prot="public" static="no">
+        <type>libp2p::crypto::marshaller::KeyMarshallerImpl</type>
+        <definition>using sgns::crdt::KeyMarshaller = libp2p::crypto::marshaller::KeyMarshallerImpl</definition>
+        <argsstring></argsstring>
+        <name>KeyMarshaller</name>
+        <qualifiedname>sgns::crdt::KeyMarshaller</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/keypair_file_storage.cpp" line="22" column="5" bodyfile="src/crdt/globaldb/keypair_file_storage.cpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d4/dd0/namespacesgns_1_1crdt_1ae1b7a7dafdb55ca9bffcc3fe149f8505" prot="public" static="no">
+        <type>libp2p::crypto::validator::KeyValidatorImpl</type>
+        <definition>using sgns::crdt::KeyValidator = libp2p::crypto::validator::KeyValidatorImpl</definition>
+        <argsstring></argsstring>
+        <name>KeyValidator</name>
+        <qualifiedname>sgns::crdt::KeyValidator</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/globaldb/keypair_file_storage.cpp" line="23" column="5" bodyfile="src/crdt/globaldb/keypair_file_storage.cpp" bodystart="23" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d1/d13/keypair__file__storage_8hpp" kindref="compound">crdt/globaldb/keypair_file_storage.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;fstream&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libp2p/crypto/key_marshaller/key_marshaller_impl.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libp2p/crypto/key_validator/key_validator_impl.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libp2p/crypto/protobuf/protobuf_key.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libp2p/peer/peer_id.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libp2p/peer/peer_address.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libp2p/crypto/random_generator/boost_generator.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libp2p/crypto/crypto_provider/crypto_provider_impl.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libp2p/crypto/ed25519_provider/ed25519_provider_impl.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libp2p/crypto/rsa_provider/rsa_provider_impl.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libp2p/crypto/secp256k1_provider/secp256k1_provider_impl.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libp2p/crypto/ecdsa_provider/ecdsa_provider_impl.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;libp2p/crypto/hmac_provider/hmac_provider_impl.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d4/dd0/namespacesgns_1_1crdt" kindref="compound">sgns::crdt</ref></highlight></codeline>
+<codeline lineno="19"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="20" refid="d4/dd0/namespacesgns_1_1crdt_1a2df47dd45fa08ff06d2a699aec8d610d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d4/dd0/namespacesgns_1_1crdt_1a2df47dd45fa08ff06d2a699aec8d610d" kindref="member">CryptoProvider</ref><sp/>=<sp/>libp2p::crypto::CryptoProviderImpl;</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">libp2p::crypto::KeyPair;</highlight></codeline>
+<codeline lineno="22" refid="d4/dd0/namespacesgns_1_1crdt_1a9204c704939b1de2f9206c2a603b82c3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d4/dd0/namespacesgns_1_1crdt_1a9204c704939b1de2f9206c2a603b82c3" kindref="member">KeyMarshaller</ref><sp/>=<sp/>libp2p::crypto::marshaller::KeyMarshallerImpl;</highlight></codeline>
+<codeline lineno="23" refid="d4/dd0/namespacesgns_1_1crdt_1ae1b7a7dafdb55ca9bffcc3fe149f8505" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d4/dd0/namespacesgns_1_1crdt_1ae1b7a7dafdb55ca9bffcc3fe149f8505" kindref="member">KeyValidator</ref><sp/><sp/>=<sp/>libp2p::crypto::validator::KeyValidatorImpl;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">libp2p::peer::PeerId;</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26" refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a226dd56c8c1e710b80596d22240e7a8b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a226dd56c8c1e710b80596d22240e7a8b" kindref="member">KeyPairFileStorage::KeyPairFileStorage</ref>(<sp/>boost::filesystem::path<sp/>keyPath<sp/>)<sp/>:<sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a439c3479ec33fdd6099028f0a0d5a4d8" kindref="member">m_keyPath</ref>(<sp/><ref refid="d8/dcc/namespacestd" kindref="compound">std</ref>::move(<sp/>keyPath<sp/>)<sp/>)</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Extract<sp/>the<sp/>directory<sp/>path<sp/>from<sp/>the<sp/>keyPath</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boost::filesystem::path<sp/>directory<sp/>=<sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a439c3479ec33fdd6099028f0a0d5a4d8" kindref="member">m_keyPath</ref>.parent_path();</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Create<sp/>the<sp/>directory<sp/>if<sp/>it<sp/>doesn&apos;t<sp/>exist</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>!boost::filesystem::exists(<sp/>directory<sp/>)<sp/>)</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boost::filesystem::create_directories(<sp/>directory<sp/>);</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight></codeline>
+<codeline lineno="38" refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a690661841bd08971f1f9b62bab6dd4ac" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>outcome::result&lt;libp2p::crypto::KeyPair&gt;<sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a690661841bd08971f1f9b62bab6dd4ac" kindref="member">KeyPairFileStorage::GetKeyPair</ref>()</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="39"><highlight class="keyword"><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>KeyPair<sp/>keyPair;</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a7cf8fe152b11e69dd2b670c59ebaf76d" kindref="member">m_logger</ref>-&gt;info(<sp/></highlight><highlight class="stringliteral">&quot;Path<sp/>to<sp/>keypairs<sp/>&quot;</highlight><highlight class="normal"><sp/>+<sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a439c3479ec33fdd6099028f0a0d5a4d8" kindref="member">m_keyPath</ref>.string()<sp/>);</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>cryptoProvider<sp/>=</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::make_shared&lt;CryptoProvider&gt;(<sp/>std::make_shared&lt;libp2p::crypto::random::BoostRandomGenerator&gt;(),</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::make_shared&lt;libp2p::crypto::ed25519::Ed25519ProviderImpl&gt;(),</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::make_shared&lt;libp2p::crypto::rsa::RsaProviderImpl&gt;(),</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::make_shared&lt;libp2p::crypto::ecdsa::EcdsaProviderImpl&gt;(),</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::make_shared&lt;libp2p::crypto::secp256k1::Secp256k1ProviderImpl&gt;(),</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::make_shared&lt;libp2p::crypto::hmac::HmacProviderImpl&gt;()<sp/>);</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"></highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>keyValidator<sp/>=<sp/>std::make_shared&lt;KeyValidator&gt;(<sp/>cryptoProvider<sp/>);</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dd0/namespacesgns_1_1crdt_1a9204c704939b1de2f9206c2a603b82c3" kindref="member">KeyMarshaller</ref><sp/>keyMarshaller(<sp/>keyValidator<sp/>);</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>!boost::filesystem::exists(<sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a439c3479ec33fdd6099028f0a0d5a4d8" kindref="member">m_keyPath</ref><sp/>)<sp/>)</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>keyPairResult<sp/>=<sp/>cryptoProvider-&gt;generateKeys(<sp/>libp2p::crypto::Key::Type::Ed25519,</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>libp2p::crypto::common::RSAKeyType::RSA1024<sp/>);</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>keyPairResult.has_failure()<sp/>)</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a7cf8fe152b11e69dd2b670c59ebaf76d" kindref="member">m_logger</ref>-&gt;error(<sp/></highlight><highlight class="stringliteral">&quot;Unable<sp/>to<sp/>generate<sp/>key<sp/>pair&quot;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>boost::system::error_code{}<sp/>);</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"></highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>keyPair<sp/>=<sp/>keyPairResult.value();</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"></highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>marshalPrivateKeyResult<sp/>=<sp/>keyMarshaller.marshal(<sp/>keyPair.privateKey<sp/>);</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>marshalPrivateKeyResult.has_failure()<sp/>)</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a7cf8fe152b11e69dd2b670c59ebaf76d" kindref="member">m_logger</ref>-&gt;error(<sp/></highlight><highlight class="stringliteral">&quot;Unable<sp/>to<sp/>marshal<sp/>private<sp/>key&quot;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>boost::system::error_code{}<sp/>);</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"></highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>marshalPublicKeyResult<sp/>=<sp/>keyMarshaller.marshal(<sp/>keyPair.publicKey<sp/>);</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>marshalPublicKeyResult.has_failure()<sp/>)</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a7cf8fe152b11e69dd2b670c59ebaf76d" kindref="member">m_logger</ref>-&gt;error(<sp/></highlight><highlight class="stringliteral">&quot;Unable<sp/>to<sp/>marshal<sp/>public<sp/>key&quot;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>boost::system::error_code{}<sp/>);</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"></highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::ofstream<sp/>fileKey(<sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a439c3479ec33fdd6099028f0a0d5a4d8" kindref="member">m_keyPath</ref>.string(),<sp/>std::ios::out<sp/>|<sp/>std::ios::binary<sp/>);</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::copy(<sp/>marshalPrivateKeyResult.value().key.cbegin(),</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>marshalPrivateKeyResult.value().key.cend(),</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::ostreambuf_iterator&lt;char&gt;(<sp/>fileKey<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::copy(<sp/>marshalPublicKeyResult.value().key.cbegin(),</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>marshalPublicKeyResult.value().key.cend(),</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::ostreambuf_iterator&lt;char&gt;(<sp/>fileKey<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>fileKey.close();</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">else</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::ifstream<sp/>fileKey(<sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a439c3479ec33fdd6099028f0a0d5a4d8" kindref="member">m_keyPath</ref>.string(),<sp/>std::ios::in<sp/>|<sp/>std::ios::binary<sp/>);</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>!fileKey.is_open()<sp/>)</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a7cf8fe152b11e69dd2b670c59ebaf76d" kindref="member">m_logger</ref>-&gt;error(<sp/></highlight><highlight class="stringliteral">&quot;Unable<sp/>to<sp/>open<sp/>key<sp/>file:<sp/>&quot;</highlight><highlight class="normal"><sp/>+<sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a439c3479ec33fdd6099028f0a0d5a4d8" kindref="member">m_keyPath</ref>.string()<sp/>);</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>boost::system::error_code{}<sp/>);</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"></highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::istreambuf_iterator&lt;char&gt;<sp/>it{<sp/>fileKey<sp/>};</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::istreambuf_iterator&lt;char&gt;<sp/>end;</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ss{<sp/>it,<sp/>end<sp/>};</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"></highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;uint8_t&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>privateKey(<sp/>ss.begin(),<sp/>ss.begin()<sp/>+<sp/>ss.size()<sp/>/<sp/>2<sp/>);</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>libp2p::crypto::ProtobufKey<sp/>privateProtobufKey{<sp/>std::move(<sp/>privateKey<sp/>)<sp/>};</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"></highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;uint8_t&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>publicKey(<sp/>ss.begin()<sp/>+<sp/>ss.size()<sp/>/<sp/>2,<sp/>ss.end()<sp/>);</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>libp2p::crypto::ProtobufKey<sp/>publicProtobufKey{<sp/>std::move(<sp/>publicKey<sp/>)<sp/>};</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"></highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>unmarshalPrivateKeyResult<sp/>=<sp/>keyMarshaller.unmarshalPrivateKey(<sp/>privateProtobufKey<sp/>);</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>unmarshalPrivateKeyResult.has_failure()<sp/>)</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a7cf8fe152b11e69dd2b670c59ebaf76d" kindref="member">m_logger</ref>-&gt;error(<sp/></highlight><highlight class="stringliteral">&quot;Unable<sp/>to<sp/>unmarshal<sp/>private<sp/>key&quot;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>boost::system::error_code{}<sp/>);</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>keyPair.privateKey<sp/>=<sp/>unmarshalPrivateKeyResult.value();</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"></highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>unmarshalPublicKeyResult<sp/>=<sp/>keyMarshaller.unmarshalPublicKey(<sp/>publicProtobufKey<sp/>);</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>unmarshalPublicKeyResult.has_failure()<sp/>)</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a7cf8fe152b11e69dd2b670c59ebaf76d" kindref="member">m_logger</ref>-&gt;error(<sp/></highlight><highlight class="stringliteral">&quot;Unable<sp/>to<sp/>unmarshal<sp/>public<sp/>key&quot;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="122"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>boost::system::error_code{}<sp/>);</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>keyPair.publicKey<sp/>=<sp/>unmarshalPublicKeyResult.value();</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"></highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>protobufKeyResult<sp/>=<sp/>keyMarshaller.marshal(<sp/>keyPair.publicKey<sp/>);</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>protobufKeyResult.has_failure()<sp/>)</highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a7cf8fe152b11e69dd2b670c59ebaf76d" kindref="member">m_logger</ref>-&gt;error(<sp/></highlight><highlight class="stringliteral">&quot;Unable<sp/>to<sp/>marshal<sp/>public<sp/>key&quot;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>boost::system::error_code{}<sp/>);</highlight></codeline>
+<codeline lineno="132"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="133"><highlight class="normal"></highlight></codeline>
+<codeline lineno="134"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>peerIDResult<sp/>=<sp/>PeerId::fromPublicKey(<sp/>protobufKeyResult.value()<sp/>);</highlight></codeline>
+<codeline lineno="135"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<sp/>peerIDResult.has_failure()<sp/>)</highlight></codeline>
+<codeline lineno="136"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="137"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a7cf8fe152b11e69dd2b670c59ebaf76d" kindref="member">m_logger</ref>-&gt;error(<sp/></highlight><highlight class="stringliteral">&quot;Unable<sp/>to<sp/>get<sp/>peer<sp/>ID<sp/>from<sp/>public<sp/>key&quot;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="138"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::failure(<sp/>boost::system::error_code{}<sp/>);</highlight></codeline>
+<codeline lineno="139"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="140"><highlight class="normal"></highlight></codeline>
+<codeline lineno="141"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>peerID<sp/>=<sp/>peerIDResult.value();</highlight></codeline>
+<codeline lineno="142"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d6/d1e/classsgns_1_1crdt_1_1_key_pair_file_storage_1a7cf8fe152b11e69dd2b670c59ebaf76d" kindref="member">m_logger</ref>-&gt;info(<sp/></highlight><highlight class="stringliteral">&quot;Peer<sp/>ID<sp/>from<sp/>public<sp/>key:<sp/>&quot;</highlight><highlight class="normal"><sp/>+<sp/>peerID.toBase58()<sp/>);</highlight></codeline>
+<codeline lineno="143"><highlight class="normal"></highlight></codeline>
+<codeline lineno="144"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>outcome::success(<sp/>keyPair<sp/>);</highlight></codeline>
+<codeline lineno="145"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="146"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="src/crdt/globaldb/keypair_file_storage.cpp"/>
+  </compounddef>
+</doxygen>

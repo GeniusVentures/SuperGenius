@@ -1,0 +1,165 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/d83/structsgns_1_1primitives_1_1_check_inherents_result" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::primitives::CheckInherentsResult</compoundname>
+    <includes refid="d9/d68/check__inherents__result_8hpp" local="no">check_inherents_result.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="de/d83/structsgns_1_1primitives_1_1_check_inherents_result_1aaa04e68d831109998f4ac094f7f2c42b" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::primitives::CheckInherentsResult::is_okay</definition>
+        <argsstring></argsstring>
+        <name>is_okay</name>
+        <qualifiedname>sgns::primitives::CheckInherentsResult::is_okay</qualifiedname>
+        <initializer>= false</initializer>
+        <briefdescription>
+<para>Did the check succeed? </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/check_inherents_result.hpp" line="14" column="10" bodyfile="src/primitives/check_inherents_result.hpp" bodystart="14" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d83/structsgns_1_1primitives_1_1_check_inherents_result_1a6ab86dbd18cc4885a0ef71a68f6bd630" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::primitives::CheckInherentsResult::is_fatal_error</definition>
+        <argsstring></argsstring>
+        <name>is_fatal_error</name>
+        <qualifiedname>sgns::primitives::CheckInherentsResult::is_fatal_error</qualifiedname>
+        <initializer>= false</initializer>
+        <briefdescription>
+<para>Did we encounter a fatal error? </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/check_inherents_result.hpp" line="16" column="10" bodyfile="src/primitives/check_inherents_result.hpp" bodystart="16" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d83/structsgns_1_1primitives_1_1_check_inherents_result_1a0f4fa6fa364c8ea6bc43659d72645215" prot="public" static="no" mutable="no">
+        <type><ref refid="de/df2/structsgns_1_1primitives_1_1_inherent_data" kindref="compound">primitives::InherentData</ref></type>
+        <definition>primitives::InherentData sgns::primitives::CheckInherentsResult::errors</definition>
+        <argsstring></argsstring>
+        <name>errors</name>
+        <qualifiedname>sgns::primitives::CheckInherentsResult::errors</qualifiedname>
+        <briefdescription>
+<para>We use the <computeroutput><ref refid="de/df2/structsgns_1_1primitives_1_1_inherent_data" kindref="compound">InherentData</ref></computeroutput> to store our errors. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/primitives/check_inherents_result.hpp" line="18" column="30" bodyfile="src/primitives/check_inherents_result.hpp" bodystart="18" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>result of check_inherents method of BlockBuilder runtime api </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="15">
+        <label>K</label>
+      </node>
+      <node id="6">
+        <label>T</label>
+      </node>
+      <node id="9">
+        <label>boost::equality_comparable&lt; Buffer &gt;</label>
+      </node>
+      <node id="10">
+        <label>boost::equality_comparable&lt; gsl::span&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="11">
+        <label>boost::equality_comparable&lt; std::vector&lt; uint8_t &gt; &gt;</label>
+      </node>
+      <node id="7">
+        <label>sgns::base::Blob&lt; size_ &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::base::Blob&lt; 8u &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+        <childnode refid="7" relation="template-instance">
+          <edgelabel>&lt; 8u &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>sgns::base::Buffer</label>
+        <link refid="de/dd5/classsgns_1_1base_1_1_buffer"/>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+        <childnode refid="10" relation="public-inheritance">
+        </childnode>
+        <childnode refid="11" relation="public-inheritance">
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>-data_</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::primitives::CheckInherentsResult</label>
+        <link refid="de/d83/structsgns_1_1primitives_1_1_check_inherents_result"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+errors</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::primitives::InherentData</label>
+        <link refid="de/df2/structsgns_1_1primitives_1_1_inherent_data"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+data</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="14">
+        <label>std::map&lt; K, T &gt;</label>
+        <childnode refid="15" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::map&lt; sgns::base::Blob&lt; 8u &gt;, sgns::base::Buffer &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; sgns::base::Blob&lt; 8u &gt;, sgns::base::Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="13">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::vector&lt; uint8_t &gt;</label>
+        <childnode refid="13" relation="template-instance">
+          <edgelabel>&lt; uint8_t &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/primitives/check_inherents_result.hpp" line="12" column="3" bodyfile="src/primitives/check_inherents_result.hpp" bodystart="12" bodyend="19"/>
+    <listofallmembers>
+      <member refid="de/d83/structsgns_1_1primitives_1_1_check_inherents_result_1a0f4fa6fa364c8ea6bc43659d72645215" prot="public" virt="non-virtual"><scope>sgns::primitives::CheckInherentsResult</scope><name>errors</name></member>
+      <member refid="de/d83/structsgns_1_1primitives_1_1_check_inherents_result_1a6ab86dbd18cc4885a0ef71a68f6bd630" prot="public" virt="non-virtual"><scope>sgns::primitives::CheckInherentsResult</scope><name>is_fatal_error</name></member>
+      <member refid="de/d83/structsgns_1_1primitives_1_1_check_inherents_result_1aaa04e68d831109998f4ac094f7f2c42b" prot="public" virt="non-virtual"><scope>sgns::primitives::CheckInherentsResult</scope><name>is_okay</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

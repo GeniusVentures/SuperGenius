@@ -1,0 +1,227 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/d96/bridging__node__application_8cpp" kind="file" language="C++">
+    <compoundname>bridging_node_application.cpp</compoundname>
+    <includes local="yes">application/bridging_node_application.hpp</includes>
+    <includes local="no">iostream</includes>
+    <includes local="no">csignal</includes>
+    <includes local="no">rapidjson/document.h</includes>
+    <includes local="yes">factory/CComponentFactory.hpp</includes>
+    <incdepgraph>
+      <node id="1">
+        <label>src/application/impl/bridging_node_application.cpp</label>
+        <link refid="df/d96/bridging__node__application_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>application/bridging_node_application.hpp</label>
+      </node>
+      <node id="4">
+        <label>csignal</label>
+      </node>
+      <node id="6">
+        <label>factory/CComponentFactory.hpp</label>
+      </node>
+      <node id="3">
+        <label>iostream</label>
+      </node>
+      <node id="5">
+        <label>rapidjson/document.h</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="db/d40/namespacesgns_1_1application">sgns::application</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="db/d40/namespacesgns_1_1application_1aed854c1d786eb9eaba270693232a7c29" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::atomic&lt; bool &gt;</type>
+        <definition>std::atomic&lt; bool &gt; sgns::application::keepRunning</definition>
+        <argsstring>(true)</argsstring>
+        <name>keepRunning</name>
+        <qualifiedname>sgns::application::keepRunning</qualifiedname>
+        <param>
+          <type>true</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/bridging_node_application.cpp" line="8" column="17" declfile="src/application/impl/bridging_node_application.cpp" declline="8" declcolumn="17"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d40/namespacesgns_1_1application_1a61e5b8bd4b991e1471ecdf865f9b9a4e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::application::signalHandler</definition>
+        <argsstring>(int signum)</argsstring>
+        <name>signalHandler</name>
+        <qualifiedname>sgns::application::signalHandler</qualifiedname>
+        <param>
+          <type>int</type>
+          <declname>signum</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/bridging_node_application.cpp" line="10" column="10" bodyfile="src/application/impl/bridging_node_application.cpp" bodystart="10" bodyend="13"/>
+      </memberdef>
+      <memberdef kind="function" id="db/d40/namespacesgns_1_1application_1a49ae73e9d46b7a0ffef07588e58aca58" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::application::customMessageHandler</definition>
+        <argsstring>(const std::string &amp;message)</argsstring>
+        <name>customMessageHandler</name>
+        <qualifiedname>sgns::application::customMessageHandler</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>message</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/application/impl/bridging_node_application.cpp" line="15" column="10" bodyfile="src/application/impl/bridging_node_application.cpp" bodystart="15" bodyend="18"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;application/bridging_node_application.hpp&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;iostream&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;csignal&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;rapidjson/document.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;factory/CComponentFactory.hpp&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="db/d40/namespacesgns_1_1application" kindref="compound">sgns::application</ref><sp/>{</highlight></codeline>
+<codeline lineno="8" refid="db/d40/namespacesgns_1_1application_1aed854c1d786eb9eaba270693232a7c29" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::atomic&lt;bool&gt;<sp/><ref refid="db/d40/namespacesgns_1_1application_1aed854c1d786eb9eaba270693232a7c29" kindref="member">keepRunning</ref>(</highlight><highlight class="keyword">true</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10" refid="db/d40/namespacesgns_1_1application_1a61e5b8bd4b991e1471ecdf865f9b9a4e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="db/d40/namespacesgns_1_1application_1a61e5b8bd4b991e1471ecdf865f9b9a4e" kindref="member">signalHandler</ref>(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>signum)<sp/>{</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="db/d40/namespacesgns_1_1application_1aed854c1d786eb9eaba270693232a7c29" kindref="member">keepRunning</ref><sp/>=<sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::cout<sp/>&lt;&lt;<sp/></highlight><highlight class="stringliteral">&quot;\nInterrupt<sp/>signal<sp/>(&quot;</highlight><highlight class="normal"><sp/>&lt;&lt;<sp/>signum<sp/>&lt;&lt;<sp/></highlight><highlight class="stringliteral">&quot;)<sp/>received.<sp/>Stopping<sp/>application...&quot;</highlight><highlight class="normal"><sp/>&lt;&lt;<sp/>std::endl;</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight></codeline>
+<codeline lineno="15" refid="db/d40/namespacesgns_1_1application_1a49ae73e9d46b7a0ffef07588e58aca58" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="db/d40/namespacesgns_1_1application_1a49ae73e9d46b7a0ffef07588e58aca58" kindref="member">customMessageHandler</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::cout<sp/>&lt;&lt;<sp/></highlight><highlight class="stringliteral">&quot;Custom<sp/>Message<sp/>Handler:<sp/>&quot;</highlight><highlight class="normal"><sp/>&lt;&lt;<sp/><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref><sp/>&lt;&lt;<sp/>std::endl;</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>In<sp/>the<sp/>future,<sp/>consensus<sp/>operations<sp/>and<sp/>message<sp/>processing<sp/>will<sp/>be<sp/>added<sp/>here</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20" refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a2f15bed2868f186ecf3c0ca25122ae55" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a2f15bed2868f186ecf3c0ca25122ae55" kindref="member">BridgingNodeApplication::BridgingNodeApplication</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;AppConfig&gt;<sp/>&amp;config,</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;AppStateManager&gt;<sp/>&amp;stateManager)</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/><ref refid="da/d1d/classsgns_1_1application_1_1_sgns_application" kindref="compound">SgnsApplication</ref>(config,<sp/>stateManager)<sp/>{</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>signal(SIGINT,<sp/><ref refid="db/d40/namespacesgns_1_1application_1a61e5b8bd4b991e1471ecdf865f9b9a4e" kindref="member">signalHandler</ref>);</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Initialize<sp/>components<sp/>using<sp/>the<sp/>factory</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="df/d07/class_c_component_factory" kindref="compound">CComponentFactory</ref><sp/>factory;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1acfbfb4084c4ac2780cca14e314cba804" kindref="member">wsContext</ref><sp/>=<sp/>std::dynamic_pointer_cast&lt;WsContext&gt;(factory.createComponent(</highlight><highlight class="stringliteral">&quot;WSContext&quot;</highlight><highlight class="normal">,<sp/>config,<sp/>stateManager));</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a2da039c265e6620fd0f1d4374b91d898" kindref="member">wsThreadPool</ref><sp/>=<sp/>std::dynamic_pointer_cast&lt;WsThreadPool&gt;(</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>factory.createComponent(</highlight><highlight class="stringliteral">&quot;WSThreadPool&quot;</highlight><highlight class="normal">,<sp/>config,<sp/>stateManager));</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1aa50f67f7ee586ec611e7d41e3e06e789" kindref="member">rpcService</ref><sp/>=<sp/>std::dynamic_pointer_cast&lt;RpcService&gt;(factory.createComponent(</highlight><highlight class="stringliteral">&quot;RpcService&quot;</highlight><highlight class="normal">,<sp/>config,<sp/>stateManager));</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Setup<sp/>WebSocket<sp/>and<sp/>RPC<sp/>services</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1acff5269dda711e254512bf6ff3999015" kindref="member">setupWebSocketService</ref>();</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a808555ac994d602fb30ad65709253560" kindref="member">setupRpcService</ref>();</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37" refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1ab0849b1c3536f861b7dcb2ed9291fdca" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1ab0849b1c3536f861b7dcb2ed9291fdca" kindref="member">BridgingNodeApplication::run</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!<ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1acfbfb4084c4ac2780cca14e314cba804" kindref="member">wsContext</ref><sp/>||<sp/>!<ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a2da039c265e6620fd0f1d4374b91d898" kindref="member">wsThreadPool</ref><sp/>||<sp/>!<ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1aa50f67f7ee586ec611e7d41e3e06e789" kindref="member">rpcService</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::cerr<sp/>&lt;&lt;<sp/></highlight><highlight class="stringliteral">&quot;Failed<sp/>to<sp/>initialize<sp/>required<sp/>components.&quot;</highlight><highlight class="normal"><sp/>&lt;&lt;<sp/>std::endl;</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Load<sp/>the<sp/>configuration<sp/>from<sp/>the<sp/>AppConfig</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>*json<sp/>=<sp/>R</highlight><highlight class="stringliteral">&quot;([</highlight></codeline>
+<codeline lineno="45"><highlight class="stringliteral"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="46"><highlight class="stringliteral"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&quot;rpc_url&quot;:<sp/>&quot;http://localhost:8545&quot;,</highlight></codeline>
+<codeline lineno="47"><highlight class="stringliteral"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&quot;chain_id&quot;:<sp/>&quot;1&quot;,</highlight></codeline>
+<codeline lineno="48"><highlight class="stringliteral"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&quot;chain_name&quot;:<sp/>&quot;Ethereum<sp/>Mainnet&quot;,</highlight></codeline>
+<codeline lineno="49"><highlight class="stringliteral"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&quot;ws_url&quot;:<sp/>&quot;ws://localhost:8546&quot;</highlight></codeline>
+<codeline lineno="50"><highlight class="stringliteral"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="51"><highlight class="stringliteral"><sp/><sp/><sp/><sp/>])&quot;;</highlight></codeline>
+<codeline lineno="52"><highlight class="stringliteral"></highlight></codeline>
+<codeline lineno="53"><highlight class="stringliteral"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>rapidjson::Document<sp/>config;</highlight></codeline>
+<codeline lineno="54"><highlight class="stringliteral"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>config.Parse(json);</highlight></codeline>
+<codeline lineno="55"><highlight class="stringliteral"></highlight></codeline>
+<codeline lineno="56"><highlight class="stringliteral"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Define<sp/>topics<sp/>to<sp/>watch</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;EvmMessagingWatcher::TopicFilter&gt;<sp/>topicFilters<sp/>=<sp/>{</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight><highlight class="stringliteral">&quot;BridgeSourceBurned(address,uint256,uint256,uint256,uint256)&quot;</highlight><highlight class="normal">,</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;0xa870aa48c12cc82c11a120c39e4d9f99e93e6f74d3e0e0e6eac476e79a6a3663&quot;</highlight><highlight class="normal">}</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"></highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>The<sp/>contract<sp/>address<sp/>that<sp/>we<sp/>want<sp/>to<sp/>watch</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/>contractAddress<sp/>=<sp/></highlight><highlight class="stringliteral">&quot;0x1234567890abcdef1234567890abcdef12345678&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"></highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Create<sp/>an<sp/>instance<sp/>of<sp/>EvmMessagingWatcher</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a68a56980f0fa27dc566006bcfdafe266" kindref="member">evmWatcher</ref><sp/>=<sp/>std::make_unique&lt;EvmMessagingWatcher&gt;(config,<sp/><ref refid="db/d40/namespacesgns_1_1application_1a49ae73e9d46b7a0ffef07588e58aca58" kindref="member">customMessageHandler</ref>,<sp/>contractAddress,<sp/>topicFilters);</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"></highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Start<sp/>watching<sp/>in<sp/>a<sp/>separate<sp/>thread</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a68a56980f0fa27dc566006bcfdafe266" kindref="member">evmWatcher</ref>-&gt;startWatching();</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"></highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::cout<sp/>&lt;&lt;<sp/></highlight><highlight class="stringliteral">&quot;BridgingNodeApplication<sp/>is<sp/>running.<sp/>Press<sp/>Ctrl+C<sp/>to<sp/>stop...&quot;</highlight><highlight class="normal"><sp/>&lt;&lt;<sp/>std::endl;</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"></highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Main<sp/>loop<sp/>to<sp/>keep<sp/>running<sp/>until<sp/>interrupted</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="74" refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a417f9b623dc5ebcf104f9d4d0a32a8c5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">while</highlight><highlight class="normal"><sp/>(<ref refid="db/d40/namespacesgns_1_1application_1aed854c1d786eb9eaba270693232a7c29" kindref="member">keepRunning</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::this_thread::sleep_for(std::chrono::seconds(1));</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"></highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a417f9b623dc5ebcf104f9d4d0a32a8c5" kindref="member">stop</ref>();</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"></highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a417f9b623dc5ebcf104f9d4d0a32a8c5" kindref="member">BridgingNodeApplication::stop</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a68a56980f0fa27dc566006bcfdafe266" kindref="member">evmWatcher</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a68a56980f0fa27dc566006bcfdafe266" kindref="member">evmWatcher</ref>-&gt;stopWatching();</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::cout<sp/>&lt;&lt;<sp/></highlight><highlight class="stringliteral">&quot;Watcher<sp/>stopped.&quot;</highlight><highlight class="normal"><sp/>&lt;&lt;<sp/>std::endl;</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="86" refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1acff5269dda711e254512bf6ff3999015" refkind="member"><highlight class="normal"></highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1aa50f67f7ee586ec611e7d41e3e06e789" kindref="member">rpcService</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1aa50f67f7ee586ec611e7d41e3e06e789" kindref="member">rpcService</ref>-&gt;stop();</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::cout<sp/>&lt;&lt;<sp/></highlight><highlight class="stringliteral">&quot;RPC<sp/>Service<sp/>stopped.&quot;</highlight><highlight class="normal"><sp/>&lt;&lt;<sp/>std::endl;</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"></highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1acff5269dda711e254512bf6ff3999015" kindref="member">BridgingNodeApplication::setupWebSocketService</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!<ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1acfbfb4084c4ac2780cca14e314cba804" kindref="member">wsContext</ref><sp/>||<sp/>!<ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a2da039c265e6620fd0f1d4374b91d898" kindref="member">wsThreadPool</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::cerr<sp/>&lt;&lt;<sp/></highlight><highlight class="stringliteral">&quot;WebSocket<sp/>context<sp/>or<sp/>thread<sp/>pool<sp/>not<sp/>initialized.&quot;</highlight><highlight class="normal"><sp/>&lt;&lt;<sp/>std::endl;</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="98" refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a808555ac994d602fb30ad65709253560" refkind="member"><highlight class="normal"></highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Configure<sp/>the<sp/>WebSocket<sp/>context<sp/>and<sp/>thread<sp/>pool</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1acfbfb4084c4ac2780cca14e314cba804" kindref="member">wsContext</ref>-&gt;initialize();</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a2da039c265e6620fd0f1d4374b91d898" kindref="member">wsThreadPool</ref>-&gt;start();</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::cout<sp/>&lt;&lt;<sp/></highlight><highlight class="stringliteral">&quot;WebSocket<sp/>Service<sp/>initialized.&quot;</highlight><highlight class="normal"><sp/>&lt;&lt;<sp/>std::endl;</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"></highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a808555ac994d602fb30ad65709253560" kindref="member">BridgingNodeApplication::setupRpcService</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!<ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1aa50f67f7ee586ec611e7d41e3e06e789" kindref="member">rpcService</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::cerr<sp/>&lt;&lt;<sp/></highlight><highlight class="stringliteral">&quot;RPC<sp/>Service<sp/>not<sp/>initialized.&quot;</highlight><highlight class="normal"><sp/>&lt;&lt;<sp/>std::endl;</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="110" refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a77bee7e80e92d15c1a5bcf4b1b39e329" refkind="member"><highlight class="normal"></highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Initialize<sp/>the<sp/>RPC<sp/>service</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1aa50f67f7ee586ec611e7d41e3e06e789" kindref="member">rpcService</ref>-&gt;initialize();</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1aa50f67f7ee586ec611e7d41e3e06e789" kindref="member">rpcService</ref>-&gt;start();</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::cout<sp/>&lt;&lt;<sp/></highlight><highlight class="stringliteral">&quot;RPC<sp/>Service<sp/>initialized.&quot;</highlight><highlight class="normal"><sp/>&lt;&lt;<sp/>std::endl;</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"></highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="da/dd5/classsgns_1_1application_1_1_bridging_node_application_1a77bee7e80e92d15c1a5bcf4b1b39e329" kindref="member">BridgingNodeApplication::handleMessageArrival</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Placeholder<sp/>for<sp/>future<sp/>implementation<sp/>of<sp/>consensus<sp/>and<sp/>message<sp/>processing</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::cout<sp/>&lt;&lt;<sp/></highlight><highlight class="stringliteral">&quot;Processing<sp/>arrived<sp/>message:<sp/>&quot;</highlight><highlight class="normal"><sp/>&lt;&lt;<sp/><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref><sp/>&lt;&lt;<sp/>std::endl;</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="121"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="src/application/impl/bridging_node_application.cpp"/>
+  </compounddef>
+</doxygen>

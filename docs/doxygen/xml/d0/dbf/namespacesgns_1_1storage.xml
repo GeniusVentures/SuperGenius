@@ -1,0 +1,454 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/dbf/namespacesgns_1_1storage" kind="namespace" language="C++">
+    <compoundname>sgns::storage</compoundname>
+    <innerclass refid="de/d30/classsgns_1_1storage_1_1_in_memory_batch" prot="public">sgns::storage::InMemoryBatch</innerclass>
+    <innerclass refid="d6/d1d/classsgns_1_1storage_1_1_in_memory_storage" prot="public">sgns::storage::InMemoryStorage</innerclass>
+    <innerclass refid="d5/dbf/classsgns_1_1storage_1_1rocksdb" prot="public">sgns::storage::rocksdb</innerclass>
+    <innerclass refid="d3/d0c/classsgns_1_1storage_1_1_buffer" prot="public">sgns::storage::Buffer</innerclass>
+    <innernamespace refid="dd/d55/namespacesgns_1_1storage_1_1changes__trie">sgns::storage::changes_trie</innernamespace>
+    <innernamespace refid="d2/db5/namespacesgns_1_1storage_1_1trie">sgns::storage::trie</innernamespace>
+    <innernamespace refid="df/d29/namespacesgns_1_1storage_1_1face">sgns::storage::face</innernamespace>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4bac" prot="public" static="no" strong="yes">
+        <type>uint8_t</type>
+        <name>DatabaseError</name>
+        <qualifiedname>sgns::storage::DatabaseError</qualifiedname>
+        <enumvalue id="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4bacae0aa021e21dddbd6d8cecec71e9cf564" prot="public">
+          <name>OK</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4baca8c02547a8a3b02382bac3557bcb2280d" prot="public">
+          <name>NOT_FOUND</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4bacab0660e678637dd6e26c0f99dccb171e7" prot="public">
+          <name>CORRUPTION</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4baca5343bcd21aad65124478a61831f6949e" prot="public">
+          <name>NOT_SUPPORTED</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4bacaf295a0c3e37c94f078e1c5476479132d" prot="public">
+          <name>INVALID_ARGUMENT</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4baca198489bd72edc2407c15917c5323cd93" prot="public">
+          <name>IO_ERROR</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4baca867f6ea30f384ba41f6c0453cce186c3" prot="public">
+          <name>MERGE_IN_PROGRESS</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4baca2e47f45b8584e07c8ebd4f693d8cfe10" prot="public">
+          <name>INCOMPLETE</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4baca14cfce6ee52b4c77f4f251c0b0c1622c" prot="public">
+          <name>SHUTDOWN_IN_PROGRESS</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4bacadbe2cbac46ffa8283747010d8e1e6396" prot="public">
+          <name>TIMED_OUT</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4baca4e6c860e5da10e31c5fd9cb76ddc2025" prot="public">
+          <name>ABORTED</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4baca802706a9238e2928077f97736854bad4" prot="public">
+          <name>BUSY</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4baca38afd7ae34bd5e3e6fc170d8b09178a3" prot="public">
+          <name>EXPIRED</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4baca05d17baecbd732350927e31a99fd3156" prot="public">
+          <name>TRY_AGAIN_</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4bacaf89448656309a71d32cca84fba4961f2" prot="public">
+          <name>COMPACTION_TOO_LARGE</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4baca818278232e0e1076c1a25efa8ed8105e" prot="public">
+          <name>COLUMN_FAMILY_DROPPED</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4baca212f7b66dd4f7bb5c77f1f5ba47cd5cc" prot="public">
+          <name>UNITIALIZED</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4baca696b031073e74bf2cb98e5ef201d4aa3" prot="public">
+          <name>UNKNOWN</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>universal database interface error </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/database_error.hpp" line="12" column="5" bodyfile="src/storage/database_error.hpp" bodystart="13" bodyend="32"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="d0/dbf/namespacesgns_1_1storage_1a040e162fcce788f6ecea4e5ec54ed1c6" prot="public" static="no">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>using sgns::storage::Buffer = base::Buffer</definition>
+        <argsstring></argsstring>
+        <name>Buffer</name>
+        <qualifiedname>sgns::storage::Buffer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/buffer_map_types.hpp" line="19" column="3" bodyfile="src/storage/buffer_map_types.hpp" bodystart="19" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/dbf/namespacesgns_1_1storage_1a13183abd0cab80c7252499be9bcc88d2" prot="public" static="no">
+        <type><ref refid="d4/d01/structsgns_1_1storage_1_1face_1_1_generic_map" kindref="compound">face::GenericMap</ref>&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref>, <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt;</type>
+        <definition>using sgns::storage::BufferMap = face::GenericMap&lt;Buffer, Buffer&gt;</definition>
+        <argsstring></argsstring>
+        <name>BufferMap</name>
+        <qualifiedname>sgns::storage::BufferMap</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/buffer_map_types.hpp" line="21" column="3" bodyfile="src/storage/buffer_map_types.hpp" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/dbf/namespacesgns_1_1storage_1a5919619e4b0d178dbbbffbc8bcf1fb7d" prot="public" static="no">
+        <type><ref refid="d9/d69/structsgns_1_1storage_1_1face_1_1_write_batch" kindref="compound">face::WriteBatch</ref>&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref>, <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt;</type>
+        <definition>using sgns::storage::BufferBatch = face::WriteBatch&lt;Buffer, Buffer&gt;</definition>
+        <argsstring></argsstring>
+        <name>BufferBatch</name>
+        <qualifiedname>sgns::storage::BufferBatch</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/buffer_map_types.hpp" line="23" column="3" bodyfile="src/storage/buffer_map_types.hpp" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/dbf/namespacesgns_1_1storage_1a18d28bc8415e5fb7813712ed5131ae81" prot="public" static="no">
+        <type><ref refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map" kindref="compound">face::ReadOnlyMap</ref>&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref>, <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt;</type>
+        <definition>using sgns::storage::ReadOnlyBufferMap = face::ReadOnlyMap&lt;Buffer, Buffer&gt;</definition>
+        <argsstring></argsstring>
+        <name>ReadOnlyBufferMap</name>
+        <qualifiedname>sgns::storage::ReadOnlyBufferMap</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/buffer_map_types.hpp" line="25" column="3" bodyfile="src/storage/buffer_map_types.hpp" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/dbf/namespacesgns_1_1storage_1a148495aef1b5c37145188647a466034b" prot="public" static="no">
+        <type><ref refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map" kindref="compound">face::BatchWriteMap</ref>&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref>, <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt;</type>
+        <definition>using sgns::storage::BatchWriteBufferMap = face::BatchWriteMap&lt;Buffer, Buffer&gt;</definition>
+        <argsstring></argsstring>
+        <name>BatchWriteBufferMap</name>
+        <qualifiedname>sgns::storage::BatchWriteBufferMap</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/buffer_map_types.hpp" line="26" column="3" bodyfile="src/storage/buffer_map_types.hpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/dbf/namespacesgns_1_1storage_1a1f822800c416f58b1bcc7b1d86c11797" prot="public" static="no">
+        <type><ref refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage" kindref="compound">face::GenericStorage</ref>&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref>, <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt;</type>
+        <definition>using sgns::storage::BufferStorage = face::GenericStorage&lt;Buffer, Buffer&gt;</definition>
+        <argsstring></argsstring>
+        <name>BufferStorage</name>
+        <qualifiedname>sgns::storage::BufferStorage</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/buffer_map_types.hpp" line="28" column="3" bodyfile="src/storage/buffer_map_types.hpp" bodystart="28" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/dbf/namespacesgns_1_1storage_1af3943c7b4511cc2ca91cfcac7f94fac3" prot="public" static="no">
+        <type><ref refid="df/df2/structsgns_1_1storage_1_1face_1_1_map_cursor" kindref="compound">face::MapCursor</ref>&lt; <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref>, <ref refid="d5/d2a/class_buffer" kindref="compound">Buffer</ref> &gt;</type>
+        <definition>using sgns::storage::BufferMapCursor = face::MapCursor&lt;Buffer, Buffer&gt;</definition>
+        <argsstring></argsstring>
+        <name>BufferMapCursor</name>
+        <qualifiedname>sgns::storage::BufferMapCursor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/buffer_map_types.hpp" line="30" column="3" bodyfile="src/storage/buffer_map_types.hpp" bodystart="30" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/dbf/namespacesgns_1_1storage_1a97b1cb54276aead803a778e368f1e9d4" prot="public" static="no">
+        <type>::ROCKSDB_NAMESPACE::BlockBasedTableOptions</type>
+        <definition>using sgns::storage::BlockBasedTableOptions = ::ROCKSDB_NAMESPACE::BlockBasedTableOptions</definition>
+        <argsstring></argsstring>
+        <name>BlockBasedTableOptions</name>
+        <qualifiedname>sgns::storage::BlockBasedTableOptions</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb.cpp" line="18" column="5" bodyfile="src/storage/rocksdb/rocksdb.cpp" bodystart="18" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d0/dbf/namespacesgns_1_1storage_1a80fad7141b2f80b5551f650625873e97" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d0/dbf/namespacesgns_1_1storage_1a8a572a572309a6061c666d6d8b0f4bac" kindref="member">DatabaseError</ref></type>
+        <definition>DatabaseError sgns::storage::error_from_rocksdb</definition>
+        <argsstring>(rocksdb::Status::Code code)</argsstring>
+        <name>error_from_rocksdb</name>
+        <qualifiedname>sgns::storage::error_from_rocksdb</qualifiedname>
+        <param>
+          <type>rocksdb::Status::Code</type>
+          <declname>code</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/database_error.cpp" line="52" column="19" bodyfile="src/storage/database_error.cpp" bodystart="52" bodyend="95" declfile="src/storage/database_error.hpp" declline="34" declcolumn="19"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dbf/namespacesgns_1_1storage_1aa255430f7d25e8bebec377a71ed9f1da" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>const std::string &amp;</type>
+        <definition>const std::string &amp; sgns::storage::GetAuthoritySetKey</definition>
+        <argsstring>()</argsstring>
+        <name>GetAuthoritySetKey</name>
+        <qualifiedname>sgns::storage::GetAuthoritySetKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/predefined_keys.hpp" line="10" column="23" bodyfile="src/storage/predefined_keys.hpp" bodystart="10" bodyend="14"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dbf/namespacesgns_1_1storage_1a72f94dc5c3c05b7c08aa885e4030eaab" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>const std::string &amp;</type>
+        <definition>const std::string &amp; sgns::storage::GetSetStateKey</definition>
+        <argsstring>()</argsstring>
+        <name>GetSetStateKey</name>
+        <qualifiedname>sgns::storage::GetSetStateKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/predefined_keys.hpp" line="16" column="23" bodyfile="src/storage/predefined_keys.hpp" bodystart="16" bodyend="20"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dbf/namespacesgns_1_1storage_1aa2c761e78880b764ef80200db5eb1f56" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>const std::string &amp;</type>
+        <definition>const std::string &amp; sgns::storage::GetGenesisBlockHashLookupKey</definition>
+        <argsstring>()</argsstring>
+        <name>GetGenesisBlockHashLookupKey</name>
+        <qualifiedname>sgns::storage::GetGenesisBlockHashLookupKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/predefined_keys.hpp" line="22" column="23" bodyfile="src/storage/predefined_keys.hpp" bodystart="22" bodyend="26"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dbf/namespacesgns_1_1storage_1aea7157bf6bdef7203727d670caf42cb0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>const std::string &amp;</type>
+        <definition>const std::string &amp; sgns::storage::GetLastFinalizedBlockHashLookupKey</definition>
+        <argsstring>()</argsstring>
+        <name>GetLastFinalizedBlockHashLookupKey</name>
+        <qualifiedname>sgns::storage::GetLastFinalizedBlockHashLookupKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/predefined_keys.hpp" line="28" column="23" bodyfile="src/storage/predefined_keys.hpp" bodystart="28" bodyend="32"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dbf/namespacesgns_1_1storage_1adb3c69ab61f897c1f78049608e047f84" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>outcome::result&lt; T &gt;</type>
+        <definition>outcome::result&lt; T &gt; sgns::storage::error_as_result</definition>
+        <argsstring>(const rocksdb::Status &amp;s)</argsstring>
+        <name>error_as_result</name>
+        <qualifiedname>sgns::storage::error_as_result</qualifiedname>
+        <param>
+          <type>const <ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a0c62d4a12443a094d04b1f1c9c84d7b9" kindref="member">rocksdb::Status</ref> &amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_util.hpp" line="18" column="26" bodyfile="src/storage/rocksdb/rocksdb_util.hpp" bodystart="18" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dbf/namespacesgns_1_1storage_1affc5602333e529a0fe799fa1fed36335" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>outcome::result&lt; T &gt;</type>
+        <definition>outcome::result&lt; T &gt; sgns::storage::error_as_result</definition>
+        <argsstring>(const rocksdb::Status &amp;s, const base::Logger &amp;logger)</argsstring>
+        <name>error_as_result</name>
+        <qualifiedname>sgns::storage::error_as_result</qualifiedname>
+        <param>
+          <type>const <ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a0c62d4a12443a094d04b1f1c9c84d7b9" kindref="member">rocksdb::Status</ref> &amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref> &amp;</type>
+          <declname>logger</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_util.hpp" line="54" column="26" bodyfile="src/storage/rocksdb/rocksdb_util.hpp" bodystart="54" bodyend="59"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dbf/namespacesgns_1_1storage_1aa6fcc1a5312204766c0bbd691f1124ee" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a1492da459c197a6587932a81c3f48423" kindref="member">rocksdb::Slice</ref></type>
+        <definition>rocksdb::Slice sgns::storage::make_slice</definition>
+        <argsstring>(const base::Buffer &amp;buf)</argsstring>
+        <name>make_slice</name>
+        <qualifiedname>sgns::storage::make_slice</qualifiedname>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref> &amp;</type>
+          <declname>buf</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_util.hpp" line="61" column="25" bodyfile="src/storage/rocksdb/rocksdb_util.hpp" bodystart="61" bodyend="67"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dbf/namespacesgns_1_1storage_1a56df5a22e09697b14f4c597b13a90693" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>gsl::span&lt; const uint8_t &gt;</type>
+        <definition>gsl::span&lt; const uint8_t &gt; sgns::storage::make_span</definition>
+        <argsstring>(const rocksdb::Slice &amp;s)</argsstring>
+        <name>make_span</name>
+        <qualifiedname>sgns::storage::make_span</qualifiedname>
+        <param>
+          <type>const <ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a1492da459c197a6587932a81c3f48423" kindref="member">rocksdb::Slice</ref> &amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_util.hpp" line="69" column="20" bodyfile="src/storage/rocksdb/rocksdb_util.hpp" bodystart="69" bodyend="74"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/dbf/namespacesgns_1_1storage_1a2c08f2bb7966fe114c222eb1d38979b0" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>base::Buffer sgns::storage::make_buffer</definition>
+        <argsstring>(const rocksdb::Slice &amp;s)</argsstring>
+        <name>make_buffer</name>
+        <qualifiedname>sgns::storage::make_buffer</qualifiedname>
+        <param>
+          <type>const <ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb_1a1492da459c197a6587932a81c3f48423" kindref="member">rocksdb::Slice</ref> &amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/storage/rocksdb/rocksdb_util.hpp" line="76" column="23" bodyfile="src/storage/rocksdb/rocksdb_util.hpp" bodystart="76" bodyend="82"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>This file contains convenience typedefs for interfaces from face/, as they are mostly used with <ref refid="d3/d0c/classsgns_1_1storage_1_1_buffer" kindref="compound">Buffer</ref> key and value types </para>
+    </detaileddescription>
+    <location file="src/runtime/binaryen/runtime_api/core_factory_impl.hpp" line="12" column="1"/>
+  </compounddef>
+</doxygen>

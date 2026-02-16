@@ -1,0 +1,1761 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/d74/classsgns_1_1_account_messenger" kind="class" language="C++" prot="public">
+    <compoundname>sgns::AccountMessenger</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">std::enable_shared_from_this&lt; AccountMessenger &gt;</basecompoundref>
+    <includes refid="d8/d7a/_account_messenger_8hpp" local="no">AccountMessenger.hpp</includes>
+    <innerclass refid="dd/d3e/structsgns_1_1_account_messenger_1_1_interface_methods" prot="public">sgns::AccountMessenger::InterfaceMethods</innerclass>
+    <innerclass refid="dc/d28/structsgns_1_1_account_messenger_1_1_request_task" prot="private">sgns::AccountMessenger::RequestTask</innerclass>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="d5/d74/classsgns_1_1_account_messenger_1ac5f7a607c263ee8aa75e740dc0b96f78" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>Error</name>
+        <qualifiedname>sgns::AccountMessenger::Error</qualifiedname>
+        <enumvalue id="d5/d74/classsgns_1_1_account_messenger_1ac5f7a607c263ee8aa75e740dc0b96f78a4bc32dd6c0cfcb2a82db3a198d191564" prot="public">
+          <name>PROTO_DESERIALIZATION</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+<para><ref refid="d5/d74/classsgns_1_1_account_messenger_1ac5f7a607c263ee8aa75e740dc0b96f78" kindref="member">Error</ref> in protobuf data deserialization. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d5/d74/classsgns_1_1_account_messenger_1ac5f7a607c263ee8aa75e740dc0b96f78a39a33374e9071f0aebb95dc3a250eb08" prot="public">
+          <name>PROTO_SERIALIZATION</name>
+          <briefdescription>
+<para><ref refid="d5/d74/classsgns_1_1_account_messenger_1ac5f7a607c263ee8aa75e740dc0b96f78" kindref="member">Error</ref> in protobuf data serialization. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d5/d74/classsgns_1_1_account_messenger_1ac5f7a607c263ee8aa75e740dc0b96f78a66913491165a5f0d857abde651f35dbd" prot="public">
+          <name>NONCE_REQUEST_IN_PROGRESS</name>
+          <briefdescription>
+<para>Nonce request already in progress. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d5/d74/classsgns_1_1_account_messenger_1ac5f7a607c263ee8aa75e740dc0b96f78ae92ddcd71c9ee913c289b425bb52cf4a" prot="public">
+          <name>NONCE_GET_ERROR</name>
+          <briefdescription>
+<para>Nonce couldn&apos;t be fetched. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d5/d74/classsgns_1_1_account_messenger_1ac5f7a607c263ee8aa75e740dc0b96f78ab2079e623f8503d646fa8ac00f3bd216" prot="public">
+          <name>NO_RESPONSE_RECEIVED</name>
+          <briefdescription>
+<para>No response received from network. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d5/d74/classsgns_1_1_account_messenger_1ac5f7a607c263ee8aa75e740dc0b96f78afcea3335bf0aaffd5f33b8bfa66707a3" prot="public">
+          <name>RESPONSE_WITHOUT_NONCE</name>
+          <briefdescription>
+<para>Response received but without nonce data. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d5/d74/classsgns_1_1_account_messenger_1ac5f7a607c263ee8aa75e740dc0b96f78a04f2b654f964e6c4f7ae390b13478f9c" prot="public">
+          <name>GENESIS_REQUEST_ERROR</name>
+          <briefdescription>
+<para>Genesis request failed. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>Account Messenger errors. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="39" column="9" bodyfile="src/account/AccountMessenger.hpp" bodystart="40" bodyend="48"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/d74/classsgns_1_1_account_messenger_1a21bd8a1198fb2150ffb514745dfb66e3" prot="public" static="no">
+        <type>std::function&lt; bool(const std::string &amp;cid, const std::string &amp;peer_id, const std::string &amp;address)&gt;</type>
+        <definition>using sgns::AccountMessenger::BlockResponseHandler = 
+std::function&lt;bool( const std::string &amp;cid, const std::string &amp;peer_id, const std::string &amp;address )&gt;</definition>
+        <argsstring></argsstring>
+        <name>BlockResponseHandler</name>
+        <qualifiedname>sgns::AccountMessenger::BlockResponseHandler</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="74" column="9" bodyfile="src/account/AccountMessenger.hpp" bodystart="74" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/d74/classsgns_1_1_account_messenger_1ae5cd35734c88e17b9609aebe704d6265" prot="public" static="no">
+        <type>std::function&lt; void(const std::set&lt; std::string &gt; &amp;topics)&gt;</type>
+        <definition>using sgns::AccountMessenger::HeadRequestHandler = std::function&lt;void( const std::set&lt;std::string&gt; &amp;topics )&gt;</definition>
+        <argsstring></argsstring>
+        <name>HeadRequestHandler</name>
+        <qualifiedname>sgns::AccountMessenger::HeadRequestHandler</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="78" column="9" bodyfile="src/account/AccountMessenger.hpp" bodystart="78" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-type">
+      <memberdef kind="enum" id="d5/d74/classsgns_1_1_account_messenger_1adf1c174849e30cdb996e1299d590b396" prot="private" static="no" strong="yes">
+        <type>std::uint8_t</type>
+        <name>RequestType</name>
+        <qualifiedname>sgns::AccountMessenger::RequestType</qualifiedname>
+        <enumvalue id="d5/d74/classsgns_1_1_account_messenger_1adf1c174849e30cdb996e1299d590b396a3a90ac83535fb1f3d071e8beb25aa956" prot="private">
+          <name>Nonce</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d5/d74/classsgns_1_1_account_messenger_1adf1c174849e30cdb996e1299d590b396a411f3239ffbefd44ebd08ac9eaec6489" prot="private">
+          <name>Genesis</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d5/d74/classsgns_1_1_account_messenger_1adf1c174849e30cdb996e1299d590b396a154db57a99e3ecdddbf535530d9ed701" prot="private">
+          <name>AccountCreation</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d5/d74/classsgns_1_1_account_messenger_1adf1c174849e30cdb996e1299d590b396ae3f89acfed95a8c8ace9dd3dceafd680" prot="private">
+          <name>BlockByCid</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="204" column="9" bodyfile="src/account/AccountMessenger.hpp" bodystart="205" bodyend="210"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1a97c685516d246f58ba190f07e9c2df48" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>std::string_view</type>
+        <definition>std::string_view sgns::AccountMessenger::ACCOUNT_COMM</definition>
+        <argsstring></argsstring>
+        <name>ACCOUNT_COMM</name>
+        <qualifiedname>sgns::AccountMessenger::ACCOUNT_COMM</qualifiedname>
+        <initializer>= &quot;.comm&quot;</initializer>
+        <briefdescription>
+<para>Basis of the account receiving topic. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="164" column="43" bodyfile="src/account/AccountMessenger.hpp" bodystart="164" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1af52b7cddf4fff52261a4a933c46b7837" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>std::string_view</type>
+        <definition>std::string_view sgns::AccountMessenger::REQUESTS_COMM</definition>
+        <argsstring></argsstring>
+        <name>REQUESTS_COMM</name>
+        <qualifiedname>sgns::AccountMessenger::REQUESTS_COMM</qualifiedname>
+        <initializer>= &quot;SGNUS.BC.Requests.comm&quot;</initializer>
+        <briefdescription>
+<para>Basis of the global requests topic. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="166" column="43" bodyfile="src/account/AccountMessenger.hpp" bodystart="166" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1ad37cadd08e4b3efc73dcb8597dfc4e1f" prot="private" static="no" mutable="no">
+        <type>const std::string</type>
+        <definition>const std::string sgns::AccountMessenger::address_</definition>
+        <argsstring></argsstring>
+        <name>address_</name>
+        <qualifiedname>sgns::AccountMessenger::address_</qualifiedname>
+        <briefdescription>
+<para>Own address. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="168" column="52" bodyfile="src/account/AccountMessenger.hpp" bodystart="168" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1a2a5f46f7bd0096cb7a7af10f059828ac" prot="private" static="no" mutable="no">
+        <type>const std::string</type>
+        <definition>const std::string sgns::AccountMessenger::account_comm_topic_</definition>
+        <argsstring></argsstring>
+        <name>account_comm_topic_</name>
+        <qualifiedname>sgns::AccountMessenger::account_comm_topic_</qualifiedname>
+        <briefdescription>
+<para>Account receiving topic. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="169" column="52" bodyfile="src/account/AccountMessenger.hpp" bodystart="169" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1aa7d1b177e80a02bcf403706bd42258d3" prot="private" static="no" mutable="no">
+        <type>const std::string</type>
+        <definition>const std::string sgns::AccountMessenger::requests_topic_</definition>
+        <argsstring></argsstring>
+        <name>requests_topic_</name>
+        <qualifiedname>sgns::AccountMessenger::requests_topic_</qualifiedname>
+        <briefdescription>
+<para>Global requests topic. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="170" column="52" bodyfile="src/account/AccountMessenger.hpp" bodystart="170" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1ad2591f8ffd8185a688d9c246fa971b01" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; ipfs_pubsub::GossipPubSub &gt;</type>
+        <definition>std::shared_ptr&lt;ipfs_pubsub::GossipPubSub&gt; sgns::AccountMessenger::pubsub_</definition>
+        <argsstring></argsstring>
+        <name>pubsub_</name>
+        <qualifiedname>sgns::AccountMessenger::pubsub_</qualifiedname>
+        <briefdescription>
+<para>Pubsub instance. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="171" column="25" bodyfile="src/account/AccountMessenger.hpp" bodystart="171" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1a724f5573ab92a7acb7d3b3d7f5cfb8c0" prot="private" static="no" mutable="no">
+        <type>std::shared_future&lt; std::shared_ptr&lt; libp2p::protocol::Subscription &gt; &gt;</type>
+        <definition>std::shared_future&lt;std::shared_ptr&lt;libp2p::protocol::Subscription&gt; &gt; sgns::AccountMessenger::subs_acc_future_</definition>
+        <argsstring></argsstring>
+        <name>subs_acc_future_</name>
+        <qualifiedname>sgns::AccountMessenger::subs_acc_future_</qualifiedname>
+        <briefdescription>
+<para>Future of the subscription to the receiving topic. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="174" column="28" bodyfile="src/account/AccountMessenger.hpp" bodystart="174" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1ab2c0f63c4e553849dd4642c4410f6325" prot="private" static="no" mutable="no">
+        <type>std::shared_future&lt; std::shared_ptr&lt; libp2p::protocol::Subscription &gt; &gt;</type>
+        <definition>std::shared_future&lt;std::shared_ptr&lt;libp2p::protocol::Subscription&gt; &gt; sgns::AccountMessenger::subs_requests_future_</definition>
+        <argsstring></argsstring>
+        <name>subs_requests_future_</name>
+        <qualifiedname>sgns::AccountMessenger::subs_requests_future_</qualifiedname>
+        <briefdescription>
+<para>Future of the subscription to the requests topic. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="176" column="28" bodyfile="src/account/AccountMessenger.hpp" bodystart="176" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1a75cf3bd33f63b8460d94e9c8d78067fd" prot="private" static="no" mutable="no">
+        <type>std::unordered_map&lt; uint64_t, std::set&lt; uint64_t &gt; &gt;</type>
+        <definition>std::unordered_map&lt;uint64_t, std::set&lt;uint64_t&gt; &gt; sgns::AccountMessenger::nonce_responses_</definition>
+        <argsstring></argsstring>
+        <name>nonce_responses_</name>
+        <qualifiedname>sgns::AccountMessenger::nonce_responses_</qualifiedname>
+        <briefdescription>
+<para>All current nonce responses. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="178" column="28" bodyfile="src/account/AccountMessenger.hpp" bodystart="178" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1a4e38dc726f0439d9d365eae03c20b1ba" prot="private" static="no" mutable="no">
+        <type>std::unordered_map&lt; uint64_t, std::set&lt; std::string &gt; &gt;</type>
+        <definition>std::unordered_map&lt;uint64_t, std::set&lt;std::string&gt; &gt; sgns::AccountMessenger::no_nonce_responses_</definition>
+        <argsstring></argsstring>
+        <name>no_nonce_responses_</name>
+        <qualifiedname>sgns::AccountMessenger::no_nonce_responses_</qualifiedname>
+        <briefdescription>
+<para>Addresses that responded with no nonce. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="180" column="13" bodyfile="src/account/AccountMessenger.hpp" bodystart="180" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1a6b2742cbdee81fd8f7edb5792c91081f" prot="private" static="no" mutable="no">
+        <type>std::unordered_map&lt; uint64_t, std::chrono::steady_clock::time_point &gt;</type>
+        <definition>std::unordered_map&lt;uint64_t, std::chrono::steady_clock::time_point&gt; sgns::AccountMessenger::first_response_time_</definition>
+        <argsstring></argsstring>
+        <name>first_response_time_</name>
+        <qualifiedname>sgns::AccountMessenger::first_response_time_</qualifiedname>
+        <briefdescription>
+<para>Timestamp of the first response. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="182" column="20" bodyfile="src/account/AccountMessenger.hpp" bodystart="182" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1a7f44c1d0fadeb8f3830f291630f68c86" prot="private" static="no" mutable="no">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::AccountMessenger::nonce_responses_mutex_</definition>
+        <argsstring></argsstring>
+        <name>nonce_responses_mutex_</name>
+        <qualifiedname>sgns::AccountMessenger::nonce_responses_mutex_</qualifiedname>
+        <briefdescription>
+<para>Mutex of the nonce_responses_. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="183" column="20" bodyfile="src/account/AccountMessenger.hpp" bodystart="183" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1ab812ad85da87af6b3891fea96fe9c6ca" prot="private" static="no" mutable="no">
+        <type>std::unordered_map&lt; uint64_t, std::set&lt; std::string &gt; &gt;</type>
+        <definition>std::unordered_map&lt;uint64_t, std::set&lt;std::string&gt; &gt; sgns::AccountMessenger::block_responses_</definition>
+        <argsstring></argsstring>
+        <name>block_responses_</name>
+        <qualifiedname>sgns::AccountMessenger::block_responses_</qualifiedname>
+        <briefdescription>
+<para>collected block CIDs per req_id </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="186" column="28" bodyfile="src/account/AccountMessenger.hpp" bodystart="186" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1a5612c138082a27862bd8af4090721681" prot="private" static="no" mutable="no">
+        <type>std::unordered_map&lt; uint64_t, std::chrono::steady_clock::time_point &gt;</type>
+        <definition>std::unordered_map&lt;uint64_t, std::chrono::steady_clock::time_point&gt; sgns::AccountMessenger::block_first_response_time_</definition>
+        <argsstring></argsstring>
+        <name>block_first_response_time_</name>
+        <qualifiedname>sgns::AccountMessenger::block_first_response_time_</qualifiedname>
+        <briefdescription>
+<para>Timestamp of the first block response. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="188" column="20" bodyfile="src/account/AccountMessenger.hpp" bodystart="188" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1ac8e174b7164338b33aa3264967822565" prot="private" static="no" mutable="no">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::AccountMessenger::block_responses_mutex_</definition>
+        <argsstring></argsstring>
+        <name>block_responses_mutex_</name>
+        <qualifiedname>sgns::AccountMessenger::block_responses_mutex_</qualifiedname>
+        <briefdescription>
+<para>Mutex protecting block_responses_. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="189" column="20" bodyfile="src/account/AccountMessenger.hpp" bodystart="189" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1a8a9f55876d3bfa4a3f059ebc20755b01" prot="private" static="no" mutable="no">
+        <type><ref refid="dd/d3e/structsgns_1_1_account_messenger_1_1_interface_methods" kindref="compound">InterfaceMethods</ref></type>
+        <definition>InterfaceMethods sgns::AccountMessenger::methods_</definition>
+        <argsstring></argsstring>
+        <name>methods_</name>
+        <qualifiedname>sgns::AccountMessenger::methods_</qualifiedname>
+        <briefdescription>
+<para>Interface methods. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="191" column="26" bodyfile="src/account/AccountMessenger.hpp" bodystart="191" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1a8c49d10f4752414a5d6c5b89969caa90" prot="private" static="no" mutable="no">
+        <type>std::random_device</type>
+        <definition>std::random_device sgns::AccountMessenger::rd_</definition>
+        <argsstring></argsstring>
+        <name>rd_</name>
+        <qualifiedname>sgns::AccountMessenger::rd_</qualifiedname>
+        <briefdescription>
+<para>Random device for request IDs. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="193" column="28" bodyfile="src/account/AccountMessenger.hpp" bodystart="193" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1af086106e941b043d7d0df8bb63cae0bf" prot="private" static="no" mutable="no">
+        <type><ref refid="d5/d74/classsgns_1_1_account_messenger_1a21bd8a1198fb2150ffb514745dfb66e3" kindref="member">BlockResponseHandler</ref></type>
+        <definition>BlockResponseHandler sgns::AccountMessenger::global_block_handler_</definition>
+        <argsstring></argsstring>
+        <name>global_block_handler_</name>
+        <qualifiedname>sgns::AccountMessenger::global_block_handler_</qualifiedname>
+        <briefdescription>
+<para>Global block response handler. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="196" column="30" bodyfile="src/account/AccountMessenger.hpp" bodystart="196" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1ae7f929040822eba62e3aa656e94e6f4e" prot="private" static="no" mutable="no">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::AccountMessenger::global_handler_mutex_</definition>
+        <argsstring></argsstring>
+        <name>global_handler_mutex_</name>
+        <qualifiedname>sgns::AccountMessenger::global_handler_mutex_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="197" column="30" bodyfile="src/account/AccountMessenger.hpp" bodystart="197" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1a9d13d0fb303f3307309e1bcd3105e8eb" prot="private" static="no" mutable="no">
+        <type><ref refid="d5/d74/classsgns_1_1_account_messenger_1ae5cd35734c88e17b9609aebe704d6265" kindref="member">HeadRequestHandler</ref></type>
+        <definition>HeadRequestHandler sgns::AccountMessenger::head_request_handler_</definition>
+        <argsstring></argsstring>
+        <name>head_request_handler_</name>
+        <qualifiedname>sgns::AccountMessenger::head_request_handler_</qualifiedname>
+        <briefdescription>
+<para>Global head request handler. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="200" column="28" bodyfile="src/account/AccountMessenger.hpp" bodystart="200" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1a58db4fc113bef523a83d9d0e6c0d7153" prot="private" static="no" mutable="no">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::AccountMessenger::head_handler_mutex_</definition>
+        <argsstring></argsstring>
+        <name>head_handler_mutex_</name>
+        <qualifiedname>sgns::AccountMessenger::head_handler_mutex_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="201" column="28" bodyfile="src/account/AccountMessenger.hpp" bodystart="201" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1a70610a9553e21f779cbe32d6ffeba2dc" prot="private" static="no" mutable="no">
+        <type>std::thread</type>
+        <definition>std::thread sgns::AccountMessenger::worker_thread_</definition>
+        <argsstring></argsstring>
+        <name>worker_thread_</name>
+        <qualifiedname>sgns::AccountMessenger::worker_thread_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="223" column="41" bodyfile="src/account/AccountMessenger.hpp" bodystart="223" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1ab0fb544ac0283ca5bd2be100a0ecf085" prot="private" static="no" mutable="no">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::AccountMessenger::queue_mutex_</definition>
+        <argsstring></argsstring>
+        <name>queue_mutex_</name>
+        <qualifiedname>sgns::AccountMessenger::queue_mutex_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="224" column="41" bodyfile="src/account/AccountMessenger.hpp" bodystart="224" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1a5fbee7aafdb510f45329c90fb0d01f27" prot="private" static="no" mutable="no">
+        <type>std::condition_variable</type>
+        <definition>std::condition_variable sgns::AccountMessenger::queue_cv_</definition>
+        <argsstring></argsstring>
+        <name>queue_cv_</name>
+        <qualifiedname>sgns::AccountMessenger::queue_cv_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="225" column="41" bodyfile="src/account/AccountMessenger.hpp" bodystart="225" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1a5aaadacbef3673d75f8e58c39c1cec66" prot="private" static="no" mutable="no">
+        <type>std::queue&lt; <ref refid="dc/d28/structsgns_1_1_account_messenger_1_1_request_task" kindref="compound">RequestTask</ref> &gt;</type>
+        <definition>std::queue&lt;RequestTask&gt; sgns::AccountMessenger::request_queue_</definition>
+        <argsstring></argsstring>
+        <name>request_queue_</name>
+        <qualifiedname>sgns::AccountMessenger::request_queue_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="226" column="28" bodyfile="src/account/AccountMessenger.hpp" bodystart="226" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1a027e3b3dcd01c0ff6f8b7f8579840436" prot="private" static="no" mutable="no">
+        <type>std::atomic&lt; bool &gt;</type>
+        <definition>std::atomic&lt;bool&gt; sgns::AccountMessenger::stop_worker_</definition>
+        <argsstring></argsstring>
+        <name>stop_worker_</name>
+        <qualifiedname>sgns::AccountMessenger::stop_worker_</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="227" column="35" bodyfile="src/account/AccountMessenger.hpp" bodystart="227" bodyend="227"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/d74/classsgns_1_1_account_messenger_1afb4295b16c23bf1607fdbdab2b9d0734" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::AccountMessenger::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::AccountMessenger::logger_</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">sgns::base::createLogger</ref>( &quot;AccountMessenger&quot; )</initializer>
+        <briefdescription>
+<para>The logger instance. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="318" column="22" bodyfile="src/account/AccountMessenger.hpp" bodystart="318" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a6770501bdca54f5d9e5a93d1bdab2be2" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="d5/d74/classsgns_1_1_account_messenger_1a72dd574f55429e43edb9ca88d9feb242" kindref="member">AccountMessenger</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; AccountMessenger &gt; sgns::AccountMessenger::New</definition>
+        <argsstring>(std::string address, std::shared_ptr&lt; ipfs_pubsub::GossipPubSub &gt; pubsub, InterfaceMethods methods)</argsstring>
+        <name>New</name>
+        <qualifiedname>sgns::AccountMessenger::New</qualifiedname>
+        <param>
+          <type>std::string</type>
+          <declname>address</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; ipfs_pubsub::GossipPubSub &gt;</type>
+          <declname>pubsub</declname>
+        </param>
+        <param>
+          <type><ref refid="dd/d3e/structsgns_1_1_account_messenger_1_1_interface_methods" kindref="compound">InterfaceMethods</ref></type>
+          <declname>methods</declname>
+        </param>
+        <briefdescription>
+<para>Factory constructor of new <ref refid="d5/d74/classsgns_1_1_account_messenger" kindref="compound">AccountMessenger</ref>. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">address</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Own address </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">pubsub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>pubsub instance </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">methods</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>interface methods <ref refid="dd/d3e/structsgns_1_1_account_messenger_1_1_interface_methods" kindref="compound">InterfaceMethods</ref> </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Valid pointer if succeeds, nullptr otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="87" column="32" bodyfile="src/account/AccountMessenger.cpp" bodystart="41" bodyend="91"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a2e443987d24235791553c4fbf19caa78" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::AccountMessenger::~AccountMessenger</definition>
+        <argsstring>()</argsstring>
+        <name>~AccountMessenger</name>
+        <qualifiedname>sgns::AccountMessenger::~AccountMessenger</qualifiedname>
+        <briefdescription>
+<para>Destroy the Account Messenger object. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="93" column="9" bodyfile="src/account/AccountMessenger.cpp" bodystart="105" bodyend="113"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1aefb675e78c39b6ffb117d0f929ddf9cf" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; uint64_t &gt;</type>
+        <definition>outcome::result&lt; uint64_t &gt; sgns::AccountMessenger::GetLatestNonce</definition>
+        <argsstring>(uint64_t timeout_ms, uint64_t silent_time_ms=150)</argsstring>
+        <name>GetLatestNonce</name>
+        <qualifiedname>sgns::AccountMessenger::GetLatestNonce</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>timeout_ms</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>silent_time_ms</declname>
+          <defval>150</defval>
+        </param>
+        <briefdescription>
+<para>Get the Latest Nonce from the network. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">timeout_ms</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Timeout in miliseconds to get the latest nonce </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">silent_time_ms</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Time tyo wait for subsequential nonce responses after first was received </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Nonce value if success, error otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="100" column="25" bodyfile="src/account/AccountMessenger.cpp" bodystart="285" bodyend="294"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a32967606488c27464465f5e750c01124" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::AccountMessenger::RequestGenesis</definition>
+        <argsstring>(uint64_t timeout_ms, std::function&lt; void(outcome::result&lt; std::string &gt;)&gt; callback=nullptr)</argsstring>
+        <name>RequestGenesis</name>
+        <qualifiedname>sgns::AccountMessenger::RequestGenesis</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>timeout_ms</declname>
+        </param>
+        <param>
+          <type>std::function&lt; void(outcome::result&lt; std::string &gt;)&gt;</type>
+          <declname>callback</declname>
+          <defval>nullptr</defval>
+        </param>
+        <briefdescription>
+<para>Request genesis block from the network (retries until timeout). </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">timeout_ms</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Total timeout in milliseconds to wait for responses </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">callback</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Function to be called for each CID found (empty string if none) </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>success if at least one response arrives before timeout, error otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="108" column="25" bodyfile="src/account/AccountMessenger.cpp" bodystart="296" bodyend="301"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a28a3ae95e647c5ec84db7afd6a5290dd" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::AccountMessenger::RequestAccountCreation</definition>
+        <argsstring>(uint64_t timeout_ms, std::function&lt; void(outcome::result&lt; std::string &gt;)&gt; callback)</argsstring>
+        <name>RequestAccountCreation</name>
+        <qualifiedname>sgns::AccountMessenger::RequestAccountCreation</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>timeout_ms</declname>
+        </param>
+        <param>
+          <type>std::function&lt; void(outcome::result&lt; std::string &gt;)&gt;</type>
+          <declname>callback</declname>
+        </param>
+        <briefdescription>
+<para>Request account creation from the network and invoke callback with found CIDs. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">timeout_ms</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Total timeout in milliseconds to wait for responses </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">callback</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Function to be called for each CID found (signature: void(std::string)) </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>success on scheduled request, error otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="118" column="25" bodyfile="src/account/AccountMessenger.cpp" bodystart="694" bodyend="700"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a96ae85db1aa2c88a16b163c84a3654c8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::AccountMessenger::RequestRegularBlock</definition>
+        <argsstring>(uint64_t timeout_ms, std::string cid, std::function&lt; void(outcome::result&lt; std::string &gt;)&gt; callback=nullptr)</argsstring>
+        <name>RequestRegularBlock</name>
+        <qualifiedname>sgns::AccountMessenger::RequestRegularBlock</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>timeout_ms</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>cid</declname>
+        </param>
+        <param>
+          <type>std::function&lt; void(outcome::result&lt; std::string &gt;)&gt;</type>
+          <declname>callback</declname>
+          <defval>nullptr</defval>
+        </param>
+        <briefdescription>
+<para>Request a block by CID from the network (retries until timeout). </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">timeout_ms</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Total timeout in milliseconds to wait for responses </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">cid</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>CID to request </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">callback</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Callback invoked with the CID result (or error) </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>success on scheduled request, error otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="129" column="25" bodyfile="src/account/AccountMessenger.cpp" bodystart="303" bodyend="310"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a04c49378281624ab1c95a4d7a8f0f9bb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::AccountMessenger::RegisterBlockResponseHandler</definition>
+        <argsstring>(BlockResponseHandler handler)</argsstring>
+        <name>RegisterBlockResponseHandler</name>
+        <qualifiedname>sgns::AccountMessenger::RegisterBlockResponseHandler</qualifiedname>
+        <param>
+          <type><ref refid="d5/d74/classsgns_1_1_account_messenger_1a21bd8a1198fb2150ffb514745dfb66e3" kindref="member">BlockResponseHandler</ref></type>
+          <declname>handler</declname>
+        </param>
+        <briefdescription>
+<para>Register global block response handler. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">handler</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Function to call for all block responses </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="137" column="14" bodyfile="src/account/AccountMessenger.cpp" bodystart="115" bodyend="119"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a10902eb5a1c21f7bfa4ccf2a15f75794" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::AccountMessenger::ClearBlockResponseHandler</definition>
+        <argsstring>()</argsstring>
+        <name>ClearBlockResponseHandler</name>
+        <qualifiedname>sgns::AccountMessenger::ClearBlockResponseHandler</qualifiedname>
+        <briefdescription>
+<para>Clears the block response handler. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="142" column="14" bodyfile="src/account/AccountMessenger.cpp" bodystart="121" bodyend="125"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a52ca7ef22d099057364989abf4bf8ef9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::AccountMessenger::RegisterHeadRequestHandler</definition>
+        <argsstring>(HeadRequestHandler handler)</argsstring>
+        <name>RegisterHeadRequestHandler</name>
+        <qualifiedname>sgns::AccountMessenger::RegisterHeadRequestHandler</qualifiedname>
+        <param>
+          <type><ref refid="d5/d74/classsgns_1_1_account_messenger_1ae5cd35734c88e17b9609aebe704d6265" kindref="member">HeadRequestHandler</ref></type>
+          <declname>handler</declname>
+        </param>
+        <briefdescription>
+<para>Register handler for incoming head requests. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">handler</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Function to call when head request is received with topic list </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="148" column="14" bodyfile="src/account/AccountMessenger.cpp" bodystart="127" bodyend="131"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a6612b7c76254f2cc3b855b532eccb4e9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::AccountMessenger::ClearHeadRequestHandler</definition>
+        <argsstring>()</argsstring>
+        <name>ClearHeadRequestHandler</name>
+        <qualifiedname>sgns::AccountMessenger::ClearHeadRequestHandler</qualifiedname>
+        <briefdescription>
+<para>Clears the head request handler. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="153" column="14" bodyfile="src/account/AccountMessenger.cpp" bodystart="133" bodyend="137"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1ac46ae403802ba4fe763a13345570110a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::AccountMessenger::RequestHeads</definition>
+        <argsstring>(const std::unordered_set&lt; std::string &gt; &amp;topics)</argsstring>
+        <name>RequestHeads</name>
+        <qualifiedname>sgns::AccountMessenger::RequestHeads</qualifiedname>
+        <param>
+          <type>const std::unordered_set&lt; std::string &gt; &amp;</type>
+          <declname>topics</declname>
+        </param>
+        <briefdescription>
+<para>Request heads broadcast for specific topics. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">topics</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Vector of topic names to request heads for </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>outcome::success if request was sent, error otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="160" column="25" bodyfile="src/account/AccountMessenger.cpp" bodystart="139" bodyend="184"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1ab7d2808bbee372c06c282f49b8dc9475" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::AccountMessenger::WorkerLoop</definition>
+        <argsstring>()</argsstring>
+        <name>WorkerLoop</name>
+        <qualifiedname>sgns::AccountMessenger::WorkerLoop</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="229" column="14" bodyfile="src/account/AccountMessenger.cpp" bodystart="720" bodyend="832"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1af1c8342b13d9d390196ad9e246ca787e" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::AccountMessenger::EnqueueTask</definition>
+        <argsstring>(RequestTask task)</argsstring>
+        <name>EnqueueTask</name>
+        <qualifiedname>sgns::AccountMessenger::EnqueueTask</qualifiedname>
+        <param>
+          <type><ref refid="dc/d28/structsgns_1_1_account_messenger_1_1_request_task" kindref="compound">RequestTask</ref></type>
+          <declname>task</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="230" column="14" bodyfile="src/account/AccountMessenger.cpp" bodystart="834" bodyend="841"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a3b272d57f04e7c750ede86248b08a43e" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; uint64_t &gt;</type>
+        <definition>outcome::result&lt; uint64_t &gt; sgns::AccountMessenger::PerformNonceRequest</definition>
+        <argsstring>(uint64_t timeout_ms, uint64_t silent_time_ms)</argsstring>
+        <name>PerformNonceRequest</name>
+        <qualifiedname>sgns::AccountMessenger::PerformNonceRequest</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>timeout_ms</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>silent_time_ms</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="231" column="25" bodyfile="src/account/AccountMessenger.cpp" bodystart="843" bodyend="957"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a2ac052338c0ef098cb10b8cd28e523ab" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::set&lt; std::string &gt; &gt;</type>
+        <definition>outcome::result&lt; std::set&lt; std::string &gt; &gt; sgns::AccountMessenger::PerformBlockRequest</definition>
+        <argsstring>(uint64_t timeout_ms, uint8_t block_index)</argsstring>
+        <name>PerformBlockRequest</name>
+        <qualifiedname>sgns::AccountMessenger::PerformBlockRequest</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>timeout_ms</declname>
+        </param>
+        <param>
+          <type>uint8_t</type>
+          <declname>block_index</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="232" column="25" bodyfile="src/account/AccountMessenger.cpp" bodystart="959" bodyend="1056"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1ad2ffc7d30f2c5d21987f39df8ffa2c92" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::set&lt; std::string &gt; &gt;</type>
+        <definition>outcome::result&lt; std::set&lt; std::string &gt; &gt; sgns::AccountMessenger::PerformBlockCidRequest</definition>
+        <argsstring>(uint64_t timeout_ms, const std::string &amp;cid)</argsstring>
+        <name>PerformBlockCidRequest</name>
+        <qualifiedname>sgns::AccountMessenger::PerformBlockCidRequest</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>timeout_ms</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="233" column="25" bodyfile="src/account/AccountMessenger.cpp" bodystart="1058" bodyend="1156"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a72dd574f55429e43edb9ca88d9feb242" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::AccountMessenger::AccountMessenger</definition>
+        <argsstring>(std::string address, std::shared_ptr&lt; ipfs_pubsub::GossipPubSub &gt; pubsub, InterfaceMethods methods)</argsstring>
+        <name>AccountMessenger</name>
+        <qualifiedname>sgns::AccountMessenger::AccountMessenger</qualifiedname>
+        <param>
+          <type>std::string</type>
+          <declname>address</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; ipfs_pubsub::GossipPubSub &gt;</type>
+          <declname>pubsub</declname>
+        </param>
+        <param>
+          <type><ref refid="dd/d3e/structsgns_1_1_account_messenger_1_1_interface_methods" kindref="compound">InterfaceMethods</ref></type>
+          <declname>methods</declname>
+        </param>
+        <briefdescription>
+<para>Private constructor of the Account Messenger. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">address</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Own address </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">pubsub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>pubsub instance </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">methods</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>interface methods </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="241" column="9" bodyfile="src/account/AccountMessenger.cpp" bodystart="93" bodyend="103"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1aa75bfe008e65564522cb2ec163088249" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::AccountMessenger::RequestNonce</definition>
+        <argsstring>(uint64_t req_id)</argsstring>
+        <name>RequestNonce</name>
+        <qualifiedname>sgns::AccountMessenger::RequestNonce</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>req_id</declname>
+        </param>
+        <briefdescription>
+<para>Requests the nonce to the network. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">req_id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The current request ID </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Success if requested, error otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="249" column="25" bodyfile="src/account/AccountMessenger.cpp" bodystart="256" bodyend="283"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a04db696f038cfb9823560a45b1860e9a" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::AccountMessenger::RequestBlock</definition>
+        <argsstring>(uint64_t req_id, uint8_t block_index)</argsstring>
+        <name>RequestBlock</name>
+        <qualifiedname>sgns::AccountMessenger::RequestBlock</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>req_id</declname>
+        </param>
+        <param>
+          <type>uint8_t</type>
+          <declname>block_index</declname>
+        </param>
+        <briefdescription>
+<para>Request a block (by index) from the network (no callback). </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">req_id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Request identifier </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">block_index</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>index of the requested block (0 = genesis, 1 = account, ...) </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="256" column="25" bodyfile="src/account/AccountMessenger.cpp" bodystart="312" bodyend="339"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1ab7c25229451a20bfb082a5f0d74b6690" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::AccountMessenger::RequestBlockByCid</definition>
+        <argsstring>(uint64_t req_id, const std::string &amp;cid)</argsstring>
+        <name>RequestBlockByCid</name>
+        <qualifiedname>sgns::AccountMessenger::RequestBlockByCid</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>req_id</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+<para>Request a block (by CID) from the network (no callback). </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">req_id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Request identifier </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">cid</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>CID to request </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="263" column="25" bodyfile="src/account/AccountMessenger.cpp" bodystart="341" bodyend="370"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a66031e611f274efbb0cd6e74a3478de4" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::AccountMessenger::OnResponse</definition>
+        <argsstring>(boost::optional&lt; const ipfs_pubsub::GossipPubSub::Message &amp; &gt; message)</argsstring>
+        <name>OnResponse</name>
+        <qualifiedname>sgns::AccountMessenger::OnResponse</qualifiedname>
+        <param>
+          <type>boost::optional&lt; const ipfs_pubsub::GossipPubSub::Message &amp; &gt;</type>
+          <declname>message</declname>
+        </param>
+        <briefdescription>
+<para>Callback of pubsub message when a response was received. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in"><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pubsub messaged to be parsed to proto data type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="269" column="14" bodyfile="src/account/AccountMessenger.cpp" bodystart="223" bodyend="254"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1afdd49cb2b860d2b67d552de84d821aa8" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::AccountMessenger::OnRequest</definition>
+        <argsstring>(boost::optional&lt; const ipfs_pubsub::GossipPubSub::Message &amp; &gt; message)</argsstring>
+        <name>OnRequest</name>
+        <qualifiedname>sgns::AccountMessenger::OnRequest</qualifiedname>
+        <param>
+          <type>boost::optional&lt; const ipfs_pubsub::GossipPubSub::Message &amp; &gt;</type>
+          <declname>message</declname>
+        </param>
+        <briefdescription>
+<para>Callback of pubsub message when a request was received. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in"><ref refid="db/da6/classsgns_1_1message" kindref="compound">message</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pubsub messaged to be parsed to proto data type </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="274" column="14" bodyfile="src/account/AccountMessenger.cpp" bodystart="186" bodyend="221"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a064e540142f90a893830b32befcba909" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::AccountMessenger::SendAccountMessage</definition>
+        <argsstring>(const accountComm::AccountMessage &amp;msg, const std::set&lt; std::string &gt; &amp;topics)</argsstring>
+        <name>SendAccountMessage</name>
+        <qualifiedname>sgns::AccountMessenger::SendAccountMessage</qualifiedname>
+        <param>
+          <type>const accountComm::AccountMessage &amp;</type>
+          <declname>msg</declname>
+        </param>
+        <param>
+          <type>const std::set&lt; std::string &gt; &amp;</type>
+          <declname>topics</declname>
+        </param>
+        <briefdescription>
+<para>Sends a pubsub message to a set of topics. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">msg</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The message to be sent </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">topics</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the destination topics </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Success in case it sends, error otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="281" column="25" bodyfile="src/account/AccountMessenger.cpp" bodystart="702" bodyend="718"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1af743f56396d5ebc10f8ec7c49f1388e2" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::AccountMessenger::HandleNonceRequest</definition>
+        <argsstring>(const accountComm::SignedNonceRequest &amp;req)</argsstring>
+        <name>HandleNonceRequest</name>
+        <qualifiedname>sgns::AccountMessenger::HandleNonceRequest</qualifiedname>
+        <param>
+          <type>const accountComm::SignedNonceRequest &amp;</type>
+          <declname>req</declname>
+        </param>
+        <briefdescription>
+<para>Handles the Nonce request package. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">req</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The proto nonce request package </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="288" column="14" bodyfile="src/account/AccountMessenger.cpp" bodystart="1158" bodyend="1250"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a2271ac81b7e7ed7d4a0b7f6ae621cc8e" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::AccountMessenger::HandleNonceResponse</definition>
+        <argsstring>(const accountComm::SignedNonceResponse &amp;resp)</argsstring>
+        <name>HandleNonceResponse</name>
+        <qualifiedname>sgns::AccountMessenger::HandleNonceResponse</qualifiedname>
+        <param>
+          <type>const accountComm::SignedNonceResponse &amp;</type>
+          <declname>resp</declname>
+        </param>
+        <briefdescription>
+<para>Handles the Nonce response package. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">resp</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The proto nonce response package </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="293" column="14" bodyfile="src/account/AccountMessenger.cpp" bodystart="1252" bodyend="1300"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a77c8a1a62f2980c5b303610e87d62c3a" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::AccountMessenger::HandleBlockRequest</definition>
+        <argsstring>(const accountComm::SignedBlockRequest &amp;req)</argsstring>
+        <name>HandleBlockRequest</name>
+        <qualifiedname>sgns::AccountMessenger::HandleBlockRequest</qualifiedname>
+        <param>
+          <type>const accountComm::SignedBlockRequest &amp;</type>
+          <declname>req</declname>
+        </param>
+        <briefdescription>
+<para>Handles the Genesis request package. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">req</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The proto genesis request package </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="299" column="14" bodyfile="src/account/AccountMessenger.cpp" bodystart="372" bodyend="487"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a22d88b9d06d44104d7a13c444e06c5b5" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::AccountMessenger::HandleBlockCidRequest</definition>
+        <argsstring>(const accountComm::SignedBlockCidRequest &amp;req)</argsstring>
+        <name>HandleBlockCidRequest</name>
+        <qualifiedname>sgns::AccountMessenger::HandleBlockCidRequest</qualifiedname>
+        <param>
+          <type>const accountComm::SignedBlockCidRequest &amp;</type>
+          <declname>req</declname>
+        </param>
+        <briefdescription>
+<para>Handles the Block-by-CID request package. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">req</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The proto block-by-CID request package </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="304" column="14" bodyfile="src/account/AccountMessenger.cpp" bodystart="489" bodyend="599"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a9b16632040cd014412f3f93d033c9e08" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::AccountMessenger::HandleBlockResponse</definition>
+        <argsstring>(const accountComm::SignedBlockResponse &amp;resp)</argsstring>
+        <name>HandleBlockResponse</name>
+        <qualifiedname>sgns::AccountMessenger::HandleBlockResponse</qualifiedname>
+        <param>
+          <type>const accountComm::SignedBlockResponse &amp;</type>
+          <declname>resp</declname>
+        </param>
+        <briefdescription>
+<para>Handles the Block response package (calls global handler). </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">resp</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The proto block response package </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="309" column="14" bodyfile="src/account/AccountMessenger.cpp" bodystart="601" bodyend="692"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/d74/classsgns_1_1_account_messenger_1a64ef75af74993e69ec8f57c20546e048" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::AccountMessenger::HandleHeadRequest</definition>
+        <argsstring>(const accountComm::SignedHeadRequest &amp;req)</argsstring>
+        <name>HandleHeadRequest</name>
+        <qualifiedname>sgns::AccountMessenger::HandleHeadRequest</qualifiedname>
+        <param>
+          <type>const accountComm::SignedHeadRequest &amp;</type>
+          <declname>req</declname>
+        </param>
+        <briefdescription>
+<para>Handles the Head request package (calls registered handler). </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">req</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The proto head request package </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/account/AccountMessenger.hpp" line="315" column="14" bodyfile="src/account/AccountMessenger.cpp" bodystart="1302" bodyend="1348"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::AccountMessenger</label>
+        <link refid="d5/d74/classsgns_1_1_account_messenger"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; AccountMessenger &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="13">
+        <label>K</label>
+      </node>
+      <node id="9">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::AccountMessenger</label>
+        <link refid="d5/d74/classsgns_1_1_account_messenger"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-ACCOUNT_COMM</edgelabel>
+          <edgelabel>-REQUESTS_COMM</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-account_comm_topic_</edgelabel>
+          <edgelabel>-address_</edgelabel>
+          <edgelabel>-requests_topic_</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>-pubsub_</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>-nonce_responses_</edgelabel>
+        </childnode>
+        <childnode refid="15" relation="usage">
+          <edgelabel>-block_responses_</edgelabel>
+          <edgelabel>-no_nonce_responses_</edgelabel>
+        </childnode>
+        <childnode refid="17" relation="usage">
+          <edgelabel>-block_first_response_time_</edgelabel>
+          <edgelabel>-first_response_time_</edgelabel>
+        </childnode>
+        <childnode refid="18" relation="usage">
+          <edgelabel>-block_responses_mutex_</edgelabel>
+          <edgelabel>-global_handler_mutex_</edgelabel>
+          <edgelabel>-head_handler_mutex_</edgelabel>
+          <edgelabel>-nonce_responses_mutex_</edgelabel>
+          <edgelabel>-queue_mutex_</edgelabel>
+        </childnode>
+        <childnode refid="19" relation="usage">
+          <edgelabel>-methods_</edgelabel>
+        </childnode>
+        <childnode refid="20" relation="usage">
+          <edgelabel>-worker_thread_</edgelabel>
+        </childnode>
+        <childnode refid="21" relation="usage">
+          <edgelabel>-request_queue_</edgelabel>
+        </childnode>
+        <childnode refid="25" relation="usage">
+          <edgelabel>-stop_worker_</edgelabel>
+        </childnode>
+        <childnode refid="27" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="19">
+        <label>sgns::AccountMessenger::InterfaceMethods</label>
+        <link refid="dd/d3e/structsgns_1_1_account_messenger_1_1_interface_methods"/>
+      </node>
+      <node id="22">
+        <label>sgns::AccountMessenger::RequestTask</label>
+        <link refid="dc/d28/structsgns_1_1_account_messenger_1_1_request_task"/>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+cid</edgelabel>
+        </childnode>
+        <childnode refid="23" relation="usage">
+          <edgelabel>+nonce_promise</edgelabel>
+        </childnode>
+      </node>
+      <node id="26">
+        <label>std::atomic&lt; T &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="25">
+        <label>std::atomic&lt; bool &gt;</label>
+        <childnode refid="26" relation="template-instance">
+          <edgelabel>&lt; bool &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="4">
+        <label>std::basic_string_view&lt; Char &gt;</label>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; AccountMessenger &gt;</label>
+      </node>
+      <node id="18">
+        <label>std::mutex</label>
+      </node>
+      <node id="24">
+        <label>std::queue&lt; T &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>std::queue&lt; sgns::AccountMessenger::RequestTask &gt;</label>
+        <childnode refid="22" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="24" relation="template-instance">
+          <edgelabel>&lt; sgns::AccountMessenger::RequestTask &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::set&lt; K &gt;</label>
+        <childnode refid="13" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>std::set&lt; std::string &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="template-instance">
+          <edgelabel>&lt; std::string &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::set&lt; uint64_t &gt;</label>
+        <childnode refid="12" relation="template-instance">
+          <edgelabel>&lt; uint64_t &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::shared_ptr&lt; ipfs_pubsub::GossipPubSub &gt;</label>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; ipfs_pubsub::GossipPubSub &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="27">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="23">
+        <label>std::shared_ptr&lt; std::promise&lt; outcome::result&lt; uint64_t &gt; &gt; &gt;</label>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; std::promise&lt; outcome::result&lt; uint64_t &gt; &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::string</label>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::string_view</label>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>std::thread</label>
+      </node>
+      <node id="14">
+        <label>std::unordered_map&lt; K, T &gt;</label>
+        <childnode refid="13" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>std::unordered_map&lt; uint64_t, std::chrono::steady_clock::time_point &gt;</label>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; uint64_t, std::chrono::steady_clock::time_point &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="15">
+        <label>std::unordered_map&lt; uint64_t, std::set&lt; std::string &gt; &gt;</label>
+        <childnode refid="16" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; uint64_t, std::set&lt; std::string &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::unordered_map&lt; uint64_t, std::set&lt; uint64_t &gt; &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; uint64_t, std::set&lt; uint64_t &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/account/AccountMessenger.hpp" line="33" column="5" bodyfile="src/account/AccountMessenger.hpp" bodystart="34" bodyend="319"/>
+    <listofallmembers>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a97c685516d246f58ba190f07e9c2df48" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>ACCOUNT_COMM</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a2a5f46f7bd0096cb7a7af10f059828ac" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>account_comm_topic_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a72dd574f55429e43edb9ca88d9feb242" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>AccountMessenger</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1ad37cadd08e4b3efc73dcb8597dfc4e1f" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>address_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a5612c138082a27862bd8af4090721681" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>block_first_response_time_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1ab812ad85da87af6b3891fea96fe9c6ca" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>block_responses_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1ac8e174b7164338b33aa3264967822565" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>block_responses_mutex_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a21bd8a1198fb2150ffb514745dfb66e3" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>BlockResponseHandler</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a10902eb5a1c21f7bfa4ccf2a15f75794" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>ClearBlockResponseHandler</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a6612b7c76254f2cc3b855b532eccb4e9" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>ClearHeadRequestHandler</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1af1c8342b13d9d390196ad9e246ca787e" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>EnqueueTask</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1ac5f7a607c263ee8aa75e740dc0b96f78" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>Error</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a6b2742cbdee81fd8f7edb5792c91081f" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>first_response_time_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1aefb675e78c39b6ffb117d0f929ddf9cf" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>GetLatestNonce</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1af086106e941b043d7d0df8bb63cae0bf" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>global_block_handler_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1ae7f929040822eba62e3aa656e94e6f4e" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>global_handler_mutex_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a22d88b9d06d44104d7a13c444e06c5b5" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>HandleBlockCidRequest</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a77c8a1a62f2980c5b303610e87d62c3a" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>HandleBlockRequest</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a9b16632040cd014412f3f93d033c9e08" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>HandleBlockResponse</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a64ef75af74993e69ec8f57c20546e048" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>HandleHeadRequest</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1af743f56396d5ebc10f8ec7c49f1388e2" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>HandleNonceRequest</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a2271ac81b7e7ed7d4a0b7f6ae621cc8e" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>HandleNonceResponse</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a58db4fc113bef523a83d9d0e6c0d7153" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>head_handler_mutex_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a9d13d0fb303f3307309e1bcd3105e8eb" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>head_request_handler_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1ae5cd35734c88e17b9609aebe704d6265" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>HeadRequestHandler</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1afb4295b16c23bf1607fdbdab2b9d0734" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>logger_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a8a9f55876d3bfa4a3f059ebc20755b01" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>methods_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a6770501bdca54f5d9e5a93d1bdab2be2" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>New</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a4e38dc726f0439d9d365eae03c20b1ba" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>no_nonce_responses_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a75cf3bd33f63b8460d94e9c8d78067fd" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>nonce_responses_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a7f44c1d0fadeb8f3830f291630f68c86" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>nonce_responses_mutex_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1afdd49cb2b860d2b67d552de84d821aa8" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>OnRequest</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a66031e611f274efbb0cd6e74a3478de4" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>OnResponse</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1ad2ffc7d30f2c5d21987f39df8ffa2c92" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>PerformBlockCidRequest</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a2ac052338c0ef098cb10b8cd28e523ab" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>PerformBlockRequest</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a3b272d57f04e7c750ede86248b08a43e" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>PerformNonceRequest</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1ad2591f8ffd8185a688d9c246fa971b01" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>pubsub_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a5fbee7aafdb510f45329c90fb0d01f27" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>queue_cv_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1ab0fb544ac0283ca5bd2be100a0ecf085" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>queue_mutex_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a8c49d10f4752414a5d6c5b89969caa90" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>rd_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a04c49378281624ab1c95a4d7a8f0f9bb" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>RegisterBlockResponseHandler</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a52ca7ef22d099057364989abf4bf8ef9" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>RegisterHeadRequestHandler</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a5aaadacbef3673d75f8e58c39c1cec66" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>request_queue_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a28a3ae95e647c5ec84db7afd6a5290dd" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>RequestAccountCreation</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a04db696f038cfb9823560a45b1860e9a" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>RequestBlock</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1ab7c25229451a20bfb082a5f0d74b6690" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>RequestBlockByCid</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a32967606488c27464465f5e750c01124" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>RequestGenesis</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1ac46ae403802ba4fe763a13345570110a" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>RequestHeads</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1aa75bfe008e65564522cb2ec163088249" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>RequestNonce</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a96ae85db1aa2c88a16b163c84a3654c8" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>RequestRegularBlock</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1af52b7cddf4fff52261a4a933c46b7837" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>REQUESTS_COMM</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1aa7d1b177e80a02bcf403706bd42258d3" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>requests_topic_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1adf1c174849e30cdb996e1299d590b396" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>RequestType</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a064e540142f90a893830b32befcba909" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>SendAccountMessage</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a027e3b3dcd01c0ff6f8b7f8579840436" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>stop_worker_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a724f5573ab92a7acb7d3b3d7f5cfb8c0" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>subs_acc_future_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1ab2c0f63c4e553849dd4642c4410f6325" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>subs_requests_future_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a70610a9553e21f779cbe32d6ffeba2dc" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>worker_thread_</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1ab7d2808bbee372c06c282f49b8dc9475" prot="private" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>WorkerLoop</name></member>
+      <member refid="d5/d74/classsgns_1_1_account_messenger_1a2e443987d24235791553c4fbf19caa78" prot="public" virt="non-virtual"><scope>sgns::AccountMessenger</scope><name>~AccountMessenger</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

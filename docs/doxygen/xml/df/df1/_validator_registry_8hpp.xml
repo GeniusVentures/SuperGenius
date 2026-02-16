@@ -1,0 +1,779 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="df/df1/_validator_registry_8hpp" kind="file" language="C++">
+    <compoundname>ValidatorRegistry.hpp</compoundname>
+    <includes local="no">cstdint</includes>
+    <includes local="no">functional</includes>
+    <includes local="no">memory</includes>
+    <includes local="no">mutex</includes>
+    <includes local="no">optional</includes>
+    <includes local="no">shared_mutex</includes>
+    <includes local="no">set</includes>
+    <includes local="no">string</includes>
+    <includes local="no">vector</includes>
+    <includes refid="da/d1d/buffer_8hpp" local="yes">base/buffer.hpp</includes>
+    <includes refid="d6/da3/logger_8hpp" local="yes">base/logger.hpp</includes>
+    <includes local="yes">blockchain/impl/proto/ValidatorRegistry.pb.h</includes>
+    <includes refid="dc/d0f/crdt__callback__manager_8hpp" local="yes">crdt/crdt_callback_manager.hpp</includes>
+    <includes local="yes">crdt/proto/delta.pb.h</includes>
+    <includes refid="d5/dda/outcome_8hpp" local="yes">outcome/outcome.hpp</includes>
+    <includes refid="d0/d0e/globaldb_8hpp" local="yes">crdt/globaldb/globaldb.hpp</includes>
+    <includes local="yes">primitives/cid/cid.hpp</includes>
+    <includedby refid="db/da7/_migration3__5__1_to3__6__0_8cpp" local="yes">src/account/Migration3_5_1To3_6_0.cpp</includedby>
+    <includedby refid="df/d00/_validator_registry_8cpp" local="yes">src/blockchain/ValidatorRegistry.cpp</includedby>
+    <includedby refid="da/d8c/_blockchain_8cpp" local="yes">src/blockchain/impl/Blockchain.cpp</includedby>
+    <incdepgraph>
+      <node id="11">
+        <label>base/buffer.hpp</label>
+        <link refid="da/d1d/buffer_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/blockchain/ValidatorRegistry.hpp</label>
+        <link refid="df/df1/_validator_registry_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+      </node>
+      <node id="36">
+        <label>crdt/atomic_transaction.hpp</label>
+        <link refid="dd/d8f/atomic__transaction_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="65">
+        <label>crdt/broadcaster.hpp</label>
+        <link refid="d9/d25/broadcaster_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="66" relation="include">
+        </childnode>
+        <childnode refid="67" relation="include">
+        </childnode>
+        <childnode refid="68" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>crdt/crdt_callback_manager.hpp</label>
+        <link refid="dc/d0f/crdt__callback__manager_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="72">
+        <label>crdt/crdt_data_filter.hpp</label>
+        <link refid="d9/dc5/crdt__data__filter_8hpp"/>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="73" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="39">
+        <label>crdt/crdt_datastore.hpp</label>
+        <link refid="d5/d29/crdt__datastore_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="44" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+        <childnode refid="46" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="47" relation="include">
+        </childnode>
+        <childnode refid="64" relation="include">
+        </childnode>
+        <childnode refid="65" relation="include">
+        </childnode>
+        <childnode refid="69" relation="include">
+        </childnode>
+        <childnode refid="71" relation="include">
+        </childnode>
+        <childnode refid="72" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+      </node>
+      <node id="64">
+        <label>crdt/crdt_heads.hpp</label>
+        <link refid="dc/d76/crdt__heads_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+      </node>
+      <node id="71">
+        <label>crdt/crdt_options.hpp</label>
+        <link refid="d0/d2d/crdt__options_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="47">
+        <label>crdt/crdt_set.hpp</label>
+        <link refid="d4/d2e/crdt__set_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="69">
+        <label>crdt/dagsyncer.hpp</label>
+        <link refid="d5/db5/dagsyncer_8hpp"/>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="70" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>crdt/globaldb/globaldb.hpp</label>
+        <link refid="d0/d0e/globaldb_8hpp"/>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="71" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="74" relation="include">
+        </childnode>
+      </node>
+      <node id="74">
+        <label>pubsub_broadcaster_ext.hpp</label>
+        <link refid="d7/db9/pubsub__broadcaster__ext_8hpp"/>
+        <childnode refid="65" relation="include">
+        </childnode>
+        <childnode refid="75" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+        <childnode refid="68" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="75">
+        <label>crdt/graphsync_dagsyncer.hpp</label>
+        <link refid="d6/dea/graphsync__dagsyncer_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="69" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="76" relation="include">
+        </childnode>
+        <childnode refid="77" relation="include">
+        </childnode>
+        <childnode refid="78" relation="include">
+        </childnode>
+      </node>
+      <node id="37">
+        <label>crdt/hierarchical_key.hpp</label>
+        <link refid="d5/dc7/hierarchical__key_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="63">
+        <label>singleton/IComponent.hpp</label>
+        <link refid="df/dec/_i_component_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="54">
+        <label>storage/buffer_map_types.hpp</label>
+        <link refid="d8/dcc/buffer__map__types_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="55" relation="include">
+        </childnode>
+        <childnode refid="58" relation="include">
+        </childnode>
+      </node>
+      <node id="57">
+        <label>storage/face/batchable.hpp</label>
+        <link refid="de/d87/batchable_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="58" relation="include">
+        </childnode>
+      </node>
+      <node id="56">
+        <label>storage/face/generic_maps.hpp</label>
+        <link refid="d9/daa/generic__maps_8hpp"/>
+        <childnode refid="57" relation="include">
+        </childnode>
+        <childnode refid="60" relation="include">
+        </childnode>
+        <childnode refid="62" relation="include">
+        </childnode>
+        <childnode refid="59" relation="include">
+        </childnode>
+      </node>
+      <node id="55">
+        <label>storage/face/generic_storage.hpp</label>
+        <link refid="d6/d4e/generic__storage_8hpp"/>
+        <childnode refid="56" relation="include">
+        </childnode>
+        <childnode refid="63" relation="include">
+        </childnode>
+      </node>
+      <node id="60">
+        <label>storage/face/iterable.hpp</label>
+        <link refid="db/d3e/iterable_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="61" relation="include">
+        </childnode>
+      </node>
+      <node id="61">
+        <label>storage/face/map_cursor.hpp</label>
+        <link refid="d9/d4b/map__cursor_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="62">
+        <label>storage/face/readable.hpp</label>
+        <link refid="d5/dd2/readable_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="58">
+        <label>storage/face/write_batch.hpp</label>
+        <link refid="d2/d76/write__batch_8hpp"/>
+        <childnode refid="59" relation="include">
+        </childnode>
+      </node>
+      <node id="59">
+        <label>storage/face/writeable.hpp</label>
+        <link refid="dc/da4/writeable_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="48">
+        <label>storage/rocksdb/rocksdb.hpp</label>
+        <link refid="d1/d07/rocksdb_8hpp"/>
+        <childnode refid="49" relation="include">
+        </childnode>
+        <childnode refid="50" relation="include">
+        </childnode>
+        <childnode refid="51" relation="include">
+        </childnode>
+        <childnode refid="52" relation="include">
+        </childnode>
+        <childnode refid="53" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="54" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>blockchain/impl/proto/ValidatorRegistry.pb.h</label>
+      </node>
+      <node id="27">
+        <label>boost/asio/io_context.hpp</label>
+      </node>
+      <node id="45">
+        <label>boost/asio/steady_timer.hpp</label>
+      </node>
+      <node id="13">
+        <label>boost/container_hash/hash.hpp</label>
+      </node>
+      <node id="28">
+        <label>boost/filesystem/path.hpp</label>
+      </node>
+      <node id="14">
+        <label>boost/operators.hpp</label>
+      </node>
+      <node id="67">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="41">
+        <label>chrono</label>
+      </node>
+      <node id="44">
+        <label>condition_variable</label>
+      </node>
+      <node id="24">
+        <label>crdt/proto/delta.pb.h</label>
+      </node>
+      <node id="2">
+        <label>cstdint</label>
+      </node>
+      <node id="3">
+        <label>functional</label>
+      </node>
+      <node id="40">
+        <label>future</label>
+      </node>
+      <node id="15">
+        <label>gsl/span</label>
+      </node>
+      <node id="29">
+        <label>ipfs_lite/ipfs/graphsync/impl/graphsync_impl.hpp</label>
+      </node>
+      <node id="30">
+        <label>ipfs_lite/ipfs/graphsync/impl/local_requests.hpp</label>
+      </node>
+      <node id="76">
+        <label>ipfs_lite/ipfs/graphsync/impl/merkledag_bridge_impl.hpp</label>
+      </node>
+      <node id="77">
+        <label>ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp</label>
+      </node>
+      <node id="70">
+        <label>ipfs_lite/ipfs/merkledag/merkledag_service.hpp</label>
+      </node>
+      <node id="46">
+        <label>ipfs_lite/ipld/ipld_node.hpp</label>
+      </node>
+      <node id="31">
+        <label>ipfs_pubsub/gossip_pubsub_topic.hpp</label>
+      </node>
+      <node id="78">
+        <label>libp2p/host/host.hpp</label>
+      </node>
+      <node id="17">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="66">
+        <label>libp2p/peer/peer_info.hpp</label>
+      </node>
+      <node id="32">
+        <label>libp2p/protocol/autonat/autonat.hpp</label>
+      </node>
+      <node id="33">
+        <label>libp2p/protocol/holepunch/holepunch_client.hpp</label>
+      </node>
+      <node id="34">
+        <label>libp2p/protocol/holepunch/holepunch_server.hpp</label>
+      </node>
+      <node id="35">
+        <label>libp2p/protocol/identify/identify.hpp</label>
+      </node>
+      <node id="43">
+        <label>map</label>
+      </node>
+      <node id="4">
+        <label>memory</label>
+      </node>
+      <node id="5">
+        <label>mutex</label>
+      </node>
+      <node id="6">
+        <label>optional</label>
+      </node>
+      <node id="38">
+        <label>primitives/cid/cid.hpp</label>
+      </node>
+      <node id="42">
+        <label>queue</label>
+      </node>
+      <node id="73">
+        <label>regex</label>
+      </node>
+      <node id="50">
+        <label>rocksdb/db.h</label>
+      </node>
+      <node id="52">
+        <label>rocksdb/options.h</label>
+      </node>
+      <node id="49">
+        <label>rocksdb/rocksdb_namespace.h</label>
+      </node>
+      <node id="51">
+        <label>rocksdb/slice.h</label>
+      </node>
+      <node id="53">
+        <label>rocksdb/write_batch.h</label>
+      </node>
+      <node id="8">
+        <label>set</label>
+      </node>
+      <node id="7">
+        <label>shared_mutex</label>
+      </node>
+      <node id="19">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="20">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="9">
+        <label>string</label>
+      </node>
+      <node id="12">
+        <label>string_view</label>
+      </node>
+      <node id="68">
+        <label>tuple</label>
+      </node>
+      <node id="23">
+        <label>unordered_map</label>
+      </node>
+      <node id="26">
+        <label>unordered_set</label>
+      </node>
+      <node id="10">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>src/account/Migration3_5_1To3_6_0.cpp</label>
+        <link refid="db/da7/_migration3__5__1_to3__6__0_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/blockchain/ValidatorRegistry.cpp</label>
+        <link refid="df/d00/_validator_registry_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/blockchain/ValidatorRegistry.hpp</label>
+        <link refid="df/df1/_validator_registry_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>src/blockchain/impl/Blockchain.cpp</label>
+        <link refid="da/d8c/_blockchain_8cpp"/>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry" prot="public">sgns::blockchain::ValidatorRegistry</innerclass>
+    <innerclass refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config" prot="public">sgns::blockchain::ValidatorRegistry::WeightConfig</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d9/df6/namespacesgns_1_1blockchain">sgns::blockchain</innernamespace>
+    <briefdescription>
+<para>Validator registry and quorum logic for governance. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="date"><para>2025-10-16 </para>
+</simplesect>
+<simplesect kind="author"><para>Henrique A. Klein (<ulink url="mailto:hklein@gnus.ai">hklein@gnus.ai</ulink>) </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#pragma<sp/>once</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstdint&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;functional&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;memory&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;mutex&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;optional&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;shared_mutex&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;set&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;vector&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="da/d1d/buffer_8hpp" kindref="compound">base/buffer.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d6/da3/logger_8hpp" kindref="compound">base/logger.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;blockchain/impl/proto/ValidatorRegistry.pb.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dc/d0f/crdt__callback__manager_8hpp" kindref="compound">crdt/crdt_callback_manager.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;crdt/proto/delta.pb.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/dda/outcome_8hpp" kindref="compound">outcome/outcome.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d0/d0e/globaldb_8hpp" kindref="compound">crdt/globaldb/globaldb.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;primitives/cid/cid.hpp&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref></highlight></codeline>
+<codeline lineno="29"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="df/da7/classsgns_1_1_migration3__5__1_to3__6__0" kindref="compound">Migration3_5_1To3_6_0</ref>;</highlight></codeline>
+<codeline lineno="31"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d9/df6/namespacesgns_1_1blockchain" kindref="compound">sgns::blockchain</ref></highlight></codeline>
+<codeline lineno="34"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="35" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a3b770efbe4a19cf9471ecf2a5a9ea843" kindref="member">ValidatorRegistry</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>std::enable_shared_from_this&lt;ValidatorRegistry&gt;</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="38" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ab1f807a82389de5f5e2c83d578292c55" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ab1f807a82389de5f5e2c83d578292c55" kindref="member">ValidatorEntry</ref><sp/>=<sp/>validator::ValidatorEntry;</highlight></codeline>
+<codeline lineno="39" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a326f52e36051d3a1141b0222f7d6b703" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a326f52e36051d3a1141b0222f7d6b703" kindref="member">Registry</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>validator::Registry;</highlight></codeline>
+<codeline lineno="40" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ac318a7a8f3fa8bfb1d802138609ee6e4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ac318a7a8f3fa8bfb1d802138609ee6e4" kindref="member">SignatureEntry</ref><sp/>=<sp/>validator::SignatureEntry;</highlight></codeline>
+<codeline lineno="41" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ad72bc9b3dd24c029f95784f66ea6ecad" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ad72bc9b3dd24c029f95784f66ea6ecad" kindref="member">RegistryUpdate</ref><sp/>=<sp/>validator::RegistryUpdate;</highlight></codeline>
+<codeline lineno="42" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1aa10e589f38c27335fa6462699b5ff331" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1aa10e589f38c27335fa6462699b5ff331" kindref="member">Role</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>validator::Role;</highlight></codeline>
+<codeline lineno="43" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a9ab997dbfe67998930aba81579b26e14" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a9ab997dbfe67998930aba81579b26e14" kindref="member">Status</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>validator::Status;</highlight></codeline>
+<codeline lineno="44" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a561c130ecb3c2a1cb74caab160778c26" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a561c130ecb3c2a1cb74caab160778c26" kindref="member">InitCallback</ref><sp/><sp/><sp/>=<sp/>std::function&lt;void(<sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>)&gt;;</highlight></codeline>
+<codeline lineno="45" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a096a515e35e5793ae0ce0e07b22584f6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a096a515e35e5793ae0ce0e07b22584f6" kindref="member">BlockRequestMethod</ref><sp/>=</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;void(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;,<sp/>std::function&lt;</highlight><highlight class="keywordtype">void</highlight><highlight class="normal">(<sp/>outcome::result&lt;std::string&gt;<sp/>)&gt;<sp/>)&gt;;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="48" refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config" kindref="compound">WeightConfig</ref></highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="50" refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1a3e9de2dd1eb7ce45cd9464142cf68cf0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1a3e9de2dd1eb7ce45cd9464142cf68cf0" kindref="member">base_weight_</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>1;</highlight></codeline>
+<codeline lineno="51" refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1a6d41326f8e184bc09ad129a86f213635" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1a6d41326f8e184bc09ad129a86f213635" kindref="member">full_multiplier_</ref><sp/><sp/><sp/><sp/>=<sp/>3;</highlight></codeline>
+<codeline lineno="52" refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1add1307d4c181f66b9e0e1bb15de5d501" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1add1307d4c181f66b9e0e1bb15de5d501" kindref="member">genesis_multiplier_</ref><sp/>=<sp/>5;</highlight></codeline>
+<codeline lineno="53" refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1acc4fc9eb94b271d4a561d495e8dff668" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1acc4fc9eb94b271d4a561d495e8dff668" kindref="member">sharded_multiplier_</ref><sp/>=<sp/>1;</highlight></codeline>
+<codeline lineno="54" refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1a084384ef5fb4a8e39cc9ff27bad4a143" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config_1a084384ef5fb4a8e39cc9ff27bad4a143" kindref="member">max_weight_</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>10;</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;ValidatorRegistry&gt;<sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1aed90a1bb0c62a300ad08f5975d6cccdc" kindref="member">New</ref>(<sp/>std::shared_ptr&lt;crdt::GlobalDB&gt;<sp/>db,</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>quorum_numerator,</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>quorum_denominator,</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config" kindref="compound">WeightConfig</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>weight_config,</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>genesis_authority,</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a096a515e35e5793ae0ce0e07b22584f6" kindref="member">BlockRequestMethod</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>block_request_method,</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a561c130ecb3c2a1cb74caab160778c26" kindref="member">InitCallback</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>init_callback<sp/>=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"></highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a653c89f89301d90e05d9bbb16f3b4454" kindref="member">ComputeWeight</ref>(<sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1aa10e589f38c27335fa6462699b5ff331" kindref="member">Role</ref><sp/>role<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a0827c6c8614a41fe65ab992f1c2cd51b" kindref="member">TotalWeight</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a326f52e36051d3a1141b0222f7d6b703" kindref="member">Registry</ref><sp/>&amp;registry<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a97fa7116a0fb18a80f0281310362b752" kindref="member">QuorumThreshold</ref>(<sp/>uint64_t<sp/>total_weight<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a4f61918d7daf4d4910acbb3c6700e6de" kindref="member">IsQuorum</ref>(<sp/>uint64_t<sp/>accumulated_weight,<sp/>uint64_t<sp/>total_weight<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"></highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a326f52e36051d3a1141b0222f7d6b703" kindref="member">Registry</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a4268235f00a7a6bbdf8b77d2a73e1d7c" kindref="member">CreateGenesisRegistry</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;genesis_validator_id<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;void&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a47f758e7e8a08f667dd5ea16a5050e98" kindref="member">StoreGenesisRegistry</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;genesis_validator_id,</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;std::vector&lt;uint8_t&gt;(<sp/>std::vector&lt;uint8_t&gt;<sp/>)&gt;<sp/>sign<sp/>);</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;Registry&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a09391cdbb6d2b9df7e3fa60c6387a9aa" kindref="member">LoadRegistry</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;RegistryUpdate&gt;<sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ab0c8c06a5bbb2394e6f20bd4d8566423" kindref="member">LoadRegistryUpdate</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1adf78a171902d6ea39ef11ad21df4e480" kindref="member">RegisterFilter</ref>();</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"></highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;std::vector&lt;uint8_t&gt;&gt;<sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1aca9f4ef9e1834a8fbcd837d0ccf0b3fc" kindref="member">SerializeRegistry</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a326f52e36051d3a1141b0222f7d6b703" kindref="member">Registry</ref><sp/>&amp;registry<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;Registry&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a1d88c4b1391f9220bb87a23584d5da46" kindref="member">DeserializeRegistry</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;uint8_t&gt;<sp/>&amp;buffer<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;std::vector&lt;uint8_t&gt;&gt;<sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ae1bbbcae5d4aa278c32202514b150741" kindref="member">SerializeRegistryUpdate</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ad72bc9b3dd24c029f95784f66ea6ecad" kindref="member">RegistryUpdate</ref><sp/>&amp;update<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;RegistryUpdate&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ab7083c95c7f2102670dc3351711019a0" kindref="member">DeserializeRegistryUpdate</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;uint8_t&gt;<sp/>&amp;buffer<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"></highlight></codeline>
+<codeline lineno="82" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a8142c816913c19889d066a5b0c5581be" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::string_view<sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a8142c816913c19889d066a5b0c5581be" kindref="member">RegistryKey</ref>()</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;gnus-validator-registry&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"></highlight></codeline>
+<codeline lineno="87" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a1b6b5028d9f8740da59c415e5106e06c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::string_view<sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a1b6b5028d9f8740da59c415e5106e06c" kindref="member">ValidatorTopic</ref>()</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;gnus-validator-registry&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"></highlight></codeline>
+<codeline lineno="92" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a3b865533ca84e596a2874fd007306361" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::string_view<sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a3b865533ca84e596a2874fd007306361" kindref="member">RegistryCidKey</ref>()</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;gnus-validator-registry-cid&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"></highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">protected</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="98" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1aff5ff362f37c56be0401a240a3220a20" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">friend</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="df/da7/classsgns_1_1_migration3__5__1_to3__6__0" kindref="compound">sgns::Migration3_5_1To3_6_0</ref>;</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"></highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>outcome::result&lt;void&gt;<sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a91448b8cf1eb60dbc978517234ee2630" kindref="member">MigrateCids</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;crdt::GlobalDB&gt;<sp/>&amp;old_db,</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;crdt::GlobalDB&gt;<sp/>&amp;new_db<sp/>);</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"></highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a3b770efbe4a19cf9471ecf2a5a9ea843" kindref="member">ValidatorRegistry</ref>(<sp/>std::shared_ptr&lt;crdt::GlobalDB&gt;<sp/>db,</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>quorum_numerator,</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>quorum_denominator,</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config" kindref="compound">WeightConfig</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>weight_config,</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>genesis_authority,</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a096a515e35e5793ae0ce0e07b22584f6" kindref="member">BlockRequestMethod</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>block_request_method,</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a561c130ecb3c2a1cb74caab160778c26" kindref="member">InitCallback</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>init_callback<sp/>);</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"></highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::optional&lt;std::vector&lt;crdt::pb::Element&gt;&gt;<sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a2a21c9c6ad154dac933c817fcd15193b" kindref="member">FilterRegistryUpdate</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>crdt::pb::Element<sp/>&amp;element<sp/>);</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1aefd389b1385f04e90af35b920f483ca7" kindref="member">RegistryUpdateReceived</ref>(<sp/><ref refid="d7/d42/classsgns_1_1crdt_1_1_c_r_d_t_callback_manager_1a6d7c2728bb59cdef78288ab0989fbcda" kindref="member">crdt::CRDTCallbackManager::NewDataPair</ref><sp/>new_data,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;cid<sp/>);</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>outcome::result&lt;std::vector&lt;uint8_t&gt;&gt;<sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ad569a5eb3b3cdf2cab604a9cf82ac387" kindref="member">ComputeUpdateSigningBytes</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ad72bc9b3dd24c029f95784f66ea6ecad" kindref="member">RegistryUpdate</ref><sp/>&amp;update<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a701a0469bc05b3f070bce256b34ce5cf" kindref="member">VerifyUpdate</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ad72bc9b3dd24c029f95784f66ea6ecad" kindref="member">RegistryUpdate</ref><sp/>&amp;update,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a326f52e36051d3a1141b0222f7d6b703" kindref="member">Registry</ref><sp/>*current_registry<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ab1f807a82389de5f5e2c83d578292c55" kindref="member">ValidatorEntry</ref><sp/>*<ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ab0de727b99aaf0e06f9040625fec5702" kindref="member">FindValidator</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a326f52e36051d3a1141b0222f7d6b703" kindref="member">Registry</ref><sp/>&amp;registry,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;validator_id<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1aed2e7a4f18eb200660badc156ec93a2a" kindref="member">InitializeCache</ref>();</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ad5232d6a8ccb6cf61ad3a6d0913e4054" kindref="member">NotifyInitialized</ref>(<sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>success<sp/>);</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a9474ee2b84233b21502145f62b412fa3" kindref="member">PersistLocalState</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;cid<sp/>);</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a5b154349dac731c824703580115ac5f3" kindref="member">RequestHeadCids</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::set&lt;CID&gt;<sp/>&amp;cids<sp/>);</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"></highlight></codeline>
+<codeline lineno="122" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ab73edbca07efe223d512b3b3d6cfec6f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;crdt::GlobalDB&gt;<sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ab73edbca07efe223d512b3b3d6cfec6f" kindref="member">db_</ref>;</highlight></codeline>
+<codeline lineno="123" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ac3b9f94413153fe05f08a648b399c86c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ac3b9f94413153fe05f08a648b399c86c" kindref="member">quorum_numerator_</ref>;</highlight></codeline>
+<codeline lineno="124" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ae028a0db293dde1ad7f422588271ea78" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ae028a0db293dde1ad7f422588271ea78" kindref="member">quorum_denominator_</ref>;</highlight></codeline>
+<codeline lineno="125" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a441f5c958857a9efa133279adaf60e88" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="da/dc2/structsgns_1_1blockchain_1_1_validator_registry_1_1_weight_config" kindref="compound">WeightConfig</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a441f5c958857a9efa133279adaf60e88" kindref="member">weight_config_</ref>;</highlight></codeline>
+<codeline lineno="126" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a1db97a8a67d2a4324af111f811421ef7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a1db97a8a67d2a4324af111f811421ef7" kindref="member">genesis_authority_</ref>;</highlight></codeline>
+<codeline lineno="127" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a1b4a510c8009ceedf77039d40eab51ea" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a1b4a510c8009ceedf77039d40eab51ea" kindref="member">logger_</ref><sp/>=<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>(<sp/></highlight><highlight class="stringliteral">&quot;ValidatorRegistry&quot;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="128" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ad9c9c2b9c965b6fbec6d48c422718af0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">mutable</highlight><highlight class="normal"><sp/>std::shared_mutex<sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ad9c9c2b9c965b6fbec6d48c422718af0" kindref="member">cache_mutex_</ref>;</highlight></codeline>
+<codeline lineno="129" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ad13e457e668e7ab795e1fb93ccab1a2f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::optional&lt;Registry&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ad13e457e668e7ab795e1fb93ccab1a2f" kindref="member">cached_registry_</ref>;</highlight></codeline>
+<codeline lineno="130" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a1dc0f42a37592af189bf1abc41a7e397" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::optional&lt;RegistryUpdate&gt;<sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a1dc0f42a37592af189bf1abc41a7e397" kindref="member">cached_update_</ref>;</highlight></codeline>
+<codeline lineno="131" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ada545c8a9cc8a0a376b5309116a823f2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1ada545c8a9cc8a0a376b5309116a823f2" kindref="member">cached_registry_id_</ref>;</highlight></codeline>
+<codeline lineno="132" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a68adf4cdce61ed617d0ccfbece2d034d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a68adf4cdce61ed617d0ccfbece2d034d" kindref="member">cache_initialized_</ref><sp/>=<sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="133"><highlight class="normal"></highlight></codeline>
+<codeline lineno="134" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a0defd94e71d7af6f75cf310b4b82a001" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a561c130ecb3c2a1cb74caab160778c26" kindref="member">InitCallback</ref><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a0defd94e71d7af6f75cf310b4b82a001" kindref="member">init_callback_</ref>;</highlight></codeline>
+<codeline lineno="135"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;void(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;cid,<sp/>std::function&lt;</highlight><highlight class="keywordtype">void</highlight><highlight class="normal">(<sp/>outcome::result&lt;std::string&gt;<sp/>)&gt;<sp/>callback<sp/>)&gt;</highlight></codeline>
+<codeline lineno="136" refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a01ab382de40f9f40e57163b7088fb610" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d3/d1c/classsgns_1_1blockchain_1_1_validator_registry_1a01ab382de40f9f40e57163b7088fb610" kindref="member">request_block_by_cid_</ref>;</highlight></codeline>
+<codeline lineno="137"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="138"><highlight class="normal"></highlight></codeline>
+<codeline lineno="139"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="src/blockchain/ValidatorRegistry.hpp"/>
+  </compounddef>
+</doxygen>

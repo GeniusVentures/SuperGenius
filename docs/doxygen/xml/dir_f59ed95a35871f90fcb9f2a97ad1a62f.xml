@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_f59ed95a35871f90fcb9f2a97ad1a62f" kind="dir">
+    <compoundname>src/storage/changes_trie</compoundname>
+    <innerdir refid="dir_55b83367ca5b1c6ce6ceddd0db6562b2">src/storage/changes_trie/impl</innerdir>
+    <innerfile refid="d3/d51/changes__tracker_8hpp">changes_tracker.hpp</innerfile>
+    <innerfile refid="da/d9b/changes__trie__config_8hpp">changes_trie_config.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/storage/changes_trie/"/>
+  </compounddef>
+</doxygen>

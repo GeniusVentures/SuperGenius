@@ -1,0 +1,461 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/d6d/classsgns_1_1message__header" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>sgns::message_header</compoundname>
+    <includes refid="da/d8d/node_2common_8hpp" local="no">common.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="de/d6d/classsgns_1_1message__header_1a624f79b0e770eb98156142f44bb5507c" prot="public" static="no" mutable="no">
+        <type>uint8_t</type>
+        <definition>uint8_t sgns::message_header::version_max</definition>
+        <argsstring></argsstring>
+        <name>version_max</name>
+        <qualifiedname>sgns::message_header::version_max</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="198" column="9" bodyfile="node/common.hpp" bodystart="198" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d6d/classsgns_1_1message__header_1a93ea441112c1df48de6d9d272087d6c1" prot="public" static="no" mutable="no">
+        <type>uint8_t</type>
+        <definition>uint8_t sgns::message_header::version_using</definition>
+        <argsstring></argsstring>
+        <name>version_using</name>
+        <qualifiedname>sgns::message_header::version_using</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="199" column="9" bodyfile="node/common.hpp" bodystart="199" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d6d/classsgns_1_1message__header_1aa581547fa2e7f31f8583cb2c5a59d366" prot="public" static="no" mutable="no">
+        <type><ref refid="d2/d2b/namespacesgns_1a28d1086e9c7886336bab065d17b7541f" kindref="member">sgns::message_type</ref></type>
+        <definition>sgns::message_type sgns::message_header::type</definition>
+        <argsstring></argsstring>
+        <name>type</name>
+        <qualifiedname>sgns::message_header::type</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="205" column="20" bodyfile="node/common.hpp" bodystart="205" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d6d/classsgns_1_1message__header_1a81c8696bd6f74bf798254c67c0999c0b" prot="public" static="no" mutable="no">
+        <type>std::bitset&lt; 16 &gt;</type>
+        <definition>std::bitset&lt;16&gt; sgns::message_header::extensions</definition>
+        <argsstring></argsstring>
+        <name>extensions</name>
+        <qualifiedname>sgns::message_header::extensions</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="206" column="13" bodyfile="node/common.hpp" bodystart="206" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="de/d6d/classsgns_1_1message__header_1a4032abaf1303ab6233f56717d7a8ba9c" prot="private" static="no" mutable="no">
+        <type>uint8_t</type>
+        <definition>uint8_t sgns::message_header::version_min_m</definition>
+        <argsstring></argsstring>
+        <name>version_min_m</name>
+        <qualifiedname>sgns::message_header::version_min_m</qualifiedname>
+        <initializer>{ std::numeric_limits&lt;uint8_t&gt;::max () }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="202" column="9" bodyfile="node/common.hpp" bodystart="202" bodyend="202"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="de/d6d/classsgns_1_1message__header_1a5aff9128173e1552edcf9c09bc9822ff" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>size_t constexpr</type>
+        <definition>size_t constexpr sgns::message_header::size</definition>
+        <argsstring></argsstring>
+        <name>size</name>
+        <qualifiedname>sgns::message_header::size</qualifiedname>
+        <initializer>= sizeof (network_params::header_magic_number) + sizeof (<ref refid="de/d6d/classsgns_1_1message__header_1a624f79b0e770eb98156142f44bb5507c" kindref="member">version_max</ref>) + sizeof (<ref refid="de/d6d/classsgns_1_1message__header_1a93ea441112c1df48de6d9d272087d6c1" kindref="member">version_using</ref>) + sizeof (<ref refid="de/d6d/classsgns_1_1message__header_1a4032abaf1303ab6233f56717d7a8ba9c" kindref="member">version_min_m</ref>) + sizeof (<ref refid="de/d6d/classsgns_1_1message__header_1aa581547fa2e7f31f8583cb2c5a59d366" kindref="member">type</ref>) + sizeof ( uint16_t)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="207" column="25" bodyfile="node/common.hpp" bodystart="207" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d6d/classsgns_1_1message__header_1a92df48ba54180dfee900415ad23f42bd" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>uint8_t constexpr</type>
+        <definition>uint8_t constexpr sgns::message_header::bulk_pull_count_present_flag</definition>
+        <argsstring></argsstring>
+        <name>bulk_pull_count_present_flag</name>
+        <qualifiedname>sgns::message_header::bulk_pull_count_present_flag</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="210" column="26" bodyfile="node/common.hpp" bodystart="210" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d6d/classsgns_1_1message__header_1a2f769cdeb68ad171bbaa43452f96b0c8" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>uint8_t constexpr</type>
+        <definition>uint8_t constexpr sgns::message_header::node_id_handshake_query_flag</definition>
+        <argsstring></argsstring>
+        <name>node_id_handshake_query_flag</name>
+        <qualifiedname>sgns::message_header::node_id_handshake_query_flag</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="212" column="26" bodyfile="node/common.hpp" bodystart="212" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d6d/classsgns_1_1message__header_1ad3b7ed763aafb56a10d066238d5c5a97" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>uint8_t constexpr</type>
+        <definition>uint8_t constexpr sgns::message_header::node_id_handshake_response_flag</definition>
+        <argsstring></argsstring>
+        <name>node_id_handshake_response_flag</name>
+        <qualifiedname>sgns::message_header::node_id_handshake_response_flag</qualifiedname>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="213" column="26" bodyfile="node/common.hpp" bodystart="213" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d6d/classsgns_1_1message__header_1a58431229668faec1268c82f060653f66" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>std::bitset&lt; 16 &gt; constexpr</type>
+        <definition>std::bitset&lt; 16 &gt; constexpr sgns::message_header::block_type_mask</definition>
+        <argsstring></argsstring>
+        <name>block_type_mask</name>
+        <qualifiedname>sgns::message_header::block_type_mask</qualifiedname>
+        <initializer>{ 0x0f00 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="221" column="30" bodyfile="node/common.hpp" bodystart="221" bodyend="221"/>
+      </memberdef>
+      <memberdef kind="variable" id="de/d6d/classsgns_1_1message__header_1aea4ac4ba6529950348a7ca543f70c1ef" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>std::bitset&lt; 16 &gt; constexpr</type>
+        <definition>std::bitset&lt; 16 &gt; constexpr sgns::message_header::count_mask</definition>
+        <argsstring></argsstring>
+        <name>count_mask</name>
+        <qualifiedname>sgns::message_header::count_mask</qualifiedname>
+        <initializer>{ 0xf000 }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="222" column="30" bodyfile="node/common.hpp" bodystart="222" bodyend="222"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="de/d6d/classsgns_1_1message__header_1a4f2d13af594b47d620459385416cce8f" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::message_header::message_header</definition>
+        <argsstring>(sgns::message_type)</argsstring>
+        <name>message_header</name>
+        <qualifiedname>sgns::message_header::message_header</qualifiedname>
+        <param>
+          <type><ref refid="d2/d2b/namespacesgns_1a28d1086e9c7886336bab065d17b7541f" kindref="member">sgns::message_type</ref></type>
+          <defname>type_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="190" column="10" bodyfile="node/common.cpp" bodystart="50" bodyend="55"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d6d/classsgns_1_1message__header_1ac534a318c46c5f8b64aa406c8a9d930f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::message_header::message_header</definition>
+        <argsstring>(bool &amp;, sgns::stream &amp;)</argsstring>
+        <name>message_header</name>
+        <qualifiedname>sgns::message_header::message_header</qualifiedname>
+        <param>
+          <type>bool &amp;</type>
+          <defname>error_a</defname>
+        </param>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="191" column="1" bodyfile="node/common.cpp" bodystart="57" bodyend="63"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d6d/classsgns_1_1message__header_1af5d423a1fea7876108227d5ab27cfc07" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::message_header::serialize</definition>
+        <argsstring>(sgns::stream &amp;, bool) const</argsstring>
+        <name>serialize</name>
+        <qualifiedname>sgns::message_header::serialize</qualifiedname>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <param>
+          <type>bool</type>
+          <defname>use_epoch_2_min_version_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="192" column="6" bodyfile="node/common.cpp" bodystart="65" bodyend="74"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d6d/classsgns_1_1message__header_1a40d17343545852230be9e972ed46d07b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::message_header::deserialize</definition>
+        <argsstring>(sgns::stream &amp;)</argsstring>
+        <name>deserialize</name>
+        <qualifiedname>sgns::message_header::deserialize</qualifiedname>
+        <param>
+          <type>sgns::stream &amp;</type>
+          <defname>stream_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="193" column="6" bodyfile="node/common.cpp" bodystart="76" bodyend="103"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d6d/classsgns_1_1message__header_1ac4be374cdb9c95faea2e07c9ed1ecef5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::block_type</type>
+        <definition>sgns::block_type sgns::message_header::block_type</definition>
+        <argsstring>() const</argsstring>
+        <name>block_type</name>
+        <qualifiedname>sgns::message_header::block_type</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="194" column="18" bodyfile="node/common.cpp" bodystart="134" bodyend="137"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d6d/classsgns_1_1message__header_1af1ea4ea792f30f94cd4ad002a418ff14" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::message_header::block_type_set</definition>
+        <argsstring>(sgns::block_type)</argsstring>
+        <name>block_type_set</name>
+        <qualifiedname>sgns::message_header::block_type_set</qualifiedname>
+        <param>
+          <type>sgns::block_type</type>
+          <defname>type_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="195" column="6" bodyfile="node/common.cpp" bodystart="139" bodyend="143"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d6d/classsgns_1_1message__header_1afded0ad1865d7874a979ee84c22d1d5c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>uint8_t</type>
+        <definition>uint8_t sgns::message_header::count_get</definition>
+        <argsstring>() const</argsstring>
+        <name>count_get</name>
+        <qualifiedname>sgns::message_header::count_get</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="196" column="9" bodyfile="node/common.cpp" bodystart="145" bodyend="148"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d6d/classsgns_1_1message__header_1a3506f3eb58be2cdd9f2d23f1811ee34d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::message_header::count_set</definition>
+        <argsstring>(uint8_t)</argsstring>
+        <name>count_set</name>
+        <qualifiedname>sgns::message_header::count_set</qualifiedname>
+        <param>
+          <type>uint8_t</type>
+          <defname>count_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="197" column="6" bodyfile="node/common.cpp" bodystart="150" bodyend="155"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d6d/classsgns_1_1message__header_1a2a362b5874a3462a760c13c479b4cbcd" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::message_header::flag_set</definition>
+        <argsstring>(uint8_t)</argsstring>
+        <name>flag_set</name>
+        <qualifiedname>sgns::message_header::flag_set</qualifiedname>
+        <param>
+          <type>uint8_t</type>
+          <defname>flag_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="209" column="6" bodyfile="node/common.cpp" bodystart="157" bodyend="162"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d6d/classsgns_1_1message__header_1a6c34d28ecf2f38d6d49527f1f37604e6" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::message_header::bulk_pull_is_count_present</definition>
+        <argsstring>() const</argsstring>
+        <name>bulk_pull_is_count_present</name>
+        <qualifiedname>sgns::message_header::bulk_pull_is_count_present</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="211" column="6" bodyfile="node/common.cpp" bodystart="164" bodyend="175"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d6d/classsgns_1_1message__header_1af5e7725dc89db07b33c7cdd460d42f51" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::message_header::node_id_handshake_is_query</definition>
+        <argsstring>() const</argsstring>
+        <name>node_id_handshake_is_query</name>
+        <qualifiedname>sgns::message_header::node_id_handshake_is_query</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="214" column="6" bodyfile="node/common.cpp" bodystart="177" bodyend="188"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d6d/classsgns_1_1message__header_1af15cf92b7e507c38d2056dd40c0f4866" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::message_header::node_id_handshake_is_response</definition>
+        <argsstring>() const</argsstring>
+        <name>node_id_handshake_is_response</name>
+        <qualifiedname>sgns::message_header::node_id_handshake_is_response</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="215" column="6" bodyfile="node/common.cpp" bodystart="190" bodyend="201"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d6d/classsgns_1_1message__header_1af01db98ce4fbc93007bdb7958df6657d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>uint8_t</type>
+        <definition>uint8_t sgns::message_header::version_min</definition>
+        <argsstring>() const</argsstring>
+        <name>version_min</name>
+        <qualifiedname>sgns::message_header::version_min</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="216" column="9" bodyfile="node/common.cpp" bodystart="105" bodyend="109"/>
+      </memberdef>
+      <memberdef kind="function" id="de/d6d/classsgns_1_1message__header_1a9a9400f824e7c33dc4c64420e2a11f9b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t sgns::message_header::payload_length_bytes</definition>
+        <argsstring>() const</argsstring>
+        <name>payload_length_bytes</name>
+        <qualifiedname>sgns::message_header::payload_length_bytes</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Size of the payload in bytes. For some messages, the payload size is based on header flags. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="219" column="8" bodyfile="node/common.cpp" bodystart="203" bodyend="255"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::message_header</label>
+        <link refid="de/d6d/classsgns_1_1message__header"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+block_type_mask</edgelabel>
+          <edgelabel>+count_mask</edgelabel>
+          <edgelabel>+extensions</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::bitset&lt; Bits &gt;</label>
+      </node>
+      <node id="2">
+        <label>std::bitset&lt; 16 &gt;</label>
+        <childnode refid="3" relation="template-instance">
+          <edgelabel>&lt; 16 &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="node/common.hpp" line="187" column="1" bodyfile="node/common.hpp" bodystart="188" bodyend="223"/>
+    <listofallmembers>
+      <member refid="de/d6d/classsgns_1_1message__header_1ac4be374cdb9c95faea2e07c9ed1ecef5" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>block_type</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1a58431229668faec1268c82f060653f66" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>block_type_mask</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1af1ea4ea792f30f94cd4ad002a418ff14" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>block_type_set</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1a92df48ba54180dfee900415ad23f42bd" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>bulk_pull_count_present_flag</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1a6c34d28ecf2f38d6d49527f1f37604e6" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>bulk_pull_is_count_present</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1afded0ad1865d7874a979ee84c22d1d5c" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>count_get</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1aea4ac4ba6529950348a7ca543f70c1ef" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>count_mask</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1a3506f3eb58be2cdd9f2d23f1811ee34d" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>count_set</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1a40d17343545852230be9e972ed46d07b" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>deserialize</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1a81c8696bd6f74bf798254c67c0999c0b" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>extensions</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1a2a362b5874a3462a760c13c479b4cbcd" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>flag_set</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1a4f2d13af594b47d620459385416cce8f" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>message_header</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1ac534a318c46c5f8b64aa406c8a9d930f" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>message_header</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1af5e7725dc89db07b33c7cdd460d42f51" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>node_id_handshake_is_query</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1af15cf92b7e507c38d2056dd40c0f4866" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>node_id_handshake_is_response</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1a2f769cdeb68ad171bbaa43452f96b0c8" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>node_id_handshake_query_flag</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1ad3b7ed763aafb56a10d066238d5c5a97" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>node_id_handshake_response_flag</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1a9a9400f824e7c33dc4c64420e2a11f9b" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>payload_length_bytes</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1af5d423a1fea7876108227d5ab27cfc07" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>serialize</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1a5aff9128173e1552edcf9c09bc9822ff" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>size</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1aa581547fa2e7f31f8583cb2c5a59d366" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>type</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1a624f79b0e770eb98156142f44bb5507c" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>version_max</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1af01db98ce4fbc93007bdb7958df6657d" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>version_min</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1a4032abaf1303ab6233f56717d7a8ba9c" prot="private" virt="non-virtual"><scope>sgns::message_header</scope><name>version_min_m</name></member>
+      <member refid="de/d6d/classsgns_1_1message__header_1a93ea441112c1df48de6d9d272087d6c1" prot="public" virt="non-virtual"><scope>sgns::message_header</scope><name>version_using</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

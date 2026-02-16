@@ -1,0 +1,152 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d4/d13/_u_t_x_o_structs_8cpp" kind="file" language="C++">
+    <compoundname>UTXOStructs.cpp</compoundname>
+    <includes refid="d1/dd1/_u_t_x_o_structs_8hpp" local="yes">UTXOStructs.hpp</includes>
+    <includes local="yes">account/proto/SGTransaction.pb.h</includes>
+    <includes refid="d1/d84/endian_8h" local="yes">base/endian.h</includes>
+    <incdepgraph>
+      <node id="14">
+        <label>TokenID.hpp</label>
+        <link refid="df/d5f/_token_i_d_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/account/UTXOStructs.cpp</label>
+        <link refid="d4/d13/_u_t_x_o_structs_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>UTXOStructs.hpp</label>
+        <link refid="d1/dd1/_u_t_x_o_structs_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>base/blob.hpp</label>
+        <link refid="d4/d16/blob_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>base/endian.h</label>
+        <link refid="d1/d84/endian_8h"/>
+      </node>
+      <node id="7">
+        <label>base/hexutil.hpp</label>
+        <link refid="df/d28/hexutil_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>account/proto/SGTransaction.pb.h</label>
+      </node>
+      <node id="20">
+        <label>algorithm</label>
+      </node>
+      <node id="5">
+        <label>array</label>
+      </node>
+      <node id="6">
+        <label>boost/functional/hash.hpp</label>
+      </node>
+      <node id="4">
+        <label>cstddef</label>
+      </node>
+      <node id="15">
+        <label>cstdint</label>
+      </node>
+      <node id="16">
+        <label>cstring</label>
+      </node>
+      <node id="10">
+        <label>gsl/span</label>
+      </node>
+      <node id="17">
+        <label>iomanip</label>
+      </node>
+      <node id="13">
+        <label>iostream</label>
+      </node>
+      <node id="12">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="19">
+        <label>sstream</label>
+      </node>
+      <node id="18">
+        <label>string</label>
+      </node>
+      <node id="8">
+        <label>string_view</label>
+      </node>
+      <node id="9">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d1/dd1/_u_t_x_o_structs_8hpp" kindref="compound">UTXOStructs.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;account/proto/SGTransaction.pb.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d1/d84/endian_8h" kindref="compound">base/endian.h</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7" refid="d3/dbc/structsgns_1_1_input_u_t_x_o_info_1a9add95a13519275b09631adb86ee8fd2" refkind="member"><highlight class="normal">std::vector&lt;uint8_t&gt;<sp/><ref refid="d3/dbc/structsgns_1_1_input_u_t_x_o_info_1a9add95a13519275b09631adb86ee8fd2" kindref="member">sgns::InputUTXOInfo::SerializeForSigning</ref>()</highlight><highlight class="keyword"><sp/>const</highlight></codeline>
+<codeline lineno="8"><highlight class="keyword"></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>little_ended<sp/>=<sp/>htole32(<sp/><ref refid="d3/dbc/structsgns_1_1_input_u_t_x_o_info_1a834d8f349c0ae3d2c610eba1cca32840" kindref="member">output_idx_</ref><sp/>);</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/>std::vector&lt;uint8_t&gt;<sp/>vec(<sp/>36<sp/>);</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/>std::copy(<sp/><ref refid="d3/dbc/structsgns_1_1_input_u_t_x_o_info_1a618a65417634ac4eabe041be1a8a1f3c" kindref="member">txid_hash_</ref>.begin(),<sp/><ref refid="d3/dbc/structsgns_1_1_input_u_t_x_o_info_1a618a65417634ac4eabe041be1a8a1f3c" kindref="member">txid_hash_</ref>.end(),<sp/>vec.begin()<sp/>);</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/>memcpy(<sp/>&amp;little_ended,<sp/>vec.data()<sp/>+<sp/>32,<sp/></highlight><highlight class="keyword">sizeof</highlight><highlight class="normal">(<sp/>little_ended<sp/>)<sp/>);</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>vec;</highlight></codeline>
+<codeline lineno="17"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="src/account/UTXOStructs.cpp"/>
+  </compounddef>
+</doxygen>

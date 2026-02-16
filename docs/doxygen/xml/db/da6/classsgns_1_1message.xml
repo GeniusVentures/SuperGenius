@@ -1,0 +1,295 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="db/da6/classsgns_1_1message" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::message</compoundname>
+    <derivedcompoundref refid="d1/de0/classsgns_1_1bulk__pull" prot="public" virt="non-virtual">sgns::bulk_pull</derivedcompoundref>
+    <derivedcompoundref refid="d6/dcf/classsgns_1_1bulk__pull__account" prot="public" virt="non-virtual">sgns::bulk_pull_account</derivedcompoundref>
+    <derivedcompoundref refid="de/d2e/classsgns_1_1bulk__push" prot="public" virt="non-virtual">sgns::bulk_push</derivedcompoundref>
+    <derivedcompoundref refid="dd/d90/classsgns_1_1confirm__ack" prot="public" virt="non-virtual">sgns::confirm_ack</derivedcompoundref>
+    <derivedcompoundref refid="d5/df9/classsgns_1_1confirm__req" prot="public" virt="non-virtual">sgns::confirm_req</derivedcompoundref>
+    <derivedcompoundref refid="d3/d01/classsgns_1_1frontier__req" prot="public" virt="non-virtual">sgns::frontier_req</derivedcompoundref>
+    <derivedcompoundref refid="d2/d9f/classsgns_1_1keepalive" prot="public" virt="non-virtual">sgns::keepalive</derivedcompoundref>
+    <derivedcompoundref refid="dc/db5/classsgns_1_1node__id__handshake" prot="public" virt="non-virtual">sgns::node_id_handshake</derivedcompoundref>
+    <derivedcompoundref refid="d6/db9/classsgns_1_1publish" prot="public" virt="non-virtual">sgns::publish</derivedcompoundref>
+    <derivedcompoundref refid="db/d21/classsgns_1_1telemetry__ack" prot="public" virt="non-virtual">sgns::telemetry_ack</derivedcompoundref>
+    <derivedcompoundref refid="d8/dbd/classsgns_1_1telemetry__req" prot="public" virt="non-virtual">sgns::telemetry_req</derivedcompoundref>
+    <includes refid="da/d8d/node_2common_8hpp" local="no">common.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="db/da6/classsgns_1_1message_1abc0de834dc846d1d86110caec8a4b7db" prot="public" static="no" mutable="no">
+        <type><ref refid="de/d6d/classsgns_1_1message__header" kindref="compound">sgns::message_header</ref></type>
+        <definition>sgns::message_header sgns::message::header</definition>
+        <argsstring></argsstring>
+        <name>header</name>
+        <qualifiedname>sgns::message::header</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="235" column="22" bodyfile="node/common.hpp" bodystart="235" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="db/da6/classsgns_1_1message_1a1c0d801d4625dbcc8a9f40a5c6631b2c" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::message::message</definition>
+        <argsstring>(sgns::message_type)</argsstring>
+        <name>message</name>
+        <qualifiedname>sgns::message::message</qualifiedname>
+        <param>
+          <type><ref refid="d2/d2b/namespacesgns_1a28d1086e9c7886336bab065d17b7541f" kindref="member">sgns::message_type</ref></type>
+          <defname>type_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="227" column="10" bodyfile="node/common.cpp" bodystart="111" bodyend="114"/>
+      </memberdef>
+      <memberdef kind="function" id="db/da6/classsgns_1_1message_1a2fbf35d959e3532e2ce4675c9c26761e" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::message::message</definition>
+        <argsstring>(sgns::message_header const &amp;)</argsstring>
+        <name>message</name>
+        <qualifiedname>sgns::message::message</qualifiedname>
+        <param>
+          <type><ref refid="de/d6d/classsgns_1_1message__header" kindref="compound">sgns::message_header</ref> const &amp;</type>
+          <defname>header_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="228" column="10" bodyfile="node/common.cpp" bodystart="116" bodyend="119"/>
+      </memberdef>
+      <memberdef kind="function" id="db/da6/classsgns_1_1message_1a144f9f336461eb5a17eac7825ba23b41" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::message::~message</definition>
+        <argsstring>()=default</argsstring>
+        <name>~message</name>
+        <qualifiedname>sgns::message::~message</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="229" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="db/da6/classsgns_1_1message_1a7caa91e43882d5ce6b2f84e7a180bfd8" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::message::serialize</definition>
+        <argsstring>(sgns::stream &amp;, bool) const =0</argsstring>
+        <name>serialize</name>
+        <qualifiedname>sgns::message::serialize</qualifiedname>
+        <reimplementedby refid="d1/de0/classsgns_1_1bulk__pull_1ac8d23f3fe708a7d217b7f70573a1255e">serialize</reimplementedby>
+        <reimplementedby refid="d6/dcf/classsgns_1_1bulk__pull__account_1ac1fadfa36b50f11ed0dd7cafbadbd8d2">serialize</reimplementedby>
+        <reimplementedby refid="de/d2e/classsgns_1_1bulk__push_1a543a3a248a5640fc08e34bffe4618fb1">serialize</reimplementedby>
+        <reimplementedby refid="dd/d90/classsgns_1_1confirm__ack_1ab6e4d05e32e52adc8c0b1bb0441f166a">serialize</reimplementedby>
+        <reimplementedby refid="d5/df9/classsgns_1_1confirm__req_1a1ab27babb45f19c76572bbf8bdad546a">serialize</reimplementedby>
+        <reimplementedby refid="d3/d01/classsgns_1_1frontier__req_1a46ae0bbbe86ca35c914cdeb0aa23c65b">serialize</reimplementedby>
+        <reimplementedby refid="d2/d9f/classsgns_1_1keepalive_1a8eaa5a23d7c92046776b69c12592a1dd">serialize</reimplementedby>
+        <reimplementedby refid="dc/db5/classsgns_1_1node__id__handshake_1af27e2e942017aefd4e94db27d97bf89d">serialize</reimplementedby>
+        <reimplementedby refid="d6/db9/classsgns_1_1publish_1a3da09685ca4d94e698fad89d05d3feb7">serialize</reimplementedby>
+        <reimplementedby refid="db/d21/classsgns_1_1telemetry__ack_1ab6acec41bdfafc421b9a72b5ec2cafba">serialize</reimplementedby>
+        <reimplementedby refid="d8/dbd/classsgns_1_1telemetry__req_1a67e6d2544a1a5ab4ad5399f12c7366fe">serialize</reimplementedby>
+        <param>
+          <type>sgns::stream &amp;</type>
+        </param>
+        <param>
+          <type>bool</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="230" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="db/da6/classsgns_1_1message_1a85e15104bd6bb3f97732067f4a31b418" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void sgns::message::visit</definition>
+        <argsstring>(sgns::message_visitor &amp;) const =0</argsstring>
+        <name>visit</name>
+        <qualifiedname>sgns::message::visit</qualifiedname>
+        <reimplementedby refid="d1/de0/classsgns_1_1bulk__pull_1abd761ebbfff9dccad09aeb728f8e9eca">visit</reimplementedby>
+        <reimplementedby refid="d6/dcf/classsgns_1_1bulk__pull__account_1af6b6698844b216376ae87603456baad6">visit</reimplementedby>
+        <reimplementedby refid="de/d2e/classsgns_1_1bulk__push_1ac857254b86c8786e4d4eda7e820ac808">visit</reimplementedby>
+        <reimplementedby refid="dd/d90/classsgns_1_1confirm__ack_1aaf24739b2e5f06d9a90d78f6138c4c6d">visit</reimplementedby>
+        <reimplementedby refid="d5/df9/classsgns_1_1confirm__req_1a0317fef8f2a1eacd3f40fbe3487b176f">visit</reimplementedby>
+        <reimplementedby refid="d3/d01/classsgns_1_1frontier__req_1a21cd958ec05f0335bf8afdc0994f9f3b">visit</reimplementedby>
+        <reimplementedby refid="d2/d9f/classsgns_1_1keepalive_1a35cc435a544169f64c2b6c4fc4962f72">visit</reimplementedby>
+        <reimplementedby refid="dc/db5/classsgns_1_1node__id__handshake_1a01ec635a54b6ece83f8ae8a07eb64933">visit</reimplementedby>
+        <reimplementedby refid="d6/db9/classsgns_1_1publish_1acd98fc9362b02d2b80dd90c91b830295">visit</reimplementedby>
+        <reimplementedby refid="db/d21/classsgns_1_1telemetry__ack_1a6268f0ddfc0786a212b99015c751e2e5">visit</reimplementedby>
+        <reimplementedby refid="d8/dbd/classsgns_1_1telemetry__req_1a53ee14227af3acecec0266bbd7dae9ef">visit</reimplementedby>
+        <param>
+          <type><ref refid="dd/d84/classsgns_1_1message__visitor" kindref="compound">sgns::message_visitor</ref> &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="231" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="db/da6/classsgns_1_1message_1a2ad934099e11461e98605fcb5b001c0b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; std::vector&lt; uint8_t &gt; &gt;</type>
+        <definition>std::shared_ptr&lt; std::vector&lt; uint8_t &gt; &gt; sgns::message::to_bytes</definition>
+        <argsstring>(bool) const</argsstring>
+        <name>to_bytes</name>
+        <qualifiedname>sgns::message::to_bytes</qualifiedname>
+        <param>
+          <type>bool</type>
+          <defname>use_epoch_2_min_version_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="232" column="17" bodyfile="node/common.cpp" bodystart="121" bodyend="127"/>
+      </memberdef>
+      <memberdef kind="function" id="db/da6/classsgns_1_1message_1a5ae4e86a1763a52b65e042caed25ee54" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>sgns::shared_const_buffer</type>
+        <definition>sgns::shared_const_buffer sgns::message::to_shared_const_buffer</definition>
+        <argsstring>(bool) const</argsstring>
+        <name>to_shared_const_buffer</name>
+        <qualifiedname>sgns::message::to_shared_const_buffer</qualifiedname>
+        <param>
+          <type>bool</type>
+          <defname>use_epoch_2_min_version_a</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="node/common.hpp" line="233" column="27" bodyfile="node/common.cpp" bodystart="129" bodyend="132"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::bulk_pull</label>
+        <link refid="d1/de0/classsgns_1_1bulk__pull"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::bulk_pull_account</label>
+        <link refid="d6/dcf/classsgns_1_1bulk__pull__account"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::bulk_push</label>
+        <link refid="de/d2e/classsgns_1_1bulk__push"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>sgns::confirm_ack</label>
+        <link refid="dd/d90/classsgns_1_1confirm__ack"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>sgns::confirm_req</label>
+        <link refid="d5/df9/classsgns_1_1confirm__req"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::frontier_req</label>
+        <link refid="d3/d01/classsgns_1_1frontier__req"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>sgns::keepalive</label>
+        <link refid="d2/d9f/classsgns_1_1keepalive"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::message</label>
+        <link refid="db/da6/classsgns_1_1message"/>
+      </node>
+      <node id="9">
+        <label>sgns::node_id_handshake</label>
+        <link refid="dc/db5/classsgns_1_1node__id__handshake"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>sgns::publish</label>
+        <link refid="d6/db9/classsgns_1_1publish"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::telemetry_ack</label>
+        <link refid="db/d21/classsgns_1_1telemetry__ack"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>sgns::telemetry_req</label>
+        <link refid="d8/dbd/classsgns_1_1telemetry__req"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::message</label>
+        <link refid="db/da6/classsgns_1_1message"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>+header</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::message_header</label>
+        <link refid="de/d6d/classsgns_1_1message__header"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+block_type_mask</edgelabel>
+          <edgelabel>+count_mask</edgelabel>
+          <edgelabel>+extensions</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::bitset&lt; Bits &gt;</label>
+      </node>
+      <node id="3">
+        <label>std::bitset&lt; 16 &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; 16 &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="node/common.hpp" line="224" column="1" bodyfile="node/common.hpp" bodystart="225" bodyend="236"/>
+    <listofallmembers>
+      <member refid="db/da6/classsgns_1_1message_1abc0de834dc846d1d86110caec8a4b7db" prot="public" virt="non-virtual"><scope>sgns::message</scope><name>header</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a1c0d801d4625dbcc8a9f40a5c6631b2c" prot="public" virt="non-virtual"><scope>sgns::message</scope><name>message</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a2fbf35d959e3532e2ce4675c9c26761e" prot="public" virt="non-virtual"><scope>sgns::message</scope><name>message</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a7caa91e43882d5ce6b2f84e7a180bfd8" prot="public" virt="pure-virtual"><scope>sgns::message</scope><name>serialize</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a2ad934099e11461e98605fcb5b001c0b" prot="public" virt="non-virtual"><scope>sgns::message</scope><name>to_bytes</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a5ae4e86a1763a52b65e042caed25ee54" prot="public" virt="non-virtual"><scope>sgns::message</scope><name>to_shared_const_buffer</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a85e15104bd6bb3f97732067f4a31b418" prot="public" virt="pure-virtual"><scope>sgns::message</scope><name>visit</name></member>
+      <member refid="db/da6/classsgns_1_1message_1a144f9f336461eb5a17eac7825ba23b41" prot="public" virt="virtual"><scope>sgns::message</scope><name>~message</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

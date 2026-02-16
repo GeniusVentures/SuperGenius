@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_0688506dd10da2bf05e9f59c711f9106" kind="dir">
+    <compoundname>src/crypto/keccak</compoundname>
+    <innerfile refid="d5/d47/keccak_8c">keccak.c</innerfile>
+    <innerfile refid="d6/dd8/keccak_8h">keccak.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/keccak/"/>
+  </compounddef>
+</doxygen>

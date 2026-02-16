@@ -1,0 +1,76 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/d4b/classsgns_1_1runtime_1_1_core_factory" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::runtime::CoreFactory</compoundname>
+    <derivedcompoundref refid="d5/dd8/classsgns_1_1runtime_1_1binaryen_1_1_core_factory_impl" prot="public" virt="non-virtual">sgns::runtime::binaryen::CoreFactoryImpl</derivedcompoundref>
+    <includes refid="da/d13/core__factory_8hpp" local="no">core_factory.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d0/d4b/classsgns_1_1runtime_1_1_core_factory_1aaacf832725a4a69ff868b17d511ffbe6" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::runtime::CoreFactory::~CoreFactory</definition>
+        <argsstring>()=default</argsstring>
+        <name>~CoreFactory</name>
+        <qualifiedname>sgns::runtime::CoreFactory::~CoreFactory</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/core_factory.hpp" line="20" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d4b/classsgns_1_1runtime_1_1_core_factory_1ad0570ddd09532e4caf38992fabdd3a52" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::unique_ptr&lt; <ref refid="d4/df1/classsgns_1_1runtime_1_1_core" kindref="compound">Core</ref> &gt;</type>
+        <definition>virtual std::unique_ptr&lt; Core &gt; sgns::runtime::CoreFactory::createWithCode</definition>
+        <argsstring>(std::shared_ptr&lt; WasmProvider &gt; wasm_provider)=0</argsstring>
+        <name>createWithCode</name>
+        <qualifiedname>sgns::runtime::CoreFactory::createWithCode</qualifiedname>
+        <reimplementedby refid="d5/dd8/classsgns_1_1runtime_1_1binaryen_1_1_core_factory_impl_1a8c7903ae662b2e791a20ea5c42a09acb">createWithCode</reimplementedby>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d2/d00/classsgns_1_1runtime_1_1_wasm_provider" kindref="compound">WasmProvider</ref> &gt;</type>
+          <declname>wasm_provider</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Creates a <ref refid="d4/df1/classsgns_1_1runtime_1_1_core" kindref="compound">Core</ref> API object backed by the code that <itemizedlist>
+<listitem><para>wasm_provider serves </para>
+</listitem>
+</itemizedlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/core_factory.hpp" line="26" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>An abstract factory that enables construction of <ref refid="d4/df1/classsgns_1_1runtime_1_1_core" kindref="compound">Core</ref> objects over specific WASM code </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>sgns::runtime::CoreFactory</label>
+        <link refid="d0/d4b/classsgns_1_1runtime_1_1_core_factory"/>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::binaryen::CoreFactoryImpl</label>
+        <link refid="d5/dd8/classsgns_1_1runtime_1_1binaryen_1_1_core_factory_impl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::runtime::CoreFactory</label>
+        <link refid="d0/d4b/classsgns_1_1runtime_1_1_core_factory"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/core_factory.hpp" line="18" column="3" bodyfile="src/runtime/core_factory.hpp" bodystart="18" bodyend="28"/>
+    <listofallmembers>
+      <member refid="d0/d4b/classsgns_1_1runtime_1_1_core_factory_1ad0570ddd09532e4caf38992fabdd3a52" prot="public" virt="pure-virtual"><scope>sgns::runtime::CoreFactory</scope><name>createWithCode</name></member>
+      <member refid="d0/d4b/classsgns_1_1runtime_1_1_core_factory_1aaacf832725a4a69ff868b17d511ffbe6" prot="public" virt="virtual"><scope>sgns::runtime::CoreFactory</scope><name>~CoreFactory</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

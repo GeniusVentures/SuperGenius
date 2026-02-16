@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/dcb/structstd_1_1hash_3_01sgns_1_1base_1_1_buffer_01_4" kind="struct" language="C++" prot="public">
+    <compoundname>std::hash&lt; sgns::base::Buffer &gt;</compoundname>
+    <includes refid="da/d1d/buffer_8hpp" local="no">buffer.hpp</includes>
+    <templateparamlist>
+    </templateparamlist>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d0/dcb/structstd_1_1hash_3_01sgns_1_1base_1_1_buffer_01_4_1af09117f7cc18c5152b5b5a948e1d2fcb" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t std::hash&lt; sgns::base::Buffer &gt;::operator()</definition>
+        <argsstring>(const sgns::base::Buffer &amp;x) const</argsstring>
+        <name>operator()</name>
+        <qualifiedname>std::hash&lt; sgns::base::Buffer &gt;::operator()</qualifiedname>
+        <param>
+          <type>const <ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">sgns::base::Buffer</ref> &amp;</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/base/buffer.hpp" line="290" column="12" bodyfile="src/base/buffer.hpp" bodystart="290" bodyend="292"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>std::hash&lt; sgns::base::Buffer &gt;</label>
+        <link refid="d0/dcb/structstd_1_1hash_3_01sgns_1_1base_1_1_buffer_01_4"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/base/buffer.hpp" line="289" column="3" bodyfile="src/base/buffer.hpp" bodystart="289" bodyend="293"/>
+    <listofallmembers>
+      <member refid="d0/dcb/structstd_1_1hash_3_01sgns_1_1base_1_1_buffer_01_4_1af09117f7cc18c5152b5b5a948e1d2fcb" prot="public" virt="non-virtual"><scope>std::hash&lt; sgns::base::Buffer &gt;</scope><name>operator()</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

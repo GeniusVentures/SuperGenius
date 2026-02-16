@@ -1,0 +1,166 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="db/d1c/processing__subtask__queue__channel_8hpp" kind="file" language="C++">
+    <compoundname>processing_subtask_queue_channel.hpp</compoundname>
+    <includes local="yes">processing/proto/SGProcessing.pb.h</includes>
+    <includes local="no">string</includes>
+    <includes local="no">memory</includes>
+    <includes local="no">ipfs_pubsub/gossip_pubsub_topic.hpp</includes>
+    <includedby refid="d7/d8d/processing__subtask__queue__channel__pubsub_8hpp" local="yes">src/processing/processing_subtask_queue_channel_pubsub.hpp</includedby>
+    <includedby refid="dd/dd8/processing__subtask__queue__manager_8hpp" local="yes">src/processing/processing_subtask_queue_manager.hpp</includedby>
+    <includedby refid="d4/deb/processing__validation__core_8cpp" local="yes">src/processing/processing_validation_core.cpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/processing/processing_subtask_queue_channel.hpp</label>
+        <link refid="db/d1c/processing__subtask__queue__channel_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>ipfs_pubsub/gossip_pubsub_topic.hpp</label>
+      </node>
+      <node id="4">
+        <label>memory</label>
+      </node>
+      <node id="2">
+        <label>processing/proto/SGProcessing.pb.h</label>
+      </node>
+      <node id="3">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="9">
+        <label>src/account/GeniusNode.cpp</label>
+        <link refid="df/de0/_genius_node_8cpp"/>
+      </node>
+      <node id="8">
+        <label>src/account/GeniusNode.hpp</label>
+        <link refid="d3/d63/_genius_node_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>src/processing/processing_node.cpp</label>
+        <link refid="de/d98/processing__node_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/processing/processing_node.hpp</label>
+        <link refid="df/dac/processing__node_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>src/processing/processing_service.cpp</label>
+        <link refid="d3/d3a/processing__service_8cpp"/>
+      </node>
+      <node id="7">
+        <label>src/processing/processing_service.hpp</label>
+        <link refid="d5/d37/processing__service_8hpp"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>src/processing/processing_subtask_queue_accessor_impl.cpp</label>
+        <link refid="dd/d14/processing__subtask__queue__accessor__impl_8cpp"/>
+      </node>
+      <node id="11">
+        <label>src/processing/processing_subtask_queue_accessor_impl.hpp</label>
+        <link refid="de/d17/processing__subtask__queue__accessor__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/processing/processing_subtask_queue_channel.hpp</label>
+        <link refid="db/d1c/processing__subtask__queue__channel_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>src/processing/processing_subtask_queue_channel_pubsub.cpp</label>
+        <link refid="d8/d6f/processing__subtask__queue__channel__pubsub_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/processing/processing_subtask_queue_channel_pubsub.hpp</label>
+        <link refid="d7/d8d/processing__subtask__queue__channel__pubsub_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>src/processing/processing_subtask_queue_manager.cpp</label>
+        <link refid="da/d9e/processing__subtask__queue__manager_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/processing/processing_subtask_queue_manager.hpp</label>
+        <link refid="dd/dd8/processing__subtask__queue__manager_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>src/processing/processing_validation_core.cpp</label>
+        <link refid="d4/deb/processing__validation__core_8cpp"/>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel" prot="public">sgns::processing::ProcessingSubTaskQueueChannel</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6a/namespacesgns_1_1processing">sgns::processing</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_CHANNEL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_CHANNEL_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;processing/proto/SGProcessing.pb.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;memory&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;ipfs_pubsub/gossip_pubsub_topic.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d6a/namespacesgns_1_1processing" kindref="compound">sgns::processing</ref></highlight></codeline>
+<codeline lineno="17"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="20" refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel" kindref="compound">ProcessingSubTaskQueueChannel</ref></highlight></codeline>
+<codeline lineno="21"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="23" refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a61d360e4a1f265b1061acde32f030bd3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a61d360e4a1f265b1061acde32f030bd3" kindref="member">~ProcessingSubTaskQueueChannel</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28" refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a86d1536ac372b9d6875a9d1dd38ac0ea" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a86d1536ac372b9d6875a9d1dd38ac0ea" kindref="member">RequestQueueOwnership</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string&amp;<sp/>nodeId)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33" refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a8edd64eb53b6f4302eb7a47a4699dbf4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a8edd64eb53b6f4302eb7a47a4699dbf4" kindref="member">PublishQueue</ref>(std::shared_ptr&lt;SGProcessing::SubTaskQueue&gt;<sp/>queue)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="39" refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1ab9e2b977c54c360e32471cda0bc2f363" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/><ref refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1ab9e2b977c54c360e32471cda0bc2f363" kindref="member">GetActiveNodesCount</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45" refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a3a4186e2808764c2f542cdac17f2e842" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>std::vector&lt;libp2p::peer::PeerId&gt;<sp/><ref refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a3a4186e2808764c2f542cdac17f2e842" kindref="member">GetActiveNodes</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="46"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="47"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_CHANNEL_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/processing/processing_subtask_queue_channel.hpp"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,71 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/dd5/structsgns_1_1scale_1_1compact_1_1_encoding_category_limits" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::scale::compact::EncodingCategoryLimits</compoundname>
+    <includes refid="dd/d27/scale_2types_8hpp" local="no">types.hpp</includes>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="d6/dd5/structsgns_1_1scale_1_1compact_1_1_encoding_category_limits_1a5e505e1cb300b37c9bcdb76aca89e9a7" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::scale::compact::EncodingCategoryLimits::kMinUint16</definition>
+        <argsstring></argsstring>
+        <name>kMinUint16</name>
+        <qualifiedname>sgns::scale::compact::EncodingCategoryLimits::kMinUint16</qualifiedname>
+        <initializer>= (1ul &lt;&lt; 6u)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/types.hpp" line="30" column="29" bodyfile="src/scale/types.hpp" bodystart="30" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/dd5/structsgns_1_1scale_1_1compact_1_1_encoding_category_limits_1a17b2ab4099965fd26ed3dfefc13f9896" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::scale::compact::EncodingCategoryLimits::kMinUint32</definition>
+        <argsstring></argsstring>
+        <name>kMinUint32</name>
+        <qualifiedname>sgns::scale::compact::EncodingCategoryLimits::kMinUint32</qualifiedname>
+        <initializer>= (1ul &lt;&lt; 14u)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/types.hpp" line="32" column="29" bodyfile="src/scale/types.hpp" bodystart="32" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/dd5/structsgns_1_1scale_1_1compact_1_1_encoding_category_limits_1ab54259e49414282861eba1837b9af7ae" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::scale::compact::EncodingCategoryLimits::kMinBigInteger</definition>
+        <argsstring></argsstring>
+        <name>kMinBigInteger</name>
+        <qualifiedname>sgns::scale::compact::EncodingCategoryLimits::kMinBigInteger</qualifiedname>
+        <initializer>= (1ul &lt;&lt; 30u)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/scale/types.hpp" line="34" column="29" bodyfile="src/scale/types.hpp" bodystart="34" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>categories of compact encoding </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::scale::compact::EncodingCategoryLimits</label>
+        <link refid="d6/dd5/structsgns_1_1scale_1_1compact_1_1_encoding_category_limits"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/scale/types.hpp" line="28" column="3" bodyfile="src/scale/types.hpp" bodystart="28" bodyend="35"/>
+    <listofallmembers>
+      <member refid="d6/dd5/structsgns_1_1scale_1_1compact_1_1_encoding_category_limits_1ab54259e49414282861eba1837b9af7ae" prot="public" virt="non-virtual"><scope>sgns::scale::compact::EncodingCategoryLimits</scope><name>kMinBigInteger</name></member>
+      <member refid="d6/dd5/structsgns_1_1scale_1_1compact_1_1_encoding_category_limits_1a5e505e1cb300b37c9bcdb76aca89e9a7" prot="public" virt="non-virtual"><scope>sgns::scale::compact::EncodingCategoryLimits</scope><name>kMinUint16</name></member>
+      <member refid="d6/dd5/structsgns_1_1scale_1_1compact_1_1_encoding_category_limits_1a17b2ab4099965fd26ed3dfefc13f9896" prot="public" virt="non-virtual"><scope>sgns::scale::compact::EncodingCategoryLimits</scope><name>kMinUint32</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

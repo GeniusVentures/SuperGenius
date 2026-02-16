@@ -1,0 +1,297 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/dd8/processing__subtask__queue__manager_8hpp" kind="file" language="C++">
+    <compoundname>processing_subtask_queue_manager.hpp</compoundname>
+    <includes refid="d7/d97/processing__subtask__queue_8hpp" local="yes">processing/processing_subtask_queue.hpp</includes>
+    <includes refid="db/d1c/processing__subtask__queue__channel_8hpp" local="yes">processing/processing_subtask_queue_channel.hpp</includes>
+    <includes local="yes">processing/proto/SGProcessing.pb.h</includes>
+    <includes local="no">boost/asio.hpp</includes>
+    <includes local="no">boost/optional.hpp</includes>
+    <includes local="no">list</includes>
+    <includes local="no">queue</includes>
+    <includedby refid="df/dac/processing__node_8hpp" local="yes">src/processing/processing_node.hpp</includedby>
+    <includedby refid="de/d17/processing__subtask__queue__accessor__impl_8hpp" local="yes">src/processing/processing_subtask_queue_accessor_impl.hpp</includedby>
+    <includedby refid="da/d9e/processing__subtask__queue__manager_8cpp" local="yes">src/processing/processing_subtask_queue_manager.cpp</includedby>
+    <incdepgraph>
+      <node id="4">
+        <label>base/logger.hpp</label>
+        <link refid="d6/da3/logger_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>processing/processing_subtask_queue.hpp</label>
+        <link refid="d7/d97/processing__subtask__queue_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>processing/processing_subtask_queue_channel.hpp</label>
+        <link refid="db/d1c/processing__subtask__queue__channel_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/processing/processing_subtask_queue_manager.hpp</label>
+        <link refid="dd/dd8/processing__subtask__queue__manager_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>boost/asio.hpp</label>
+      </node>
+      <node id="12">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="10">
+        <label>ipfs_pubsub/gossip_pubsub_topic.hpp</label>
+      </node>
+      <node id="13">
+        <label>list</label>
+      </node>
+      <node id="9">
+        <label>memory</label>
+      </node>
+      <node id="3">
+        <label>processing/proto/SGProcessing.pb.h</label>
+      </node>
+      <node id="14">
+        <label>queue</label>
+      </node>
+      <node id="5">
+        <label>spdlog/fmt/ostr.h</label>
+      </node>
+      <node id="6">
+        <label>spdlog/spdlog.h</label>
+      </node>
+      <node id="8">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="6">
+        <label>src/account/GeniusNode.cpp</label>
+        <link refid="df/de0/_genius_node_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/account/GeniusNode.hpp</label>
+        <link refid="d3/d63/_genius_node_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>src/processing/processing_node.cpp</label>
+        <link refid="de/d98/processing__node_8cpp"/>
+      </node>
+      <node id="2">
+        <label>src/processing/processing_node.hpp</label>
+        <link refid="df/dac/processing__node_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>src/processing/processing_service.cpp</label>
+        <link refid="d3/d3a/processing__service_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/processing/processing_service.hpp</label>
+        <link refid="d5/d37/processing__service_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>src/processing/processing_subtask_queue_accessor_impl.cpp</label>
+        <link refid="dd/d14/processing__subtask__queue__accessor__impl_8cpp"/>
+      </node>
+      <node id="8">
+        <label>src/processing/processing_subtask_queue_accessor_impl.hpp</label>
+        <link refid="de/d17/processing__subtask__queue__accessor__impl_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>src/processing/processing_subtask_queue_manager.cpp</label>
+        <link refid="da/d9e/processing__subtask__queue__manager_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/processing/processing_subtask_queue_manager.hpp</label>
+        <link refid="dd/dd8/processing__subtask__queue__manager_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager" prot="public">sgns::processing::ProcessingSubTaskQueueManager</innerclass>
+    <innerclass refid="da/d9a/structsgns_1_1processing_1_1_processing_sub_task_queue_manager_1_1_ownership_request" prot="private">sgns::processing::ProcessingSubTaskQueueManager::OwnershipRequest</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6a/namespacesgns_1_1processing">sgns::processing</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_MANAGER_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_MANAGER_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d7/d97/processing__subtask__queue_8hpp" kindref="compound">processing/processing_subtask_queue.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="db/d1c/processing__subtask__queue__channel_8hpp" kindref="compound">processing/processing_subtask_queue_channel.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;processing/proto/SGProcessing.pb.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/asio.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/optional.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;list&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;queue&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="df/d6a/namespacesgns_1_1processing" kindref="compound">sgns::processing</ref></highlight></codeline>
+<codeline lineno="20"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="24" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aa96bcb99c4d9dff1e34670c62eaa92f0" kindref="member">ProcessingSubTaskQueueManager</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>std::enable_shared_from_this&lt;ProcessingSubTaskQueueManager&gt;</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="27" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a1f0647de08945ce0ef31ad39987db277" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a1f0647de08945ce0ef31ad39987db277" kindref="member">SubTaskGrabbedCallback</ref><sp/>=<sp/>std::function&lt;void(<sp/>boost::optional&lt;const<sp/>SGProcessing::SubTask<sp/>&amp;&gt;<sp/>)&gt;;</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aa96bcb99c4d9dff1e34670c62eaa92f0" kindref="member">ProcessingSubTaskQueueManager</ref>(<sp/>std::shared_ptr&lt;ProcessingSubTaskQueueChannel&gt;<sp/>queueChannel,</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;boost::asio::io_context&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/>context,</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&amp;localNodeId,</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;</highlight><highlight class="keywordtype">void</highlight><highlight class="normal">(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<sp/>)&gt;<sp/><sp/><sp/><sp/><sp/>processingErrorSink,</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>delayBetweenProcessingMs<sp/>=<sp/>20<sp/>);</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a0140e45a14f2454f54ed8d7cfd5a754f" kindref="member">~ProcessingSubTaskQueueManager</ref>();</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a5697ff506e0df474205e0acac8146d60" kindref="member">SetProcessingTimeout</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::chrono::system_clock::duration<sp/>&amp;processingTimeout<sp/>);</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"></highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1af0c2ca45e36ba445a93648a148f2248a" kindref="member">CreateQueue</ref>(<sp/>std::list&lt;SGProcessing::SubTask&gt;<sp/>&amp;subTasks<sp/>);</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"></highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a834485f841eb14666bdb127d3eeae016" kindref="member">GrabSubTask</ref>(<sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a1f0647de08945ce0ef31ad39987db277" kindref="member">SubTaskGrabbedCallback</ref><sp/>onSubTaskGrabbedCallback<sp/>);</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"></highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a83a89b3e7b3c68bee87735198fdf8448" kindref="member">MoveOwnershipTo</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;nodeId<sp/>);</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"></highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a907583b4b55d4c0d2d3c48994f9aa9cc" kindref="member">HasOwnership</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"></highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1acd21eaddd28f647b99707a102aa4f07d" kindref="member">ProcessSubTaskQueueMessage</ref>(<sp/>SGProcessing::SubTaskQueue<sp/>*queue<sp/>);</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"></highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ad405ae9d1800b63f30ab868fd1b43de6" kindref="member">ProcessSubTaskQueueRequestMessage</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>SGProcessing::SubTaskQueueRequest<sp/>&amp;request<sp/>);</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"></highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::unique_ptr&lt;SGProcessing::SubTaskQueue&gt;<sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ada807add471dd304cefc19cebe6f5ac9" kindref="member">GetQueueSnapshot</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"></highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a2680a17086b901356fe2309052541707" kindref="member">ChangeSubTaskProcessingStates</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::set&lt;std::string&gt;<sp/>&amp;subTaskIds,<sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>isProcessed<sp/>);</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"></highlight></codeline>
+<codeline lineno="96" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a148c01bf4b8f285d958737f866d62049" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a148c01bf4b8f285d958737f866d62049" kindref="member">IsQueueInit</ref>()</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a18ab97be8407809d9222fed92290888d" kindref="member">m_queue</ref><sp/>!=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"></highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a5ae6e2b3d6d936d0c7a2e073ef6029da" kindref="member">IsProcessed</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"></highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a13f73871e1227e85e4722eb16f157eeb" kindref="member">SetSubTaskQueueAssignmentEventSink</ref>(</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;</highlight><highlight class="keywordtype">void</highlight><highlight class="normal">(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;std::string&gt;<sp/>&amp;<sp/>)&gt;<sp/>subTaskQueueAssignmentEventSink<sp/>);</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a4ee374a416f37d0e071dc01a7178169b" kindref="member">GetCurrentQueueTimestamp</ref>();</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"></highlight></codeline>
+<codeline lineno="123" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a7a2c3870148304e6b51f26637c7580d4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a7a2c3870148304e6b51f26637c7580d4" kindref="member">SetMaxSubtasksPerOwnership</ref>(<sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>maxSubtasksPerOwnership<sp/>)</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aeda73fec51c46057d9716671dc3738b1" kindref="member">m_defaultMaxSubtasksPerOwnership</ref><sp/>=<sp/>maxSubtasksPerOwnership;</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="127"><highlight class="normal"></highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="132"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aacd881cf0de2c0918e5f42860a205403" kindref="member">UpdateQueue</ref>(<sp/>SGProcessing::SubTaskQueue<sp/>*queue<sp/>);</highlight></codeline>
+<codeline lineno="133"><highlight class="normal"></highlight></codeline>
+<codeline lineno="134"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aedd4a0db3bb9ca5e64849e92492cfcd4" kindref="member">HandleQueueRequestTimeout</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::system::error_code<sp/>&amp;ec<sp/>);</highlight></codeline>
+<codeline lineno="135"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1acc9caf8e11fa7be0e1e97b851b0a3d80" kindref="member">PublishSubTaskQueue</ref>();</highlight></codeline>
+<codeline lineno="136"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ad0a6342afe4662b8cdb61d81a1ad10f0" kindref="member">ProcessPendingSubTaskGrabbing</ref>();</highlight></codeline>
+<codeline lineno="137"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a96c750599979026c9b37cdac072f2af4" kindref="member">GrabSubTasks</ref>();</highlight></codeline>
+<codeline lineno="138"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a97eaedc99b43bb0a157681f7d9cc4831" kindref="member">HandleGrabSubTaskTimeout</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>boost::system::error_code<sp/>&amp;ec<sp/>);</highlight></codeline>
+<codeline lineno="139"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a1ff4db442a3a8050ad94a2b11e3cb09e" kindref="member">LogQueue</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="140"><highlight class="normal"></highlight></codeline>
+<codeline lineno="145"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a64ea092e1d4ae462c238828d9f3d2de5" kindref="member">HasAvailableWork</ref>(<sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>checkOwnershipQuota<sp/>=<sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal"><sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="149"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a44937976afcead07dccc39f57e7a9cd4" kindref="member">UpdateQueueTimestamp</ref>();</highlight></codeline>
+<codeline lineno="150"><highlight class="normal"></highlight></codeline>
+<codeline lineno="151"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a62a32e5ebd1cec9972b85aafb7e678d8" kindref="member">CheckActiveCount</ref>();</highlight></codeline>
+<codeline lineno="152"><highlight class="normal"></highlight></codeline>
+<codeline lineno="163"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a1acdde2b00c188475d050ba529153feb" kindref="member">CalculateGrabSubTaskTimeout</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="164"><highlight class="normal"></highlight></codeline>
+<codeline lineno="169"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::vector&lt;int&gt;<sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a3a0879af207b8c0e784a09d367636866" kindref="member">UpdateUnprocessedSubTaskIndices</ref>(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>SGProcessing::SubTaskQueue<sp/>*queue<sp/>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="170"><highlight class="normal"></highlight></codeline>
+<codeline lineno="171" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a024e1448e55fe5d18f50a2345180562d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;ProcessingSubTaskQueueChannel&gt;<sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a024e1448e55fe5d18f50a2345180562d" kindref="member">m_queueChannel</ref>;</highlight></codeline>
+<codeline lineno="172" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aec8daf4ba76373dc5effc1e39b2e0740" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;boost::asio::io_context&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aec8daf4ba76373dc5effc1e39b2e0740" kindref="member">m_context</ref>;</highlight></codeline>
+<codeline lineno="173" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a27a51a2a29d70cce8a3d5d843fa2bace" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a27a51a2a29d70cce8a3d5d843fa2bace" kindref="member">m_localNodeId</ref>;</highlight></codeline>
+<codeline lineno="174"><highlight class="normal"></highlight></codeline>
+<codeline lineno="175" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a18ab97be8407809d9222fed92290888d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;SGProcessing::SubTaskQueue&gt;<sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a18ab97be8407809d9222fed92290888d" kindref="member">m_queue</ref>;</highlight></codeline>
+<codeline lineno="176" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a6e22483081287c06850f64cbac2696d2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">mutable</highlight><highlight class="normal"><sp/>std::recursive_mutex<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a6e22483081287c06850f64cbac2696d2" kindref="member">m_queueMutex</ref>;</highlight></codeline>
+<codeline lineno="177" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a4cafcaa72c80e8e7656477230642a2bb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::list&lt;SubTaskGrabbedCallback&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a4cafcaa72c80e8e7656477230642a2bb" kindref="member">m_onSubTaskGrabbedCallbacks</ref>;</highlight></codeline>
+<codeline lineno="178"><highlight class="normal"></highlight></codeline>
+<codeline lineno="179" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ac4618259590e6fd69d1a9babe36a98da" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;void(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;std::string&gt;<sp/>&amp;<sp/>)&gt;<sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ac4618259590e6fd69d1a9babe36a98da" kindref="member">m_subTaskQueueAssignmentEventSink</ref>;</highlight></codeline>
+<codeline lineno="180" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aa9fce59958aadf2a726a675cdad86ad1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::set&lt;std::string&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aa9fce59958aadf2a726a675cdad86ad1" kindref="member">m_processedSubTaskIds</ref>;</highlight></codeline>
+<codeline lineno="181"><highlight class="normal"></highlight></codeline>
+<codeline lineno="182" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1adabc3e796078ad5fa577d94925b8a154" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boost::asio::deadline_timer<sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1adabc3e796078ad5fa577d94925b8a154" kindref="member">m_dltQueueResponseTimeout</ref>;</highlight></codeline>
+<codeline lineno="183" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a275af5faff22625b7b8ea50e3f6edda5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boost::posix_time::time_duration<sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a275af5faff22625b7b8ea50e3f6edda5" kindref="member">m_queueResponseTimeout</ref>;</highlight></codeline>
+<codeline lineno="184"><highlight class="normal"></highlight></codeline>
+<codeline lineno="185" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a9c7fd32c44fdbce9ac4ffa4c44acc44c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>boost::asio::deadline_timer<sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a9c7fd32c44fdbce9ac4ffa4c44acc44c" kindref="member">m_dltGrabSubTaskTimeout</ref>;</highlight></codeline>
+<codeline lineno="186"><highlight class="normal"></highlight></codeline>
+<codeline lineno="187" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a890514576e84a545de471876da16216e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d8/d64/classsgns_1_1processing_1_1_processing_sub_task_queue" kindref="compound">ProcessingSubTaskQueue</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a890514576e84a545de471876da16216e" kindref="member">m_processingQueue</ref>;</highlight></codeline>
+<codeline lineno="188" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a7bbb2263b0238c4fac4b61a8fcf2837c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::system_clock::duration<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a7bbb2263b0238c4fac4b61a8fcf2837c" kindref="member">m_processingTimeout</ref>;</highlight></codeline>
+<codeline lineno="189" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a6ad7aa847ad069697274686cfa5b0bbf" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::function&lt;void(<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string<sp/>&amp;<sp/>)&gt;<sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a6ad7aa847ad069697274686cfa5b0bbf" kindref="member">m_processingErrorSink</ref>;</highlight></codeline>
+<codeline lineno="190"><highlight class="normal"></highlight></codeline>
+<codeline lineno="191" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a2280321f3241f78592944b11d039e5b0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a2280321f3241f78592944b11d039e5b0" kindref="member">m_queue_timestamp_</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>0;<sp/></highlight><highlight class="comment">//<sp/>Aggregate<sp/>time<sp/>counter<sp/>for<sp/>the<sp/>queue</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="192" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a07847273b91f6be2f40a8f34d8fd909b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a07847273b91f6be2f40a8f34d8fd909b" kindref="member">m_ownership_acquired_at_</ref><sp/><sp/><sp/><sp/><sp/>=<sp/>0;<sp/></highlight><highlight class="comment">//<sp/>When<sp/>this<sp/>node<sp/>acquired<sp/>ownership<sp/>(in<sp/>ms)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="193" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ac5bd57d58f5f4ebaed11a830b8e755d0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ac5bd57d58f5f4ebaed11a830b8e755d0" kindref="member">m_ownership_last_delta_time_</ref><sp/>=<sp/>0;<sp/></highlight><highlight class="comment">//<sp/>When<sp/>this<sp/>node<sp/>last<sp/>updated<sp/>the<sp/>queue<sp/>timestamp</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="194"><highlight class="normal"></highlight></codeline>
+<codeline lineno="195"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Add<sp/>to<sp/>private<sp/>section<sp/>of<sp/>ProcessingSubTaskQueueManager</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="196" refid="da/d9a/structsgns_1_1processing_1_1_processing_sub_task_queue_manager_1_1_ownership_request" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="da/d9a/structsgns_1_1processing_1_1_processing_sub_task_queue_manager_1_1_ownership_request" kindref="compound">OwnershipRequest</ref></highlight></codeline>
+<codeline lineno="197"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="198" refid="da/d9a/structsgns_1_1processing_1_1_processing_sub_task_queue_manager_1_1_ownership_request_1a2f617b349fa5939b836d7e0608e2413d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="da/d9a/structsgns_1_1processing_1_1_processing_sub_task_queue_manager_1_1_ownership_request_1a2f617b349fa5939b836d7e0608e2413d" kindref="member">node_id</ref>;</highlight></codeline>
+<codeline lineno="199" refid="da/d9a/structsgns_1_1processing_1_1_processing_sub_task_queue_manager_1_1_ownership_request_1aa42d7d1d384ecbb793035899d0fa1aab" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><sp/><sp/><sp/><ref refid="da/d9a/structsgns_1_1processing_1_1_processing_sub_task_queue_manager_1_1_ownership_request_1aa42d7d1d384ecbb793035899d0fa1aab" kindref="member">timestamp</ref>;<sp/></highlight><highlight class="comment">//<sp/>Timestamp<sp/>when<sp/>request<sp/>was<sp/>received</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="200"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="201"><highlight class="normal"></highlight></codeline>
+<codeline lineno="202" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a75cd28e2150a6910464d12374677ebfd" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::queue&lt;OwnershipRequest&gt;<sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a75cd28e2150a6910464d12374677ebfd" kindref="member">m_ownershipRequestQueue</ref>;</highlight></codeline>
+<codeline lineno="203"><highlight class="normal"></highlight></codeline>
+<codeline lineno="204" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a53831e50b23870857367916cd2b3d737" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a53831e50b23870857367916cd2b3d737" kindref="member">m_logger</ref><sp/>=<sp/><ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>(<sp/></highlight><highlight class="stringliteral">&quot;ProcessingSubTaskQueueManager&quot;</highlight><highlight class="normal"><sp/>);</highlight></codeline>
+<codeline lineno="205" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a7f528efc73ec9a2789eccad15d5408a0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::steady_clock::time_point<sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a7f528efc73ec9a2789eccad15d5408a0" kindref="member">m_lastQueueUpdateTime</ref><sp/>=<sp/>std::chrono::steady_clock::now();</highlight></codeline>
+<codeline lineno="206"><highlight class="normal"></highlight></codeline>
+<codeline lineno="207" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ace6ff6c8a02a1729b882fed70a783c34" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1ace6ff6c8a02a1729b882fed70a783c34" kindref="member">m_processedSubtasksInCurrentOwnership</ref><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="208" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aeda73fec51c46057d9716671dc3738b1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aeda73fec51c46057d9716671dc3738b1" kindref="member">m_defaultMaxSubtasksPerOwnership</ref><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>1;</highlight></codeline>
+<codeline lineno="209" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1add28943f610b31075ecaf525f4199f55" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1add28943f610b31075ecaf525f4199f55" kindref="member">m_maxSubtasksPerOwnership</ref>;</highlight></codeline>
+<codeline lineno="210" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1adeeda817b77e42daccb2af193f4c71d7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uint64_t<sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1adeeda817b77e42daccb2af193f4c71d7" kindref="member">m_delayBetweenProcessingMs</ref>;</highlight></codeline>
+<codeline lineno="211"><highlight class="normal"></highlight></codeline>
+<codeline lineno="212" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1addda6a3ef38a4c30ac6889e1cb4b3849" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::chrono::steady_clock::time_point<sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1addda6a3ef38a4c30ac6889e1cb4b3849" kindref="member">m_lastActiveCountCheck</ref><sp/>=<sp/>std::chrono::steady_clock::now();</highlight></codeline>
+<codeline lineno="213" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aade088954cbbe2738353dddc0c716c02" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint64_t<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1aade088954cbbe2738353dddc0c716c02" kindref="member">m_waitTimeBeforeReset</ref><sp/><sp/>=<sp/>3000;<sp/><sp/></highlight><highlight class="comment">//<sp/>Initial<sp/>wait<sp/>time<sp/>of<sp/>3000ms</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="214" refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a78394b835b99f82ccba56e993fd6dc55" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d4/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_manager_1a78394b835b99f82ccba56e993fd6dc55" kindref="member">m_initialDelayPassed</ref><sp/><sp/><sp/>=<sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;<sp/></highlight><highlight class="comment">//<sp/>Track<sp/>if<sp/>initial<sp/>delay<sp/>has<sp/>passed</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="215"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="216"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="217"><highlight class="normal"></highlight></codeline>
+<codeline lineno="218"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_MANAGER_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/processing/processing_subtask_queue_manager.hpp"/>
+  </compounddef>
+</doxygen>

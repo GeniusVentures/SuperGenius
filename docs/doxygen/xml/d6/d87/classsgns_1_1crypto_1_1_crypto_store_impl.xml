@@ -1,0 +1,866 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl" kind="class" language="C++" prot="public">
+    <compoundname>sgns::crypto::CryptoStoreImpl</compoundname>
+    <basecompoundref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store" prot="public" virt="non-virtual">sgns::crypto::CryptoStore</basecompoundref>
+    <includes refid="d4/d05/crypto__store__impl_8hpp" local="no">crypto_store_impl.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1ac999ac2807b0c9e9de81d27011505ead" prot="private" static="no" mutable="no">
+        <type><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a0e4314ce82cfcde206e5d1fc17fdc3af" kindref="member">Path</ref></type>
+        <definition>Path sgns::crypto::CryptoStoreImpl::keys_directory_</definition>
+        <argsstring></argsstring>
+        <name>keys_directory_</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::keys_directory_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="102" column="10" bodyfile="src/crypto/crypto_store/crypto_store_impl.hpp" bodystart="102" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1ab5389d8509939a6103dd57af878b7372" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="da/d5d/classsgns_1_1crypto_1_1_e_d25519_provider" kindref="compound">ED25519Provider</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;ED25519Provider&gt; sgns::crypto::CryptoStoreImpl::ed25519_provider_</definition>
+        <argsstring></argsstring>
+        <name>ed25519_provider_</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::ed25519_provider_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="103" column="21" bodyfile="src/crypto/crypto_store/crypto_store_impl.hpp" bodystart="103" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1aaaa50a44a407e60d592649b9f93cb5e8" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="df/d78/classsgns_1_1crypto_1_1_s_r25519_provider" kindref="compound">SR25519Provider</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;SR25519Provider&gt; sgns::crypto::CryptoStoreImpl::sr25519_provider_</definition>
+        <argsstring></argsstring>
+        <name>sr25519_provider_</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::sr25519_provider_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="104" column="21" bodyfile="src/crypto/crypto_store/crypto_store_impl.hpp" bodystart="104" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1ae2a74478dae55c6c2d2af39aacab11d7" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d6/d6e/classsgns_1_1crypto_1_1_secp256k1_provider" kindref="compound">Secp256k1Provider</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Secp256k1Provider&gt; sgns::crypto::CryptoStoreImpl::secp256k1_provider_</definition>
+        <argsstring></argsstring>
+        <name>secp256k1_provider_</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::secp256k1_provider_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="105" column="21" bodyfile="src/crypto/crypto_store/crypto_store_impl.hpp" bodystart="105" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a81f62f4c6ca88d79b4fa885e2b60368f" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d7/d94/classsgns_1_1crypto_1_1_bip39_provider" kindref="compound">Bip39Provider</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Bip39Provider&gt; sgns::crypto::CryptoStoreImpl::bip39_provider_</definition>
+        <argsstring></argsstring>
+        <name>bip39_provider_</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::bip39_provider_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="106" column="21" bodyfile="src/crypto/crypto_store/crypto_store_impl.hpp" bodystart="106" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a6621191776ccbc3993f48c48272a4489" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="df/d6e/namespacesgns_1_1crypto_1af5b689e8f731b918be933cd0a6ba8db4" kindref="member">CSPRNG</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;CSPRNG&gt; sgns::crypto::CryptoStoreImpl::random_generator_</definition>
+        <argsstring></argsstring>
+        <name>random_generator_</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::random_generator_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="107" column="21" bodyfile="src/crypto/crypto_store/crypto_store_impl.hpp" bodystart="107" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1aed70047bd1263bbced55d3f0b61904cb" prot="private" static="no" mutable="no">
+        <type>std::map&lt; <ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref>, std::map&lt; <ref refid="df/d6e/namespacesgns_1_1crypto_1aabd48e8fa382c75b453fce43c158f97d" kindref="member">ED25519PublicKey</ref>, <ref refid="df/d6e/namespacesgns_1_1crypto_1a1cc4b7c855b0b88eef1bfebf6c800a4c" kindref="member">ED25519PrivateKey</ref> &gt; &gt;</type>
+        <definition>std::map&lt;KeyTypeId, std::map&lt;ED25519PublicKey, ED25519PrivateKey&gt; &gt; sgns::crypto::CryptoStoreImpl::ed_keys_</definition>
+        <argsstring></argsstring>
+        <name>ed_keys_</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::ed_keys_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="109" column="14" bodyfile="src/crypto/crypto_store/crypto_store_impl.hpp" bodystart="109" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a53769aa6f34602a6b03388bb87087142" prot="private" static="no" mutable="no">
+        <type>std::map&lt; <ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref>, std::map&lt; <ref refid="df/d6e/namespacesgns_1_1crypto_1ac763dcc567072893f82795e8d546ba88" kindref="member">SR25519PublicKey</ref>, <ref refid="df/d6e/namespacesgns_1_1crypto_1a633b411985472167a972b86d3a40efa6" kindref="member">SR25519SecretKey</ref> &gt; &gt;</type>
+        <definition>std::map&lt;KeyTypeId, std::map&lt;SR25519PublicKey, SR25519SecretKey&gt; &gt; sgns::crypto::CryptoStoreImpl::sr_keys_</definition>
+        <argsstring></argsstring>
+        <name>sr_keys_</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::sr_keys_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="110" column="14" bodyfile="src/crypto/crypto_store/crypto_store_impl.hpp" bodystart="110" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a2d67b860dc074f7e75a0ae5c88e0b0d4" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::crypto::CryptoStoreImpl::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::logger_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="111" column="18" bodyfile="src/crypto/crypto_store/crypto_store_impl.hpp" bodystart="111" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a79126239fa1a8b865de5dbf19066dbf6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crypto::CryptoStoreImpl::~CryptoStoreImpl</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~CryptoStoreImpl</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::~CryptoStoreImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="48" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1af5c11480b1d91b4d5892a729ddb67f62" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crypto::CryptoStoreImpl::CryptoStoreImpl</definition>
+        <argsstring>(std::shared_ptr&lt; ED25519Provider &gt; ed25519_provider, std::shared_ptr&lt; SR25519Provider &gt; sr25519_provider, std::shared_ptr&lt; Secp256k1Provider &gt; secp256k1_provider, std::shared_ptr&lt; Bip39Provider &gt; bip39_provider, std::shared_ptr&lt; CSPRNG &gt; random_generator)</argsstring>
+        <name>CryptoStoreImpl</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::CryptoStoreImpl</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="da/d5d/classsgns_1_1crypto_1_1_e_d25519_provider" kindref="compound">ED25519Provider</ref> &gt;</type>
+          <declname>ed25519_provider</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="df/d78/classsgns_1_1crypto_1_1_s_r25519_provider" kindref="compound">SR25519Provider</ref> &gt;</type>
+          <declname>sr25519_provider</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d6/d6e/classsgns_1_1crypto_1_1_secp256k1_provider" kindref="compound">Secp256k1Provider</ref> &gt;</type>
+          <declname>secp256k1_provider</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d7/d94/classsgns_1_1crypto_1_1_bip39_provider" kindref="compound">Bip39Provider</ref> &gt;</type>
+          <declname>bip39_provider</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="df/d6e/namespacesgns_1_1crypto_1af5b689e8f731b918be933cd0a6ba8db4" kindref="member">CSPRNG</ref> &gt;</type>
+          <declname>random_generator</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="50" column="5" bodyfile="src/crypto/crypto_store/crypto_store_impl.cpp" bodystart="102" bodyend="119"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a80f77cfb92e78534387e0a678a655a23" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crypto::CryptoStoreImpl::initialize</definition>
+        <argsstring>(Path keys_directory)</argsstring>
+        <name>initialize</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::initialize</qualifiedname>
+        <param>
+          <type><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a0e4314ce82cfcde206e5d1fc17fdc3af" kindref="member">Path</ref></type>
+          <declname>keys_directory</declname>
+        </param>
+        <briefdescription>
+<para>ensures that keys directory exists </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>keys_directory</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>keys directory </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>success if exists or managed to create, failure otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="61" column="21" bodyfile="src/crypto/crypto_store/crypto_store_impl.cpp" bodystart="121" bodyend="136"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a2aa6ebcdc3f29d159844e5e109b26ed0" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" kindref="compound">ED25519Keypair</ref> &gt;</type>
+        <definition>outcome::result&lt; ED25519Keypair &gt; sgns::crypto::CryptoStoreImpl::generateEd25519Keypair</definition>
+        <argsstring>(KeyTypeId key_type, std::string_view mnemonic_phrase) override</argsstring>
+        <name>generateEd25519Keypair</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::generateEd25519Keypair</qualifiedname>
+        <reimplements refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a68fafbb800ecad9c8089622ad6669fd4">generateEd25519Keypair</reimplements>
+        <param>
+          <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+          <declname>key_type</declname>
+        </param>
+        <param>
+          <type>std::string_view</type>
+          <declname>mnemonic_phrase</declname>
+        </param>
+        <briefdescription>
+<para>generates ED25519 keypair and stores it in memory </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key type identifier </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>mnemonic_phrase</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>mnemonic phrase </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>generated key pair or error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="63" column="21" bodyfile="src/crypto/crypto_store/crypto_store_impl.cpp" bodystart="138" bodyend="155"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a113519efd74311677c42ce426f16725b" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair" kindref="compound">SR25519Keypair</ref> &gt;</type>
+        <definition>outcome::result&lt; SR25519Keypair &gt; sgns::crypto::CryptoStoreImpl::generateSr25519Keypair</definition>
+        <argsstring>(KeyTypeId key_type, std::string_view mnemonic_phrase) override</argsstring>
+        <name>generateSr25519Keypair</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::generateSr25519Keypair</qualifiedname>
+        <reimplements refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a8c62b5fb71a14e544704370a67bef2ec">generateSr25519Keypair</reimplements>
+        <param>
+          <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+          <declname>key_type</declname>
+        </param>
+        <param>
+          <type>std::string_view</type>
+          <declname>mnemonic_phrase</declname>
+        </param>
+        <briefdescription>
+<para>generates SR25519 keypair and stores it in memory </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key type identifier </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>mnemonic_phrase</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>mnemonic phrase </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>generated key pair or error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="66" column="21" bodyfile="src/crypto/crypto_store/crypto_store_impl.cpp" bodystart="157" bodyend="174"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a0c87ddc6c2281cf0295c790b20e01235" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" kindref="compound">ED25519Keypair</ref></type>
+        <definition>ED25519Keypair sgns::crypto::CryptoStoreImpl::generateEd25519Keypair</definition>
+        <argsstring>(KeyTypeId key_type, const ED25519Seed &amp;seed) override</argsstring>
+        <name>generateEd25519Keypair</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::generateEd25519Keypair</qualifiedname>
+        <reimplements refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1aab1d88b9b9a5fb2955150973f210f525">generateEd25519Keypair</reimplements>
+        <param>
+          <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+          <declname>key_type</declname>
+        </param>
+        <param>
+          <type>const <ref refid="df/d6e/namespacesgns_1_1crypto_1a64ab301ce6ac44216464094d4020302b" kindref="member">ED25519Seed</ref> &amp;</type>
+          <declname>seed</declname>
+        </param>
+        <briefdescription>
+<para>generates ED25519 keypair and stores it in memory </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key type identifier </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>seed</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>seed for generating keys </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>generated key pair </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="69" column="20" bodyfile="src/crypto/crypto_store/crypto_store_impl.cpp" bodystart="176" bodyend="181"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a5b7dceb782e7c3e9ff0bd9679f499577" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair" kindref="compound">SR25519Keypair</ref></type>
+        <definition>SR25519Keypair sgns::crypto::CryptoStoreImpl::generateSr25519Keypair</definition>
+        <argsstring>(KeyTypeId key_type, const SR25519Seed &amp;seed) override</argsstring>
+        <name>generateSr25519Keypair</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::generateSr25519Keypair</qualifiedname>
+        <reimplements refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1ae77958a44e0481a43cdd725fb42086a0">generateSr25519Keypair</reimplements>
+        <param>
+          <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+          <declname>key_type</declname>
+        </param>
+        <param>
+          <type>const <ref refid="df/d6e/namespacesgns_1_1crypto_1ac4cbbe40768a209e8418d7f7ada91072" kindref="member">SR25519Seed</ref> &amp;</type>
+          <declname>seed</declname>
+        </param>
+        <briefdescription>
+<para>generates SR25519 keypair and stores it in memory </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key type identifier </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>seed</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>seed for generating keys </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>generated key </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="72" column="20" bodyfile="src/crypto/crypto_store/crypto_store_impl.cpp" bodystart="183" bodyend="188"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a3c55ff14a393c2f76402acd9d7497201" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" kindref="compound">ED25519Keypair</ref> &gt;</type>
+        <definition>outcome::result&lt; ED25519Keypair &gt; sgns::crypto::CryptoStoreImpl::generateEd25519Keypair</definition>
+        <argsstring>(KeyTypeId key_type) override</argsstring>
+        <name>generateEd25519Keypair</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::generateEd25519Keypair</qualifiedname>
+        <reimplements refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a472b1bdcebf359d94febc0a66742eff7">generateEd25519Keypair</reimplements>
+        <param>
+          <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+          <declname>key_type</declname>
+        </param>
+        <briefdescription>
+<para>generates ED25519 keypair and stores it on disk </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key type identifier </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>generated key pair or error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="75" column="21" bodyfile="src/crypto/crypto_store/crypto_store_impl.cpp" bodystart="190" bodyend="200"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a57ec90efcd7f771078d4dd53bb67a29c" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair" kindref="compound">SR25519Keypair</ref> &gt;</type>
+        <definition>outcome::result&lt; SR25519Keypair &gt; sgns::crypto::CryptoStoreImpl::generateSr25519Keypair</definition>
+        <argsstring>(KeyTypeId key_type) override</argsstring>
+        <name>generateSr25519Keypair</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::generateSr25519Keypair</qualifiedname>
+        <reimplements refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1ad2000805a2639cb1450e7e993c01fcc6">generateSr25519Keypair</reimplements>
+        <param>
+          <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+          <declname>key_type</declname>
+        </param>
+        <briefdescription>
+<para>generates SR25519 keypair and stores it on disk </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key type identifier </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>generated key pair or error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="78" column="21" bodyfile="src/crypto/crypto_store/crypto_store_impl.cpp" bodystart="202" bodyend="212"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a8611f3df820cb3a7645cd805c7e80a5e" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d4/daa/structsgns_1_1crypto_1_1_e_d25519_keypair" kindref="compound">ED25519Keypair</ref> &gt;</type>
+        <definition>outcome::result&lt; ED25519Keypair &gt; sgns::crypto::CryptoStoreImpl::findEd25519Keypair</definition>
+        <argsstring>(KeyTypeId key_type, const ED25519PublicKey &amp;pk) const override</argsstring>
+        <name>findEd25519Keypair</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::findEd25519Keypair</qualifiedname>
+        <reimplements refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1ab86767d20f039b29fef0d2d5ad48ec89">findEd25519Keypair</reimplements>
+        <param>
+          <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+          <declname>key_type</declname>
+        </param>
+        <param>
+          <type>const <ref refid="df/d6e/namespacesgns_1_1crypto_1aabd48e8fa382c75b453fce43c158f97d" kindref="member">ED25519PublicKey</ref> &amp;</type>
+          <declname>pk</declname>
+        </param>
+        <briefdescription>
+<para>searches for key pair </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key category </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pk</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>public key to look for </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>found key pair if exists </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="81" column="21" bodyfile="src/crypto/crypto_store/crypto_store_impl.cpp" bodystart="214" bodyend="232"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1ad6f1c14a1ea45866b7073f190418275b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; <ref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair" kindref="compound">SR25519Keypair</ref> &gt;</type>
+        <definition>outcome::result&lt; SR25519Keypair &gt; sgns::crypto::CryptoStoreImpl::findSr25519Keypair</definition>
+        <argsstring>(KeyTypeId key_type, const SR25519PublicKey &amp;pk) const override</argsstring>
+        <name>findSr25519Keypair</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::findSr25519Keypair</qualifiedname>
+        <reimplements refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a1a162073fc231a085de8a751506a3968">findSr25519Keypair</reimplements>
+        <param>
+          <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+          <declname>key_type</declname>
+        </param>
+        <param>
+          <type>const <ref refid="df/d6e/namespacesgns_1_1crypto_1ac763dcc567072893f82795e8d546ba88" kindref="member">SR25519PublicKey</ref> &amp;</type>
+          <declname>pk</declname>
+        </param>
+        <briefdescription>
+<para>searches for key pair </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key category </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pk</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>public key to look for </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>found key pair if exists </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="84" column="21" bodyfile="src/crypto/crypto_store/crypto_store_impl.cpp" bodystart="234" bodyend="252"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a5f27eea42236f28635f5dd1121e5a429" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1aee2cc68cf7941dc6b99fdb74d18b5225" kindref="member">ED25519Keys</ref></type>
+        <definition>CryptoStore::ED25519Keys sgns::crypto::CryptoStoreImpl::getEd25519PublicKeys</definition>
+        <argsstring>(KeyTypeId key_type) const override</argsstring>
+        <name>getEd25519PublicKeys</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::getEd25519PublicKeys</qualifiedname>
+        <reimplements refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1af4caa43c108d07bfb170fa48a00253dd">getEd25519PublicKeys</reimplements>
+        <param>
+          <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+          <declname>key_type</declname>
+        </param>
+        <briefdescription>
+<para>searches for ED25519 keys of specified type </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key type identifier to look for </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>vector of found public keys </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="87" column="17" bodyfile="src/crypto/crypto_store/crypto_store_impl.cpp" bodystart="254" bodyend="299"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a47c3c430c09ab56b124b6575414c0980" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a5ba061881ca805424e7352edc6159afc" kindref="member">SR25519Keys</ref></type>
+        <definition>CryptoStore::SR25519Keys sgns::crypto::CryptoStoreImpl::getSr25519PublicKeys</definition>
+        <argsstring>(KeyTypeId key_type) const override</argsstring>
+        <name>getSr25519PublicKeys</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::getSr25519PublicKeys</qualifiedname>
+        <reimplements refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a24a817a25007ca82fc05f179c7ceb128">getSr25519PublicKeys</reimplements>
+        <param>
+          <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+          <declname>key_type</declname>
+        </param>
+        <briefdescription>
+<para>searches for SR25519 keys of specified typeED </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>key type identifier to look for </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>vector of found public keys </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="89" column="17" bodyfile="src/crypto/crypto_store/crypto_store_impl.cpp" bodystart="301" bodyend="346"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a2482f9aad3ca1425ac53531af57cd5cb" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::pair&lt; <ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref>, <ref refid="dc/d16/namespacesgns_1_1crypto_1_1store_1a60db0e724dec483aa58ce9bc9691e83c" kindref="member">store::PublicKey</ref> &gt; &gt;</type>
+        <definition>outcome::result&lt; std::pair&lt; KeyTypeId, store::PublicKey &gt; &gt; sgns::crypto::CryptoStoreImpl::parseKeyFileName</definition>
+        <argsstring>(std::string_view file_name) const</argsstring>
+        <name>parseKeyFileName</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::parseKeyFileName</qualifiedname>
+        <param>
+          <type>std::string_view</type>
+          <declname>file_name</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="92" column="21" bodyfile="src/crypto/crypto_store/crypto_store_impl.cpp" bodystart="53" bodyend="73"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1aa9261ff586c2d53e3cb0212ac2e2e6ff" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a0e4314ce82cfcde206e5d1fc17fdc3af" kindref="member">Path</ref></type>
+        <definition>CryptoStoreImpl::Path sgns::crypto::CryptoStoreImpl::composeKeyPath</definition>
+        <argsstring>(KeyTypeId key_type, const store::PublicKey &amp;public_key) const</argsstring>
+        <name>composeKeyPath</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::composeKeyPath</qualifiedname>
+        <param>
+          <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+          <declname>key_type</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dc/d16/namespacesgns_1_1crypto_1_1store_1a60db0e724dec483aa58ce9bc9691e83c" kindref="member">store::PublicKey</ref> &amp;</type>
+          <declname>public_key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="95" column="10" bodyfile="src/crypto/crypto_store/crypto_store_impl.cpp" bodystart="75" bodyend="82"/>
+      </memberdef>
+      <memberdef kind="function" id="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a2dbfe7fc4ee0c7b3fced6c8359839c50" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crypto::CryptoStoreImpl::storeKeyfile</definition>
+        <argsstring>(KeyTypeId key_type, const store::PublicKey &amp;public_key, const store::Seed &amp;seed)</argsstring>
+        <name>storeKeyfile</name>
+        <qualifiedname>sgns::crypto::CryptoStoreImpl::storeKeyfile</qualifiedname>
+        <param>
+          <type><ref refid="df/d6e/namespacesgns_1_1crypto_1adbc500534ce9a357c84aa35edb18733d" kindref="member">KeyTypeId</ref></type>
+          <declname>key_type</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dc/d16/namespacesgns_1_1crypto_1_1store_1a60db0e724dec483aa58ce9bc9691e83c" kindref="member">store::PublicKey</ref> &amp;</type>
+          <declname>public_key</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dc/d16/namespacesgns_1_1crypto_1_1store_1a86c9a46bdc7c1fd42de20dd4f69546ac" kindref="member">store::Seed</ref> &amp;</type>
+          <declname>seed</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="98" column="21" bodyfile="src/crypto/crypto_store/crypto_store_impl.cpp" bodystart="84" bodyend="100"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::crypto::CryptoStore</label>
+        <link refid="da/d52/classsgns_1_1crypto_1_1_crypto_store"/>
+      </node>
+      <node id="1">
+        <label>sgns::crypto::CryptoStoreImpl</label>
+        <link refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="5">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="17">
+        <label>K</label>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="13">
+        <label>sgns::crypto::Bip39Provider</label>
+        <link refid="d7/d94/classsgns_1_1crypto_1_1_bip39_provider"/>
+      </node>
+      <node id="2">
+        <label>sgns::crypto::CryptoStore</label>
+        <link refid="da/d52/classsgns_1_1crypto_1_1_crypto_store"/>
+      </node>
+      <node id="1">
+        <label>sgns::crypto::CryptoStoreImpl</label>
+        <link refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-ed25519_provider_</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-sr25519_provider_</edgelabel>
+        </childnode>
+        <childnode refid="10" relation="usage">
+          <edgelabel>-secp256k1_provider_</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>-bip39_provider_</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="usage">
+          <edgelabel>-random_generator_</edgelabel>
+        </childnode>
+        <childnode refid="15" relation="usage">
+          <edgelabel>-ed_keys_</edgelabel>
+        </childnode>
+        <childnode refid="18" relation="usage">
+          <edgelabel>-sr_keys_</edgelabel>
+        </childnode>
+        <childnode refid="19" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>sgns::crypto::ED25519Provider</label>
+        <link refid="da/d5d/classsgns_1_1crypto_1_1_e_d25519_provider"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>sgns::crypto::SR25519Provider</label>
+        <link refid="df/d78/classsgns_1_1crypto_1_1_s_r25519_provider"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>sgns::crypto::Secp256k1Provider</label>
+        <link refid="d6/d6e/classsgns_1_1crypto_1_1_secp256k1_provider"/>
+      </node>
+      <node id="16">
+        <label>std::map&lt; K, T &gt;</label>
+        <childnode refid="17" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="15">
+        <label>std::map&lt; KeyTypeId, std::map&lt; sgns::base::Blob&lt; constants::ed25519::PUBKEY_SIZE &gt;, sgns::base::Blob&lt; constants::ed25519::PRIVKEY_SIZE &gt; &gt; &gt;</label>
+        <childnode refid="16" relation="template-instance">
+          <edgelabel>&lt; KeyTypeId, std::map&lt; sgns::base::Blob&lt; constants::ed25519::PUBKEY_SIZE &gt;, sgns::base::Blob&lt; constants::ed25519::PRIVKEY_SIZE &gt; &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="18">
+        <label>std::map&lt; KeyTypeId, std::map&lt; sgns::base::Blob&lt; constants::sr25519::PUBLIC_SIZE &gt;, sgns::base::Blob&lt; constants::sr25519::SECRET_SIZE &gt; &gt; &gt;</label>
+        <childnode refid="16" relation="template-instance">
+          <edgelabel>&lt; KeyTypeId, std::map&lt; sgns::base::Blob&lt; constants::sr25519::PUBLIC_SIZE &gt;, sgns::base::Blob&lt; constants::sr25519::SECRET_SIZE &gt; &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="14">
+        <label>std::shared_ptr&lt; CSPRNG &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; CSPRNG &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::shared_ptr&lt; sgns::crypto::Bip39Provider &gt;</label>
+        <childnode refid="13" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::crypto::Bip39Provider &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; sgns::crypto::ED25519Provider &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::crypto::ED25519Provider &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; sgns::crypto::SR25519Provider &gt;</label>
+        <childnode refid="9" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::crypto::SR25519Provider &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::shared_ptr&lt; sgns::crypto::Secp256k1Provider &gt;</label>
+        <childnode refid="11" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; sgns::crypto::Secp256k1Provider &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="19">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crypto/crypto_store/crypto_store_impl.hpp" line="44" column="3" bodyfile="src/crypto/crypto_store/crypto_store_impl.hpp" bodystart="44" bodyend="112"/>
+    <listofallmembers>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a81f62f4c6ca88d79b4fa885e2b60368f" prot="private" virt="non-virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>bip39_provider_</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1aa9261ff586c2d53e3cb0212ac2e2e6ff" prot="private" virt="non-virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>composeKeyPath</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1af5c11480b1d91b4d5892a729ddb67f62" prot="public" virt="non-virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>CryptoStoreImpl</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1ab5389d8509939a6103dd57af878b7372" prot="private" virt="non-virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>ed25519_provider_</name></member>
+      <member refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1aee2cc68cf7941dc6b99fdb74d18b5225" prot="public" virt="non-virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>ED25519Keys</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1aed70047bd1263bbced55d3f0b61904cb" prot="private" virt="non-virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>ed_keys_</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a8611f3df820cb3a7645cd805c7e80a5e" prot="public" virt="virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>findEd25519Keypair</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1ad6f1c14a1ea45866b7073f190418275b" prot="public" virt="virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>findSr25519Keypair</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a2aa6ebcdc3f29d159844e5e109b26ed0" prot="public" virt="virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>generateEd25519Keypair</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a0c87ddc6c2281cf0295c790b20e01235" prot="public" virt="virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>generateEd25519Keypair</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a3c55ff14a393c2f76402acd9d7497201" prot="public" virt="virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>generateEd25519Keypair</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a113519efd74311677c42ce426f16725b" prot="public" virt="virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>generateSr25519Keypair</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a5b7dceb782e7c3e9ff0bd9679f499577" prot="public" virt="virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>generateSr25519Keypair</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a57ec90efcd7f771078d4dd53bb67a29c" prot="public" virt="virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>generateSr25519Keypair</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a5f27eea42236f28635f5dd1121e5a429" prot="public" virt="virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>getEd25519PublicKeys</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a47c3c430c09ab56b124b6575414c0980" prot="public" virt="virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>getSr25519PublicKeys</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a80f77cfb92e78534387e0a678a655a23" prot="public" virt="non-virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>initialize</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1ac999ac2807b0c9e9de81d27011505ead" prot="private" virt="non-virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>keys_directory_</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a2d67b860dc074f7e75a0ae5c88e0b0d4" prot="private" virt="non-virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>logger_</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a2482f9aad3ca1425ac53531af57cd5cb" prot="private" virt="non-virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>parseKeyFileName</name></member>
+      <member refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a0e4314ce82cfcde206e5d1fc17fdc3af" prot="public" virt="non-virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>Path</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a6621191776ccbc3993f48c48272a4489" prot="private" virt="non-virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>random_generator_</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1ae2a74478dae55c6c2d2af39aacab11d7" prot="private" virt="non-virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>secp256k1_provider_</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1aaaa50a44a407e60d592649b9f93cb5e8" prot="private" virt="non-virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>sr25519_provider_</name></member>
+      <member refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a5ba061881ca805424e7352edc6159afc" prot="public" virt="non-virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>SR25519Keys</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a53769aa6f34602a6b03388bb87087142" prot="private" virt="non-virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>sr_keys_</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a2dbfe7fc4ee0c7b3fced6c8359839c50" prot="private" virt="non-virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>storeKeyfile</name></member>
+      <member refid="da/d52/classsgns_1_1crypto_1_1_crypto_store_1a5d0b24eecb9c5efb5419c373e66e8d4a" prot="public" virt="virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>~CryptoStore</name></member>
+      <member refid="d6/d87/classsgns_1_1crypto_1_1_crypto_store_impl_1a79126239fa1a8b865de5dbf19066dbf6" prot="public" virt="non-virtual"><scope>sgns::crypto::CryptoStoreImpl</scope><name>~CryptoStoreImpl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

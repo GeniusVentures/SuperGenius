@@ -1,0 +1,182 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d9/d1f/classsgns_1_1_apple_secure_storage" kind="class" language="C++" prot="public">
+    <compoundname>sgns::AppleSecureStorage</compoundname>
+    <basecompoundref refid="d9/d71/classsgns_1_1_j_s_o_n_backend" prot="public" virt="non-virtual">sgns::JSONBackend</basecompoundref>
+    <includes refid="d1/dc4/_apple_8hpp" local="no">Apple.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d9/d1f/classsgns_1_1_apple_secure_storage_1a1249bc24b7776c7e9943a860cfeed852" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string sgns::AppleSecureStorage::identifier_</definition>
+        <argsstring></argsstring>
+        <name>identifier_</name>
+        <qualifiedname>sgns::AppleSecureStorage::identifier_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Apple.hpp" line="22" column="21" bodyfile="src/local_secure_storage/impl/Apple.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d9/d1f/classsgns_1_1_apple_secure_storage_1a74c35044c2fb5ba27fca47ce7cb933fb" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::AppleSecureStorage::AppleSecureStorage</definition>
+        <argsstring>(std::string identifier)</argsstring>
+        <name>AppleSecureStorage</name>
+        <qualifiedname>sgns::AppleSecureStorage::AppleSecureStorage</qualifiedname>
+        <param>
+          <type>std::string</type>
+          <declname>identifier</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Apple.hpp" line="10" column="18" bodyfile="src/local_secure_storage/impl/Apple.cpp" bodystart="15" bodyend="15"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d1f/classsgns_1_1_apple_secure_storage_1a1efa387d80f635f3a1aab762004705c6" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::AppleSecureStorage::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::AppleSecureStorage::GetName</qualifiedname>
+        <reimplements refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Apple.hpp" line="12" column="21" bodyfile="src/local_secure_storage/impl/Apple.hpp" bodystart="12" bodyend="15"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d1f/classsgns_1_1_apple_secure_storage_1ae46afcf95f68608f363e971d2f6a8425" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; rapidjson::Document &gt;</type>
+        <definition>outcome::result&lt; rapidjson::Document &gt; sgns::AppleSecureStorage::LoadJSON</definition>
+        <argsstring>() const override</argsstring>
+        <name>LoadJSON</name>
+        <qualifiedname>sgns::AppleSecureStorage::LoadJSON</qualifiedname>
+        <reimplements refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1aa20b2995d7c4d206ae8217b08ee94fc1">LoadJSON</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Apple.hpp" line="17" column="25" bodyfile="src/local_secure_storage/impl/Apple.cpp" bodystart="17" bodyend="52"/>
+      </memberdef>
+      <memberdef kind="function" id="d9/d1f/classsgns_1_1_apple_secure_storage_1a125c79f2552074f258417ed4ce368517" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::AppleSecureStorage::SaveJSON</definition>
+        <argsstring>(rapidjson::Document document) override</argsstring>
+        <name>SaveJSON</name>
+        <qualifiedname>sgns::AppleSecureStorage::SaveJSON</qualifiedname>
+        <reimplements refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a7ec4c317139903bcb835bb3d33a4ae07">SaveJSON</reimplements>
+        <param>
+          <type>rapidjson::Document</type>
+          <declname>document</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/local_secure_storage/impl/Apple.hpp" line="19" column="25" bodyfile="src/local_secure_storage/impl/Apple.cpp" bodystart="54" bodyend="105"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="4">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::AppleSecureStorage</label>
+        <link refid="d9/d1f/classsgns_1_1_apple_secure_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::ISecureStorage</label>
+        <link refid="d5/db7/classsgns_1_1_i_secure_storage"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::JSONBackend</label>
+        <link refid="d9/d71/classsgns_1_1_j_s_o_n_backend"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::enable_shared_from_this&lt; ISecureStorage &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="4">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::AppleSecureStorage</label>
+        <link refid="d9/d1f/classsgns_1_1_apple_secure_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>-identifier_</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::ISecureStorage</label>
+        <link refid="d5/db7/classsgns_1_1_i_secure_storage"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::JSONBackend</label>
+        <link refid="d9/d71/classsgns_1_1_j_s_o_n_backend"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="5">
+        <label>std::enable_shared_from_this&lt; ISecureStorage &gt;</label>
+      </node>
+      <node id="6">
+        <label>std::string</label>
+        <childnode refid="7" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/local_secure_storage/impl/Apple.hpp" line="7" column="5" bodyfile="src/local_secure_storage/impl/Apple.hpp" bodystart="8" bodyend="23"/>
+    <listofallmembers>
+      <member refid="d9/d1f/classsgns_1_1_apple_secure_storage_1a74c35044c2fb5ba27fca47ce7cb933fb" prot="public" virt="non-virtual"><scope>sgns::AppleSecureStorage</scope><name>AppleSecureStorage</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a041dd45b9e2196bb757d23d2934876e4" prot="public" virt="virtual"><scope>sgns::AppleSecureStorage</scope><name>DeleteKey</name></member>
+      <member refid="d9/d1f/classsgns_1_1_apple_secure_storage_1a1efa387d80f635f3a1aab762004705c6" prot="public" virt="virtual"><scope>sgns::AppleSecureStorage</scope><name>GetName</name></member>
+      <member refid="d9/d1f/classsgns_1_1_apple_secure_storage_1a1249bc24b7776c7e9943a860cfeed852" prot="private" virt="non-virtual"><scope>sgns::AppleSecureStorage</scope><name>identifier_</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a9e536564914936ba39ee7d67dfa1a316" prot="public" virt="non-virtual"><scope>sgns::AppleSecureStorage</scope><name>JSONBackend</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a40da14b3444d1b03eac8164f59a3c347" prot="public" virt="virtual"><scope>sgns::AppleSecureStorage</scope><name>Load</name></member>
+      <member refid="d9/d1f/classsgns_1_1_apple_secure_storage_1ae46afcf95f68608f363e971d2f6a8425" prot="public" virt="virtual"><scope>sgns::AppleSecureStorage</scope><name>LoadJSON</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a00f62ecffae03504a180358b004d61e4" prot="public" virt="virtual"><scope>sgns::AppleSecureStorage</scope><name>Save</name></member>
+      <member refid="d9/d1f/classsgns_1_1_apple_secure_storage_1a125c79f2552074f258417ed4ce368517" prot="public" virt="virtual"><scope>sgns::AppleSecureStorage</scope><name>SaveJSON</name></member>
+      <member refid="d5/db7/classsgns_1_1_i_secure_storage_1a5a10a540c9551ccad7d9c8e44cfd14d1" prot="public" virt="non-virtual"><scope>sgns::AppleSecureStorage</scope><name>SecureBufferType</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::AppleSecureStorage</scope><name>~IComponent</name></member>
+      <member refid="d5/db7/classsgns_1_1_i_secure_storage_1a941b5c4bbea8622d949ef341b129f55c" prot="public" virt="non-virtual"><scope>sgns::AppleSecureStorage</scope><name>~ISecureStorage</name></member>
+      <member refid="d9/d71/classsgns_1_1_j_s_o_n_backend_1a8b69c80e8af12d7c16ada35f6ae2d170" prot="public" virt="non-virtual"><scope>sgns::AppleSecureStorage</scope><name>~JSONBackend</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

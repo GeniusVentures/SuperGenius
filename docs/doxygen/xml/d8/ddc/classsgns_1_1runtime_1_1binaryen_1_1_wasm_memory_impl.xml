@@ -1,0 +1,978 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl" kind="class" language="C++" prot="public">
+    <compoundname>sgns::runtime::binaryen::WasmMemoryImpl</compoundname>
+    <basecompoundref refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory" prot="public" virt="non-virtual">sgns::runtime::WasmMemory</basecompoundref>
+    <includes refid="d8/dfb/wasm__memory__impl_8hpp" local="no">wasm_memory_impl.hpp</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a7d177774d64b47f6456c83b12640fce4" prot="private" static="no" mutable="no">
+        <type>wasm::ShellExternalInterface::Memory *</type>
+        <definition>wasm::ShellExternalInterface::Memory* sgns::runtime::binaryen::WasmMemoryImpl::memory_</definition>
+        <argsstring></argsstring>
+        <name>memory_</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::memory_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="70" column="42" bodyfile="src/runtime/binaryen/wasm_memory_impl.hpp" bodystart="70" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aee7dcbf6357b04bdbb8f0aef73827b03" prot="private" static="no" mutable="no">
+        <type><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref></type>
+        <definition>WasmSize sgns::runtime::binaryen::WasmMemoryImpl::size_</definition>
+        <argsstring></argsstring>
+        <name>size_</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::size_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="71" column="14" bodyfile="src/runtime/binaryen/wasm_memory_impl.hpp" bodystart="71" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa2d31affe657e243733608e78d726a2a" prot="private" static="no" mutable="no">
+        <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+        <definition>WasmPointer sgns::runtime::binaryen::WasmMemoryImpl::offset_</definition>
+        <argsstring></argsstring>
+        <name>offset_</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::offset_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="74" column="17" bodyfile="src/runtime/binaryen/wasm_memory_impl.hpp" bodystart="74" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ab0c7705ac8108647eb3a0d0a87d15c09" prot="private" static="no" mutable="no">
+        <type>std::unordered_map&lt; <ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref>, <ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref> &gt;</type>
+        <definition>std::unordered_map&lt;WasmPointer, WasmSize&gt; sgns::runtime::binaryen::WasmMemoryImpl::allocated_</definition>
+        <argsstring></argsstring>
+        <name>allocated_</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::allocated_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="77" column="24" bodyfile="src/runtime/binaryen/wasm_memory_impl.hpp" bodystart="77" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1adbc1622db4c8f7d36636217a443ec33b" prot="private" static="no" mutable="no">
+        <type>std::unordered_map&lt; <ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref>, <ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref> &gt;</type>
+        <definition>std::unordered_map&lt;WasmPointer, WasmSize&gt; sgns::runtime::binaryen::WasmMemoryImpl::deallocated_</definition>
+        <argsstring></argsstring>
+        <name>deallocated_</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::deallocated_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="80" column="24" bodyfile="src/runtime/binaryen/wasm_memory_impl.hpp" bodystart="80" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a300f1cbda296dfcf2a758d95880f335d" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::binaryen::WasmMemoryImpl::WasmMemoryImpl</definition>
+        <argsstring>(wasm::ShellExternalInterface::Memory *memory, WasmSize size=1114112)</argsstring>
+        <name>WasmMemoryImpl</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::WasmMemoryImpl</qualifiedname>
+        <param>
+          <type>wasm::ShellExternalInterface::Memory *</type>
+          <declname>memory</declname>
+        </param>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref></type>
+          <declname>size</declname>
+          <defval>1114112</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="26" column="14" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="5" bodyend="14"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a50847e00e1bc0202c122af05f68c8a2c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::binaryen::WasmMemoryImpl::WasmMemoryImpl</definition>
+        <argsstring>(const WasmMemoryImpl &amp;copy)=delete</argsstring>
+        <name>WasmMemoryImpl</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::WasmMemoryImpl</qualifiedname>
+        <param>
+          <type>const WasmMemoryImpl &amp;</type>
+          <declname>copy</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="30" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a45fda8f7d55c0dcab63d8fc8988d576a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a300f1cbda296dfcf2a758d95880f335d" kindref="member">WasmMemoryImpl</ref> &amp;</type>
+        <definition>WasmMemoryImpl &amp; sgns::runtime::binaryen::WasmMemoryImpl::operator=</definition>
+        <argsstring>(const WasmMemoryImpl &amp;copy)=delete</argsstring>
+        <name>operator=</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::operator=</qualifiedname>
+        <param>
+          <type>const <ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a300f1cbda296dfcf2a758d95880f335d" kindref="member">WasmMemoryImpl</ref> &amp;</type>
+          <declname>copy</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="31" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a05f12c9a179cfbfc084d825ac691f98c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::binaryen::WasmMemoryImpl::WasmMemoryImpl</definition>
+        <argsstring>(WasmMemoryImpl &amp;&amp;move)=delete</argsstring>
+        <name>WasmMemoryImpl</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::WasmMemoryImpl</qualifiedname>
+        <param>
+          <type>WasmMemoryImpl &amp;&amp;</type>
+          <declname>move</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="32" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a0385a20a7a5d68df2d4bcb2769f8c080" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a300f1cbda296dfcf2a758d95880f335d" kindref="member">WasmMemoryImpl</ref> &amp;</type>
+        <definition>WasmMemoryImpl &amp; sgns::runtime::binaryen::WasmMemoryImpl::operator=</definition>
+        <argsstring>(WasmMemoryImpl &amp;&amp;move)=delete</argsstring>
+        <name>operator=</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::operator=</qualifiedname>
+        <param>
+          <type><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a300f1cbda296dfcf2a758d95880f335d" kindref="member">WasmMemoryImpl</ref> &amp;&amp;</type>
+          <declname>move</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="33" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ae2fd2312f4c75700959f1a3b51c2abaf" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::runtime::binaryen::WasmMemoryImpl::~WasmMemoryImpl</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~WasmMemoryImpl</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::~WasmMemoryImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="34" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a310cda5acd7ea1d631ae67abdb84f63b" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::runtime::binaryen::WasmMemoryImpl::reset</definition>
+        <argsstring>() override</argsstring>
+        <name>reset</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::reset</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1a2b8c3b3ad820cf12fd48877f66461928">reset</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Resets allocated and deallocated memory information </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="36" column="10" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="16" bodyend="20"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa0a444fcde4ba175912ef78293f5c629" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref></type>
+        <definition>WasmSize sgns::runtime::binaryen::WasmMemoryImpl::size</definition>
+        <argsstring>() const override</argsstring>
+        <name>size</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::size</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1a0c7d9068c9b0dab14c4cabe3f8f3ed1b">size</reimplements>
+        <briefdescription>
+<para>Return the size of the memory. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="38" column="14" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="22" bodyend="24"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ac753e244d00eeb5cf00e9985107b226e" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::runtime::binaryen::WasmMemoryImpl::resize</definition>
+        <argsstring>(WasmSize newSize) override</argsstring>
+        <name>resize</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::resize</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1a7b011d642de899fa0a3efd43de7aca08">resize</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref></type>
+          <declname>newSize</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Resizes memory to the given size <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>newSize</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="39" column="10" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="26" bodyend="29"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a5294b49486e28c5f76657db357484ea8" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+        <definition>WasmPointer sgns::runtime::binaryen::WasmMemoryImpl::allocate</definition>
+        <argsstring>(WasmSize size) override</argsstring>
+        <name>allocate</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::allocate</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1a74be0200443862022aec35762887f741">allocate</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref></type>
+          <declname>size</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Allocates memory of given size and returns address in the memory <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa0a444fcde4ba175912ef78293f5c629" kindref="member">size</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>allocated memory size </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>address to allocated memory. If there is no available slot for such allocation, then -1 is returned </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="41" column="17" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="31" bodyend="48"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a0c4368a8063fb78b50715ea3cb63138c" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>boost::optional&lt; <ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref> &gt;</type>
+        <definition>boost::optional&lt; WasmSize &gt; sgns::runtime::binaryen::WasmMemoryImpl::deallocate</definition>
+        <argsstring>(WasmPointer ptr) override</argsstring>
+        <name>deallocate</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::deallocate</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1a4b1fd09b6f0e4c52316b2bff536252cc">deallocate</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+          <declname>ptr</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Deallocates memory in provided region <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>ptr</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>address of deallocated memory </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>size of deallocated memory or none if given address does not point to any allocated pieces of memory </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="42" column="21" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="50" bodyend="61"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a08d3ec851366b7fbca6302641909269a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>int8_t</type>
+        <definition>int8_t sgns::runtime::binaryen::WasmMemoryImpl::load8s</definition>
+        <argsstring>(WasmPointer addr) const override</argsstring>
+        <name>load8s</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::load8s</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1ab8ab4956a244c3d654df8eba148250f7">load8s</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+          <declname>addr</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Load integers from provided address </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="44" column="12" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="108" bodyend="110"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a1417156a98eb4c07be049a2ddc6b211c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>uint8_t</type>
+        <definition>uint8_t sgns::runtime::binaryen::WasmMemoryImpl::load8u</definition>
+        <argsstring>(WasmPointer addr) const override</argsstring>
+        <name>load8u</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::load8u</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1a26f644cab0442b0f3b2c6dc4be9173e1">load8u</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+          <declname>addr</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="45" column="13" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="111" bodyend="113"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a4404cb5be87f738cfdf470cdeda0b5f2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>int16_t</type>
+        <definition>int16_t sgns::runtime::binaryen::WasmMemoryImpl::load16s</definition>
+        <argsstring>(WasmPointer addr) const override</argsstring>
+        <name>load16s</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::load16s</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1a198f75b41494184d0297626e80b509db">load16s</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+          <declname>addr</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="46" column="13" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="114" bodyend="116"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aefc3e3e9d331f37fbc5287e7d8ac3a25" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>uint16_t</type>
+        <definition>uint16_t sgns::runtime::binaryen::WasmMemoryImpl::load16u</definition>
+        <argsstring>(WasmPointer addr) const override</argsstring>
+        <name>load16u</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::load16u</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1a1f59c67cefe05e25193ab78d24656209">load16u</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+          <declname>addr</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="47" column="14" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="117" bodyend="119"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a228bf2b47d31bd40de88dabcf2df75c4" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>int32_t</type>
+        <definition>int32_t sgns::runtime::binaryen::WasmMemoryImpl::load32s</definition>
+        <argsstring>(WasmPointer addr) const override</argsstring>
+        <name>load32s</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::load32s</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1a8fba34f8511d811238d7e010bbc8656f">load32s</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+          <declname>addr</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="48" column="13" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="120" bodyend="122"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a896436dc97908d528e6ab83071c88f7f" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>uint32_t</type>
+        <definition>uint32_t sgns::runtime::binaryen::WasmMemoryImpl::load32u</definition>
+        <argsstring>(WasmPointer addr) const override</argsstring>
+        <name>load32u</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::load32u</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1a4f8641d673611f47f174319c2fdd0c6b">load32u</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+          <declname>addr</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="49" column="14" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="123" bodyend="125"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ac024fdcacfd22a551088b1e10e4df9a9" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>int64_t</type>
+        <definition>int64_t sgns::runtime::binaryen::WasmMemoryImpl::load64s</definition>
+        <argsstring>(WasmPointer addr) const override</argsstring>
+        <name>load64s</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::load64s</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1a0e60416f11e0b9797a8045389a3b1da4">load64s</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+          <declname>addr</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="50" column="13" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="126" bodyend="128"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a0c1d7480ebc1ba8f67c09d5d97cb1ae3" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::runtime::binaryen::WasmMemoryImpl::load64u</definition>
+        <argsstring>(WasmPointer addr) const override</argsstring>
+        <name>load64u</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::load64u</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1af9e1c7b41ba9873e634d5d1126ce809e">load64u</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+          <declname>addr</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="51" column="14" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="129" bodyend="131"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ae44a091abfba975ea3b4e2c85cc06bfd" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>std::array&lt; uint8_t, 16 &gt;</type>
+        <definition>std::array&lt; uint8_t, 16 &gt; sgns::runtime::binaryen::WasmMemoryImpl::load128</definition>
+        <argsstring>(WasmPointer addr) const override</argsstring>
+        <name>load128</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::load128</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1a006aa910b6d968dfab03d73aafd2aa0b">load128</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+          <declname>addr</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="52" column="16" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="132" bodyend="134"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a23657fa45d80175366b72b5a43a187d3" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>base::Buffer sgns::runtime::binaryen::WasmMemoryImpl::loadN</definition>
+        <argsstring>(sgns::runtime::WasmPointer addr, sgns::runtime::WasmSize n) const override</argsstring>
+        <name>loadN</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::loadN</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1a3b805776f41eddfc4f522ef7a4d63d69">loadN</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">sgns::runtime::WasmPointer</ref></type>
+          <declname>addr</declname>
+        </param>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">sgns::runtime::WasmSize</ref></type>
+          <declname>n</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Load bytes from provided address into the buffer of size n <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>addr</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>address in memory to load bytes </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>n</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>number of bytes to be loaded </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="d0/dee/classsgns_1_1runtime_1_1binaryen_1_1_buffer" kindref="compound">Buffer</ref> of length N </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="53" column="18" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="136" bodyend="145"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a25910f00116bf7d35523d58ac8ba7bca" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::runtime::binaryen::WasmMemoryImpl::loadStr</definition>
+        <argsstring>(sgns::runtime::WasmPointer addr, sgns::runtime::WasmSize n) const override</argsstring>
+        <name>loadStr</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::loadStr</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1ab585b59e6bddc47847ce63eabb730e21">loadStr</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">sgns::runtime::WasmPointer</ref></type>
+          <declname>addr</declname>
+        </param>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">sgns::runtime::WasmSize</ref></type>
+          <declname>n</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Load string from address into buffer of size n <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>addr</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>address in memory to load bytes </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>n</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>number of bytes </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>string with data </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="55" column="17" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="147" bodyend="155"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a4e118d967f59a86ef3d7f9c43c86b016" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::runtime::binaryen::WasmMemoryImpl::store8</definition>
+        <argsstring>(WasmPointer addr, int8_t value) override</argsstring>
+        <name>store8</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::store8</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1afe823d7f2993b69b6f4ada3d87c52230">store8</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+          <declname>addr</declname>
+        </param>
+        <param>
+          <type>int8_t</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Store integers at given address of the wasm memory </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="58" column="10" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="157" bodyend="159"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ae51b0eeaa4135782d191fce2fe7d5046" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::runtime::binaryen::WasmMemoryImpl::store16</definition>
+        <argsstring>(WasmPointer addr, int16_t value) override</argsstring>
+        <name>store16</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::store16</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1ab7be9d593b8d6528474c813ef6db446f">store16</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+          <declname>addr</declname>
+        </param>
+        <param>
+          <type>int16_t</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="59" column="10" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="160" bodyend="162"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a33a4e4c33f10c04950123adaa53e9f87" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::runtime::binaryen::WasmMemoryImpl::store32</definition>
+        <argsstring>(WasmPointer addr, int32_t value) override</argsstring>
+        <name>store32</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::store32</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1a75adf68d71f330eb34b371d60cd53214">store32</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+          <declname>addr</declname>
+        </param>
+        <param>
+          <type>int32_t</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="60" column="10" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="163" bodyend="165"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a7cfec9009caea833c2c9bc2f688564bb" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::runtime::binaryen::WasmMemoryImpl::store64</definition>
+        <argsstring>(WasmPointer addr, int64_t value) override</argsstring>
+        <name>store64</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::store64</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1a777b58ff92eb90fbe54e69ee77ad4b51">store64</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+          <declname>addr</declname>
+        </param>
+        <param>
+          <type>int64_t</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="61" column="10" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="166" bodyend="168"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a2dbb585dbe92d3fc2a52cf1058c629a4" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::runtime::binaryen::WasmMemoryImpl::store128</definition>
+        <argsstring>(WasmPointer addr, const std::array&lt; uint8_t, 16 &gt; &amp;value) override</argsstring>
+        <name>store128</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::store128</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1a8eaacfa044bf55e75b9b3512ed919f0b">store128</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+          <declname>addr</declname>
+        </param>
+        <param>
+          <type>const std::array&lt; uint8_t, 16 &gt; &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="62" column="10" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="169" bodyend="172"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa06e5a6a113d81cfbb8717a32a7ae77b" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::runtime::binaryen::WasmMemoryImpl::storeBuffer</definition>
+        <argsstring>(sgns::runtime::WasmPointer addr, gsl::span&lt; const uint8_t &gt; value) override</argsstring>
+        <name>storeBuffer</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::storeBuffer</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1affdde4a11c342fcbd58dcb5e0e16ea1e">storeBuffer</reimplements>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">sgns::runtime::WasmPointer</ref></type>
+          <declname>addr</declname>
+        </param>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="64" column="10" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="173" bodyend="181"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a04b4fe0108948b068e60036df7db37e8" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="dd/da6/namespacesgns_1_1runtime_1adc9fc98228747f341ff4f49e2f8d9002" kindref="member">WasmSpan</ref></type>
+        <definition>WasmSpan sgns::runtime::binaryen::WasmMemoryImpl::storeBuffer</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; value) override</argsstring>
+        <name>storeBuffer</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::storeBuffer</qualifiedname>
+        <reimplements refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1a5b695f381130ff9b08ea1b0c53999369">storeBuffer</reimplements>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+<para>allocates buffer in memory and copies value into memory </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>buffer to store </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>full wasm pointer to allocated buffer </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="67" column="14" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="183" bodyend="190"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a4d7d6cb14ec9455fa912c998152f73c7" prot="private" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>bool</type>
+        <definition>static bool sgns::runtime::binaryen::WasmMemoryImpl::aligned</definition>
+        <argsstring>(const char *address)</argsstring>
+        <name>aligned</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::aligned</qualifiedname>
+        <param>
+          <type>const char *</type>
+          <declname>address</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="83" column="17" bodyfile="src/runtime/binaryen/wasm_memory_impl.hpp" bodystart="83" bodyend="87"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a088e1d3d7d3496b91e4971df167babc1" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+        <definition>WasmPointer sgns::runtime::binaryen::WasmMemoryImpl::freealloc</definition>
+        <argsstring>(WasmSize size)</argsstring>
+        <name>freealloc</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::freealloc</qualifiedname>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref></type>
+          <declname>size</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Finds memory segment of given size among deallocated pieces of memory and allocates a memory there <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa0a444fcde4ba175912ef78293f5c629" kindref="member">size</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>of target memory </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>address of memory of given size, or -1 if it is impossible to allocate this amount of memory </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="96" column="17" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="63" bodyend="73"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1af54af3e843fcced95e026134453fd19e" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+        <definition>WasmPointer sgns::runtime::binaryen::WasmMemoryImpl::findContaining</definition>
+        <argsstring>(WasmSize size)</argsstring>
+        <name>findContaining</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::findContaining</qualifiedname>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref></type>
+          <declname>size</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Finds memory segment of given size among deallocated pieces of memory <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa0a444fcde4ba175912ef78293f5c629" kindref="member">size</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>of target memory </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>address of memory of given size, or 0 if it is impossible to allocate this amount of memory </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="104" column="17" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="75" bodyend="88"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a69e8247f12d32abdee18d2a9155951e8" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref></type>
+        <definition>WasmPointer sgns::runtime::binaryen::WasmMemoryImpl::growAlloc</definition>
+        <argsstring>(WasmSize size)</argsstring>
+        <name>growAlloc</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::growAlloc</qualifiedname>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref></type>
+          <declname>size</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Resize memory and allocate memory segment of given size <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername><ref refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa0a444fcde4ba175912ef78293f5c629" kindref="member">size</ref></parametername>
+</parameternamelist>
+<parameterdescription>
+<para>memory size to be allocated </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>pointer to the allocated memory or 0 if it is impossible to allocate this amount of memory </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="112" column="17" bodyfile="src/runtime/binaryen/wasm_memory_impl.cpp" bodystart="90" bodyend="106"/>
+      </memberdef>
+      <memberdef kind="function" id="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1abe079c2ae8f7bb17f1a74492cf713f6d" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::runtime::binaryen::WasmMemoryImpl::resizeInternal</definition>
+        <argsstring>(WasmSize newSize)</argsstring>
+        <name>resizeInternal</name>
+        <qualifiedname>sgns::runtime::binaryen::WasmMemoryImpl::resizeInternal</qualifiedname>
+        <param>
+          <type><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref></type>
+          <declname>newSize</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="114" column="10"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Memory implementation for wasm environment Most code is taken from Binaryen&apos;s implementation here: <ulink url="https://github.com/WebAssembly/binaryen/blob/master/src/shell-interface.h#L37">https://github.com/WebAssembly/binaryen/blob/master/src/shell-interface.h#L37</ulink> <simplesect kind="note"><para>Memory size of this implementation is at least of the size of one wasm page (4096 bytes) </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::runtime::WasmMemory</label>
+        <link refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory"/>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::binaryen::WasmMemoryImpl</label>
+        <link refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="5">
+        <label>K</label>
+      </node>
+      <node id="6">
+        <label>T</label>
+      </node>
+      <node id="2">
+        <label>sgns::runtime::WasmMemory</label>
+        <link refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory"/>
+      </node>
+      <node id="1">
+        <label>sgns::runtime::binaryen::WasmMemoryImpl</label>
+        <link refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-allocated_</edgelabel>
+          <edgelabel>-deallocated_</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::unordered_map&lt; K, T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::unordered_map&lt; WasmPointer, WasmSize &gt;</label>
+        <childnode refid="4" relation="template-instance">
+          <edgelabel>&lt; WasmPointer, WasmSize &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/runtime/binaryen/wasm_memory_impl.hpp" line="24" column="3" bodyfile="src/runtime/binaryen/wasm_memory_impl.hpp" bodystart="24" bodyend="115"/>
+    <listofallmembers>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a4d7d6cb14ec9455fa912c998152f73c7" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>aligned</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a5294b49486e28c5f76657db357484ea8" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>allocate</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ab0c7705ac8108647eb3a0d0a87d15c09" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>allocated_</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a0c4368a8063fb78b50715ea3cb63138c" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>deallocate</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1adbc1622db4c8f7d36636217a443ec33b" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>deallocated_</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1af54af3e843fcced95e026134453fd19e" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>findContaining</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a088e1d3d7d3496b91e4971df167babc1" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>freealloc</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a69e8247f12d32abdee18d2a9155951e8" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>growAlloc</name></member>
+      <member refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1af8fbdd9664c28d1c805cf55e0c8cf9f0" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>kMaxMemorySize</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ae44a091abfba975ea3b4e2c85cc06bfd" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>load128</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a4404cb5be87f738cfdf470cdeda0b5f2" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>load16s</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aefc3e3e9d331f37fbc5287e7d8ac3a25" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>load16u</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a228bf2b47d31bd40de88dabcf2df75c4" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>load32s</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a896436dc97908d528e6ab83071c88f7f" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>load32u</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ac024fdcacfd22a551088b1e10e4df9a9" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>load64s</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a0c1d7480ebc1ba8f67c09d5d97cb1ae3" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>load64u</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a08d3ec851366b7fbca6302641909269a" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>load8s</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a1417156a98eb4c07be049a2ddc6b211c" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>load8u</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a23657fa45d80175366b72b5a43a187d3" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>loadN</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a25910f00116bf7d35523d58ac8ba7bca" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>loadStr</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a7d177774d64b47f6456c83b12640fce4" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>memory_</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa2d31affe657e243733608e78d726a2a" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>offset_</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a45fda8f7d55c0dcab63d8fc8988d576a" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>operator=</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a0385a20a7a5d68df2d4bcb2769f8c080" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>operator=</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a310cda5acd7ea1d631ae67abdb84f63b" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>reset</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ac753e244d00eeb5cf00e9985107b226e" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>resize</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1abe079c2ae8f7bb17f1a74492cf713f6d" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>resizeInternal</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa0a444fcde4ba175912ef78293f5c629" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>size</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aee7dcbf6357b04bdbb8f0aef73827b03" prot="private" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>size_</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a2dbb585dbe92d3fc2a52cf1058c629a4" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>store128</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ae51b0eeaa4135782d191fce2fe7d5046" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>store16</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a33a4e4c33f10c04950123adaa53e9f87" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>store32</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a7cfec9009caea833c2c9bc2f688564bb" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>store64</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a4e118d967f59a86ef3d7f9c43c86b016" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>store8</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1aa06e5a6a113d81cfbb8717a32a7ae77b" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>storeBuffer</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a04b4fe0108948b068e60036df7db37e8" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>storeBuffer</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a300f1cbda296dfcf2a758d95880f335d" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>WasmMemoryImpl</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a50847e00e1bc0202c122af05f68c8a2c" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>WasmMemoryImpl</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1a05f12c9a179cfbfc084d825ac691f98c" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>WasmMemoryImpl</name></member>
+      <member refid="d2/d6e/classsgns_1_1runtime_1_1_wasm_memory_1a47db432747c6784186d2abcab66697cf" prot="public" virt="virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>~WasmMemory</name></member>
+      <member refid="d8/ddc/classsgns_1_1runtime_1_1binaryen_1_1_wasm_memory_impl_1ae2fd2312f4c75700959f1a3b51c2abaf" prot="public" virt="non-virtual"><scope>sgns::runtime::binaryen::WasmMemoryImpl</scope><name>~WasmMemoryImpl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

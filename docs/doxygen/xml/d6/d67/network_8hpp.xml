@@ -1,0 +1,40 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d6/d67/network_8hpp" kind="file" language="C++">
+    <compoundname>network.hpp</compoundname>
+    <includedby refid="dc/d8a/network_8cpp" local="yes">node/network.cpp</includedby>
+    <invincdepgraph>
+      <node id="2">
+        <label>node/network.cpp</label>
+        <link refid="dc/d8a/network_8cpp"/>
+      </node>
+      <node id="1">
+        <label>node/network.hpp</label>
+        <link refid="d6/d67/network_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d6/d99/classsgns_1_1network" prot="public">sgns::network</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_NODE_NETWORK_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_NODE_NETWORK_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/d2b/namespacesgns" kindref="compound">sgns</ref>{</highlight></codeline>
+<codeline lineno="4" refid="d6/d99/classsgns_1_1network" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d6/d99/classsgns_1_1network_1a987a4c8e53426588d5270fa1e1605ca8" kindref="member">network</ref><sp/></highlight></codeline>
+<codeline lineno="5"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="7"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/d99/classsgns_1_1network_1a987a4c8e53426588d5270fa1e1605ca8" kindref="member">network</ref>();</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d6/d99/classsgns_1_1network_1a4b0f4e62fd56b2c667efe0fee4817fdc" kindref="member">~network</ref>();</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="10"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="11"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="node/network.hpp"/>
+  </compounddef>
+</doxygen>

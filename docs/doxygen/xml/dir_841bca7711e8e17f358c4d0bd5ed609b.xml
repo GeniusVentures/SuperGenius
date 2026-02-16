@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_841bca7711e8e17f358c4d0bd5ed609b" kind="dir">
+    <compoundname>src/crypto/sr25519</compoundname>
+    <innerfile refid="dd/db9/sr25519__provider__impl_8cpp">sr25519_provider_impl.cpp</innerfile>
+    <innerfile refid="d7/d0b/sr25519__provider__impl_8hpp">sr25519_provider_impl.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/crypto/sr25519/"/>
+  </compounddef>
+</doxygen>

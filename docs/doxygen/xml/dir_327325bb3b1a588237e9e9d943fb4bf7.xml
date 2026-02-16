@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dir_327325bb3b1a588237e9e9d943fb4bf7" kind="dir">
+    <compoundname>src/storage/face</compoundname>
+    <innerfile refid="de/d87/batchable_8hpp">batchable.hpp</innerfile>
+    <innerfile refid="d2/d02/generic__iterator_8hpp">generic_iterator.hpp</innerfile>
+    <innerfile refid="d1/da1/generic__list_8hpp">generic_list.hpp</innerfile>
+    <innerfile refid="d9/daa/generic__maps_8hpp">generic_maps.hpp</innerfile>
+    <innerfile refid="d6/d4e/generic__storage_8hpp">generic_storage.hpp</innerfile>
+    <innerfile refid="db/d3e/iterable_8hpp">iterable.hpp</innerfile>
+    <innerfile refid="d9/d4b/map__cursor_8hpp">map_cursor.hpp</innerfile>
+    <innerfile refid="d5/dd2/readable_8hpp">readable.hpp</innerfile>
+    <innerfile refid="d2/d76/write__batch_8hpp">write_batch.hpp</innerfile>
+    <innerfile refid="dc/da4/writeable_8hpp">writeable.hpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="src/storage/face/"/>
+  </compounddef>
+</doxygen>

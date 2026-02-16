@@ -1,0 +1,77 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::GeniusAssigner::AssignerOutput</compoundname>
+    <includes refid="d1/d19/_genius_assigner_8hpp" local="no">GeniusAssigner.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output_1a69fb98088d17ae4436d7796004305654" prot="public" static="no" mutable="no">
+        <type><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a636b6edfc3948db5355f97c042edac23" kindref="member">PlonkConstraintSystemType</ref></type>
+        <definition>PlonkConstraintSystemType sgns::GeniusAssigner::AssignerOutput::constrains</definition>
+        <argsstring></argsstring>
+        <name>constrains</name>
+        <qualifiedname>sgns::GeniusAssigner::AssignerOutput::constrains</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="88" column="39" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="88" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output_1a176e9b5080fa4bbae9c3e7e7751fa263" prot="public" static="no" mutable="no">
+        <type><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1afa467b5b38c772695d1365d4ac6601b6" kindref="member">PlonkAssignTableType</ref></type>
+        <definition>PlonkAssignTableType sgns::GeniusAssigner::AssignerOutput::table</definition>
+        <argsstring></argsstring>
+        <name>table</name>
+        <qualifiedname>sgns::GeniusAssigner::AssignerOutput::table</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="89" column="39" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="89" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output_1a41f9dc72c3eed6dfc066d87def15d3a5" prot="public" static="no" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::GeniusAssigner::AssignerOutput::AssignerOutput</definition>
+        <argsstring>(PlonkConstraintSystemType new_constrains, PlonkAssignTableType new_table)</argsstring>
+        <name>AssignerOutput</name>
+        <qualifiedname>sgns::GeniusAssigner::AssignerOutput::AssignerOutput</qualifiedname>
+        <param>
+          <type><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1a636b6edfc3948db5355f97c042edac23" kindref="member">PlonkConstraintSystemType</ref></type>
+          <declname>new_constrains</declname>
+        </param>
+        <param>
+          <type><ref refid="d6/d8b/classsgns_1_1_genius_assigner_1afa467b5b38c772695d1365d4ac6601b6" kindref="member">PlonkAssignTableType</ref></type>
+          <declname>new_table</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/proof/GeniusAssigner.hpp" line="83" column="22" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="83" bodyend="86"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::GeniusAssigner::AssignerOutput</label>
+        <link refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/proof/GeniusAssigner.hpp" line="81" column="9" bodyfile="src/proof/GeniusAssigner.hpp" bodystart="82" bodyend="90"/>
+    <listofallmembers>
+      <member refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output_1a41f9dc72c3eed6dfc066d87def15d3a5" prot="public" virt="non-virtual"><scope>sgns::GeniusAssigner::AssignerOutput</scope><name>AssignerOutput</name></member>
+      <member refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output_1a69fb98088d17ae4436d7796004305654" prot="public" virt="non-virtual"><scope>sgns::GeniusAssigner::AssignerOutput</scope><name>constrains</name></member>
+      <member refid="d2/deb/structsgns_1_1_genius_assigner_1_1_assigner_output_1a176e9b5080fa4bbae9c3e7e7751fa263" prot="public" virt="non-virtual"><scope>sgns::GeniusAssigner::AssignerOutput</scope><name>table</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

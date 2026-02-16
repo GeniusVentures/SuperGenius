@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/d2f/class_unreachable___at___line" kind="class" language="C++" prot="public">
+    <compoundname>Unreachable_At_Line</compoundname>
+    <includes refid="d7/d10/unreachable_8hpp" local="no">unreachable.hpp</includes>
+    <templateparamlist>
+      <param>
+        <type>unsigned int</type>
+        <declname>LINE</declname>
+        <defname>LINE</defname>
+      </param>
+    </templateparamlist>
+    <briefdescription>
+<para>This file declares UNREACHABLE macro. Use it to prevent compiler warnings. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>Unreachable_At_Line&lt; LINE &gt;</label>
+        <link refid="d5/d2f/class_unreachable___at___line"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/macro/unreachable.hpp" line="15" column="1" bodyfile="src/macro/unreachable.hpp" bodystart="15" bodyend="15"/>
+    <listofallmembers>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

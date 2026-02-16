@@ -1,0 +1,230 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::crypto::SR25519Keypair</compoundname>
+    <basecompoundref refid="d1/dbf/class_i_component" prot="public" virt="non-virtual">IComponent</basecompoundref>
+    <includes refid="d2/d9c/sr25519__types_8hpp" local="no">sr25519_types.hpp</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1aa2981545cdc50bf31f1bd7afd5190991" prot="public" static="no" mutable="no">
+        <type><ref refid="df/d6e/namespacesgns_1_1crypto_1a633b411985472167a972b86d3a40efa6" kindref="member">SR25519SecretKey</ref></type>
+        <definition>SR25519SecretKey sgns::crypto::SR25519Keypair::secret_key</definition>
+        <argsstring></argsstring>
+        <name>secret_key</name>
+        <qualifiedname>sgns::crypto::SR25519Keypair::secret_key</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="99" column="22" bodyfile="src/crypto/sr25519_types.hpp" bodystart="99" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1a2bd706611a12387c1113ae879119eb71" prot="public" static="no" mutable="no">
+        <type><ref refid="df/d6e/namespacesgns_1_1crypto_1ac763dcc567072893f82795e8d546ba88" kindref="member">SR25519PublicKey</ref></type>
+        <definition>SR25519PublicKey sgns::crypto::SR25519Keypair::public_key</definition>
+        <argsstring></argsstring>
+        <name>public_key</name>
+        <qualifiedname>sgns::crypto::SR25519Keypair::public_key</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="100" column="22" bodyfile="src/crypto/sr25519_types.hpp" bodystart="100" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1a20acf05abe639dba4c4db8f685d25200" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crypto::SR25519Keypair::SR25519Keypair</definition>
+        <argsstring>()=default</argsstring>
+        <name>SR25519Keypair</name>
+        <qualifiedname>sgns::crypto::SR25519Keypair::SR25519Keypair</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="102" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1a0d3f13d8d35d923d6bb5c984803a0e99" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crypto::SR25519Keypair::SR25519Keypair</definition>
+        <argsstring>(SR25519SecretKey sk, SR25519PublicKey pk)</argsstring>
+        <name>SR25519Keypair</name>
+        <qualifiedname>sgns::crypto::SR25519Keypair::SR25519Keypair</qualifiedname>
+        <param>
+          <type><ref refid="df/d6e/namespacesgns_1_1crypto_1a633b411985472167a972b86d3a40efa6" kindref="member">SR25519SecretKey</ref></type>
+          <declname>sk</declname>
+        </param>
+        <param>
+          <type><ref refid="df/d6e/namespacesgns_1_1crypto_1ac763dcc567072893f82795e8d546ba88" kindref="member">SR25519PublicKey</ref></type>
+          <declname>pk</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="103" column="5" bodyfile="src/crypto/sr25519_types.hpp" bodystart="103" bodyend="103"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1ac40f90fffd48e1873c58c6b52fa36da5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crypto::SR25519Keypair::operator==</definition>
+        <argsstring>(const SR25519Keypair &amp;other) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::crypto::SR25519Keypair::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1a20acf05abe639dba4c4db8f685d25200" kindref="member">SR25519Keypair</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="105" column="10" bodyfile="src/crypto/sr25519_types.cpp" bodystart="12" bodyend="14"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1ae344aaef0390af802d498b0f75971482" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crypto::SR25519Keypair::operator!=</definition>
+        <argsstring>(const SR25519Keypair &amp;other) const</argsstring>
+        <name>operator!=</name>
+        <qualifiedname>sgns::crypto::SR25519Keypair::operator!=</qualifiedname>
+        <param>
+          <type>const <ref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1a20acf05abe639dba4c4db8f685d25200" kindref="member">SR25519Keypair</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="106" column="10" bodyfile="src/crypto/sr25519_types.cpp" bodystart="16" bodyend="18"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1a3d9251c3ef03b405e9e1c2e5616d15fd" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string sgns::crypto::SR25519Keypair::GetName</definition>
+        <argsstring>() override</argsstring>
+        <name>GetName</name>
+        <qualifiedname>sgns::crypto::SR25519Keypair::GetName</qualifiedname>
+        <reimplements refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7">GetName</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="112" column="17" bodyfile="src/crypto/sr25519_types.hpp" bodystart="112" bodyend="115"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="friend">
+      <memberdef kind="friend" id="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1a54a28661c02f8c5cc6bda8a6d30e53b9" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::ostream &amp;</type>
+        <definition>std::ostream &amp; operator&lt;&lt;</definition>
+        <argsstring>(std::ostream &amp;out, const SR25519Keypair &amp;test_struct)</argsstring>
+        <name>operator&lt;&lt;</name>
+        <qualifiedname>sgns::crypto::SR25519Keypair::operator&lt;&lt;</qualifiedname>
+        <param>
+          <type>std::ostream &amp;</type>
+          <declname>out</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1a20acf05abe639dba4c4db8f685d25200" kindref="member">SR25519Keypair</ref> &amp;</type>
+          <declname>test_struct</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/sr25519_types.hpp" line="108" column="12" bodyfile="src/crypto/sr25519_types.hpp" bodystart="108" bodyend="111"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::crypto::SR25519Keypair</label>
+        <link refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="5">
+        <label>T</label>
+      </node>
+      <node id="6">
+        <label>sgns::base::Blob&lt; size_ &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>sgns::base::Blob&lt; constants::sr25519::PUBLIC_SIZE &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; constants::sr25519::PUBLIC_SIZE &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::base::Blob&lt; constants::sr25519::SECRET_SIZE &gt;</label>
+        <link refid="d4/dc6/classsgns_1_1base_1_1_blob"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; constants::sr25519::SECRET_SIZE &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::crypto::SR25519Keypair</label>
+        <link refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>+secret_key</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+public_key</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::array&lt; T &gt;</label>
+        <childnode refid="5" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crypto/sr25519_types.hpp" line="98" column="3" bodyfile="src/crypto/sr25519_types.hpp" bodystart="98" bodyend="117"/>
+    <listofallmembers>
+      <member refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1a3d9251c3ef03b405e9e1c2e5616d15fd" prot="public" virt="virtual"><scope>sgns::crypto::SR25519Keypair</scope><name>GetName</name></member>
+      <member refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1ae344aaef0390af802d498b0f75971482" prot="public" virt="non-virtual"><scope>sgns::crypto::SR25519Keypair</scope><name>operator!=</name></member>
+      <member refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1a54a28661c02f8c5cc6bda8a6d30e53b9" prot="public" virt="non-virtual"><scope>sgns::crypto::SR25519Keypair</scope><name>operator&lt;&lt;</name></member>
+      <member refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1ac40f90fffd48e1873c58c6b52fa36da5" prot="public" virt="non-virtual"><scope>sgns::crypto::SR25519Keypair</scope><name>operator==</name></member>
+      <member refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1a2bd706611a12387c1113ae879119eb71" prot="public" virt="non-virtual"><scope>sgns::crypto::SR25519Keypair</scope><name>public_key</name></member>
+      <member refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1aa2981545cdc50bf31f1bd7afd5190991" prot="public" virt="non-virtual"><scope>sgns::crypto::SR25519Keypair</scope><name>secret_key</name></member>
+      <member refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1a20acf05abe639dba4c4db8f685d25200" prot="public" virt="non-virtual"><scope>sgns::crypto::SR25519Keypair</scope><name>SR25519Keypair</name></member>
+      <member refid="d0/d20/structsgns_1_1crypto_1_1_s_r25519_keypair_1a0d3f13d8d35d923d6bb5c984803a0e99" prot="public" virt="non-virtual"><scope>sgns::crypto::SR25519Keypair</scope><name>SR25519Keypair</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::crypto::SR25519Keypair</scope><name>~IComponent</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

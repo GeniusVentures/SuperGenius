@@ -1,0 +1,313 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="de/de8/classsgns_1_1blockchain_1_1_block_storage" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>sgns::blockchain::BlockStorage</compoundname>
+    <basecompoundref refid="d1/dbf/class_i_component" prot="public" virt="non-virtual">IComponent</basecompoundref>
+    <derivedcompoundref refid="d1/daf/classsgns_1_1blockchain_1_1_key_value_block_storage" prot="public" virt="non-virtual">sgns::blockchain::KeyValueBlockStorage</derivedcompoundref>
+    <includes refid="d4/d5d/block__storage_8hpp" local="no">block_storage.hpp</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="de/de8/classsgns_1_1blockchain_1_1_block_storage_1a3e661beac92789a53b11164b86f25d93" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::blockchain::BlockStorage::~BlockStorage</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~BlockStorage</name>
+        <qualifiedname>sgns::blockchain::BlockStorage::~BlockStorage</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_storage.hpp" line="18" column="8"/>
+      </memberdef>
+      <memberdef kind="function" id="de/de8/classsgns_1_1blockchain_1_1_block_storage_1a73104233acc99504e040514c22e58612" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; primitives::BlockHash &gt; sgns::blockchain::BlockStorage::getGenesisBlockHash</definition>
+        <argsstring>() const =0</argsstring>
+        <name>getGenesisBlockHash</name>
+        <qualifiedname>sgns::blockchain::BlockStorage::getGenesisBlockHash</qualifiedname>
+        <reimplementedby refid="d1/daf/classsgns_1_1blockchain_1_1_key_value_block_storage_1ab295e961519c2ec56b82f6011cd57474">getGenesisBlockHash</reimplementedby>
+        <briefdescription>
+<para>Get hash of genesis block. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_storage.hpp" line="21" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="de/de8/classsgns_1_1blockchain_1_1_block_storage_1afe4426f8508fbd9de667bfe198a9019d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; primitives::BlockHash &gt; sgns::blockchain::BlockStorage::getLastFinalizedBlockHash</definition>
+        <argsstring>() const =0</argsstring>
+        <name>getLastFinalizedBlockHash</name>
+        <qualifiedname>sgns::blockchain::BlockStorage::getLastFinalizedBlockHash</qualifiedname>
+        <reimplementedby refid="d1/daf/classsgns_1_1blockchain_1_1_key_value_block_storage_1a3de6933ff289e561078ce16ef85a9bce">getLastFinalizedBlockHash</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_storage.hpp" line="24" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="de/de8/classsgns_1_1blockchain_1_1_block_storage_1acb18d7a46444cf4f96cbf8a84687fec3" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::blockchain::BlockStorage::setLastFinalizedBlockHash</definition>
+        <argsstring>(const primitives::BlockHash &amp;)=0</argsstring>
+        <name>setLastFinalizedBlockHash</name>
+        <qualifiedname>sgns::blockchain::BlockStorage::setLastFinalizedBlockHash</qualifiedname>
+        <reimplementedby refid="d1/daf/classsgns_1_1blockchain_1_1_key_value_block_storage_1ac3dae0674560bb62a0fdcad2d7788b62">setLastFinalizedBlockHash</reimplementedby>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_storage.hpp" line="26" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="de/de8/classsgns_1_1blockchain_1_1_block_storage_1a6996e41fe42105d72c70f0e9f73585a7" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">primitives::BlockHeader</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; primitives::BlockHeader &gt; sgns::blockchain::BlockStorage::getBlockHeader</definition>
+        <argsstring>(const primitives::BlockId &amp;id) const =0</argsstring>
+        <name>getBlockHeader</name>
+        <qualifiedname>sgns::blockchain::BlockStorage::getBlockHeader</qualifiedname>
+        <reimplementedby refid="d1/daf/classsgns_1_1blockchain_1_1_key_value_block_storage_1a3f8b10082a9d3b10b3eabc369f5119fe">getBlockHeader</reimplementedby>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_storage.hpp" line="29" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="de/de8/classsgns_1_1blockchain_1_1_block_storage_1a892f4b3c1e9d3bbc7f4490ca81aaa643" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1a016631413654509e31b54b0d3ac7f865" kindref="member">primitives::BlockBody</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; primitives::BlockBody &gt; sgns::blockchain::BlockStorage::getBlockBody</definition>
+        <argsstring>(const primitives::BlockId &amp;id) const =0</argsstring>
+        <name>getBlockBody</name>
+        <qualifiedname>sgns::blockchain::BlockStorage::getBlockBody</qualifiedname>
+        <reimplementedby refid="d1/daf/classsgns_1_1blockchain_1_1_key_value_block_storage_1a77b2a0b1631673bd9430029562048773">getBlockBody</reimplementedby>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_storage.hpp" line="31" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="de/de8/classsgns_1_1blockchain_1_1_block_storage_1af98b46327917d007cdc97cd9d254a55c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="d3/db4/structsgns_1_1primitives_1_1_block_data" kindref="compound">primitives::BlockData</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; primitives::BlockData &gt; sgns::blockchain::BlockStorage::getBlockData</definition>
+        <argsstring>(const primitives::BlockId &amp;id) const =0</argsstring>
+        <name>getBlockData</name>
+        <qualifiedname>sgns::blockchain::BlockStorage::getBlockData</qualifiedname>
+        <reimplementedby refid="d1/daf/classsgns_1_1blockchain_1_1_key_value_block_storage_1aa76977b1ca5e7c08030cc696bd18f1c1">getBlockData</reimplementedby>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_storage.hpp" line="33" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="de/de8/classsgns_1_1blockchain_1_1_block_storage_1a41fea866758be7c0be27e9a3b63ab37b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="de/d97/structsgns_1_1primitives_1_1_justification" kindref="compound">primitives::Justification</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; primitives::Justification &gt; sgns::blockchain::BlockStorage::getJustification</definition>
+        <argsstring>(const primitives::BlockId &amp;block) const =0</argsstring>
+        <name>getJustification</name>
+        <qualifiedname>sgns::blockchain::BlockStorage::getJustification</qualifiedname>
+        <reimplementedby refid="d1/daf/classsgns_1_1blockchain_1_1_key_value_block_storage_1a8655b38d26789f0f2e5f0b6ef69b9923">getJustification</reimplementedby>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a8ff366c722ebc39b0e728102c3a55abf" kindref="member">primitives::BlockId</ref> &amp;</type>
+          <declname>block</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_storage.hpp" line="35" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="de/de8/classsgns_1_1blockchain_1_1_block_storage_1ac431766d2250c439c2249bd35794f059" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; primitives::BlockHash &gt; sgns::blockchain::BlockStorage::putBlockHeader</definition>
+        <argsstring>(const primitives::BlockHeader &amp;header)=0</argsstring>
+        <name>putBlockHeader</name>
+        <qualifiedname>sgns::blockchain::BlockStorage::putBlockHeader</qualifiedname>
+        <reimplementedby refid="d1/daf/classsgns_1_1blockchain_1_1_key_value_block_storage_1a3f3f1efc20f152720b32cccaeea608a4">putBlockHeader</reimplementedby>
+        <param>
+          <type>const <ref refid="d4/ded/structsgns_1_1primitives_1_1_block_header" kindref="compound">primitives::BlockHeader</ref> &amp;</type>
+          <declname>header</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_storage.hpp" line="38" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="de/de8/classsgns_1_1blockchain_1_1_block_storage_1aded244972109d96fb905d216b9fc4161" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::blockchain::BlockStorage::putBlockData</definition>
+        <argsstring>(primitives::BlockNumber, const primitives::BlockData &amp;block_data)=0</argsstring>
+        <name>putBlockData</name>
+        <qualifiedname>sgns::blockchain::BlockStorage::putBlockData</qualifiedname>
+        <reimplementedby refid="d1/daf/classsgns_1_1blockchain_1_1_key_value_block_storage_1ae7640fb03d8f2752b5866fce2a1afcc6">putBlockData</reimplementedby>
+        <param>
+          <type><ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref></type>
+        </param>
+        <param>
+          <type>const <ref refid="d3/db4/structsgns_1_1primitives_1_1_block_data" kindref="compound">primitives::BlockData</ref> &amp;</type>
+          <declname>block_data</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_storage.hpp" line="41" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="de/de8/classsgns_1_1blockchain_1_1_block_storage_1aca6bafa356403256374c3dfe1d4e156b" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &gt;</type>
+        <definition>virtual outcome::result&lt; primitives::BlockHash &gt; sgns::blockchain::BlockStorage::putBlock</definition>
+        <argsstring>(const primitives::Block &amp;block)=0</argsstring>
+        <name>putBlock</name>
+        <qualifiedname>sgns::blockchain::BlockStorage::putBlock</qualifiedname>
+        <reimplementedby refid="d1/daf/classsgns_1_1blockchain_1_1_key_value_block_storage_1abb832a0db254e5bbe41fb9af466f2450">putBlock</reimplementedby>
+        <param>
+          <type>const <ref refid="da/dcc/structsgns_1_1primitives_1_1_block" kindref="compound">primitives::Block</ref> &amp;</type>
+          <declname>block</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_storage.hpp" line="44" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="de/de8/classsgns_1_1blockchain_1_1_block_storage_1a55db96804eb9dd04839d2c7bf6d5ae33" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::blockchain::BlockStorage::putJustification</definition>
+        <argsstring>(const primitives::Justification &amp;j, const primitives::BlockHash &amp;hash, const primitives::BlockNumber &amp;number)=0</argsstring>
+        <name>putJustification</name>
+        <qualifiedname>sgns::blockchain::BlockStorage::putJustification</qualifiedname>
+        <reimplementedby refid="d1/daf/classsgns_1_1blockchain_1_1_key_value_block_storage_1aa63caf99b8cd935d7aace196e41553b8">putJustification</reimplementedby>
+        <param>
+          <type>const <ref refid="de/d97/structsgns_1_1primitives_1_1_justification" kindref="compound">primitives::Justification</ref> &amp;</type>
+          <declname>j</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &amp;</type>
+          <declname>hash</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref> &amp;</type>
+          <declname>number</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_storage.hpp" line="47" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="de/de8/classsgns_1_1blockchain_1_1_block_storage_1a7fd53d12bb77f5c00f55197216abf124" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>virtual outcome::result&lt; void &gt; sgns::blockchain::BlockStorage::removeBlock</definition>
+        <argsstring>(const primitives::BlockHash &amp;hash, const primitives::BlockNumber &amp;number)=0</argsstring>
+        <name>removeBlock</name>
+        <qualifiedname>sgns::blockchain::BlockStorage::removeBlock</qualifiedname>
+        <reimplementedby refid="d1/daf/classsgns_1_1blockchain_1_1_key_value_block_storage_1ada5fa5d3e7df676783288d59cf91603e">removeBlock</reimplementedby>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1ae057aa4874931946d3b10aae197f9247" kindref="member">primitives::BlockHash</ref> &amp;</type>
+          <declname>hash</declname>
+        </param>
+        <param>
+          <type>const <ref refid="dd/dc5/namespacesgns_1_1primitives_1a4d41d58038f35d095940e2f3660d7381" kindref="member">primitives::BlockNumber</ref> &amp;</type>
+          <declname>number</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/blockchain/block_storage.hpp" line="52" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>A wrapper for a storage of blocks Provides a convenient interface to work with it </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::blockchain::BlockStorage</label>
+        <link refid="de/de8/classsgns_1_1blockchain_1_1_block_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>sgns::blockchain::KeyValueBlockStorage</label>
+        <link refid="d1/daf/classsgns_1_1blockchain_1_1_key_value_block_storage"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="1">
+        <label>sgns::blockchain::BlockStorage</label>
+        <link refid="de/de8/classsgns_1_1blockchain_1_1_block_storage"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/blockchain/block_storage.hpp" line="16" column="3" bodyfile="src/blockchain/block_storage.hpp" bodystart="16" bodyend="55"/>
+    <listofallmembers>
+      <member refid="de/de8/classsgns_1_1blockchain_1_1_block_storage_1a892f4b3c1e9d3bbc7f4490ca81aaa643" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockStorage</scope><name>getBlockBody</name></member>
+      <member refid="de/de8/classsgns_1_1blockchain_1_1_block_storage_1af98b46327917d007cdc97cd9d254a55c" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockStorage</scope><name>getBlockData</name></member>
+      <member refid="de/de8/classsgns_1_1blockchain_1_1_block_storage_1a6996e41fe42105d72c70f0e9f73585a7" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockStorage</scope><name>getBlockHeader</name></member>
+      <member refid="de/de8/classsgns_1_1blockchain_1_1_block_storage_1a73104233acc99504e040514c22e58612" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockStorage</scope><name>getGenesisBlockHash</name></member>
+      <member refid="de/de8/classsgns_1_1blockchain_1_1_block_storage_1a41fea866758be7c0be27e9a3b63ab37b" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockStorage</scope><name>getJustification</name></member>
+      <member refid="de/de8/classsgns_1_1blockchain_1_1_block_storage_1afe4426f8508fbd9de667bfe198a9019d" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockStorage</scope><name>getLastFinalizedBlockHash</name></member>
+      <member refid="d1/dbf/class_i_component_1a3245bb895cec2695784bbf037c70bca7" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockStorage</scope><name>GetName</name></member>
+      <member refid="de/de8/classsgns_1_1blockchain_1_1_block_storage_1aca6bafa356403256374c3dfe1d4e156b" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockStorage</scope><name>putBlock</name></member>
+      <member refid="de/de8/classsgns_1_1blockchain_1_1_block_storage_1aded244972109d96fb905d216b9fc4161" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockStorage</scope><name>putBlockData</name></member>
+      <member refid="de/de8/classsgns_1_1blockchain_1_1_block_storage_1ac431766d2250c439c2249bd35794f059" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockStorage</scope><name>putBlockHeader</name></member>
+      <member refid="de/de8/classsgns_1_1blockchain_1_1_block_storage_1a55db96804eb9dd04839d2c7bf6d5ae33" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockStorage</scope><name>putJustification</name></member>
+      <member refid="de/de8/classsgns_1_1blockchain_1_1_block_storage_1a7fd53d12bb77f5c00f55197216abf124" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockStorage</scope><name>removeBlock</name></member>
+      <member refid="de/de8/classsgns_1_1blockchain_1_1_block_storage_1acb18d7a46444cf4f96cbf8a84687fec3" prot="public" virt="pure-virtual"><scope>sgns::blockchain::BlockStorage</scope><name>setLastFinalizedBlockHash</name></member>
+      <member refid="de/de8/classsgns_1_1blockchain_1_1_block_storage_1a3e661beac92789a53b11164b86f25d93" prot="public" virt="non-virtual"><scope>sgns::blockchain::BlockStorage</scope><name>~BlockStorage</name></member>
+      <member refid="d1/dbf/class_i_component_1ab1a616cdfb3812f3aabdb97666c71116" prot="public" virt="virtual"><scope>sgns::blockchain::BlockStorage</scope><name>~IComponent</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,248 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d7/dac/runtime__environment_8hpp" kind="file" language="C++">
+    <compoundname>runtime_environment.hpp</compoundname>
+    <includes local="no">memory</includes>
+    <includes local="no">boost/optional.hpp</includes>
+    <includes refid="d5/dda/outcome_8hpp" local="yes">outcome/outcome.hpp</includes>
+    <includedby refid="dd/d87/runtime__api_8hpp" local="yes">src/runtime/binaryen/runtime_api/runtime_api.hpp</includedby>
+    <includedby refid="d1/d6f/runtime__environment_8cpp" local="yes">src/runtime/binaryen/runtime_environment.cpp</includedby>
+    <includedby refid="d3/d10/runtime__manager_8hpp" local="yes">src/runtime/binaryen/runtime_manager.hpp</includedby>
+    <incdepgraph>
+      <node id="4">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/runtime/binaryen/runtime_environment.hpp</label>
+        <link refid="d7/dac/runtime__environment_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>boost/optional.hpp</label>
+      </node>
+      <node id="5">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="2">
+        <label>memory</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="4">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.cpp</label>
+        <link refid="d7/d6b/block__builder__impl_8cpp"/>
+      </node>
+      <node id="3">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.hpp</label>
+        <link refid="d3/d95/block__builder__impl_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.cpp</label>
+        <link refid="de/d5e/core__factory__impl_8cpp"/>
+      </node>
+      <node id="22">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.hpp</label>
+        <link refid="d7/de4/core__factory__impl_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>src/runtime/binaryen/runtime_api/core_impl.cpp</label>
+        <link refid="dc/d7c/core__impl_8cpp"/>
+      </node>
+      <node id="5">
+        <label>src/runtime/binaryen/runtime_api/core_impl.hpp</label>
+        <link refid="d7/dbc/core__impl_8hpp"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.cpp</label>
+        <link refid="dc/def/finality__api__impl_8cpp"/>
+      </node>
+      <node id="8">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.hpp</label>
+        <link refid="db/dad/finality__api__impl_8hpp"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>src/runtime/binaryen/runtime_api/metadata_impl.cpp</label>
+        <link refid="d0/dfc/metadata__impl_8cpp"/>
+      </node>
+      <node id="10">
+        <label>src/runtime/binaryen/runtime_api/metadata_impl.hpp</label>
+        <link refid="dc/dcf/metadata__impl_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>src/runtime/binaryen/runtime_api/offchain_worker_impl.cpp</label>
+        <link refid="d3/d58/offchain__worker__impl_8cpp"/>
+      </node>
+      <node id="12">
+        <label>src/runtime/binaryen/runtime_api/offchain_worker_impl.hpp</label>
+        <link refid="dd/d03/offchain__worker__impl_8hpp"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.cpp</label>
+        <link refid="db/dae/parachain__host__impl_8cpp"/>
+      </node>
+      <node id="14">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.hpp</label>
+        <link refid="d6/d15/parachain__host__impl_8hpp"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.cpp</label>
+        <link refid="d3/d02/production__api__impl_8cpp"/>
+      </node>
+      <node id="16">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.hpp</label>
+        <link refid="d1/d6a/production__api__impl_8hpp"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>src/runtime/binaryen/runtime_api/runtime_api.hpp</label>
+        <link refid="dd/d87/runtime__api_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.cpp</label>
+        <link refid="db/d63/tagged__transaction__queue__impl_8cpp"/>
+      </node>
+      <node id="18">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.hpp</label>
+        <link refid="d4/d66/tagged__transaction__queue__impl_8hpp"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>src/runtime/binaryen/runtime_environment.cpp</label>
+        <link refid="d1/d6f/runtime__environment_8cpp"/>
+      </node>
+      <node id="1">
+        <label>src/runtime/binaryen/runtime_environment.hpp</label>
+        <link refid="d7/dac/runtime__environment_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>src/runtime/binaryen/runtime_manager.cpp</label>
+        <link refid="da/dc5/runtime__manager_8cpp"/>
+      </node>
+      <node id="21">
+        <label>src/runtime/binaryen/runtime_manager.hpp</label>
+        <link refid="d3/d10/runtime__manager_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment" prot="public">sgns::runtime::binaryen::RuntimeEnvironment</innerclass>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="d4/dcb/namespacesgns_1_1base">sgns::base</innernamespace>
+    <innernamespace refid="d0/dbf/namespacesgns_1_1storage">sgns::storage</innernamespace>
+    <innernamespace refid="d2/db5/namespacesgns_1_1storage_1_1trie">sgns::storage::trie</innernamespace>
+    <innernamespace refid="dd/da6/namespacesgns_1_1runtime">sgns::runtime</innernamespace>
+    <innernamespace refid="d5/d54/namespacesgns_1_1runtime_1_1binaryen">sgns::runtime::binaryen</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_RUNTIME_BINARYEN_RUNTIME_ENVIRONMENT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_RUNTIME_BINARYEN_RUNTIME_ENVIRONMENT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;memory&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;boost/optional.hpp&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d5/dda/outcome_8hpp" kindref="compound">outcome/outcome.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d4/dcb/namespacesgns_1_1base" kindref="compound">sgns::base</ref><sp/>{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">Buffer</ref>;</highlight></codeline>
+<codeline lineno="13"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight></codeline>
+<codeline lineno="15" refid="d2/db5/namespacesgns_1_1storage_1_1trie" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d2/db5/namespacesgns_1_1storage_1_1trie" kindref="compound">sgns::storage::trie</ref><sp/>{</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d2/d7a/classsgns_1_1storage_1_1trie_1_1_topper_trie_batch" kindref="compound">TopperTrieBatch</ref>;</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="dc/d88/classsgns_1_1storage_1_1trie_1_1_trie_batch" kindref="compound">TrieBatch</ref>;</highlight></codeline>
+<codeline lineno="18"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::storage::trie</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="dd/da6/namespacesgns_1_1runtime" kindref="compound">sgns::runtime</ref><sp/>{</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">WasmMemory;</highlight></codeline>
+<codeline lineno="22"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d5/d54/namespacesgns_1_1runtime_1_1binaryen" kindref="compound">sgns::runtime::binaryen</ref><sp/>{</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">RuntimeExternalInterface;</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">WasmModuleInstance;</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">WasmModule;</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33" refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a9127949c296d83217e6ed32d7e9847d4" kindref="member">RuntimeEnvironment</ref><sp/>{</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>outcome::result&lt;RuntimeEnvironment&gt;<sp/><ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a7bf3a01fa7dd9cedbdb6a8572d966368" kindref="member">create</ref>(</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;RuntimeExternalInterface&gt;<sp/>&amp;rei,</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;WasmModule&gt;<sp/>&amp;module,</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref><sp/>&amp;state_code);</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40" refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a9127949c296d83217e6ed32d7e9847d4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a9127949c296d83217e6ed32d7e9847d4" kindref="member">RuntimeEnvironment</ref>(<ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a9127949c296d83217e6ed32d7e9847d4" kindref="member">RuntimeEnvironment</ref><sp/>&amp;&amp;)<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="41" refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a8572d7a173989adf1e79d54ab9e3a21a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a9127949c296d83217e6ed32d7e9847d4" kindref="member">RuntimeEnvironment</ref><sp/>&amp;<ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a8572d7a173989adf1e79d54ab9e3a21a" kindref="member">operator=</ref>(<ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a9127949c296d83217e6ed32d7e9847d4" kindref="member">RuntimeEnvironment</ref><sp/>&amp;&amp;)<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight></codeline>
+<codeline lineno="43" refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a55c85241798c7610fe5861343a3d4513" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a55c85241798c7610fe5861343a3d4513" kindref="member">RuntimeEnvironment</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a9127949c296d83217e6ed32d7e9847d4" kindref="member">RuntimeEnvironment</ref><sp/>&amp;)<sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="44" refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a4df5ed0719284e9b4a4b48edc1afc51c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a9127949c296d83217e6ed32d7e9847d4" kindref="member">RuntimeEnvironment</ref><sp/>&amp;<ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a4df5ed0719284e9b4a4b48edc1afc51c" kindref="member">operator=</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a9127949c296d83217e6ed32d7e9847d4" kindref="member">RuntimeEnvironment</ref><sp/>&amp;)<sp/>=<sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46" refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a6bc43ec638a4a8cb65ced774ec8e248c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a6bc43ec638a4a8cb65ced774ec8e248c" kindref="member">~RuntimeEnvironment</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="48" refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a65311d178a8ebc4e35798402a5d4036c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;WasmModuleInstance&gt;<sp/><ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1a65311d178a8ebc4e35798402a5d4036c" kindref="member">module_instance</ref>;</highlight></codeline>
+<codeline lineno="49" refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1aee04cee27a7178f88c72aeb99c1fcae3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;WasmMemory&gt;<sp/><ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1aee04cee27a7178f88c72aeb99c1fcae3" kindref="member">memory</ref>;</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/>boost::optional&lt;std::shared_ptr&lt;storage::trie::TopperTrieBatch&gt;&gt;</highlight></codeline>
+<codeline lineno="51" refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1acec5d21ddec37aa3d1c7d78deca65991" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="d1/dcf/classsgns_1_1runtime_1_1binaryen_1_1_runtime_environment_1acec5d21ddec37aa3d1c7d78deca65991" kindref="member">batch</ref>;<sp/><sp/></highlight><highlight class="comment">//<sp/>in<sp/>persistent<sp/>environments<sp/>all<sp/>changes<sp/>of<sp/>a<sp/>call<sp/>must<sp/>be</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>either<sp/>applied<sp/>together<sp/>or<sp/>discarded<sp/>in<sp/>case<sp/>of<sp/>failure</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight></codeline>
+<codeline lineno="55"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::runtime::binaryen</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="56"><highlight class="normal"></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_SRC_RUNTIME_BINARYEN_RUNTIME_ENVIRONMENT</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/runtime/binaryen/runtime_environment.hpp"/>
+  </compounddef>
+</doxygen>

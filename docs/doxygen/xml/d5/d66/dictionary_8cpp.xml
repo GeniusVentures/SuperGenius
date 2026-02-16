@@ -1,0 +1,150 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/d66/dictionary_8cpp" kind="file" language="C++">
+    <compoundname>dictionary.cpp</compoundname>
+    <includes refid="dc/df7/dictionary_8hpp" local="yes">crypto/bip39/dictionary.hpp</includes>
+    <includes local="no">gsl/gsl</includes>
+    <includes refid="d0/da6/entropy__accumulator_8hpp" local="yes">crypto/bip39/entropy_accumulator.hpp</includes>
+    <includes refid="d1/d00/english_8hpp" local="yes">crypto/bip39/wordlist/english.hpp</includes>
+    <incdepgraph>
+      <node id="1">
+        <label>src/crypto/bip39/dictionary.cpp</label>
+        <link refid="d5/d66/dictionary_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>crypto/bip39/dictionary.hpp</label>
+        <link refid="dc/df7/dictionary_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>crypto/bip39/entropy_accumulator.hpp</label>
+        <link refid="d0/da6/entropy__accumulator_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>crypto/bip39/wordlist/english.hpp</label>
+        <link refid="d1/d00/english_8hpp"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>outcome/outcome.hpp</label>
+        <link refid="d5/dda/outcome_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>array</label>
+      </node>
+      <node id="6">
+        <label>bitset</label>
+      </node>
+      <node id="9">
+        <label>gsl/gsl</label>
+      </node>
+      <node id="5">
+        <label>libp2p/outcome/outcome.hpp</label>
+      </node>
+      <node id="12">
+        <label>string_view</label>
+      </node>
+      <node id="8">
+        <label>unordered_map</label>
+      </node>
+      <node id="7">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="df/d6e/namespacesgns_1_1crypto">sgns::crypto</innernamespace>
+    <innernamespace refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39">sgns::crypto::bip39</innernamespace>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="d5/d66/dictionary_8cpp_1ae13b84a47fa252a7bbddf5b9a944909b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>OUTCOME_CPP_DEFINE_CATEGORY_3</definition>
+        <argsstring>(sgns::crypto::bip39, DictionaryError, error)</argsstring>
+        <name>OUTCOME_CPP_DEFINE_CATEGORY_3</name>
+        <param>
+          <type><ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39" kindref="compound">sgns::crypto::bip39</ref></type>
+        </param>
+        <param>
+          <type>DictionaryError</type>
+        </param>
+        <param>
+          <type>error</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crypto/bip39/dictionary.cpp" line="30" column="1" bodyfile="src/crypto/bip39/dictionary.cpp" bodystart="30" bodyend="37"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="dc/df7/dictionary_8hpp" kindref="compound">crypto/bip39/dictionary.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;gsl/gsl&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d0/da6/entropy__accumulator_8hpp" kindref="compound">crypto/bip39/entropy_accumulator.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="d1/d00/english_8hpp" kindref="compound">crypto/bip39/wordlist/english.hpp</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39" kindref="compound">sgns::crypto::bip39</ref><sp/>{</highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11" refid="db/d61/classsgns_1_1crypto_1_1bip39_1_1_dictionary_1aaedb5286427e16f2fee933d39f2de048" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="db/d61/classsgns_1_1crypto_1_1bip39_1_1_dictionary_1aaedb5286427e16f2fee933d39f2de048" kindref="member">Dictionary::initialize</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>i<sp/>=<sp/>0;<sp/>i<sp/>&lt;<sp/><ref refid="d9/da1/namespacesgns_1_1crypto_1_1bip39_1_1english_1a07bc037517542b1f7abd7d137ea0d60e" kindref="member">english::dictionary</ref>.size();<sp/>++i)<sp/>{</highlight></codeline>
+<codeline lineno="13"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>token<sp/>=<sp/><ref refid="da/dc8/structsgns_1_1crypto_1_1bip39_1_1_entropy_token" kindref="compound">EntropyToken</ref>(i);</highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::string_view<sp/>word<sp/>=<sp/>gsl::at(<ref refid="d9/da1/namespacesgns_1_1crypto_1_1bip39_1_1english_1a07bc037517542b1f7abd7d137ea0d60e" kindref="member">english::dictionary</ref>,<sp/>i);</highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="db/d61/classsgns_1_1crypto_1_1bip39_1_1_dictionary_1a382e62348b449eb547aa8df722a6f8f7" kindref="member">entropy_map_</ref>[word]<sp/>=<sp/>token;</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19" refid="db/d61/classsgns_1_1crypto_1_1bip39_1_1_dictionary_1a0ef059f7a94573d50ce24a518ac1a358" refkind="member"><highlight class="normal"><sp/><sp/>outcome::result&lt;EntropyToken&gt;<sp/><ref refid="db/d61/classsgns_1_1crypto_1_1bip39_1_1_dictionary_1a0ef059f7a94573d50ce24a518ac1a358" kindref="member">Dictionary::findValue</ref>(std::string_view<sp/>word)<sp/>{</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>loc<sp/>=<sp/><ref refid="db/d61/classsgns_1_1crypto_1_1bip39_1_1_dictionary_1a382e62348b449eb547aa8df722a6f8f7" kindref="member">entropy_map_</ref>.find(word);</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="db/d61/classsgns_1_1crypto_1_1bip39_1_1_dictionary_1a382e62348b449eb547aa8df722a6f8f7" kindref="member">entropy_map_</ref>.end()<sp/>!=<sp/>loc)<sp/>{</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>loc-&gt;second;</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39_1abc8c0231344dd4d3390b4d9e3355949ca76b1648f3fc53521fcf863c74f9b908e" kindref="member">DictionaryError::ENTRY_NOT_FOUND</ref>;</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::crypto::bip39</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30" refid="d5/d66/dictionary_8cpp_1ae13b84a47fa252a7bbddf5b9a944909b" refkind="member"><highlight class="normal"><ref refid="d0/d58/_account_messenger_8cpp_1a02e728041bc457b75e7166617f4c9c33" kindref="member">OUTCOME_CPP_DEFINE_CATEGORY_3</ref>(<ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39" kindref="compound">sgns::crypto::bip39</ref>,<sp/>DictionaryError,<sp/>error)<sp/>{</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">E<sp/>=<sp/><ref refid="d3/d2f/namespacesgns_1_1crypto_1_1bip39_1abc8c0231344dd4d3390b4d9e3355949c" kindref="member">sgns::crypto::bip39::DictionaryError</ref>;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">switch</highlight><highlight class="normal"><sp/>(error)<sp/>{</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">case</highlight><highlight class="normal"><sp/>E::ENTRY_NOT_FOUND:</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;word<sp/>not<sp/>found&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="stringliteral">&quot;unknown<sp/>DictionaryError<sp/>error&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="37"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="src/crypto/bip39/dictionary.cpp"/>
+  </compounddef>
+</doxygen>

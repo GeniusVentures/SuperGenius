@@ -1,0 +1,216 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="db/dee/class_super_genius___open_a_p_i_impl" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>SuperGenius_OpenAPIImpl</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">sgns::SuperGenius_OpenAPI</basecompoundref>
+    <includes refid="d3/d18/grpc__server__impl_8h" local="no">grpc_server_impl.h</includes>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="db/dee/class_super_genius___open_a_p_i_impl_1a5f298f2e9f00d5fb88a6be4268c37641" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>Status</type>
+        <definition>Status SuperGenius_OpenAPIImpl::GETAccountBalance</definition>
+        <argsstring>(ServerContext *context, GETAccountBalanceParameters *request, BalanceInfo *response)</argsstring>
+        <name>GETAccountBalance</name>
+        <qualifiedname>SuperGenius_OpenAPIImpl::GETAccountBalance</qualifiedname>
+        <param>
+          <type>ServerContext *</type>
+          <declname>context</declname>
+        </param>
+        <param>
+          <type>GETAccountBalanceParameters *</type>
+          <declname>request</declname>
+        </param>
+        <param>
+          <type>BalanceInfo *</type>
+          <declname>response</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/grpc/grpc_server_impl.h" line="35" column="10" bodyfile="src/api/grpc/grpc_server_impl.h" bodystart="35" bodyend="37"/>
+      </memberdef>
+      <memberdef kind="function" id="db/dee/class_super_genius___open_a_p_i_impl_1afb17741cbc635224bd2ef42d3a296416" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>Status</type>
+        <definition>Status SuperGenius_OpenAPIImpl::GETAccountBlockCount</definition>
+        <argsstring>(ServerContext *context, GETAccountBlockCountParameters *request, BlockCountInfo *response)</argsstring>
+        <name>GETAccountBlockCount</name>
+        <qualifiedname>SuperGenius_OpenAPIImpl::GETAccountBlockCount</qualifiedname>
+        <param>
+          <type>ServerContext *</type>
+          <declname>context</declname>
+        </param>
+        <param>
+          <type>GETAccountBlockCountParameters *</type>
+          <declname>request</declname>
+        </param>
+        <param>
+          <type>BlockCountInfo *</type>
+          <declname>response</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/grpc/grpc_server_impl.h" line="38" column="10" bodyfile="src/api/grpc/grpc_server_impl.h" bodystart="38" bodyend="40"/>
+      </memberdef>
+      <memberdef kind="function" id="db/dee/class_super_genius___open_a_p_i_impl_1aba593bfe5e39310f2101016470c18bcd" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>Status</type>
+        <definition>Status SuperGenius_OpenAPIImpl::GETAccountCreate</definition>
+        <argsstring>(ServerContext *context, GETAccountCreateParameters *request, Account *response)</argsstring>
+        <name>GETAccountCreate</name>
+        <qualifiedname>SuperGenius_OpenAPIImpl::GETAccountCreate</qualifiedname>
+        <param>
+          <type>ServerContext *</type>
+          <declname>context</declname>
+        </param>
+        <param>
+          <type>GETAccountCreateParameters *</type>
+          <declname>request</declname>
+        </param>
+        <param>
+          <type>Account *</type>
+          <declname>response</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/grpc/grpc_server_impl.h" line="41" column="10" bodyfile="src/api/grpc/grpc_server_impl.h" bodystart="41" bodyend="42"/>
+      </memberdef>
+      <memberdef kind="function" id="db/dee/class_super_genius___open_a_p_i_impl_1af78edd5582453f55a4d0393a373deb1f" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>Status</type>
+        <definition>Status SuperGenius_OpenAPIImpl::GETTotalSupply</definition>
+        <argsstring>(ServerContext *context, AvailableSupply *response)</argsstring>
+        <name>GETTotalSupply</name>
+        <qualifiedname>SuperGenius_OpenAPIImpl::GETTotalSupply</qualifiedname>
+        <param>
+          <type>ServerContext *</type>
+          <declname>context</declname>
+        </param>
+        <param>
+          <type>AvailableSupply *</type>
+          <declname>response</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/grpc/grpc_server_impl.h" line="44" column="10" bodyfile="src/api/grpc/grpc_server_impl.h" bodystart="44" bodyend="45"/>
+      </memberdef>
+      <memberdef kind="function" id="db/dee/class_super_genius___open_a_p_i_impl_1ae39b0d1e2faf459539a3c7da95348970" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>Status</type>
+        <definition>Status SuperGenius_OpenAPIImpl::GETBlock</definition>
+        <argsstring>(ServerContext *context, GETBlockParameters *reuest, Block *response)</argsstring>
+        <name>GETBlock</name>
+        <qualifiedname>SuperGenius_OpenAPIImpl::GETBlock</qualifiedname>
+        <param>
+          <type>ServerContext *</type>
+          <declname>context</declname>
+        </param>
+        <param>
+          <type>GETBlockParameters *</type>
+          <declname>reuest</declname>
+        </param>
+        <param>
+          <type>Block *</type>
+          <declname>response</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/grpc/grpc_server_impl.h" line="46" column="10" bodyfile="src/api/grpc/grpc_server_impl.h" bodystart="46" bodyend="47"/>
+      </memberdef>
+      <memberdef kind="function" id="db/dee/class_super_genius___open_a_p_i_impl_1aad3f048ffd76747b609a0d431e64af66" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>Status</type>
+        <definition>Status SuperGenius_OpenAPIImpl::GETBlockCount</definition>
+        <argsstring>(ServerContext *context, BlockCountInfo *response)</argsstring>
+        <name>GETBlockCount</name>
+        <qualifiedname>SuperGenius_OpenAPIImpl::GETBlockCount</qualifiedname>
+        <param>
+          <type>ServerContext *</type>
+          <declname>context</declname>
+        </param>
+        <param>
+          <type>BlockCountInfo *</type>
+          <declname>response</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/grpc/grpc_server_impl.h" line="48" column="10" bodyfile="src/api/grpc/grpc_server_impl.h" bodystart="48" bodyend="49"/>
+      </memberdef>
+      <memberdef kind="function" id="db/dee/class_super_genius___open_a_p_i_impl_1a2fbd122489f552edfce31f350c7716d6" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>Status</type>
+        <definition>Status SuperGenius_OpenAPIImpl::GETPeers</definition>
+        <argsstring>(ServerContext *context, PeerPortPairs *response)</argsstring>
+        <name>GETPeers</name>
+        <qualifiedname>SuperGenius_OpenAPIImpl::GETPeers</qualifiedname>
+        <param>
+          <type>ServerContext *</type>
+          <declname>context</declname>
+        </param>
+        <param>
+          <type>PeerPortPairs *</type>
+          <declname>response</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/grpc/grpc_server_impl.h" line="50" column="10" bodyfile="src/api/grpc/grpc_server_impl.h" bodystart="50" bodyend="51"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>SuperGenius_OpenAPIImpl</label>
+        <link refid="db/dee/class_super_genius___open_a_p_i_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::SuperGenius_OpenAPI</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>SuperGenius_OpenAPIImpl</label>
+        <link refid="db/dee/class_super_genius___open_a_p_i_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>sgns::SuperGenius_OpenAPI</label>
+      </node>
+    </collaborationgraph>
+    <location file="src/api/grpc/grpc_server_impl.h" line="34" column="1" bodyfile="src/api/grpc/grpc_server_impl.h" bodystart="34" bodyend="54"/>
+    <listofallmembers>
+      <member refid="db/dee/class_super_genius___open_a_p_i_impl_1a5f298f2e9f00d5fb88a6be4268c37641" prot="private" virt="non-virtual"><scope>SuperGenius_OpenAPIImpl</scope><name>GETAccountBalance</name></member>
+      <member refid="db/dee/class_super_genius___open_a_p_i_impl_1afb17741cbc635224bd2ef42d3a296416" prot="private" virt="non-virtual"><scope>SuperGenius_OpenAPIImpl</scope><name>GETAccountBlockCount</name></member>
+      <member refid="db/dee/class_super_genius___open_a_p_i_impl_1aba593bfe5e39310f2101016470c18bcd" prot="private" virt="non-virtual"><scope>SuperGenius_OpenAPIImpl</scope><name>GETAccountCreate</name></member>
+      <member refid="db/dee/class_super_genius___open_a_p_i_impl_1ae39b0d1e2faf459539a3c7da95348970" prot="private" virt="non-virtual"><scope>SuperGenius_OpenAPIImpl</scope><name>GETBlock</name></member>
+      <member refid="db/dee/class_super_genius___open_a_p_i_impl_1aad3f048ffd76747b609a0d431e64af66" prot="private" virt="non-virtual"><scope>SuperGenius_OpenAPIImpl</scope><name>GETBlockCount</name></member>
+      <member refid="db/dee/class_super_genius___open_a_p_i_impl_1a2fbd122489f552edfce31f350c7716d6" prot="private" virt="non-virtual"><scope>SuperGenius_OpenAPIImpl</scope><name>GETPeers</name></member>
+      <member refid="db/dee/class_super_genius___open_a_p_i_impl_1af78edd5582453f55a4d0393a373deb1f" prot="private" virt="non-virtual"><scope>SuperGenius_OpenAPIImpl</scope><name>GETTotalSupply</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,1066 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads" kind="class" language="C++" prot="public">
+    <compoundname>sgns::crdt::CrdtHeads</compoundname>
+    <includes refid="dc/d76/crdt__heads_8hpp" local="no">crdt_heads.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a9f4342a407c5b9ebd251f2405354cdbd" prot="public" static="no">
+        <type><ref refid="d5/dbf/classsgns_1_1storage_1_1rocksdb" kindref="compound">storage::rocksdb</ref></type>
+        <definition>using sgns::crdt::CrdtHeads::DataStore = storage::rocksdb</definition>
+        <argsstring></argsstring>
+        <name>DataStore</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::DataStore</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="22" column="9" bodyfile="src/crdt/crdt_heads.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1aaeefaed9af06bcea59214f6d5dd0abf4" prot="public" static="no">
+        <type><ref refid="de/dd5/classsgns_1_1base_1_1_buffer" kindref="compound">base::Buffer</ref></type>
+        <definition>using sgns::crdt::CrdtHeads::Buffer = base::Buffer</definition>
+        <argsstring></argsstring>
+        <name>Buffer</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::Buffer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="23" column="9" bodyfile="src/crdt/crdt_heads.hpp" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a9a30f348dd54a07ea7c06e21a3cccb5d" prot="public" static="no">
+        <type>std::unordered_map&lt; std::string, std::set&lt; CID &gt; &gt;</type>
+        <definition>using sgns::crdt::CrdtHeads::CRDTHeadList = std::unordered_map&lt;std::string, std::set&lt;CID&gt;&gt;</definition>
+        <argsstring></argsstring>
+        <name>CRDTHeadList</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::CRDTHeadList</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="24" column="9" bodyfile="src/crdt/crdt_heads.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1aaf18c63f04f27439947f69f90e9be3ce" prot="public" static="no">
+        <type>std::pair&lt; <ref refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a9a30f348dd54a07ea7c06e21a3cccb5d" kindref="member">CRDTHeadList</ref>, uint64_t &gt;</type>
+        <definition>using sgns::crdt::CrdtHeads::CRDTListResult = std::pair&lt;CRDTHeadList, uint64_t&gt;</definition>
+        <argsstring></argsstring>
+        <name>CRDTListResult</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::CRDTListResult</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="25" column="9" bodyfile="src/crdt/crdt_heads.hpp" bodystart="25" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1af41b143c02cd2d77eba4c69ae05b01c0" prot="private" static="no" mutable="yes">
+        <type>std::shared_mutex</type>
+        <definition>std::shared_mutex sgns::crdt::CrdtHeads::mutex_</definition>
+        <argsstring></argsstring>
+        <name>mutex_</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::mutex_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="146" column="66" bodyfile="src/crdt/crdt_heads.hpp" bodystart="146" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a8f923e6a1dee95c32ed849a09894bbe8" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a9f4342a407c5b9ebd251f2405354cdbd" kindref="member">DataStore</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;DataStore&gt; sgns::crdt::CrdtHeads::dataStore_</definition>
+        <argsstring></argsstring>
+        <name>dataStore_</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::dataStore_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="147" column="55" bodyfile="src/crdt/crdt_heads.hpp" bodystart="147" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a007a08a466ca855cf646c713dfeb5300" prot="private" static="no" mutable="no">
+        <type>std::unordered_map&lt; std::string, std::map&lt; CID, uint64_t &gt; &gt;</type>
+        <definition>std::unordered_map&lt;std::string, std::map&lt;CID, uint64_t&gt; &gt; sgns::crdt::CrdtHeads::cache_</definition>
+        <argsstring></argsstring>
+        <name>cache_</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::cache_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="148" column="28" bodyfile="src/crdt/crdt_heads.hpp" bodystart="148" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a75d26cf52ead6d8dc3766f399cdae499" prot="private" static="no" mutable="no">
+        <type><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref></type>
+        <definition>HierarchicalKey sgns::crdt::CrdtHeads::namespaceKey_</definition>
+        <argsstring></argsstring>
+        <name>namespaceKey_</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::namespaceKey_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="149" column="66" bodyfile="src/crdt/crdt_heads.hpp" bodystart="149" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a0bd1b5f2647d0b442095317138649cc3" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::crdt::CrdtHeads::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::logger_</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>( &quot;CrdtHeads&quot; )</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="150" column="66" bodyfile="src/crdt/crdt_heads.hpp" bodystart="150" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a92047287756436c632896e815d56cf7c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crdt::CrdtHeads::CrdtHeads</definition>
+        <argsstring>(std::shared_ptr&lt; DataStore &gt; aDatastore, const HierarchicalKey &amp;aNamespace)</argsstring>
+        <name>CrdtHeads</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::CrdtHeads</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a9f4342a407c5b9ebd251f2405354cdbd" kindref="member">DataStore</ref> &gt;</type>
+          <declname>aDatastore</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref> &amp;</type>
+          <declname>aNamespace</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Constructor <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aDatastore</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pointer to datastore </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aNamespace</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Namespace key (e.g &quot;/namespace&quot;) </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="31" column="9" bodyfile="src/crdt/impl/crdt_heads.cpp" bodystart="10" bodyend="15"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1aef0d3aaecf9ce149ce34c2d7004a3e62" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crdt::CrdtHeads::CrdtHeads</definition>
+        <argsstring>(const CrdtHeads &amp;)</argsstring>
+        <name>CrdtHeads</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::CrdtHeads</qualifiedname>
+        <param>
+          <type>const CrdtHeads &amp;</type>
+          <defname>aHeads</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Copy constructor </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="35" column="9" bodyfile="src/crdt/impl/crdt_heads.cpp" bodystart="17" bodyend="20"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1abf7dbd79c1ba9b9142203ce083d2f6fc" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual sgns::crdt::CrdtHeads::~CrdtHeads</definition>
+        <argsstring>()=default</argsstring>
+        <name>~CrdtHeads</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::~CrdtHeads</qualifiedname>
+        <briefdescription>
+<para>Destroy the Crdt Heads object. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="40" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1ab1378dfeec973b10d6d48dd7046f5651" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::CrdtHeads::operator==</definition>
+        <argsstring>(const CrdtHeads &amp;) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::operator==</qualifiedname>
+        <param>
+          <type>const <ref refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a92047287756436c632896e815d56cf7c" kindref="member">CrdtHeads</ref> &amp;</type>
+          <defname>aHeads</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Equality operator <simplesect kind="return"><para>true if equal otherwise, it returns false. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="45" column="14" bodyfile="src/crdt/impl/crdt_heads.cpp" bodystart="33" bodyend="40"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a65dffad98fddaf01894944adc8b48092" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::CrdtHeads::operator!=</definition>
+        <argsstring>(const CrdtHeads &amp;) const</argsstring>
+        <name>operator!=</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::operator!=</qualifiedname>
+        <param>
+          <type>const <ref refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a92047287756436c632896e815d56cf7c" kindref="member">CrdtHeads</ref> &amp;</type>
+          <defname>aHeads</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Equality operator <simplesect kind="return"><para>true if NOT equal otherwise, it returns false. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="50" column="14" bodyfile="src/crdt/impl/crdt_heads.cpp" bodystart="42" bodyend="45"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1abc67937522b80a027d469d3de7819380" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a92047287756436c632896e815d56cf7c" kindref="member">CrdtHeads</ref> &amp;</type>
+        <definition>CrdtHeads &amp; sgns::crdt::CrdtHeads::operator=</definition>
+        <argsstring>(const CrdtHeads &amp;)</argsstring>
+        <name>operator=</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::operator=</qualifiedname>
+        <param>
+          <type>const <ref refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a92047287756436c632896e815d56cf7c" kindref="member">CrdtHeads</ref> &amp;</type>
+          <defname>aHeads</defname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Assignment operator </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="54" column="19" bodyfile="src/crdt/impl/crdt_heads.cpp" bodystart="22" bodyend="31"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1aeb855fb264476047c10b8f186ec0412b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref></type>
+        <definition>HierarchicalKey sgns::crdt::CrdtHeads::GetNamespaceKey</definition>
+        <argsstring>() const</argsstring>
+        <name>GetNamespaceKey</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::GetNamespaceKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get namespace hierarchical key </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="58" column="25" bodyfile="src/crdt/impl/crdt_heads.cpp" bodystart="47" bodyend="50"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a12b1cf857c7a3e822a7683f684a857fa" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref> &gt;</type>
+        <definition>outcome::result&lt; HierarchicalKey &gt; sgns::crdt::CrdtHeads::GetKey</definition>
+        <argsstring>(const std::string &amp;topic, const CID &amp;aCid) const</argsstring>
+        <name>GetKey</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::GetKey</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>topic</declname>
+        </param>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>aCid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get full path to CID key. Path format: /namespace/topic/cid <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>topic</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Topic namespace. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aCid</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Content identifier. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>full path to CID key as <ref refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key" kindref="compound">HierarchicalKey</ref> or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="66" column="25" bodyfile="src/crdt/impl/crdt_heads.cpp" bodystart="52" bodyend="64"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1acba0ac10bc5388a75b24011b559f37d1" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::CrdtHeads::IsHead</definition>
+        <argsstring>(const CID &amp;aCid, const std::string &amp;topic) const</argsstring>
+        <name>IsHead</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::IsHead</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>aCid</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>topic</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Check if CID is among the current heads. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aCid</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Content identifier </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>topic</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Topic namespace </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true is CID is head, false otherwise </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="73" column="14" bodyfile="src/crdt/impl/crdt_heads.cpp" bodystart="124" bodyend="146"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1acf1f0e2d36c0c8007db8056aacedd616" prot="public" static="no" nodiscard="yes" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; uint64_t &gt;</type>
+        <definition>outcome::result&lt; uint64_t &gt; sgns::crdt::CrdtHeads::GetHeadHeight</definition>
+        <argsstring>(const CID &amp;aCid, const std::string &amp;topic) const</argsstring>
+        <name>GetHeadHeight</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::GetHeadHeight</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>aCid</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>topic</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Check if CID is head and return it height if it is <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aCid</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Content identifier </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>topic</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Topic namespace </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Height of head or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="80" column="26" bodyfile="src/crdt/impl/crdt_heads.cpp" bodystart="148" bodyend="173"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a1fe09875f0164e60d05aad3e7dc4501a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; size_t &gt;</type>
+        <definition>outcome::result&lt; size_t &gt; sgns::crdt::CrdtHeads::GetLength</definition>
+        <argsstring>(const std::string &amp;topic=&quot;&quot;) const</argsstring>
+        <name>GetLength</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::GetLength</qualifiedname>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>topic</declname>
+          <defval>&quot;&quot;</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get current number of heads <simplesect kind="return"><para>length, current number of heads or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="85" column="25" bodyfile="src/crdt/impl/crdt_heads.cpp" bodystart="175" bodyend="188"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1ab34dc8935b89d4208277be976a77ce99" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::CrdtHeads::Add</definition>
+        <argsstring>(const CID &amp;aCid, uint64_t aHeight, const std::string &amp;topic)</argsstring>
+        <name>Add</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::Add</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>aCid</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>aHeight</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>topic</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Add head CID to datastore with full namespace <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aCid</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Content identifier </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aHeight</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>height of head </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>topic</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Topic namespace </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="93" column="25" bodyfile="src/crdt/impl/crdt_heads.cpp" bodystart="190" bodyend="216"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a27438def9e90ea4fa6c361e4cc77bcf7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::CrdtHeads::Remove</definition>
+        <argsstring>(const CID &amp;aCid, const std::string &amp;topic)</argsstring>
+        <name>Remove</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::Remove</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>aCid</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>topic</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="95" column="25" bodyfile="src/crdt/impl/crdt_heads.cpp" bodystart="108" bodyend="122"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a9024c2187937e21ef643a27e26bfec04" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::CrdtHeads::Replace</definition>
+        <argsstring>(const CID &amp;aCidHead, const CID &amp;aNewHeadCid, uint64_t aHeight, const std::string &amp;topic)</argsstring>
+        <name>Replace</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::Replace</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>aCidHead</declname>
+        </param>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>aNewHeadCid</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>aHeight</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>topic</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Replace a head with a new cid. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aCidHead</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Content identifier of head to replace </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aNewHeadCid</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Content identifier of new head </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aHeight</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>height of head </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>topic</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Topic namespace </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="104" column="25" bodyfile="src/crdt/impl/crdt_heads.cpp" bodystart="218" bodyend="257"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1ab6433ec135678f5863637646a841e59b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1aaf18c63f04f27439947f69f90e9be3ce" kindref="member">CRDTListResult</ref> &gt;</type>
+        <definition>outcome::result&lt; CrdtHeads::CRDTListResult &gt; sgns::crdt::CrdtHeads::GetList</definition>
+        <argsstring>(const std::unordered_set&lt; std::string &gt; &amp;topics={}) const</argsstring>
+        <name>GetList</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::GetList</qualifiedname>
+        <param>
+          <type>const std::unordered_set&lt; std::string &gt; &amp;</type>
+          <declname>topics</declname>
+          <defval>{}</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Returns the list of current heads plus the max height. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>topics</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Topic to get list from </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="113" column="25" bodyfile="src/crdt/impl/crdt_heads.cpp" bodystart="259" bodyend="284"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1abbe1e17bc57e375af2f58c81414fc1a1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::CrdtHeads::PrimeCache</definition>
+        <argsstring>()</argsstring>
+        <name>PrimeCache</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::PrimeCache</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>primeCache builds the heads cache based on what&apos;s in storage; since it is called from the constructor only we don&apos;t bother locking. <simplesect kind="return"><para>outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="119" column="25" bodyfile="src/crdt/impl/crdt_heads.cpp" bodystart="286" bodyend="365"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="protected-func">
+      <memberdef kind="function" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a3d4c4cbe003fd9997bae74351301d68c" prot="protected" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::CrdtHeads::Write</definition>
+        <argsstring>(storage::BufferBatch &amp;aDataStore, const CID &amp;aCid, uint64_t aHeight, const std::string &amp;topic) const</argsstring>
+        <name>Write</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::Write</qualifiedname>
+        <param>
+          <type><ref refid="d0/dbf/namespacesgns_1_1storage_1a5919619e4b0d178dbbbffbc8bcf1fb7d" kindref="member">storage::BufferBatch</ref> &amp;</type>
+          <declname>aDataStore</declname>
+        </param>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>aCid</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>aHeight</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>topic</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Write data to datastore in batch mode <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aDataStore</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pointer to datastore batch </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aCid</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Content identifier to add </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aHeight</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>height of CID head </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>topic</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Topic namespace </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="129" column="25" bodyfile="src/crdt/impl/crdt_heads.cpp" bodystart="66" bodyend="86"/>
+      </memberdef>
+      <memberdef kind="function" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1ab9ca580909760179be67775f2a05b15b" prot="protected" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::CrdtHeads::Delete</definition>
+        <argsstring>(const std::unique_ptr&lt; storage::BufferBatch &gt; &amp;aDataStore, const CID &amp;aCid, const std::string &amp;topic) const</argsstring>
+        <name>Delete</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::Delete</qualifiedname>
+        <param>
+          <type>const std::unique_ptr&lt; <ref refid="d0/dbf/namespacesgns_1_1storage_1a5919619e4b0d178dbbbffbc8bcf1fb7d" kindref="member">storage::BufferBatch</ref> &gt; &amp;</type>
+          <declname>aDataStore</declname>
+        </param>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>aCid</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>topic</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Delete data from datastore in batch mode <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>aDataStore</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pointer to datastore batch </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>aCid</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Content identifier to remove </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>topic</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Topic namespace </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="139" column="25" bodyfile="src/crdt/impl/crdt_heads.cpp" bodystart="88" bodyend="106"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a8116b0546888837ecd6aa3bc8ee0ab2d" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crdt::CrdtHeads::CrdtHeads</definition>
+        <argsstring>()=default</argsstring>
+        <name>CrdtHeads</name>
+        <qualifiedname>sgns::crdt::CrdtHeads::CrdtHeads</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/crdt_heads.hpp" line="144" column="9"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><ref refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads" kindref="compound">CrdtHeads</ref> manages the current Merkle-CRDT heads. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="5">
+        <label>BufferStorage</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+        <childnode refid="14" relation="public-inheritance">
+        </childnode>
+        <childnode refid="21" relation="public-inheritance">
+        </childnode>
+        <childnode refid="22" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>IComponent</label>
+        <link refid="d1/dbf/class_i_component"/>
+      </node>
+      <node id="35">
+        <label>K</label>
+      </node>
+      <node id="27">
+        <label>T</label>
+      </node>
+      <node id="1">
+        <label>sgns::crdt::CrdtHeads</label>
+        <link refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>-mutex_</edgelabel>
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>-dataStore_</edgelabel>
+        </childnode>
+        <childnode refid="32" relation="usage">
+          <edgelabel>-cache_</edgelabel>
+        </childnode>
+        <childnode refid="37" relation="usage">
+          <edgelabel>-namespaceKey_</edgelabel>
+        </childnode>
+        <childnode refid="28" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+      </node>
+      <node id="37">
+        <label>sgns::crdt::HierarchicalKey</label>
+        <link refid="d6/dfe/classsgns_1_1crdt_1_1_hierarchical_key"/>
+        <childnode refid="30" relation="usage">
+          <edgelabel>-key_</edgelabel>
+        </childnode>
+      </node>
+      <node id="18">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+        <childnode refid="20" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>sgns::storage::face::BatchWriteMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="15" relation="public-inheritance">
+        </childnode>
+        <childnode refid="17" relation="public-inheritance">
+        </childnode>
+        <childnode refid="18" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="24">
+        <label>sgns::storage::face::BatchWriteMap&lt; K, V &gt;</label>
+        <link refid="d3/df4/structsgns_1_1storage_1_1face_1_1_batch_write_map"/>
+        <childnode refid="19" relation="public-inheritance">
+        </childnode>
+        <childnode refid="20" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="20">
+        <label>sgns::storage::face::Batchable&lt; K, V &gt;</label>
+        <link refid="de/d2d/structsgns_1_1storage_1_1face_1_1_batchable"/>
+      </node>
+      <node id="22">
+        <label>sgns::storage::face::GenericStorage&lt; K, V &gt;</label>
+        <link refid="da/d5d/structsgns_1_1storage_1_1face_1_1_generic_storage"/>
+        <childnode refid="23" relation="public-inheritance">
+        </childnode>
+        <childnode refid="24" relation="public-inheritance">
+        </childnode>
+        <childnode refid="21" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="7">
+        <label>sgns::storage::face::Iterable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+        <childnode refid="8" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>sgns::storage::face::Iterable&lt; K, V &gt;</label>
+        <link refid="d4/d27/structsgns_1_1storage_1_1face_1_1_iterable"/>
+      </node>
+      <node id="11">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+        <childnode refid="13" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>sgns::storage::face::ReadOnlyMap&lt; Buffer, Buffer &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="7" relation="public-inheritance">
+        </childnode>
+        <childnode refid="9" relation="public-inheritance">
+        </childnode>
+        <childnode refid="11" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="23">
+        <label>sgns::storage::face::ReadOnlyMap&lt; K, V &gt;</label>
+        <link refid="d6/d8f/structsgns_1_1storage_1_1face_1_1_read_only_map"/>
+        <childnode refid="12" relation="public-inheritance">
+        </childnode>
+        <childnode refid="13" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="9">
+        <label>sgns::storage::face::Readable&lt; Buffer, Buffer &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="13">
+        <label>sgns::storage::face::Readable&lt; K, V &gt;</label>
+        <link refid="dc/d9e/structsgns_1_1storage_1_1face_1_1_readable"/>
+      </node>
+      <node id="16">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="15">
+        <label>sgns::storage::face::Writeable&lt; Buffer, Buffer &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+        <childnode refid="16" relation="template-instance">
+          <edgelabel>&lt; Buffer, Buffer &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="19">
+        <label>sgns::storage::face::Writeable&lt; K, V &gt;</label>
+        <link refid="d7/dc2/structsgns_1_1storage_1_1face_1_1_writeable"/>
+      </node>
+      <node id="4">
+        <label>sgns::storage::rocksdb</label>
+        <link refid="d5/dbf/classsgns_1_1storage_1_1rocksdb"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+        <childnode refid="25" relation="usage">
+          <edgelabel>-db_</edgelabel>
+        </childnode>
+        <childnode refid="28" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="29" relation="usage">
+          <edgelabel>-options_</edgelabel>
+        </childnode>
+        <childnode refid="30" relation="usage">
+          <edgelabel>-path_</edgelabel>
+        </childnode>
+      </node>
+      <node id="31">
+        <label>std::basic_string&lt; Char &gt;</label>
+      </node>
+      <node id="34">
+        <label>std::map&lt; K, T &gt;</label>
+        <childnode refid="35" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="27" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="33">
+        <label>std::map&lt; CID, uint64_t &gt;</label>
+        <childnode refid="34" relation="template-instance">
+          <edgelabel>&lt; CID, uint64_t &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::shared_mutex</label>
+      </node>
+      <node id="26">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="27" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="25">
+        <label>std::shared_ptr&lt; DB &gt;</label>
+        <childnode refid="26" relation="template-instance">
+          <edgelabel>&lt; DB &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="29">
+        <label>std::shared_ptr&lt; Options &gt;</label>
+        <childnode refid="26" relation="template-instance">
+          <edgelabel>&lt; Options &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::shared_ptr&lt; sgns::storage::rocksdb &gt;</label>
+        <childnode refid="4" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+        <childnode refid="26" relation="template-instance">
+          <edgelabel>&lt; sgns::storage::rocksdb &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="28">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="26" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="30">
+        <label>std::string</label>
+        <childnode refid="31" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="36">
+        <label>std::unordered_map&lt; K, T &gt;</label>
+        <childnode refid="35" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="27" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="32">
+        <label>std::unordered_map&lt; std::string, std::map&lt; CID, uint64_t &gt; &gt;</label>
+        <childnode refid="30" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="33" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="36" relation="template-instance">
+          <edgelabel>&lt; std::string, std::map&lt; CID, uint64_t &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crdt/crdt_heads.hpp" line="19" column="5" bodyfile="src/crdt/crdt_heads.hpp" bodystart="20" bodyend="151"/>
+    <listofallmembers>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1ab34dc8935b89d4208277be976a77ce99" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>Add</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1aaeefaed9af06bcea59214f6d5dd0abf4" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>Buffer</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a007a08a466ca855cf646c713dfeb5300" prot="private" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>cache_</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a9a30f348dd54a07ea7c06e21a3cccb5d" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>CRDTHeadList</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a92047287756436c632896e815d56cf7c" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>CrdtHeads</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1aef0d3aaecf9ce149ce34c2d7004a3e62" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>CrdtHeads</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a8116b0546888837ecd6aa3bc8ee0ab2d" prot="private" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>CrdtHeads</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1aaf18c63f04f27439947f69f90e9be3ce" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>CRDTListResult</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a9f4342a407c5b9ebd251f2405354cdbd" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>DataStore</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a8f923e6a1dee95c32ed849a09894bbe8" prot="private" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>dataStore_</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1ab9ca580909760179be67775f2a05b15b" prot="protected" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>Delete</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1acf1f0e2d36c0c8007db8056aacedd616" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>GetHeadHeight</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a12b1cf857c7a3e822a7683f684a857fa" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>GetKey</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a1fe09875f0164e60d05aad3e7dc4501a" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>GetLength</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1ab6433ec135678f5863637646a841e59b" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>GetList</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1aeb855fb264476047c10b8f186ec0412b" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>GetNamespaceKey</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1acba0ac10bc5388a75b24011b559f37d1" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>IsHead</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a0bd1b5f2647d0b442095317138649cc3" prot="private" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>logger_</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1af41b143c02cd2d77eba4c69ae05b01c0" prot="private" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>mutex_</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a75d26cf52ead6d8dc3766f399cdae499" prot="private" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>namespaceKey_</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a65dffad98fddaf01894944adc8b48092" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>operator!=</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1abc67937522b80a027d469d3de7819380" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>operator=</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1ab1378dfeec973b10d6d48dd7046f5651" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>operator==</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1abbe1e17bc57e375af2f58c81414fc1a1" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>PrimeCache</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a27438def9e90ea4fa6c361e4cc77bcf7" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>Remove</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a9024c2187937e21ef643a27e26bfec04" prot="public" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>Replace</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1a3d4c4cbe003fd9997bae74351301d68c" prot="protected" virt="non-virtual"><scope>sgns::crdt::CrdtHeads</scope><name>Write</name></member>
+      <member refid="d5/dea/classsgns_1_1crdt_1_1_crdt_heads_1abf7dbd79c1ba9b9142203ce083d2f6fc" prot="public" virt="virtual"><scope>sgns::crdt::CrdtHeads</scope><name>~CrdtHeads</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,1849 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer" kind="class" language="C++" prot="public">
+    <compoundname>sgns::crdt::GraphsyncDAGSyncer</compoundname>
+    <basecompoundref refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer" prot="public" virt="non-virtual">sgns::crdt::DAGSyncer</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">std::enable_shared_from_this&lt; GraphsyncDAGSyncer &gt;</basecompoundref>
+    <includes refid="d6/dea/graphsync__dagsyncer_8hpp" local="no">graphsync_dagsyncer.hpp</includes>
+    <innerclass refid="d8/dea/structsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_blacklist_entry" prot="public">sgns::crdt::GraphsyncDAGSyncer::BlacklistEntry</innerclass>
+    <innerclass refid="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache" prot="private">sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache</innerclass>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a09cc16b9879da3d51c21f0227ddd4789" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>Error</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::Error</qualifiedname>
+        <enumvalue id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a09cc16b9879da3d51c21f0227ddd4789af03da63a202147a2cf706b576656e893" prot="public">
+          <name>CID_NOT_FOUND</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+<para>The requested CID wasn&apos;t found. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a09cc16b9879da3d51c21f0227ddd4789a2d514255a0f3a3c5c2f0f266225dbf42" prot="public">
+          <name>ROUTE_NOT_FOUND</name>
+          <briefdescription>
+<para>Route for the CID wasn&apos;t found. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a09cc16b9879da3d51c21f0227ddd4789a3c4552e6639b319fecc42431d272b813" prot="public">
+          <name>PEER_BLACKLISTED</name>
+          <briefdescription>
+<para>The peer that has the CID is blacklisted. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a09cc16b9879da3d51c21f0227ddd4789adbe2cbac46ffa8283747010d8e1e6396" prot="public">
+          <name>TIMED_OUT</name>
+          <briefdescription>
+<para>The request has timed out. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a09cc16b9879da3d51c21f0227ddd4789ab56bce4fbfb2ee0193ec3e64af9f8c69" prot="public">
+          <name>DAGSYNCER_NOT_STARTED</name>
+          <briefdescription>
+<para>Start wasn&apos;t called, or StopSync was called. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a09cc16b9879da3d51c21f0227ddd4789afe5113ec8705ba33c38c405be6aa5653" prot="public">
+          <name>GRAPHSYNC_IS_NULL</name>
+          <briefdescription>
+<para><ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a7e74dad05b5f57693e4b3ad5fe09358e" kindref="member">Graphsync</ref> member is nullptr. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a09cc16b9879da3d51c21f0227ddd4789a0b0eb66ae238952d55a14b6c4ef44f4c" prot="public">
+          <name>HOST_IS_NULL</name>
+          <briefdescription>
+<para><ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a7e74dad05b5f57693e4b3ad5fe09358e" kindref="member">Graphsync</ref> member is nullptr. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="43" column="9" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="44" bodyend="52"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a8dbfc66ff03c78724604e17ac092680e" prot="public" static="no">
+        <type>ipfs_lite::ipfs::IpfsDatastore</type>
+        <definition>using sgns::crdt::GraphsyncDAGSyncer::IpfsDatastore = ipfs_lite::ipfs::IpfsDatastore</definition>
+        <argsstring></argsstring>
+        <name>IpfsDatastore</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::IpfsDatastore</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="25" column="9" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="25" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a7e74dad05b5f57693e4b3ad5fe09358e" prot="public" static="no">
+        <type>ipfs_lite::ipfs::graphsync::Graphsync</type>
+        <definition>using sgns::crdt::GraphsyncDAGSyncer::Graphsync = ipfs_lite::ipfs::graphsync::Graphsync</definition>
+        <argsstring></argsstring>
+        <name>Graphsync</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::Graphsync</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="26" column="9" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="26" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a1e21dab410e32c3231a27ea834015126" prot="public" static="no">
+        <type>ipfs_lite::ipfs::graphsync::ResponseMetadata</type>
+        <definition>using sgns::crdt::GraphsyncDAGSyncer::ResponseMetadata = ipfs_lite::ipfs::graphsync::ResponseMetadata</definition>
+        <argsstring></argsstring>
+        <name>ResponseMetadata</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::ResponseMetadata</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="27" column="9" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aa4396aec946680145f0bd06291815db5" prot="public" static="no">
+        <type>ipfs_lite::ipfs::graphsync::Extension</type>
+        <definition>using sgns::crdt::GraphsyncDAGSyncer::Extension = ipfs_lite::ipfs::graphsync::Extension</definition>
+        <argsstring></argsstring>
+        <name>Extension</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::Extension</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="28" column="9" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="28" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a52c90ad75edeae1adeec2c3cc8390d1c" prot="public" static="no">
+        <type>ipfs_lite::ipfs::graphsync::MerkleDagBridgeImpl</type>
+        <definition>using sgns::crdt::GraphsyncDAGSyncer::MerkleDagBridgeImpl = ipfs_lite::ipfs::graphsync::MerkleDagBridgeImpl</definition>
+        <argsstring></argsstring>
+        <name>MerkleDagBridgeImpl</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::MerkleDagBridgeImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="29" column="9" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="29" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1af632be4e2529d72c715b5774ff62d07e" prot="public" static="no">
+        <type>ipfs_lite::ipfs::graphsync::ResponseStatusCode</type>
+        <definition>using sgns::crdt::GraphsyncDAGSyncer::ResponseStatusCode = ipfs_lite::ipfs::graphsync::ResponseStatusCode</definition>
+        <argsstring></argsstring>
+        <name>ResponseStatusCode</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::ResponseStatusCode</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="30" column="9" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="30" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a74333371c151f798bd37406742839ca7" prot="public" static="no">
+        <type>libp2p::multi::Multiaddress</type>
+        <definition>using sgns::crdt::GraphsyncDAGSyncer::Multiaddress = libp2p::multi::Multiaddress</definition>
+        <argsstring></argsstring>
+        <name>Multiaddress</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::Multiaddress</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="31" column="9" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="31" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1adaf0ddbf23d57f23d55eb9c570bb060c" prot="public" static="no">
+        <type>libp2p::multi::Multihash</type>
+        <definition>using sgns::crdt::GraphsyncDAGSyncer::Multihash = libp2p::multi::Multihash</definition>
+        <argsstring></argsstring>
+        <name>Multihash</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::Multihash</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="32" column="9" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="32" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a3ecc9d2e665527c52c102fe7878d8ebd" prot="public" static="no">
+        <type>libp2p::peer::PeerId</type>
+        <definition>using sgns::crdt::GraphsyncDAGSyncer::PeerId = libp2p::peer::PeerId</definition>
+        <argsstring></argsstring>
+        <name>PeerId</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::PeerId</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="33" column="9" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="33" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1afc13b29955cc8888e36af49798366cc9" prot="public" static="no">
+        <type>libp2p::protocol::Subscription</type>
+        <definition>using sgns::crdt::GraphsyncDAGSyncer::Subscription = libp2p::protocol::Subscription</definition>
+        <argsstring></argsstring>
+        <name>Subscription</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::Subscription</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="34" column="9" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="34" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ad0800f5cea9a9d74b5e2d5ae9dedbd77" prot="public" static="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>using sgns::crdt::GraphsyncDAGSyncer::Logger = base::Logger</definition>
+        <argsstring></argsstring>
+        <name>Logger</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::Logger</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="35" column="9" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="35" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a7cb266895097d54cf5c5d16da9ba7334" prot="public" static="no">
+        <type>Graphsync::BlockCallback</type>
+        <definition>using sgns::crdt::GraphsyncDAGSyncer::BlockCallback = Graphsync::BlockCallback</definition>
+        <argsstring></argsstring>
+        <name>BlockCallback</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::BlockCallback</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="36" column="9" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="36" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a46c7d7c8267886f428f4846e0d2d4e0d" prot="public" static="no">
+        <type>size_t</type>
+        <definition>using sgns::crdt::GraphsyncDAGSyncer::PeerKey = size_t</definition>
+        <argsstring></argsstring>
+        <name>PeerKey</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::PeerKey</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="39" column="9" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="39" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ac8151dff2e3c708a38321fe04206540d" prot="public" static="no">
+        <type>std::pair&lt; <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a3ecc9d2e665527c52c102fe7878d8ebd" kindref="member">PeerId</ref>, std::vector&lt; <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a74333371c151f798bd37406742839ca7" kindref="member">Multiaddress</ref> &gt; &gt;</type>
+        <definition>using sgns::crdt::GraphsyncDAGSyncer::PeerEntry = std::pair&lt;PeerId, std::vector&lt;Multiaddress&gt;&gt;</definition>
+        <argsstring></argsstring>
+        <name>PeerEntry</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::PeerEntry</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="40" column="9" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="40" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1af1eeebd6a48a131e8b5dd5aac9def6ca" prot="public" static="no">
+        <type>std::map&lt; CID, <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a46c7d7c8267886f428f4846e0d2d4e0d" kindref="member">PeerKey</ref> &gt;</type>
+        <definition>using sgns::crdt::GraphsyncDAGSyncer::RouteMapType = std::map&lt;CID, PeerKey&gt;</definition>
+        <argsstring></argsstring>
+        <name>RouteMapType</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::RouteMapType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="41" column="9" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="41" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ab1a89ed32e06a6652fb7160bc21e1432" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::crdt::GraphsyncDAGSyncer::TIMEOUT_SECONDS</definition>
+        <argsstring></argsstring>
+        <name>TIMEOUT_SECONDS</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::TIMEOUT_SECONDS</qualifiedname>
+        <initializer>= 1200</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="130" column="35" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="130" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a0f7b10455cd5abfe3c3d5ff6d1199d6c" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::crdt::GraphsyncDAGSyncer::MAX_FAILURES</definition>
+        <argsstring></argsstring>
+        <name>MAX_FAILURES</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::MAX_FAILURES</qualifiedname>
+        <initializer>= 3</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="131" column="35" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="131" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ac2396347256ac756b17b66c4b4209f1c" prot="private" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool sgns::crdt::GraphsyncDAGSyncer::started_</definition>
+        <argsstring></argsstring>
+        <name>started_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::started_</qualifiedname>
+        <initializer>= false</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="170" column="26" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="170" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a123eb84c7b15a14114ba663eb3e97f98" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; CID &gt;</type>
+        <definition>std::vector&lt;CID&gt; sgns::crdt::GraphsyncDAGSyncer::unexpected_blocks</definition>
+        <argsstring></argsstring>
+        <name>unexpected_blocks</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::unexpected_blocks</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="171" column="21" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="171" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aa106eb60b3edfda0b375e9345b95412b" prot="private" static="no" mutable="yes">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::crdt::GraphsyncDAGSyncer::dagMutex_</definition>
+        <argsstring></argsstring>
+        <name>dagMutex_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::dagMutex_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="173" column="58" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="173" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ab36b13007dcb5698cae628900ebeecb8" prot="private" static="no" mutable="no">
+        <type>ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl</type>
+        <definition>ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl sgns::crdt::GraphsyncDAGSyncer::dagService_</definition>
+        <argsstring></argsstring>
+        <name>dagService_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::dagService_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="174" column="58" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="174" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ab5c67644a97cab16a96e92168d72c27f" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a7e74dad05b5f57693e4b3ad5fe09358e" kindref="member">Graphsync</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Graphsync&gt; sgns::crdt::GraphsyncDAGSyncer::graphsync_</definition>
+        <argsstring></argsstring>
+        <name>graphsync_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::graphsync_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="175" column="47" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="175" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1af567b747f779943068e1e8a3e7bef16b" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; libp2p::Host &gt;</type>
+        <definition>std::shared_ptr&lt;libp2p::Host&gt; sgns::crdt::GraphsyncDAGSyncer::host_</definition>
+        <argsstring></argsstring>
+        <name>host_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::host_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="177" column="25" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="177" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a298fe133a0cfb7b5bd68da9cdd2f00f4" prot="private" static="no" mutable="no">
+        <type><ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ad0800f5cea9a9d74b5e2d5ae9dedbd77" kindref="member">Logger</ref></type>
+        <definition>Logger sgns::crdt::GraphsyncDAGSyncer::logger_</definition>
+        <argsstring></argsstring>
+        <name>logger_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::logger_</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>( &quot;GraphsyncDAGSyncer&quot; )</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="179" column="16" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="179" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a72770d28578a31f5c32a26e44f760ac2" prot="private" static="no" mutable="no">
+        <type>std::map&lt; CID, std::tuple&lt; std::shared_ptr&lt; <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1afc13b29955cc8888e36af49798366cc9" kindref="member">Subscription</ref> &gt;, std::shared_ptr&lt; std::promise&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt; &gt; &gt; &gt;</type>
+        <definition>std::map&lt;CID, std::tuple&lt;std::shared_ptr&lt;Subscription&gt;, std::shared_ptr&lt;std::promise&lt;std::shared_ptr&lt;ipfs_lite::ipld::IPLDNode&gt; &gt; &gt; &gt; &gt; sgns::crdt::GraphsyncDAGSyncer::requests_</definition>
+        <argsstring></argsstring>
+        <name>requests_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::requests_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="187" column="13" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="187" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a73a3407fe09196ac92ae70b30396f1ea" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ac8151dff2e3c708a38321fe04206540d" kindref="member">PeerEntry</ref> &gt;</type>
+        <definition>std::vector&lt;PeerEntry&gt; sgns::crdt::GraphsyncDAGSyncer::peer_registry_</definition>
+        <argsstring></argsstring>
+        <name>peer_registry_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::peer_registry_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="190" column="24" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="190" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a37bbf9182c64fdb5856e277d4f75c89f" prot="private" static="no" mutable="no">
+        <type>std::map&lt; <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a3ecc9d2e665527c52c102fe7878d8ebd" kindref="member">PeerId</ref>, <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a46c7d7c8267886f428f4846e0d2d4e0d" kindref="member">PeerKey</ref> &gt;</type>
+        <definition>std::map&lt;PeerId, PeerKey&gt; sgns::crdt::GraphsyncDAGSyncer::peer_index_</definition>
+        <argsstring></argsstring>
+        <name>peer_index_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::peer_index_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="191" column="18" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="191" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a9f25e5a43610eb6b57e40bb66962542c" prot="private" static="no" mutable="yes">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::crdt::GraphsyncDAGSyncer::registry_mutex_</definition>
+        <argsstring></argsstring>
+        <name>registry_mutex_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::registry_mutex_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="192" column="35" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="192" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aad30ee3abac1f3615e5d3e76ca0a5126" prot="private" static="no" mutable="yes">
+        <type><ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1af1eeebd6a48a131e8b5dd5aac9def6ca" kindref="member">RouteMapType</ref></type>
+        <definition>RouteMapType sgns::crdt::GraphsyncDAGSyncer::routing_</definition>
+        <argsstring></argsstring>
+        <name>routing_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::routing_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="195" column="30" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="195" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a04a05490ed12e64c84c81cdc9bfedb22" prot="private" static="no" mutable="yes">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::crdt::GraphsyncDAGSyncer::routing_mutex_</definition>
+        <argsstring></argsstring>
+        <name>routing_mutex_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::routing_mutex_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="196" column="30" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="196" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ae38a48dea54c7bc85faa689b3601ad12" prot="private" static="no" mutable="yes">
+        <type>std::map&lt; <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1adaf0ddbf23d57f23d55eb9c570bb060c" kindref="member">Multihash</ref>, <ref refid="d8/dea/structsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_blacklist_entry" kindref="compound">BlacklistEntry</ref> &gt;</type>
+        <definition>std::map&lt;Multihash, BlacklistEntry&gt; sgns::crdt::GraphsyncDAGSyncer::blacklist_</definition>
+        <argsstring></argsstring>
+        <name>blacklist_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::blacklist_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="198" column="26" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="198" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a04cd8683ad22f5f69da1b5745962199d" prot="private" static="no" mutable="yes">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::crdt::GraphsyncDAGSyncer::blacklist_mutex_</definition>
+        <argsstring></argsstring>
+        <name>blacklist_mutex_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::blacklist_mutex_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="199" column="53" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="199" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a8c4426dc8a7487d38b5c87bc58d6896e" prot="private" static="no" mutable="yes">
+        <type>std::map&lt; std::pair&lt; <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1adaf0ddbf23d57f23d55eb9c570bb060c" kindref="member">Multihash</ref>, CID &gt;, uint64_t &gt;</type>
+        <definition>std::map&lt;std::pair&lt;Multihash, CID&gt;, uint64_t&gt; sgns::crdt::GraphsyncDAGSyncer::cid_failures_</definition>
+        <argsstring></argsstring>
+        <name>cid_failures_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::cid_failures_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="202" column="26" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="202" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a50067819d336ad003f53345941d3157e" prot="private" static="no" mutable="yes">
+        <type>std::mutex</type>
+        <definition>std::mutex sgns::crdt::GraphsyncDAGSyncer::cid_failures_mutex_</definition>
+        <argsstring></argsstring>
+        <name>cid_failures_mutex_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::cid_failures_mutex_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="203" column="63" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="203" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a4a3442268956cb4b76692b2700ef8c90" prot="private" static="no" mutable="no">
+        <type>std::map&lt; CID, std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt;</type>
+        <definition>std::map&lt;CID, std::shared_ptr&lt;ipfs_lite::ipld::IPLDNode&gt; &gt; sgns::crdt::GraphsyncDAGSyncer::received_blocks_</definition>
+        <argsstring></argsstring>
+        <name>received_blocks_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::received_blocks_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="205" column="18" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="205" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ac2d15abe1298442d4f804df2c7c51c7a" prot="private" static="no" mutable="yes">
+        <type><ref refid="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache" kindref="compound">LRUCIDCache</ref></type>
+        <definition>LRUCIDCache sgns::crdt::GraphsyncDAGSyncer::lru_cid_cache_</definition>
+        <argsstring></argsstring>
+        <name>lru_cid_cache_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::lru_cid_cache_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="235" column="29" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="235" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a48614556984c87643f929a69c03b8977" prot="private" static="no" mutable="no">
+        <type>std::atomic&lt; bool &gt;</type>
+        <definition>std::atomic&lt;bool&gt; sgns::crdt::GraphsyncDAGSyncer::is_stopped_</definition>
+        <argsstring></argsstring>
+        <name>is_stopped_</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::is_stopped_</qualifiedname>
+        <initializer>{ false }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="237" column="21" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="237" bodyend="237"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a5a0385108c14b1e05fefda6b7ff6df21" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crdt::GraphsyncDAGSyncer::GraphsyncDAGSyncer</definition>
+        <argsstring>(std::shared_ptr&lt; IpfsDatastore &gt; service, std::shared_ptr&lt; Graphsync &gt; graphsync, std::shared_ptr&lt; libp2p::Host &gt; host)</argsstring>
+        <name>GraphsyncDAGSyncer</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::GraphsyncDAGSyncer</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a8dbfc66ff03c78724604e17ac092680e" kindref="member">IpfsDatastore</ref> &gt;</type>
+          <declname>service</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a7e74dad05b5f57693e4b3ad5fe09358e" kindref="member">Graphsync</ref> &gt;</type>
+          <declname>graphsync</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; libp2p::Host &gt;</type>
+          <declname>host</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="67" column="9" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="34" bodyend="40"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aa1a451355c6550fbeac7fb87517a493e" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>sgns::crdt::GraphsyncDAGSyncer::~GraphsyncDAGSyncer</definition>
+        <argsstring>() override</argsstring>
+        <name>~GraphsyncDAGSyncer</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::~GraphsyncDAGSyncer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="71" column="9" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="71" bodyend="74"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a5ab8d8e353d8e629bcc91e11ae2bcfcd" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::GraphsyncDAGSyncer::Listen</definition>
+        <argsstring>(const Multiaddress &amp;listen_to)</argsstring>
+        <name>Listen</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::Listen</qualifiedname>
+        <param>
+          <type>const <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a74333371c151f798bd37406742839ca7" kindref="member">Multiaddress</ref> &amp;</type>
+          <declname>listen_to</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="76" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="78" bodyend="92"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ae950c08f3a71ca56445fd52d5627f010" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::GraphsyncDAGSyncer::StartSync</definition>
+        <argsstring>()</argsstring>
+        <name>StartSync</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::StartSync</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Starts instance and subscribes to blocks </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="79" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="375" bodyend="408"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a86bde4d2d7f079a86c910d524eb39f52" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::GraphsyncDAGSyncer::AddRoute</definition>
+        <argsstring>(const CID &amp;cid, const PeerId &amp;peer, std::vector&lt; Multiaddress &gt; address)</argsstring>
+        <name>AddRoute</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::AddRoute</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <param>
+          <type>const <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a3ecc9d2e665527c52c102fe7878d8ebd" kindref="member">PeerId</ref> &amp;</type>
+          <declname>peer</declname>
+        </param>
+        <param>
+          <type>std::vector&lt; <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a74333371c151f798bd37406742839ca7" kindref="member">Multiaddress</ref> &gt;</type>
+          <declname>address</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="81" column="14" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="138" bodyend="151"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a8d3b49f907520729a6f4be7624a2229a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::GraphsyncDAGSyncer::addNode</definition>
+        <argsstring>(std::shared_ptr&lt; const ipfs_lite::ipld::IPLDNode &gt; node) override</argsstring>
+        <name>addNode</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::addNode</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; const ipfs_lite::ipld::IPLDNode &gt;</type>
+          <declname>node</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="84" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="153" bodyend="169"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a80e2ce88ed3561fa6a8d28f04ea10341" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt; sgns::crdt::GraphsyncDAGSyncer::getNode</definition>
+        <argsstring>(const CID &amp;cid) const override</argsstring>
+        <name>getNode</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::getNode</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="86" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="171" bodyend="302"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a6ff4a37a46e5ebe17e5c46ecd3d6095c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::GraphsyncDAGSyncer::removeNode</definition>
+        <argsstring>(const CID &amp;cid) override</argsstring>
+        <name>removeNode</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::removeNode</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="88" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="304" bodyend="308"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a7939cbb21878ba75e451d92d65d38960" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; size_t &gt;</type>
+        <definition>outcome::result&lt; size_t &gt; sgns::crdt::GraphsyncDAGSyncer::select</definition>
+        <argsstring>(gsl::span&lt; const uint8_t &gt; root_cid, gsl::span&lt; const uint8_t &gt; selector, std::function&lt; bool(std::shared_ptr&lt; const ipfs_lite::ipld::IPLDNode &gt; node)&gt; handler) const override</argsstring>
+        <name>select</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::select</qualifiedname>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>root_cid</declname>
+        </param>
+        <param>
+          <type>gsl::span&lt; const uint8_t &gt;</type>
+          <declname>selector</declname>
+        </param>
+        <param>
+          <type>std::function&lt; bool(std::shared_ptr&lt; const ipfs_lite::ipld::IPLDNode &gt; <ref refid="de/ddf/classsgns_1_1node" kindref="compound">node</ref>)&gt;</type>
+          <declname>handler</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="90" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="310" bodyend="317"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a7cd84d8350a8e78a1a389c0b48854f3c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; ipfs_lite::ipfs::merkledag::Leaf &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; ipfs_lite::ipfs::merkledag::Leaf &gt; &gt; sgns::crdt::GraphsyncDAGSyncer::fetchGraph</definition>
+        <argsstring>(const CID &amp;cid) const override</argsstring>
+        <name>fetchGraph</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::fetchGraph</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="95" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="319" bodyend="334"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ab242339d4b8ec662c0adfa1dfb1dad9b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; ipfs_lite::ipfs::merkledag::Leaf &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; ipfs_lite::ipfs::merkledag::Leaf &gt; &gt; sgns::crdt::GraphsyncDAGSyncer::fetchGraphOnDepth</definition>
+        <argsstring>(const CID &amp;cid, uint64_t depth) const override</argsstring>
+        <name>fetchGraphOnDepth</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::fetchGraphOnDepth</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <param>
+          <type>uint64_t</type>
+          <declname>depth</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="97" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="336" bodyend="352"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a29f885542a74ac9db2bf9a34f1daee98" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; bool &gt;</type>
+        <definition>outcome::result&lt; bool &gt; sgns::crdt::GraphsyncDAGSyncer::HasBlock</definition>
+        <argsstring>(const CID &amp;cid) const override</argsstring>
+        <name>HasBlock</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::HasBlock</qualifiedname>
+        <reimplements refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a2ede6e4a67602274c52701f28d1f31f2">HasBlock</reimplements>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Check if the block with cid is locally available (therefore, it is considered processed). <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>cid</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Content identifier of the node </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if the block is locally available or outcome::failure on error </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="101" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="354" bodyend="360"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a2da8bf74327f1f9963a2aabc46756039" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt; sgns::crdt::GraphsyncDAGSyncer::GetNodeWithoutRequest</definition>
+        <argsstring>(const CID &amp;cid) const override</argsstring>
+        <name>GetNodeWithoutRequest</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::GetNodeWithoutRequest</qualifiedname>
+        <reimplements refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1aaff676b17e35bb4ca2295eb4ceaecda0">GetNodeWithoutRequest</reimplements>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="103" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="362" bodyend="373"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a019bee5b8bc5f9bc9ffefe6347e1bf6c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt; sgns::crdt::GraphsyncDAGSyncer::GetNodeFromMerkleDAG</definition>
+        <argsstring>(const CID &amp;cid) const</argsstring>
+        <name>GetNodeFromMerkleDAG</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::GetNodeFromMerkleDAG</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="106" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="832" bodyend="837"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aad4d75a9a4bc22ff0a6b9806f9334208" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>std::pair&lt; <ref refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a5cceea9780d3f0583664154383289d28" kindref="member">LinkInfoSet</ref>, <ref refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a5cceea9780d3f0583664154383289d28" kindref="member">LinkInfoSet</ref> &gt;</type>
+        <definition>std::pair&lt; DAGSyncer::LinkInfoSet, DAGSyncer::LinkInfoSet &gt; sgns::crdt::GraphsyncDAGSyncer::TraverseCIDsLinks</definition>
+        <argsstring>(ipfs_lite::ipld::IPLDNode &amp;node, std::string link_name=&quot;&quot;, LinkInfoSet visited={}) const override</argsstring>
+        <name>TraverseCIDsLinks</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::TraverseCIDsLinks</qualifiedname>
+        <reimplements refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a39758bd74c09d96bf66734ba608697af">TraverseCIDsLinks</reimplements>
+        <param>
+          <type>ipfs_lite::ipld::IPLDNode &amp;</type>
+          <declname>node</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>link_name</declname>
+          <defval>&quot;&quot;</defval>
+        </param>
+        <param>
+          <type><ref refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a5cceea9780d3f0583664154383289d28" kindref="member">LinkInfoSet</ref></type>
+          <declname>visited</declname>
+          <defval>{}</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="108" column="19" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="521" bodyend="643"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a67ee11d87847457d6a13b6f709988d5d" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::GraphsyncDAGSyncer::markResolved</definition>
+        <argsstring>(const CID &amp;cid) override</argsstring>
+        <name>markResolved</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::markResolved</qualifiedname>
+        <reimplements refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a9130b1c77cb3eaf26d8c77bcbf8f80d0">markResolved</reimplements>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="112" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="645" bodyend="649"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aed1004cb97713c48ac078eae4d28be27" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; bool &gt;</type>
+        <definition>outcome::result&lt; bool &gt; sgns::crdt::GraphsyncDAGSyncer::isResolved</definition>
+        <argsstring>(const CID &amp;cid) const override</argsstring>
+        <name>isResolved</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::isResolved</qualifiedname>
+        <reimplements refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1aadd7552df6fc37e83fdcb4dd6d5529c2">isResolved</reimplements>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="113" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="651" bodyend="655"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a9fb5d60cacb6cee13d8194b228adfbf9" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a3ecc9d2e665527c52c102fe7878d8ebd" kindref="member">PeerId</ref> &gt;</type>
+        <definition>outcome::result&lt; GraphsyncDAGSyncer::PeerId &gt; sgns::crdt::GraphsyncDAGSyncer::GetId</definition>
+        <argsstring>() const</argsstring>
+        <name>GetId</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::GetId</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="115" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="423" bodyend="430"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a2d9d982bdfcc3ee8c8475857ef124697" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; libp2p::peer::PeerInfo &gt;</type>
+        <definition>outcome::result&lt; libp2p::peer::PeerInfo &gt; sgns::crdt::GraphsyncDAGSyncer::GetPeerInfo</definition>
+        <argsstring>() const</argsstring>
+        <name>GetPeerInfo</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::GetPeerInfo</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="117" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="432" bodyend="439"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aa7c906a09a86c2835aa974638b80da0d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::GraphsyncDAGSyncer::AddToBlackList</definition>
+        <argsstring>(const PeerId &amp;peer) const</argsstring>
+        <name>AddToBlackList</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::AddToBlackList</qualifiedname>
+        <param>
+          <type>const <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a3ecc9d2e665527c52c102fe7878d8ebd" kindref="member">PeerId</ref> &amp;</type>
+          <declname>peer</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="119" column="14" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="710" bodyend="731"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ab4d0045576bfe5d7a7aad47384aec002" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::GraphsyncDAGSyncer::IsOnBlackList</definition>
+        <argsstring>(const PeerId &amp;peer) const</argsstring>
+        <name>IsOnBlackList</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::IsOnBlackList</qualifiedname>
+        <param>
+          <type>const <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a3ecc9d2e665527c52c102fe7878d8ebd" kindref="member">PeerId</ref> &amp;</type>
+          <declname>peer</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="121" column="14" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="758" bodyend="806"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a68594bf54d1bec4d03359b18a81a400b" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::GraphsyncDAGSyncer::InitCIDBlock</definition>
+        <argsstring>(const CID &amp;cid) override</argsstring>
+        <name>InitCIDBlock</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::InitCIDBlock</qualifiedname>
+        <reimplements refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a93e2390ab06898ca46cc575bd7fcde7a">InitCIDBlock</reimplements>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="123" column="31" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="657" bodyend="663"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aef4ae95fa09891531e7f1bb82c93b505" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::GraphsyncDAGSyncer::IsCIDInCache</definition>
+        <argsstring>(const CID &amp;cid) const override</argsstring>
+        <name>IsCIDInCache</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::IsCIDInCache</qualifiedname>
+        <reimplements refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1ad3062c60a04f39bea4e4ddf8b3369014">IsCIDInCache</reimplements>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="124" column="31" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="683" bodyend="686"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a3b7ceabd1f75a49272c962f3da9ef8b1" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::GraphsyncDAGSyncer::DeleteCIDBlock</definition>
+        <argsstring>(const CID &amp;cid) override</argsstring>
+        <name>DeleteCIDBlock</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::DeleteCIDBlock</qualifiedname>
+        <reimplements refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a2d449eb020778ff935db27bcfc6eff34">DeleteCIDBlock</reimplements>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="125" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="701" bodyend="708"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1af8fd05fdabdb73645a4ace7cdaef581a" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::GraphsyncDAGSyncer::Stop</definition>
+        <argsstring>() override</argsstring>
+        <name>Stop</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::Stop</qualifiedname>
+        <reimplements refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1ab4a1e22a4f97a9a4e8655cbbf3099797">Stop</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="127" column="14" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="1072" bodyend="1077"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ac739e69e8e78a566917e8c884e401437" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; ipfs_lite::ipfs::graphsync::Subscription &gt;</type>
+        <definition>outcome::result&lt; ipfs_lite::ipfs::graphsync::Subscription &gt; sgns::crdt::GraphsyncDAGSyncer::RequestNode</definition>
+        <argsstring>(const PeerId &amp;peer, boost::optional&lt; std::vector&lt; Multiaddress &gt; &gt; address, const CID &amp;root_cid) const</argsstring>
+        <name>RequestNode</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::RequestNode</qualifiedname>
+        <param>
+          <type>const <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a3ecc9d2e665527c52c102fe7878d8ebd" kindref="member">PeerId</ref> &amp;</type>
+          <declname>peer</declname>
+        </param>
+        <param>
+          <type>boost::optional&lt; std::vector&lt; <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a74333371c151f798bd37406742839ca7" kindref="member">Multiaddress</ref> &gt; &gt;</type>
+          <declname>address</declname>
+        </param>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>root_cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="133" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="94" bodyend="136"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aa1719b328ecc4eadcfd7133fbb976b84" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::GraphsyncDAGSyncer::RequestProgressCallback</definition>
+        <argsstring>(ResponseStatusCode code, const std::vector&lt; Extension &gt; &amp;extensions) const</argsstring>
+        <name>RequestProgressCallback</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::RequestProgressCallback</qualifiedname>
+        <param>
+          <type><ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1af632be4e2529d72c715b5774ff62d07e" kindref="member">ResponseStatusCode</ref></type>
+          <declname>code</declname>
+        </param>
+        <param>
+          <type>const std::vector&lt; <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aa4396aec946680145f0bd06291815db5" kindref="member">Extension</ref> &gt; &amp;</type>
+          <declname>extensions</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="138" column="14" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="441" bodyend="451"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a2772f36f20c25f8590dbdf9550808aa2" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::GraphsyncDAGSyncer::BlockReceivedCallback</definition>
+        <argsstring>(const CID &amp;cid, common::Buffer buffer)</argsstring>
+        <name>BlockReceivedCallback</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::BlockReceivedCallback</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <param>
+          <type>common::Buffer</type>
+          <declname>buffer</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="139" column="14" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="453" bodyend="519"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1affe2f504162348d741b7f353e8833d4f" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::GraphsyncDAGSyncer::StopSync</definition>
+        <argsstring>()</argsstring>
+        <name>StopSync</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::StopSync</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Stops instance </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="142" column="14" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="410" bodyend="421"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a1521bad3958774968b82d8610a5b9265" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a46c7d7c8267886f428f4846e0d2d4e0d" kindref="member">PeerKey</ref></type>
+        <definition>GraphsyncDAGSyncer::PeerKey sgns::crdt::GraphsyncDAGSyncer::RegisterPeer</definition>
+        <argsstring>(const PeerId &amp;peer, std::vector&lt; Multiaddress &gt; address)</argsstring>
+        <name>RegisterPeer</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::RegisterPeer</qualifiedname>
+        <param>
+          <type>const <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a3ecc9d2e665527c52c102fe7878d8ebd" kindref="member">PeerId</ref> &amp;</type>
+          <declname>peer</declname>
+        </param>
+        <param>
+          <type>std::vector&lt; <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a74333371c151f798bd37406742839ca7" kindref="member">Multiaddress</ref> &gt;</type>
+          <declname>address</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="145" column="36" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="42" bodyend="63"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ac3c8b17fa8df20f2f85bae901a5ac7ca" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ac8151dff2e3c708a38321fe04206540d" kindref="member">PeerEntry</ref> &gt;</type>
+        <definition>outcome::result&lt; GraphsyncDAGSyncer::PeerEntry &gt; sgns::crdt::GraphsyncDAGSyncer::GetPeerById</definition>
+        <argsstring>(PeerKey id) const</argsstring>
+        <name>GetPeerById</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::GetPeerById</qualifiedname>
+        <param>
+          <type><ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a46c7d7c8267886f428f4846e0d2d4e0d" kindref="member">PeerKey</ref></type>
+          <declname>id</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="146" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="65" bodyend="76"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1af3722f903e13adac82395bf9ad864f2b" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::GraphsyncDAGSyncer::AddCIDBlock</definition>
+        <argsstring>(const CID &amp;cid, const std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &amp;block)</argsstring>
+        <name>AddCIDBlock</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::AddCIDBlock</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <param>
+          <type>const std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &amp;</type>
+          <declname>block</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="148" column="14" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="665" bodyend="681"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ac0ada455d31fb5ff3b58187297578cf6" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt;</type>
+        <definition>outcome::result&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt; sgns::crdt::GraphsyncDAGSyncer::GrabCIDBlock</definition>
+        <argsstring>(const CID &amp;cid) const</argsstring>
+        <name>GrabCIDBlock</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::GrabCIDBlock</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="149" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="688" bodyend="699"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a6d3281bfd645ca7ce2d9dd66f8c9d6fa" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; void &gt;</type>
+        <definition>outcome::result&lt; void &gt; sgns::crdt::GraphsyncDAGSyncer::BlackListPeer</definition>
+        <argsstring>(const PeerId &amp;peer) const</argsstring>
+        <name>BlackListPeer</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::BlackListPeer</qualifiedname>
+        <param>
+          <type>const <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a3ecc9d2e665527c52c102fe7878d8ebd" kindref="member">PeerId</ref> &amp;</type>
+          <declname>peer</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="151" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="822" bodyend="830"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a2f40f4b2511c03437d4e9f56ee4bc2b1" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ac8151dff2e3c708a38321fe04206540d" kindref="member">PeerEntry</ref> &gt;</type>
+        <definition>outcome::result&lt; GraphsyncDAGSyncer::PeerEntry &gt; sgns::crdt::GraphsyncDAGSyncer::GetRoute</definition>
+        <argsstring>(const CID &amp;cid) const</argsstring>
+        <name>GetRoute</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::GetRoute</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="153" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="839" bodyend="856"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a14c2b2d662bd0ab0501c22ff0fc2465c" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::GraphsyncDAGSyncer::EraseRoutesFromPeerID</definition>
+        <argsstring>(const PeerId &amp;peer) const</argsstring>
+        <name>EraseRoutesFromPeerID</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::EraseRoutesFromPeerID</qualifiedname>
+        <param>
+          <type>const <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a3ecc9d2e665527c52c102fe7878d8ebd" kindref="member">PeerId</ref> &amp;</type>
+          <declname>peer</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="154" column="36" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="858" bodyend="888"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1afe6b3083a60ca2fba7f94a0f2e6af6a8" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::GraphsyncDAGSyncer::EraseRoute</definition>
+        <argsstring>(const CID &amp;cid)</argsstring>
+        <name>EraseRoute</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::EraseRoute</qualifiedname>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="155" column="36" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="890" bodyend="897"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aa6ffab0283cc6168d58c4ab71b9525b7" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::GraphsyncDAGSyncer::RecordSuccessfulConnection</definition>
+        <argsstring>(const PeerId &amp;peer)</argsstring>
+        <name>RecordSuccessfulConnection</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::RecordSuccessfulConnection</qualifiedname>
+        <param>
+          <type>const <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a3ecc9d2e665527c52c102fe7878d8ebd" kindref="member">PeerId</ref> &amp;</type>
+          <declname>peer</declname>
+        </param>
+        <briefdescription>
+<para>record successful connections </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="163" column="14" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="809" bodyend="820"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a7f8999a193c3a4518830ca4d5a035627" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::GraphsyncDAGSyncer::RecordCIDFailure</definition>
+        <argsstring>(const PeerId &amp;peer, const CID &amp;cid) const</argsstring>
+        <name>RecordCIDFailure</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::RecordCIDFailure</qualifiedname>
+        <param>
+          <type>const <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a3ecc9d2e665527c52c102fe7878d8ebd" kindref="member">PeerId</ref> &amp;</type>
+          <declname>peer</declname>
+        </param>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+<para>CID-specific failure tracking methods. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="166" column="14" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="906" bodyend="914"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1af4811d4ca7e8b1e45a343c1d9c53faff" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool sgns::crdt::GraphsyncDAGSyncer::HasRecentCIDFailure</definition>
+        <argsstring>(const PeerId &amp;peer, const CID &amp;cid) const</argsstring>
+        <name>HasRecentCIDFailure</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::HasRecentCIDFailure</qualifiedname>
+        <param>
+          <type>const <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a3ecc9d2e665527c52c102fe7878d8ebd" kindref="member">PeerId</ref> &amp;</type>
+          <declname>peer</declname>
+        </param>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="167" column="14" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="916" bodyend="941"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a7c61bb29506145898b6cd59379cb7552" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::crdt::GraphsyncDAGSyncer::ClearCIDFailure</definition>
+        <argsstring>(const PeerId &amp;peer, const CID &amp;cid) const</argsstring>
+        <name>ClearCIDFailure</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::ClearCIDFailure</qualifiedname>
+        <param>
+          <type>const <ref refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a3ecc9d2e665527c52c102fe7878d8ebd" kindref="member">PeerId</ref> &amp;</type>
+          <declname>peer</declname>
+        </param>
+        <param>
+          <type>const CID &amp;</type>
+          <declname>cid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="168" column="14" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="943" bodyend="955"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a6b71e0e310edbe92d464d546b288bf13" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::crdt::GraphsyncDAGSyncer::GetCurrentTimestamp</definition>
+        <argsstring>()</argsstring>
+        <name>GetCurrentTimestamp</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::GetCurrentTimestamp</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="157" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="899" bodyend="904"/>
+      </memberdef>
+      <memberdef kind="function" id="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a1a55000d26d4bf8f877f9ebeeeab4291" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>uint64_t</type>
+        <definition>uint64_t sgns::crdt::GraphsyncDAGSyncer::getBackoffTimeout</definition>
+        <argsstring>(uint64_t attempts, bool ever_connected)</argsstring>
+        <name>getBackoffTimeout</name>
+        <qualifiedname>sgns::crdt::GraphsyncDAGSyncer::getBackoffTimeout</qualifiedname>
+        <param>
+          <type>uint64_t</type>
+          <declname>attempts</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>ever_connected</declname>
+        </param>
+        <briefdescription>
+<para>Using exponential backoff for both cases but with different base values. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/crdt/graphsync_dagsyncer.hpp" line="160" column="25" bodyfile="src/crdt/impl/graphsync_dagsyncer.cpp" bodystart="733" bodyend="756"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A <ref refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer" kindref="compound">DAGSyncer</ref> is an abstraction to an IPLD-based p2p storage layer. A <ref refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer" kindref="compound">DAGSyncer</ref> is a DAGService with the ability to publish new ipld nodes to the network, and retrieving others from it. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>ipfs_lite::ipfs::merkledag::MerkleDagService</label>
+      </node>
+      <node id="2">
+        <label>sgns::crdt::DAGSyncer</label>
+        <link refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::crdt::GraphsyncDAGSyncer</label>
+        <link refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::enable_shared_from_this&lt; GraphsyncDAGSyncer &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="15">
+        <label>K</label>
+      </node>
+      <node id="7">
+        <label>T</label>
+      </node>
+      <node id="19">
+        <label>T1</label>
+      </node>
+      <node id="20">
+        <label>T2</label>
+      </node>
+      <node id="3">
+        <label>ipfs_lite::ipfs::merkledag::MerkleDagService</label>
+      </node>
+      <node id="2">
+        <label>sgns::crdt::DAGSyncer</label>
+        <link refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>sgns::crdt::GraphsyncDAGSyncer</label>
+        <link refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>-unexpected_blocks</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-blacklist_mutex_</edgelabel>
+          <edgelabel>-cid_failures_mutex_</edgelabel>
+          <edgelabel>-dagMutex_</edgelabel>
+          <edgelabel>-registry_mutex_</edgelabel>
+          <edgelabel>-routing_mutex_</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-graphsync_</edgelabel>
+        </childnode>
+        <childnode refid="11" relation="usage">
+          <edgelabel>-host_</edgelabel>
+        </childnode>
+        <childnode refid="12" relation="usage">
+          <edgelabel>-logger_</edgelabel>
+        </childnode>
+        <childnode refid="13" relation="usage">
+          <edgelabel>-requests_</edgelabel>
+        </childnode>
+        <childnode refid="16" relation="usage">
+          <edgelabel>-peer_registry_</edgelabel>
+        </childnode>
+        <childnode refid="21" relation="usage">
+          <edgelabel>-peer_index_</edgelabel>
+        </childnode>
+        <childnode refid="22" relation="usage">
+          <edgelabel>-routing_</edgelabel>
+        </childnode>
+        <childnode refid="23" relation="usage">
+          <edgelabel>-blacklist_</edgelabel>
+        </childnode>
+        <childnode refid="25" relation="usage">
+          <edgelabel>-cid_failures_</edgelabel>
+        </childnode>
+        <childnode refid="27" relation="usage">
+          <edgelabel>-received_blocks_</edgelabel>
+        </childnode>
+        <childnode refid="29" relation="usage">
+          <edgelabel>-lru_cid_cache_</edgelabel>
+        </childnode>
+        <childnode refid="34" relation="usage">
+          <edgelabel>-is_stopped_</edgelabel>
+        </childnode>
+      </node>
+      <node id="24">
+        <label>sgns::crdt::GraphsyncDAGSyncer::BlacklistEntry</label>
+        <link refid="d8/dea/structsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_blacklist_entry"/>
+      </node>
+      <node id="29">
+        <label>sgns::crdt::GraphsyncDAGSyncer::LRUCIDCache</label>
+        <link refid="d9/d91/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1_1_l_r_u_c_i_d_cache"/>
+        <childnode refid="30" relation="usage">
+          <edgelabel>+cache_map_</edgelabel>
+        </childnode>
+        <childnode refid="32" relation="usage">
+          <edgelabel>+lru_list_</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>+mutex_</edgelabel>
+        </childnode>
+      </node>
+      <node id="35">
+        <label>std::atomic&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="34">
+        <label>std::atomic&lt; bool &gt;</label>
+        <childnode refid="35" relation="template-instance">
+          <edgelabel>&lt; bool &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::enable_shared_from_this&lt; GraphsyncDAGSyncer &gt;</label>
+      </node>
+      <node id="33">
+        <label>std::list&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="32">
+        <label>std::list&lt; CID &gt;</label>
+        <childnode refid="33" relation="template-instance">
+          <edgelabel>&lt; CID &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="14">
+        <label>std::map&lt; K, T &gt;</label>
+        <childnode refid="15" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="22">
+        <label>std::map&lt; CID, PeerKey &gt;</label>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; CID, PeerKey &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="30">
+        <label>std::map&lt; CID, std::pair&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;, std::list&lt; CID &gt;::iterator &gt; &gt;</label>
+        <childnode refid="31" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; CID, std::pair&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;, std::list&lt; CID &gt;::iterator &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="27">
+        <label>std::map&lt; CID, std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt;</label>
+        <childnode refid="28" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; CID, std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="13">
+        <label>std::map&lt; CID, std::tuple&lt; std::shared_ptr&lt; Subscription &gt;, std::shared_ptr&lt; std::promise&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt; &gt; &gt; &gt;</label>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; CID, std::tuple&lt; std::shared_ptr&lt; Subscription &gt;, std::shared_ptr&lt; std::promise&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt; &gt; &gt; &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="23">
+        <label>std::map&lt; Multihash, sgns::crdt::GraphsyncDAGSyncer::BlacklistEntry &gt;</label>
+        <childnode refid="24" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; Multihash, sgns::crdt::GraphsyncDAGSyncer::BlacklistEntry &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="21">
+        <label>std::map&lt; PeerId, PeerKey &gt;</label>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; PeerId, PeerKey &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="25">
+        <label>std::map&lt; std::pair&lt; Multihash, CID &gt;, uint64_t &gt;</label>
+        <childnode refid="26" relation="usage">
+          <edgelabel>+keys</edgelabel>
+        </childnode>
+        <childnode refid="14" relation="template-instance">
+          <edgelabel>&lt; std::pair&lt; Multihash, CID &gt;, uint64_t &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::mutex</label>
+      </node>
+      <node id="18">
+        <label>std::pair&lt; T1, T2 &gt;</label>
+        <childnode refid="19" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="20" relation="usage">
+          <edgelabel>+second_type</edgelabel>
+        </childnode>
+      </node>
+      <node id="26">
+        <label>std::pair&lt; Multihash, CID &gt;</label>
+        <childnode refid="18" relation="template-instance">
+          <edgelabel>&lt; Multihash, CID &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>std::pair&lt; PeerId, std::vector&lt; Multiaddress &gt; &gt;</label>
+        <childnode refid="18" relation="template-instance">
+          <edgelabel>&lt; PeerId, std::vector&lt; Multiaddress &gt; &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="31">
+        <label>std::pair&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;, std::list&lt; CID &gt;::iterator &gt;</label>
+        <childnode refid="28" relation="usage">
+          <edgelabel>+first_type</edgelabel>
+        </childnode>
+        <childnode refid="32" relation="usage">
+          <edgelabel>+second_type</edgelabel>
+        </childnode>
+        <childnode refid="18" relation="template-instance">
+          <edgelabel>&lt; std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;, std::list&lt; CID &gt;::iterator &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="10">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::shared_ptr&lt; Graphsync &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; Graphsync &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="28">
+        <label>std::shared_ptr&lt; ipfs_lite::ipld::IPLDNode &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; ipfs_lite::ipld::IPLDNode &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="11">
+        <label>std::shared_ptr&lt; libp2p::Host &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; libp2p::Host &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="12">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="10" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::vector&lt; T &gt;</label>
+        <childnode refid="7" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::vector&lt; CID &gt;</label>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; CID &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="16">
+        <label>std::vector&lt; PeerEntry &gt;</label>
+        <childnode refid="17" relation="usage">
+          <edgelabel>+elements</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="template-instance">
+          <edgelabel>&lt; PeerEntry &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/crdt/graphsync_dagsyncer.hpp" line="22" column="5" bodyfile="src/crdt/graphsync_dagsyncer.hpp" bodystart="23" bodyend="238"/>
+    <listofallmembers>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1af3722f903e13adac82395bf9ad864f2b" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>AddCIDBlock</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a8d3b49f907520729a6f4be7624a2229a" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>addNode</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a86bde4d2d7f079a86c910d524eb39f52" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>AddRoute</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aa7c906a09a86c2835aa974638b80da0d" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>AddToBlackList</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ae38a48dea54c7bc85faa689b3601ad12" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>blacklist_</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a04cd8683ad22f5f69da1b5745962199d" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>blacklist_mutex_</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a6d3281bfd645ca7ce2d9dd66f8c9d6fa" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>BlackListPeer</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a7cb266895097d54cf5c5d16da9ba7334" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>BlockCallback</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a2772f36f20c25f8590dbdf9550808aa2" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>BlockReceivedCallback</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a8c4426dc8a7487d38b5c87bc58d6896e" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>cid_failures_</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a50067819d336ad003f53345941d3157e" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>cid_failures_mutex_</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a7c61bb29506145898b6cd59379cb7552" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>ClearCIDFailure</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aa106eb60b3edfda0b375e9345b95412b" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>dagMutex_</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ab36b13007dcb5698cae628900ebeecb8" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>dagService_</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a3b7ceabd1f75a49272c962f3da9ef8b1" prot="public" virt="virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>DeleteCIDBlock</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1afe6b3083a60ca2fba7f94a0f2e6af6a8" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>EraseRoute</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a14c2b2d662bd0ab0501c22ff0fc2465c" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>EraseRoutesFromPeerID</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a09cc16b9879da3d51c21f0227ddd4789" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>Error</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aa4396aec946680145f0bd06291815db5" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>Extension</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a7cd84d8350a8e78a1a389c0b48854f3c" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>fetchGraph</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ab242339d4b8ec662c0adfa1dfb1dad9b" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>fetchGraphOnDepth</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a1a55000d26d4bf8f877f9ebeeeab4291" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>getBackoffTimeout</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a6b71e0e310edbe92d464d546b288bf13" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>GetCurrentTimestamp</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a9fb5d60cacb6cee13d8194b228adfbf9" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>GetId</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a80e2ce88ed3561fa6a8d28f04ea10341" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>getNode</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a019bee5b8bc5f9bc9ffefe6347e1bf6c" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>GetNodeFromMerkleDAG</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a2da8bf74327f1f9963a2aabc46756039" prot="public" virt="virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>GetNodeWithoutRequest</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ac3c8b17fa8df20f2f85bae901a5ac7ca" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>GetPeerById</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a2d9d982bdfcc3ee8c8475857ef124697" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>GetPeerInfo</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a2f40f4b2511c03437d4e9f56ee4bc2b1" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>GetRoute</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ac0ada455d31fb5ff3b58187297578cf6" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>GrabCIDBlock</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a7e74dad05b5f57693e4b3ad5fe09358e" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>Graphsync</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ab5c67644a97cab16a96e92168d72c27f" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>graphsync_</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a5a0385108c14b1e05fefda6b7ff6df21" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>GraphsyncDAGSyncer</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a29f885542a74ac9db2bf9a34f1daee98" prot="public" virt="virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>HasBlock</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1af4811d4ca7e8b1e45a343c1d9c53faff" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>HasRecentCIDFailure</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1af567b747f779943068e1e8a3e7bef16b" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>host_</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a68594bf54d1bec4d03359b18a81a400b" prot="public" virt="virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>InitCIDBlock</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a8dbfc66ff03c78724604e17ac092680e" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>IpfsDatastore</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a48614556984c87643f929a69c03b8977" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>is_stopped_</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aef4ae95fa09891531e7f1bb82c93b505" prot="public" virt="virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>IsCIDInCache</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ab4d0045576bfe5d7a7aad47384aec002" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>IsOnBlackList</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aed1004cb97713c48ac078eae4d28be27" prot="public" virt="virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>isResolved</name></member>
+      <member refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1abc63bfd9bae5edca9de65f1485b26acf" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>LinkInfoPair</name></member>
+      <member refid="d5/d05/classsgns_1_1crdt_1_1_d_a_g_syncer_1a5cceea9780d3f0583664154383289d28" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>LinkInfoSet</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a5ab8d8e353d8e629bcc91e11ae2bcfcd" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>Listen</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ad0800f5cea9a9d74b5e2d5ae9dedbd77" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>Logger</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a298fe133a0cfb7b5bd68da9cdd2f00f4" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>logger_</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ac2d15abe1298442d4f804df2c7c51c7a" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>lru_cid_cache_</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a67ee11d87847457d6a13b6f709988d5d" prot="public" virt="virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>markResolved</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a0f7b10455cd5abfe3c3d5ff6d1199d6c" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>MAX_FAILURES</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a52c90ad75edeae1adeec2c3cc8390d1c" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>MerkleDagBridgeImpl</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a74333371c151f798bd37406742839ca7" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>Multiaddress</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1adaf0ddbf23d57f23d55eb9c570bb060c" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>Multihash</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a37bbf9182c64fdb5856e277d4f75c89f" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>peer_index_</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a73a3407fe09196ac92ae70b30396f1ea" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>peer_registry_</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ac8151dff2e3c708a38321fe04206540d" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>PeerEntry</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a3ecc9d2e665527c52c102fe7878d8ebd" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>PeerId</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a46c7d7c8267886f428f4846e0d2d4e0d" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>PeerKey</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a4a3442268956cb4b76692b2700ef8c90" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>received_blocks_</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a7f8999a193c3a4518830ca4d5a035627" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>RecordCIDFailure</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aa6ffab0283cc6168d58c4ab71b9525b7" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>RecordSuccessfulConnection</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a1521bad3958774968b82d8610a5b9265" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>RegisterPeer</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a9f25e5a43610eb6b57e40bb66962542c" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>registry_mutex_</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a6ff4a37a46e5ebe17e5c46ecd3d6095c" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>removeNode</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ac739e69e8e78a566917e8c884e401437" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>RequestNode</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aa1719b328ecc4eadcfd7133fbb976b84" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>RequestProgressCallback</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a72770d28578a31f5c32a26e44f760ac2" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>requests_</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a1e21dab410e32c3231a27ea834015126" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>ResponseMetadata</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1af632be4e2529d72c715b5774ff62d07e" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>ResponseStatusCode</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1af1eeebd6a48a131e8b5dd5aac9def6ca" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>RouteMapType</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aad30ee3abac1f3615e5d3e76ca0a5126" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>routing_</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a04a05490ed12e64c84c81cdc9bfedb22" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>routing_mutex_</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a7939cbb21878ba75e451d92d65d38960" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>select</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ac2396347256ac756b17b66c4b4209f1c" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>started_</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ae950c08f3a71ca56445fd52d5627f010" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>StartSync</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1af8fd05fdabdb73645a4ace7cdaef581a" prot="public" virt="virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>Stop</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1affe2f504162348d741b7f353e8833d4f" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>StopSync</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1afc13b29955cc8888e36af49798366cc9" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>Subscription</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1ab1a89ed32e06a6652fb7160bc21e1432" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>TIMEOUT_SECONDS</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aad4d75a9a4bc22ff0a6b9806f9334208" prot="public" virt="virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>TraverseCIDsLinks</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1a123eb84c7b15a14114ba663eb3e97f98" prot="private" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>unexpected_blocks</name></member>
+      <member refid="d0/d05/classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer_1aa1a451355c6550fbeac7fb87517a493e" prot="public" virt="non-virtual"><scope>sgns::crdt::GraphsyncDAGSyncer</scope><name>~GraphsyncDAGSyncer</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

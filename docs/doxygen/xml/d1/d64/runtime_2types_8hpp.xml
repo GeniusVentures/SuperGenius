@@ -1,0 +1,477 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/d64/runtime_2types_8hpp" kind="file" language="C++">
+    <compoundname>types.hpp</compoundname>
+    <includes local="no">cstdint</includes>
+    <includes local="no">utility</includes>
+    <includedby refid="d4/dc2/wasm__memory_8hpp" local="yes">src/runtime/wasm_memory.hpp</includedby>
+    <includedby refid="d4/d08/wasm__result_8hpp" local="yes">src/runtime/wasm_result.hpp</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>src/runtime/types.hpp</label>
+        <link refid="d1/d64/runtime_2types_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>cstdint</label>
+      </node>
+      <node id="3">
+        <label>utility</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="22">
+        <label>src/runtime/binaryen/module/wasm_module.hpp</label>
+        <link refid="dd/dbc/wasm__module_8hpp"/>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>src/runtime/binaryen/module/wasm_module_factory.hpp</label>
+        <link refid="d4/dc9/wasm__module__factory_8hpp"/>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>src/runtime/binaryen/module/wasm_module_factory_impl.cpp</label>
+        <link refid="d5/def/wasm__module__factory__impl_8cpp"/>
+      </node>
+      <node id="24">
+        <label>src/runtime/binaryen/module/wasm_module_factory_impl.hpp</label>
+        <link refid="d8/d01/wasm__module__factory__impl_8hpp"/>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>src/runtime/binaryen/module/wasm_module_impl.cpp</label>
+        <link refid="d9/df2/wasm__module__impl_8cpp"/>
+      </node>
+      <node id="29">
+        <label>src/runtime/binaryen/module/wasm_module_impl.hpp</label>
+        <link refid="d5/d13/wasm__module__impl_8hpp"/>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="35">
+        <label>src/runtime/binaryen/module/wasm_module_instance_impl.cpp</label>
+        <link refid="d7/d13/wasm__module__instance__impl_8cpp"/>
+      </node>
+      <node id="34">
+        <label>src/runtime/binaryen/module/wasm_module_instance_impl.hpp</label>
+        <link refid="da/d86/wasm__module__instance__impl_8hpp"/>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.cpp</label>
+        <link refid="d7/d6b/block__builder__impl_8cpp"/>
+      </node>
+      <node id="4">
+        <label>src/runtime/binaryen/runtime_api/block_builder_impl.hpp</label>
+        <link refid="d3/d95/block__builder__impl_8hpp"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.cpp</label>
+        <link refid="de/d5e/core__factory__impl_8cpp"/>
+      </node>
+      <node id="27">
+        <label>src/runtime/binaryen/runtime_api/core_factory_impl.hpp</label>
+        <link refid="d7/de4/core__factory__impl_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>src/runtime/binaryen/runtime_api/core_impl.cpp</label>
+        <link refid="dc/d7c/core__impl_8cpp"/>
+      </node>
+      <node id="6">
+        <label>src/runtime/binaryen/runtime_api/core_impl.hpp</label>
+        <link refid="d7/dbc/core__impl_8hpp"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.cpp</label>
+        <link refid="dc/def/finality__api__impl_8cpp"/>
+      </node>
+      <node id="9">
+        <label>src/runtime/binaryen/runtime_api/finality_api_impl.hpp</label>
+        <link refid="db/dad/finality__api__impl_8hpp"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>src/runtime/binaryen/runtime_api/metadata_impl.cpp</label>
+        <link refid="d0/dfc/metadata__impl_8cpp"/>
+      </node>
+      <node id="11">
+        <label>src/runtime/binaryen/runtime_api/metadata_impl.hpp</label>
+        <link refid="dc/dcf/metadata__impl_8hpp"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>src/runtime/binaryen/runtime_api/offchain_worker_impl.cpp</label>
+        <link refid="d3/d58/offchain__worker__impl_8cpp"/>
+      </node>
+      <node id="13">
+        <label>src/runtime/binaryen/runtime_api/offchain_worker_impl.hpp</label>
+        <link refid="dd/d03/offchain__worker__impl_8hpp"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.cpp</label>
+        <link refid="db/dae/parachain__host__impl_8cpp"/>
+      </node>
+      <node id="15">
+        <label>src/runtime/binaryen/runtime_api/parachain_host_impl.hpp</label>
+        <link refid="d6/d15/parachain__host__impl_8hpp"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.cpp</label>
+        <link refid="d3/d02/production__api__impl_8cpp"/>
+      </node>
+      <node id="17">
+        <label>src/runtime/binaryen/runtime_api/production_api_impl.hpp</label>
+        <link refid="d1/d6a/production__api__impl_8hpp"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>src/runtime/binaryen/runtime_api/runtime_api.hpp</label>
+        <link refid="dd/d87/runtime__api_8hpp"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.cpp</label>
+        <link refid="db/d63/tagged__transaction__queue__impl_8cpp"/>
+      </node>
+      <node id="19">
+        <label>src/runtime/binaryen/runtime_api/tagged_transaction_queue_impl.hpp</label>
+        <link refid="d4/d66/tagged__transaction__queue__impl_8hpp"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>src/runtime/binaryen/runtime_environment.cpp</label>
+        <link refid="d1/d6f/runtime__environment_8cpp"/>
+      </node>
+      <node id="36">
+        <label>src/runtime/binaryen/runtime_external_interface.cpp</label>
+        <link refid="df/d4e/runtime__external__interface_8cpp"/>
+      </node>
+      <node id="21">
+        <label>src/runtime/binaryen/runtime_external_interface.hpp</label>
+        <link refid="d0/d78/runtime__external__interface_8hpp"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>src/runtime/binaryen/runtime_manager.cpp</label>
+        <link refid="da/dc5/runtime__manager_8cpp"/>
+      </node>
+      <node id="26">
+        <label>src/runtime/binaryen/runtime_manager.hpp</label>
+        <link refid="d3/d10/runtime__manager_8hpp"/>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>src/runtime/binaryen/wasm_executor.cpp</label>
+        <link refid="d9/db1/wasm__executor_8cpp"/>
+      </node>
+      <node id="32">
+        <label>src/runtime/binaryen/wasm_executor.hpp</label>
+        <link refid="d4/d2e/wasm__executor_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+      </node>
+      <node id="38">
+        <label>src/runtime/binaryen/wasm_memory_impl.cpp</label>
+        <link refid="d8/d89/wasm__memory__impl_8cpp"/>
+      </node>
+      <node id="37">
+        <label>src/runtime/binaryen/wasm_memory_impl.hpp</label>
+        <link refid="d8/dfb/wasm__memory__impl_8hpp"/>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/runtime/types.hpp</label>
+        <link refid="d1/d64/runtime_2types_8hpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>src/runtime/wasm_memory.hpp</label>
+        <link refid="d4/dc2/wasm__memory_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+      </node>
+      <node id="39">
+        <label>src/runtime/wasm_result.hpp</label>
+        <link refid="d4/d08/wasm__result_8hpp"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innernamespace refid="d2/d2b/namespacesgns">sgns</innernamespace>
+    <innernamespace refid="dd/da6/namespacesgns_1_1runtime">sgns::runtime</innernamespace>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968" prot="public" static="no" strong="no">
+        <type></type>
+        <name>WasmLogLevel</name>
+        <qualifiedname>sgns::runtime::WasmLogLevel</qualifiedname>
+        <enumvalue id="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968ac2970cc0375a499178e180e70b819654" prot="public">
+          <name>WasmLL_Error</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968abb2236af57c10bc2cc62724a649ebb0e" prot="public">
+          <name>WasmLL_Warn</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968ac9c446b016298ad2fe3cf38412e2c0f0" prot="public">
+          <name>WasmLL_Info</name>
+          <initializer>= 2</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968a0c9bf7a941a3a87f7216db8aa96d0885" prot="public">
+          <name>WasmLL_Debug</name>
+          <initializer>= 3</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968a3c30f56999f6766f82e2dd4513d5a828" prot="public">
+          <name>WasmLL_Trace</name>
+          <initializer>= 4</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>type of wasm log levels </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/types.hpp" line="12" column="3" bodyfile="src/runtime/types.hpp" bodystart="12" bodyend="18"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" prot="public" static="no">
+        <type>uint32_t</type>
+        <definition>using sgns::runtime::WasmPointer = uint32_t</definition>
+        <argsstring></argsstring>
+        <name>WasmPointer</name>
+        <qualifiedname>sgns::runtime::WasmPointer</qualifiedname>
+        <briefdescription>
+<para>type of wasm memory is 32 bit integer </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/types.hpp" line="22" column="3" bodyfile="src/runtime/types.hpp" bodystart="22" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/da6/namespacesgns_1_1runtime_1adc9fc98228747f341ff4f49e2f8d9002" prot="public" static="no">
+        <type>uint64_t</type>
+        <definition>using sgns::runtime::WasmSpan = uint64_t</definition>
+        <argsstring></argsstring>
+        <name>WasmSpan</name>
+        <qualifiedname>sgns::runtime::WasmSpan</qualifiedname>
+        <briefdescription>
+<para>combination of pointer and size, where less significant part represents wasm pointer, and most significant represents size </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/types.hpp" line="27" column="3" bodyfile="src/runtime/types.hpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" prot="public" static="no">
+        <type>uint32_t</type>
+        <definition>using sgns::runtime::WasmSize = uint32_t</definition>
+        <argsstring></argsstring>
+        <name>WasmSize</name>
+        <qualifiedname>sgns::runtime::WasmSize</qualifiedname>
+        <briefdescription>
+<para>Size type is uint32_t because we are working in 32 bit address space. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/types.hpp" line="31" column="3" bodyfile="src/runtime/types.hpp" bodystart="31" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/da6/namespacesgns_1_1runtime_1a136a9e1c14ad086b6322b1feaf85534b" prot="public" static="no">
+        <type>uint32_t</type>
+        <definition>using sgns::runtime::WasmEnum = uint32_t</definition>
+        <argsstring></argsstring>
+        <name>WasmEnum</name>
+        <qualifiedname>sgns::runtime::WasmEnum</qualifiedname>
+        <briefdescription>
+<para>Enum value is uint32_t. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/types.hpp" line="35" column="3" bodyfile="src/runtime/types.hpp" bodystart="35" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/da6/namespacesgns_1_1runtime_1abfd6037b863b63cd7b52b00f3cb6a31f" prot="public" static="no">
+        <type>uint32_t</type>
+        <definition>using sgns::runtime::WasmOffset = uint32_t</definition>
+        <argsstring></argsstring>
+        <name>WasmOffset</name>
+        <qualifiedname>sgns::runtime::WasmOffset</qualifiedname>
+        <briefdescription>
+<para>Offset type is uint32_t because we are working in 32 bit address space. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/types.hpp" line="40" column="3" bodyfile="src/runtime/types.hpp" bodystart="40" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="dd/da6/namespacesgns_1_1runtime_1a4fe3375f85083a25353e338f4db4ce74" prot="public" static="yes" constexpr="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::pair&lt; WasmPointer, WasmSize &gt;</type>
+        <definition>static constexpr std::pair&lt; WasmPointer, WasmSize &gt; sgns::runtime::splitSpan</definition>
+        <argsstring>(WasmSpan span)</argsstring>
+        <name>splitSpan</name>
+        <qualifiedname>sgns::runtime::splitSpan</qualifiedname>
+        <param>
+          <type>WasmSpan</type>
+          <declname>span</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Splits 64 bit wasm span on 32 bit pointer and 32 bit address </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/runtime/types.hpp" line="45" column="30" bodyfile="src/runtime/types.hpp" bodystart="45" bodyend="51"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>SUPERGENIUS_SRC_RUNTIME_TYPES_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SUPERGENIUS_SRC_RUNTIME_TYPES_HPP</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstdint&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;utility&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="dd/da6/namespacesgns_1_1runtime" kindref="compound">sgns::runtime</ref><sp/>{</highlight></codeline>
+<codeline lineno="12" refid="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">enum</highlight><highlight class="normal"><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968" kindref="member">WasmLogLevel</ref><sp/>{</highlight></codeline>
+<codeline lineno="13" refid="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968ac2970cc0375a499178e180e70b819654" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968ac2970cc0375a499178e180e70b819654" kindref="member">WasmLL_Error</ref><sp/>=<sp/>0,</highlight></codeline>
+<codeline lineno="14" refid="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968abb2236af57c10bc2cc62724a649ebb0e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968abb2236af57c10bc2cc62724a649ebb0e" kindref="member">WasmLL_Warn</ref><sp/>=<sp/>1,</highlight></codeline>
+<codeline lineno="15" refid="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968ac9c446b016298ad2fe3cf38412e2c0f0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968ac9c446b016298ad2fe3cf38412e2c0f0" kindref="member">WasmLL_Info</ref><sp/>=<sp/>2,</highlight></codeline>
+<codeline lineno="16" refid="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968a0c9bf7a941a3a87f7216db8aa96d0885" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968a0c9bf7a941a3a87f7216db8aa96d0885" kindref="member">WasmLL_Debug</ref><sp/>=<sp/>3,</highlight></codeline>
+<codeline lineno="17" refid="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968a3c30f56999f6766f82e2dd4513d5a828" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1afdf9c2873567c79dad5ce362c5074968a3c30f56999f6766f82e2dd4513d5a828" kindref="member">WasmLL_Trace</ref><sp/>=<sp/>4,</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="22" refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/da6/namespacesgns_1_1runtime_1acf38d1532a37efe954110973d4842097" kindref="member">WasmPointer</ref><sp/>=<sp/>uint32_t;</highlight></codeline>
+<codeline lineno="27" refid="dd/da6/namespacesgns_1_1runtime_1adc9fc98228747f341ff4f49e2f8d9002" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/da6/namespacesgns_1_1runtime_1adc9fc98228747f341ff4f49e2f8d9002" kindref="member">WasmSpan</ref><sp/>=<sp/>uint64_t;</highlight></codeline>
+<codeline lineno="31" refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/da6/namespacesgns_1_1runtime_1a552bebfa2595abf74f943ba9a4ed3ad9" kindref="member">WasmSize</ref><sp/>=<sp/>uint32_t;</highlight></codeline>
+<codeline lineno="35" refid="dd/da6/namespacesgns_1_1runtime_1a136a9e1c14ad086b6322b1feaf85534b" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/da6/namespacesgns_1_1runtime_1a136a9e1c14ad086b6322b1feaf85534b" kindref="member">WasmEnum</ref><sp/>=<sp/>uint32_t;</highlight></codeline>
+<codeline lineno="40" refid="dd/da6/namespacesgns_1_1runtime_1abfd6037b863b63cd7b52b00f3cb6a31f" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="dd/da6/namespacesgns_1_1runtime_1abfd6037b863b63cd7b52b00f3cb6a31f" kindref="member">WasmOffset</ref><sp/>=<sp/>uint32_t;</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45" refid="dd/da6/namespacesgns_1_1runtime_1a4fe3375f85083a25353e338f4db4ce74" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/>std::pair&lt;WasmPointer,<sp/>WasmSize&gt;<sp/><ref refid="dd/da6/namespacesgns_1_1runtime_1a4fe3375f85083a25353e338f4db4ce74" kindref="member">splitSpan</ref>(<ref refid="dd/da6/namespacesgns_1_1runtime_1adc9fc98228747f341ff4f49e2f8d9002" kindref="member">WasmSpan</ref><sp/>span)<sp/>{</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>unsigned_result<sp/>=<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint64_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(span);</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/>uint64_t<sp/>minor_part<sp/>=<sp/>unsigned_result<sp/>&amp;<sp/>0xFFFFFFFFLLU;</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/>uint64_t<sp/>major_part<sp/>=<sp/>(unsigned_result<sp/>&gt;&gt;<sp/>32u)<sp/>&amp;<sp/>0xFFFFFFFFLLU;</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>{minor_part,<sp/>major_part};</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="52"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>sgns::runtime</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="53"><highlight class="normal"></highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>SUPERGENIUS_SRC_RUNTIME_TYPES_HPP</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/runtime/types.hpp"/>
+  </compounddef>
+</doxygen>

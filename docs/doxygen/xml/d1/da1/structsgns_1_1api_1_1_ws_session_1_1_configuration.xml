@@ -1,0 +1,88 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration" kind="struct" language="C++" prot="public">
+    <compoundname>sgns::api::WsSession::Configuration</compoundname>
+    <includes refid="d4/d57/ws__session_8hpp" local="no">ws_session.hpp</includes>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration_1a74aa4dd47ed97987572c884d88bf7c2c" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::api::WsSession::Configuration::kDefaultRequestSize</definition>
+        <argsstring></argsstring>
+        <name>kDefaultRequestSize</name>
+        <qualifiedname>sgns::api::WsSession::Configuration::kDefaultRequestSize</qualifiedname>
+        <initializer>= 10000u</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="23" column="31" bodyfile="src/api/transport/impl/ws/ws_session.hpp" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration_1ace0d7fc6a476da9eb29424d21b989e60" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="db/d02/classsgns_1_1api_1_1_session_1ade6442f88ca08387c1e733fef6f54655" kindref="member">Duration</ref></type>
+        <definition>Duration sgns::api::WsSession::Configuration::kDefaultTimeout</definition>
+        <argsstring></argsstring>
+        <name>kDefaultTimeout</name>
+        <qualifiedname>sgns::api::WsSession::Configuration::kDefaultTimeout</qualifiedname>
+        <initializer>= std::chrono::seconds(30)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="24" column="33" bodyfile="src/api/transport/impl/ws/ws_session.hpp" bodystart="24" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration_1a724f5bd1b0d6984bdea7e5cb78ee39f5" prot="public" static="no" mutable="no">
+        <type>size_t</type>
+        <definition>size_t sgns::api::WsSession::Configuration::max_request_size</definition>
+        <argsstring></argsstring>
+        <name>max_request_size</name>
+        <qualifiedname>sgns::api::WsSession::Configuration::max_request_size</qualifiedname>
+        <initializer>{<ref refid="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration_1a74aa4dd47ed97987572c884d88bf7c2c" kindref="member">kDefaultRequestSize</ref>}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="26" column="14" bodyfile="src/api/transport/impl/ws/ws_session.hpp" bodystart="26" bodyend="26"/>
+      </memberdef>
+      <memberdef kind="variable" id="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration_1a40dfd684eaaec154207faefef2293415" prot="public" static="no" mutable="no">
+        <type><ref refid="db/d02/classsgns_1_1api_1_1_session_1ade6442f88ca08387c1e733fef6f54655" kindref="member">Duration</ref></type>
+        <definition>Duration sgns::api::WsSession::Configuration::operation_timeout</definition>
+        <argsstring></argsstring>
+        <name>operation_timeout</name>
+        <qualifiedname>sgns::api::WsSession::Configuration::operation_timeout</qualifiedname>
+        <initializer>{<ref refid="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration_1ace0d7fc6a476da9eb29424d21b989e60" kindref="member">kDefaultTimeout</ref>}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/api/transport/impl/ws/ws_session.hpp" line="27" column="16" bodyfile="src/api/transport/impl/ws/ws_session.hpp" bodystart="27" bodyend="27"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>sgns::api::WsSession::Configuration</label>
+        <link refid="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration"/>
+      </node>
+    </collaborationgraph>
+    <location file="src/api/transport/impl/ws/ws_session.hpp" line="22" column="5" bodyfile="src/api/transport/impl/ws/ws_session.hpp" bodystart="22" bodyend="28"/>
+    <listofallmembers>
+      <member refid="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration_1a74aa4dd47ed97987572c884d88bf7c2c" prot="public" virt="non-virtual"><scope>sgns::api::WsSession::Configuration</scope><name>kDefaultRequestSize</name></member>
+      <member refid="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration_1ace0d7fc6a476da9eb29424d21b989e60" prot="public" virt="non-virtual"><scope>sgns::api::WsSession::Configuration</scope><name>kDefaultTimeout</name></member>
+      <member refid="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration_1a724f5bd1b0d6984bdea7e5cb78ee39f5" prot="public" virt="non-virtual"><scope>sgns::api::WsSession::Configuration</scope><name>max_request_size</name></member>
+      <member refid="d1/da1/structsgns_1_1api_1_1_ws_session_1_1_configuration_1a40dfd684eaaec154207faefef2293415" prot="public" virt="non-virtual"><scope>sgns::api::WsSession::Configuration</scope><name>operation_timeout</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

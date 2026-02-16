@@ -1,0 +1,500 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.16.1" xml:lang="en-US">
+  <compounddef id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub" kind="class" language="C++" prot="public">
+    <compoundname>sgns::processing::ProcessingSubTaskQueueChannelPubSub</compoundname>
+    <basecompoundref refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel" prot="public" virt="non-virtual">sgns::processing::ProcessingSubTaskQueueChannel</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">std::enable_shared_from_this&lt; ProcessingSubTaskQueueChannelPubSub &gt;</basecompoundref>
+    <includes refid="d7/d8d/processing__subtask__queue__channel__pubsub_8hpp" local="no">processing_subtask_queue_channel_pubsub.hpp</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a3478955b999abc9a4eb520f1fa3c5e14" prot="public" static="no">
+        <type>std::function&lt; bool(const SGProcessing::SubTaskQueueRequest &amp;)&gt;</type>
+        <definition>using sgns::processing::ProcessingSubTaskQueueChannelPubSub::QueueRequestSink = std::function&lt;bool( const SGProcessing::SubTaskQueueRequest &amp; )&gt;</definition>
+        <argsstring></argsstring>
+        <name>QueueRequestSink</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::QueueRequestSink</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="27" column="9" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.hpp" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1aa7b21b10922299ee9a6af86c508ec859" prot="public" static="no">
+        <type>std::function&lt; bool(SGProcessing::SubTaskQueue *)&gt;</type>
+        <definition>using sgns::processing::ProcessingSubTaskQueueChannelPubSub::QueueUpdateSink = std::function&lt;bool( SGProcessing::SubTaskQueue * )&gt;</definition>
+        <argsstring></argsstring>
+        <name>QueueUpdateSink</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::QueueUpdateSink</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="28" column="9" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.hpp" bodystart="28" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a3ac787fc6f094d3f05a86348d3b031b9" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; sgns::ipfs_pubsub::GossipPubSubTopic &gt;</type>
+        <definition>std::shared_ptr&lt;sgns::ipfs_pubsub::GossipPubSubTopic&gt; sgns::processing::ProcessingSubTaskQueueChannelPubSub::m_processingQueueChannel</definition>
+        <argsstring></argsstring>
+        <name>m_processingQueueChannel</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::m_processingQueueChannel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="74" column="25" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.hpp" bodystart="74" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a8407c49c1b642bc105fd7beb32d22602" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; sgns::ipfs_pubsub::GossipPubSub &gt;</type>
+        <definition>std::shared_ptr&lt;sgns::ipfs_pubsub::GossipPubSub&gt; sgns::processing::ProcessingSubTaskQueueChannelPubSub::m_gossipPubSub</definition>
+        <argsstring></argsstring>
+        <name>m_gossipPubSub</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::m_gossipPubSub</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="81" column="25" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.hpp" bodystart="81" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1abe2558ee4fb7ccd250b06fb5a87e9a90" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; boost::asio::io_context &gt;</type>
+        <definition>std::shared_ptr&lt;boost::asio::io_context&gt; sgns::processing::ProcessingSubTaskQueueChannelPubSub::m_context</definition>
+        <argsstring></argsstring>
+        <name>m_context</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::m_context</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="82" column="33" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.hpp" bodystart="82" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a8e4f027c960f70e1fe5fc6075cb0f89e" prot="private" static="no" mutable="no">
+        <type>std::function&lt; bool(const SGProcessing::SubTaskQueueRequest &amp;)&gt;</type>
+        <definition>std::function&lt;bool( const SGProcessing::SubTaskQueueRequest &amp; )&gt; sgns::processing::ProcessingSubTaskQueueChannelPubSub::m_queueRequestSink</definition>
+        <argsstring></argsstring>
+        <name>m_queueRequestSink</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::m_queueRequestSink</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="84" column="23" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.hpp" bodystart="84" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a660af5540dd03090efe232af43c43c0b" prot="private" static="no" mutable="no">
+        <type>std::function&lt; bool(SGProcessing::SubTaskQueue *)&gt;</type>
+        <definition>std::function&lt;bool( SGProcessing::SubTaskQueue * )&gt; sgns::processing::ProcessingSubTaskQueueChannelPubSub::m_queueUpdateSink</definition>
+        <argsstring></argsstring>
+        <name>m_queueUpdateSink</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::m_queueUpdateSink</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="85" column="36" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.hpp" bodystart="85" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a59a2d856497f1b9658c715d9d968267b" prot="private" static="no" mutable="no">
+        <type><ref refid="d4/dcb/namespacesgns_1_1base_1a84728df12d1a8d2c47209c108acd99f8" kindref="member">base::Logger</ref></type>
+        <definition>base::Logger sgns::processing::ProcessingSubTaskQueueChannelPubSub::m_logger</definition>
+        <argsstring></argsstring>
+        <name>m_logger</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::m_logger</qualifiedname>
+        <initializer>= <ref refid="d4/dcb/namespacesgns_1_1base_1adda240ec58c03f76a4b36c16af53ff02" kindref="member">base::createLogger</ref>( &quot;ProcessingSubTaskQueueChannelPubSub&quot; )</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="87" column="22" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.hpp" bodystart="87" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1aaa98909ecce0e0839c31fb6335198298" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::processing::ProcessingSubTaskQueueChannelPubSub::ProcessingSubTaskQueueChannelPubSub</definition>
+        <argsstring>(std::shared_ptr&lt; sgns::ipfs_pubsub::GossipPubSub &gt; gossipPubSub, const std::string &amp;processingQueueChannelId)</argsstring>
+        <name>ProcessingSubTaskQueueChannelPubSub</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::ProcessingSubTaskQueueChannelPubSub</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; sgns::ipfs_pubsub::GossipPubSub &gt;</type>
+          <declname>gossipPubSub</declname>
+        </param>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>processingQueueChannelId</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Constructs subtask queue channel object <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>gossipPubSub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- ipfs pubsub </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>processingQueueChannelId</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- a unique id of queue data channel </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="34" column="9" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.cpp" bodystart="7" bodyend="14"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a9f4de0350a6d7ae8e6303b8b74a59a82" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>sgns::processing::ProcessingSubTaskQueueChannelPubSub::~ProcessingSubTaskQueueChannelPubSub</definition>
+        <argsstring>() override</argsstring>
+        <name>~ProcessingSubTaskQueueChannelPubSub</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::~ProcessingSubTaskQueueChannelPubSub</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="37" column="9" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.cpp" bodystart="16" bodyend="19"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a93e2f7002ecd1a1237cf88a148ed1586" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueChannelPubSub::RequestQueueOwnership</definition>
+        <argsstring>(const std::string &amp;nodeId) override</argsstring>
+        <name>RequestQueueOwnership</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::RequestQueueOwnership</qualifiedname>
+        <reimplements refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a86d1536ac372b9d6875a9d1dd38ac0ea">RequestQueueOwnership</reimplements>
+        <param>
+          <type>const std::string &amp;</type>
+          <declname>nodeId</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><ref refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel" kindref="compound">ProcessingSubTaskQueueChannel</ref> overrides </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="41" column="14" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.cpp" bodystart="66" bodyend="72"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a027b5d104fe2102bd32006b4a6955462" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueChannelPubSub::PublishQueue</definition>
+        <argsstring>(std::shared_ptr&lt; SGProcessing::SubTaskQueue &gt; queue) override</argsstring>
+        <name>PublishQueue</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::PublishQueue</qualifiedname>
+        <reimplements refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a8edd64eb53b6f4302eb7a47a4699dbf4">PublishQueue</reimplements>
+        <param>
+          <type>std::shared_ptr&lt; SGProcessing::SubTaskQueue &gt;</type>
+          <declname>queue</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Publishes queue to all queue consumers queue = subtask queue </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="42" column="14" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.cpp" bodystart="74" bodyend="80"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1af1c81717f423dc437c9521550e0066fb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueChannelPubSub::SetQueueRequestSink</definition>
+        <argsstring>(QueueRequestSink queueRequestSink)</argsstring>
+        <name>SetQueueRequestSink</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::SetQueueRequestSink</qualifiedname>
+        <param>
+          <type><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a3478955b999abc9a4eb520f1fa3c5e14" kindref="member">QueueRequestSink</ref></type>
+          <declname>queueRequestSink</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Sets a handler for remote queue requests processing <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>queueRequestSink</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- request handler </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="47" column="14" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.cpp" bodystart="82" bodyend="85"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a25bb188ac800c44d597f29aadafbef59" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueChannelPubSub::SetQueueUpdateSink</definition>
+        <argsstring>(QueueUpdateSink queueUpdateSink)</argsstring>
+        <name>SetQueueUpdateSink</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::SetQueueUpdateSink</qualifiedname>
+        <param>
+          <type><ref refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1aa7b21b10922299ee9a6af86c508ec859" kindref="member">QueueUpdateSink</ref></type>
+          <declname>queueUpdateSink</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Sets a handler for remote queue updates processing </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="51" column="14" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.cpp" bodystart="87" bodyend="90"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a4db369f4446778f84475e61b3c640405" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>outcome::result&lt; std::variant&lt; std::chrono::milliseconds, std::shared_future&lt; std::shared_ptr&lt; GossipPubSubTopic::Subscription &gt; &gt; &gt; &gt;</type>
+        <definition>outcome::result&lt; std::variant&lt; std::chrono::milliseconds, std::shared_future&lt; std::shared_ptr&lt; GossipPubSubTopic::Subscription &gt; &gt; &gt; &gt; sgns::processing::ProcessingSubTaskQueueChannelPubSub::Listen</definition>
+        <argsstring>(std::chrono::milliseconds msSubscriptionWaitingDuration=std::chrono::milliseconds(2000))</argsstring>
+        <name>Listen</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::Listen</qualifiedname>
+        <param>
+          <type>std::chrono::milliseconds</type>
+          <declname>msSubscriptionWaitingDuration</declname>
+          <defval>std::chrono::milliseconds(2000)</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Starts a listening to pubsub channel <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>msSubscriptionWaitingDuration</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>- Duration to wait for subscription, 0 means no waiting </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>If msSubscriptionWaitingDuration &gt; 0: outcome with success/failure and actual wait time If msSubscriptionWaitingDuration = 0: outcome with future that completes when subscription is established </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="58" column="25" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.cpp" bodystart="23" bodyend="64"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a8b5d5cee7aedc830d19d79b561318841" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>size_t</type>
+        <definition>size_t sgns::processing::ProcessingSubTaskQueueChannelPubSub::GetActiveNodesCount</definition>
+        <argsstring>() const override</argsstring>
+        <name>GetActiveNodesCount</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::GetActiveNodesCount</qualifiedname>
+        <reimplements refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1ab9e2b977c54c360e32471cda0bc2f363">GetActiveNodesCount</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Retrieves the count of active nodes in the subtask queue channel. <simplesect kind="return"><para>The number of active nodes currently participating in the channel. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="64" column="16" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.cpp" bodystart="140" bodyend="144"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1aebfdbbb01a75f1d622d02529f6008599" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>std::vector&lt; libp2p::peer::PeerId &gt;</type>
+        <definition>std::vector&lt; libp2p::peer::PeerId &gt; sgns::processing::ProcessingSubTaskQueueChannelPubSub::GetActiveNodes</definition>
+        <argsstring>() const override</argsstring>
+        <name>GetActiveNodes</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::GetActiveNodes</qualifiedname>
+        <reimplements refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a3a4186e2808764c2f542cdac17f2e842">GetActiveNodes</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Retrieves the list of active node IDs currently participating in the subtask queue channel. <simplesect kind="return"><para>A vector of strings containing the IDs of active nodes in the channel. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="70" column="21" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.cpp" bodystart="146" bodyend="149"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a1f52aee00af5c81ea7ee7b8083568d24" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueChannelPubSub::OnProcessingChannelMessage</definition>
+        <argsstring>(boost::optional&lt; const sgns::ipfs_pubsub::GossipPubSub::Message &amp; &gt; message)</argsstring>
+        <name>OnProcessingChannelMessage</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::OnProcessingChannelMessage</qualifiedname>
+        <param>
+          <type>boost::optional&lt; const sgns::ipfs_pubsub::GossipPubSub::Message &amp; &gt;</type>
+          <declname>message</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="76" column="14" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.cpp" bodystart="92" bodyend="110"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1ab40fcced0fc2c81b61aa55de3f223b51" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueChannelPubSub::HandleSubTaskQueueRequest</definition>
+        <argsstring>(SGProcessing::ProcessingChannelMessage &amp;channelMesssage)</argsstring>
+        <name>HandleSubTaskQueueRequest</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::HandleSubTaskQueueRequest</qualifiedname>
+        <param>
+          <type>SGProcessing::ProcessingChannelMessage &amp;</type>
+          <declname>channelMesssage</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="78" column="14" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.cpp" bodystart="112" bodyend="127"/>
+      </memberdef>
+      <memberdef kind="function" id="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1ab12f37da8fb9221a43438c47185afd36" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void sgns::processing::ProcessingSubTaskQueueChannelPubSub::HandleSubTaskQueue</definition>
+        <argsstring>(SGProcessing::ProcessingChannelMessage &amp;channelMesssage)</argsstring>
+        <name>HandleSubTaskQueue</name>
+        <qualifiedname>sgns::processing::ProcessingSubTaskQueueChannelPubSub::HandleSubTaskQueue</qualifiedname>
+        <param>
+          <type>SGProcessing::ProcessingChannelMessage &amp;</type>
+          <declname>channelMesssage</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="79" column="14" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.cpp" bodystart="129" bodyend="138"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Subtask queue channel implementation that uses pubsub as a data transport protocol </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>sgns::processing::ProcessingSubTaskQueueChannel</label>
+        <link refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel"/>
+      </node>
+      <node id="1">
+        <label>sgns::processing::ProcessingSubTaskQueueChannelPubSub</label>
+        <link refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::enable_shared_from_this&lt; ProcessingSubTaskQueueChannelPubSub &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="6">
+        <label>T</label>
+      </node>
+      <node id="2">
+        <label>sgns::processing::ProcessingSubTaskQueueChannel</label>
+        <link refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel"/>
+      </node>
+      <node id="1">
+        <label>sgns::processing::ProcessingSubTaskQueueChannelPubSub</label>
+        <link refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>-m_processingQueueChannel</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>-m_gossipPubSub</edgelabel>
+        </childnode>
+        <childnode refid="8" relation="usage">
+          <edgelabel>-m_context</edgelabel>
+        </childnode>
+        <childnode refid="9" relation="usage">
+          <edgelabel>-m_logger</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::enable_shared_from_this&lt; ProcessingSubTaskQueueChannelPubSub &gt;</label>
+      </node>
+      <node id="5">
+        <label>std::shared_ptr&lt; T &gt;</label>
+        <childnode refid="6" relation="usage">
+          <edgelabel>+ptr</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::shared_ptr&lt; boost::asio::io_context &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; boost::asio::io_context &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::shared_ptr&lt; sgns::ipfs_pubsub::GossipPubSub &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; sgns::ipfs_pubsub::GossipPubSub &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::shared_ptr&lt; sgns::ipfs_pubsub::GossipPubSubTopic &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; sgns::ipfs_pubsub::GossipPubSubTopic &gt;</edgelabel>
+        </childnode>
+      </node>
+      <node id="9">
+        <label>std::shared_ptr&lt; spdlog::logger &gt;</label>
+        <childnode refid="5" relation="template-instance">
+          <edgelabel>&lt; spdlog::logger &gt;</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/processing/processing_subtask_queue_channel_pubsub.hpp" line="23" column="5" bodyfile="src/processing/processing_subtask_queue_channel_pubsub.hpp" bodystart="25" bodyend="90"/>
+    <listofallmembers>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1aebfdbbb01a75f1d622d02529f6008599" prot="public" virt="virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>GetActiveNodes</name></member>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a8b5d5cee7aedc830d19d79b561318841" prot="public" virt="virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>GetActiveNodesCount</name></member>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1ab12f37da8fb9221a43438c47185afd36" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>HandleSubTaskQueue</name></member>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1ab40fcced0fc2c81b61aa55de3f223b51" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>HandleSubTaskQueueRequest</name></member>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a4db369f4446778f84475e61b3c640405" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>Listen</name></member>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1abe2558ee4fb7ccd250b06fb5a87e9a90" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>m_context</name></member>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a8407c49c1b642bc105fd7beb32d22602" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>m_gossipPubSub</name></member>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a59a2d856497f1b9658c715d9d968267b" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>m_logger</name></member>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a3ac787fc6f094d3f05a86348d3b031b9" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>m_processingQueueChannel</name></member>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a8e4f027c960f70e1fe5fc6075cb0f89e" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>m_queueRequestSink</name></member>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a660af5540dd03090efe232af43c43c0b" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>m_queueUpdateSink</name></member>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a1f52aee00af5c81ea7ee7b8083568d24" prot="private" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>OnProcessingChannelMessage</name></member>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1aaa98909ecce0e0839c31fb6335198298" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>ProcessingSubTaskQueueChannelPubSub</name></member>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a027b5d104fe2102bd32006b4a6955462" prot="public" virt="virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>PublishQueue</name></member>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a3478955b999abc9a4eb520f1fa3c5e14" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>QueueRequestSink</name></member>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1aa7b21b10922299ee9a6af86c508ec859" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>QueueUpdateSink</name></member>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a93e2f7002ecd1a1237cf88a148ed1586" prot="public" virt="virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>RequestQueueOwnership</name></member>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1af1c81717f423dc437c9521550e0066fb" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>SetQueueRequestSink</name></member>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a25bb188ac800c44d597f29aadafbef59" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>SetQueueUpdateSink</name></member>
+      <member refid="d7/d2b/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_1a61d360e4a1f265b1061acde32f030bd3" prot="public" virt="virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>~ProcessingSubTaskQueueChannel</name></member>
+      <member refid="dd/d85/classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub_1a9f4de0350a6d7ae8e6303b8b74a59a82" prot="public" virt="non-virtual"><scope>sgns::processing::ProcessingSubTaskQueueChannelPubSub</scope><name>~ProcessingSubTaskQueueChannelPubSub</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>
