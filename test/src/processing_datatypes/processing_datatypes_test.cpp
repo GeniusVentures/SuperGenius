@@ -1360,6 +1360,100 @@ namespace sgns
         ASSERT_LT( max_abs_diff, 1e-2 ) << "Max absolute diff too large";
     }
 
+    TEST_F( ProcessingDatatypesTest, Vec2ValidationTest )
+    {
+        std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
+        std::string data_path = bin_path + "processing_datatypes/";
+
+        std::string   instance_file = data_path + "vec2-processing-definition.json";
+        std::ifstream ifs( instance_file );
+        ASSERT_TRUE( ifs ) << "Could not open " << instance_file;
+
+        std::string json_data( ( std::istreambuf_iterator<char>( ifs ) ),
+                               std::istreambuf_iterator<char>() );
+
+        auto result = sgns::sgprocessing::ProcessingManager::Create( json_data );
+        ASSERT_TRUE( result ) << result.error().message();
+
+        auto manager = result.value();
+        auto inputs = manager->GetProcessingData().get_inputs();
+        ASSERT_EQ( inputs.size(), 1 ) << "Expected 1 input";
+        ASSERT_EQ( inputs[0].get_type(), sgns::DataType::VEC2 );
+    }
+
+    TEST_F( ProcessingDatatypesTest, Vec2ProcessingTest )
+    {
+        std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
+        std::string data_path = bin_path + "processing_datatypes/";
+
+        std::string   instance_file = data_path + "vec2-processing-definition.json";
+        std::ifstream ifs( instance_file );
+        ASSERT_TRUE( ifs ) << "Could not open " << instance_file;
+
+        std::string json_data( ( std::istreambuf_iterator<char>( ifs ) ),
+                               std::istreambuf_iterator<char>() );
+
+        auto result = sgns::sgprocessing::ProcessingManager::Create( json_data );
+        ASSERT_TRUE( result ) << result.error().message();
+
+        auto manager = result.value();
+
+        // Create mock model node
+        sgns::ModelNode model;
+
+        std::cout << "Calling Process() on ProcessingManager (vec2)..." << std::endl;
+        auto proc_result = manager->Process( m_context, m_chunkhashes, model );
+        ASSERT_TRUE( proc_result ) << "Process failed: " << proc_result.error().message();
+
+        auto output_data_bytes = proc_result.value();
+        // Output should be vec2 vector count * 1 float output channel (from conv)
+        // With 16 input vectors, output should be ~16 floats
+        ASSERT_GT( output_data_bytes.size(), 0 ) << "Output data is empty";
+
+        // Compare against reference output
+        std::vector<float> output_data;
+        output_data.resize( output_data_bytes.size() / sizeof( float ) );
+        std::memcpy( output_data.data(), output_data_bytes.data(), output_data_bytes.size() );
+
+        const std::string output_file = data_path + "vec2_output.raw";
+        std::ofstream     out_stream( output_file, std::ios::binary );
+        ASSERT_TRUE( out_stream ) << "Could not open output file: " << output_file;
+        out_stream.write( reinterpret_cast<char *>( output_data.data() ), output_data_bytes.size() );
+        out_stream.close();
+
+        const std::string reference_file = data_path + "vec2_output_pt.raw";
+        std::ifstream     ref_stream( reference_file, std::ios::binary );
+        ASSERT_TRUE( ref_stream ) << "Could not open reference file: " << reference_file;
+
+        std::vector<float> reference_data;
+        ref_stream.seekg( 0, std::ios::end );
+        size_t file_size = ref_stream.tellg();
+        ref_stream.seekg( 0, std::ios::beg );
+        reference_data.resize( file_size / sizeof( float ) );
+        ref_stream.read( reinterpret_cast<char *>( reference_data.data() ), file_size );
+        ref_stream.close();
+
+        // Compare outputs
+        double mean_abs_diff = 0.0;
+        double max_abs_diff = 0.0;
+        size_t compare_size = std::min( output_data.size(), reference_data.size() );
+
+        for ( size_t i = 0; i < compare_size; ++i )
+        {
+            double diff = std::abs( static_cast<double>( output_data[i] ) -
+                                    static_cast<double>( reference_data[i] ) );
+            mean_abs_diff += diff;
+            max_abs_diff = std::max( max_abs_diff, diff );
+        }
+
+        mean_abs_diff /= static_cast<double>( output_data.size() );
+
+        std::cout << "Vec2 output diff: mean=" << mean_abs_diff << " max=" << max_abs_diff << std::endl;
+
+        ASSERT_LT( mean_abs_diff, 1e-3 ) << "Mean absolute diff too large";
+        ASSERT_LT( max_abs_diff, 1e-2 ) << "Max absolute diff too large";
+    }
+
     TEST_F( ProcessingDatatypesTest, TensorValidationTest )
     {
         std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
