@@ -91,6 +91,11 @@ namespace sgns
             return dag_st.timestamp();
         }
 
+        uint64_t GetNonce() const
+        {
+            return dag_st.nonce();
+        }
+
         virtual std::unordered_set<std::string> GetTopics() const;
 
         void FillHash();
