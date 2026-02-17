@@ -1,12 +1,12 @@
 # SuperGenius Development Guide
 
 ## Important Guidelines
-- NEVER modify files directly - suggest changes but let the user make the actual edits
 - Do not commit changes without explicit user permission
 
 ## Build Commands
-- Build project: `cd build/OSX && mkdir Debug && cd Debug && cmake .. -DCMAKE_BUILD_TYPE=Debug -G "Ninja" && ninja`
-- Release build: `cd build/OSX && mkdir Release && cd Release && cmake .. -DCMAKE_BUILD_TYPE=Release -G "Ninja" && ninja`
+- Build project: `cd build/<PLATFORM> && mkdir Debug && cd Debug && cmake .. -DCMAKE_BUILD_TYPE=Debug -G "Ninja" && ninja` or for Windows (PowerShell) `cd build/Windows; mkdir Debug; cd Debug; cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Debug`
+- Release build: `cd build/<PLATFORM> && mkdir Release && cd Release && cmake .. -DCMAKE_BUILD_TYPE=Release -G "Ninja" && ninja` or for Windows (PowerShell) `cd build/Windows; mkdir Release; cd Release; cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release`
+- Build with CMake (Windows multi-config): `cmake --build . --parallel 8 --config Debug` or `cmake --build . --parallel 8 --config Release`
 - Enable testing: Add `-DTESTING=ON` to cmake arguments
 
 ## Test Commands
@@ -14,7 +14,7 @@
 - Run specific test: `./test_bin/<test_executable> --gtest_filter=<TestCase.TestName>`
 - Example: `./test_bin/buffer_test --gtest_filter=BufferTest.EmptyBuffer`
 - Show all tests: `./test_bin/<test_executable> --gtest_list_tests`
-- Tests location: `build/OSX/Debug/test_bin/`
+- Tests location: `build/OSX/Debug/test_bin/` or on Windows `build/Windows/Debug/test_bin/Debug/` and `build/Windows/Release/test_bin/Release/`
 
 ## Code Style
 - Style: Based on Microsoft with modifications (see .clang-format)
