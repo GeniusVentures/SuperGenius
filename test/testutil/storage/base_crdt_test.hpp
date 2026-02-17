@@ -17,6 +17,11 @@
 
 #include "crdt/globaldb/globaldb.hpp"
 
+namespace soralog
+{
+    class LoggingSystem;
+}
+
 namespace test
 {
     class CRDTFixture : public FSFixture
@@ -27,12 +32,14 @@ namespace test
         ~CRDTFixture() override;
 
         static void SetUpTestSuite();
+        static void TearDownTestSuite();
 
         static const std::string                                basePath;
-        static std::shared_ptr<boost::asio::io_context>         io_;
-        static std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubs_;
+        std::shared_ptr<boost::asio::io_context>         io_;
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubs_;
 
-        std::shared_ptr<sgns::crdt::GlobalDB> db_;
+        std::shared_ptr<sgns::crdt::GlobalDB>            db_;
+        static std::shared_ptr<::soralog::LoggingSystem> logging_system_;
     };
 
 }

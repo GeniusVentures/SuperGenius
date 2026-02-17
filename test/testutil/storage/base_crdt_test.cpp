@@ -44,12 +44,16 @@ groups:
 
 namespace test
 {
-    const std::string             CRDTFixture::basePath = "CRDT.Datastore.TEST";
-    std::shared_ptr<io_context>   CRDTFixture::io_;
-    std::shared_ptr<GossipPubSub> CRDTFixture::pubs_;
+    const std::string                       CRDTFixture::basePath = "CRDT.Datastore.TEST";
+    std::shared_ptr<soralog::LoggingSystem> CRDTFixture::logging_system_;
 
     CRDTFixture::CRDTFixture( fs::path path ) : FSFixture( std::move( path ) )
     {
+        io_ = std::make_shared<io_context>();
+
+        pubs_ = std::make_shared<GossipPubSub>( KeyPairFileStorage( basePath + "/unit_test" ).GetKeyPair().value() );
+
+        BOOST_ASSERT_MSG( pubs_ != nullptr, "could not create GossibPubSub for some reason" );
         auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
         auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
         auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
@@ -79,25 +83,32 @@ namespace test
 
     void CRDTFixture::SetUpTestSuite()
     {
-        auto logging_system = std::make_shared<soralog::LoggingSystem>(
-            std::make_shared<soralog::ConfiguratorFromYAML>( std::make_shared<libp2p::log::Configurator>(),
-                                                             logger_config ) );
+        if ( !logging_system_ )
+        {
+            logging_system_ = std::make_shared<soralog::LoggingSystem>(
+                std::make_shared<soralog::ConfiguratorFromYAML>( std::make_shared<libp2p::log::Configurator>(),
+                                                                 logger_config ) );
 
-        BOOST_ASSERT( !logging_system->configure().has_error );
+            const auto config_result = logging_system_->configure();
+            if ( config_result.has_error )
+            {
+                throw std::runtime_error( "CRDTFixture logging system configure failed" );
+            }
 
-        libp2p::log::setLoggingSystem( std::move( logging_system ) );
-        libp2p::log::setLevelOfGroup( "account_handling_test", soralog::Level::ERROR_ );
+            libp2p::log::setLoggingSystem( logging_system_ );
+            libp2p::log::setLevelOfGroup( "account_handling_test", soralog::Level::ERROR_ );
 
-        auto loggerGlobalDB = sgns::base::createLogger( "GlobalDB" );
-        loggerGlobalDB->set_level( spdlog::level::debug );
+            auto loggerGlobalDB = sgns::base::createLogger( "GlobalDB" );
+            loggerGlobalDB->set_level( spdlog::level::debug );
 
-        auto loggerDAGSyncer = sgns::base::createLogger( "GraphsyncDAGSyncer" );
-        loggerDAGSyncer->set_level( spdlog::level::debug );
-
-        io_ = std::make_shared<io_context>();
-
-        pubs_ = std::make_shared<GossipPubSub>( KeyPairFileStorage( basePath + "/unit_test" ).GetKeyPair().value() );
-
-        BOOST_ASSERT_MSG( pubs_ != nullptr, "could not create GossibPubSub for some reason" );
+            auto loggerDAGSyncer = sgns::base::createLogger( "GraphsyncDAGSyncer" );
+            loggerDAGSyncer->set_level( spdlog::level::debug );
+        }
     }
+
+    void CRDTFixture::TearDownTestSuite()
+    {
+        logging_system_.reset();
+    }
+
 }
