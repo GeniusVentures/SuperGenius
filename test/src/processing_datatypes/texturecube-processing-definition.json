@@ -1,0 +1,81 @@
+{
+  "name": "texturecube-tiny-test",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "Test Author",
+  "description": "A test processing definition for textureCube input using a tiny Conv2D model",
+  "tags": ["textureCube", "image", "test"],
+
+  "inputs": [
+    {
+      "name": "inputCube",
+      "source_uri_param": "file://processing_datatypes/texturecube_input.raw",
+      "type": "textureCube",
+      "description": "Input texture cube faces (6 faces in order)",
+      "dimensions": {
+        "width": 64,
+        "height": 64
+      },
+      "format": "RGB8"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "cubeOutput",
+      "source_uri_param": "file://processing_datatypes/texturecube_output.raw",
+      "type": "tensor",
+      "description": "Output tensor from textureCube model"
+    }
+  ],
+
+  "parameters": [
+    {
+      "name": "modelUri",
+      "type": "uri",
+      "default": "file://processing_datatypes/texturecube_tiny.mnn",
+      "description": "URI to the textureCube MNN model"
+    },
+    {
+      "name": "cubeLayout",
+      "type": "string",
+      "default": "faces_in_order",
+      "description": "faces_in_order or atlas_3x2"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "texturecube_inference",
+      "type": "inference",
+      "description": "TextureCube model inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/texturecube_tiny.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputCube",
+            "shape": [1, 3, 64, 64]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:cubeOutput",
+            "shape": [1, 3, 64, 64]
+          }
+        ]
+      }
+    }
+  ],
+
+  "metadata": {
+    "created_date": "2026-02-17",
+    "framework": "MNN",
+    "test_case": "texturecube_datatype"
+  }
+}

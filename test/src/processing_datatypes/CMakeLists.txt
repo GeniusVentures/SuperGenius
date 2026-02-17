@@ -59,6 +59,10 @@ add_custom_command(TARGET processing_datatypes_test POST_BUILD
     "${CMAKE_CURRENT_SOURCE_DIR}/tensor_input.raw"
     "${CMAKE_CURRENT_SOURCE_DIR}/tensor_output_pt.raw"
     "${CMAKE_CURRENT_SOURCE_DIR}/tensor-processing-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/texturecube_tiny.mnn"
+    "${CMAKE_CURRENT_SOURCE_DIR}/texturecube_input.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/texturecube_output_pt.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/texturecube-processing-definition.json"
     "$<TARGET_FILE_DIR:processing_datatypes_test>/processing_datatypes/"
     COMMENT "Copying test files"
 )
