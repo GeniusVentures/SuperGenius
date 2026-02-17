@@ -51,6 +51,10 @@ add_custom_command(TARGET processing_datatypes_test POST_BUILD
     "${CMAKE_CURRENT_SOURCE_DIR}/mat3_input.raw"
     "${CMAKE_CURRENT_SOURCE_DIR}/mat3_output_pt.raw"
     "${CMAKE_CURRENT_SOURCE_DIR}/mat3-processing-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mat4_tiny.mnn"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mat4_input.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mat4_output_pt.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mat4-processing-definition.json"
     "$<TARGET_FILE_DIR:processing_datatypes_test>/processing_datatypes/"
     COMMENT "Copying test files"
 )
