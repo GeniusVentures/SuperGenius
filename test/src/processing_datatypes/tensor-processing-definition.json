@@ -1,0 +1,76 @@
+{
+  "name": "tensor-tiny-test",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "Test Author",
+  "description": "A test processing definition for tensor input using a tiny MLP model",
+  "tags": ["tensor", "test"],
+
+  "inputs": [
+    {
+      "name": "inputTensor",
+      "source_uri_param": "file://processing_datatypes/tensor_input.raw",
+      "type": "tensor",
+      "description": "Input tensor data (flat)",
+      "dimensions": {
+        "width": 256,
+        "block_len": 64,
+        "chunk_stride": 32
+      },
+      "format": "FLOAT32"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "tensorOutput",
+      "source_uri_param": "file://processing_datatypes/tensor_output.raw",
+      "type": "tensor",
+      "description": "Output tensor from tensor model"
+    }
+  ],
+
+  "parameters": [
+    {
+      "name": "modelUri",
+      "type": "uri",
+      "default": "file://processing_datatypes/tensor_tiny.mnn",
+      "description": "URI to the tensor MNN model"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "tensor_inference",
+      "type": "inference",
+      "description": "Tensor model inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/tensor_tiny.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputTensor",
+            "shape": [1, 64]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:tensorOutput",
+            "shape": [1, 64]
+          }
+        ]
+      }
+    }
+  ],
+
+  "metadata": {
+    "created_date": "2026-02-17",
+    "framework": "MNN",
+    "test_case": "tensor_datatype"
+  }
+}
