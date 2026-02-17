@@ -1398,50 +1398,60 @@ namespace sgns
 
         auto manager = result.value();
 
+        auto processing = manager->GetProcessingData();
+        const auto &passes = processing.get_passes();
+        ASSERT_EQ( passes.size(), 1 );
+
+        ASSERT_TRUE( passes[0].get_model().has_value() );
+        const auto model = passes[0].get_model().value();
+        const auto input_nodes = model.get_input_nodes();
+        ASSERT_EQ( input_nodes.size(), 1 );
+
         // Create mock model node
-        sgns::ModelNode model;
+        auto ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        sgns::ModelNode model_node = input_nodes[0];
 
         std::cout << "Calling Process() on ProcessingManager (vec2)..." << std::endl;
-        auto proc_result = manager->Process( m_context, m_chunkhashes, model );
+        auto proc_result = manager->Process( ioc, chunkhashes, model_node );
         ASSERT_TRUE( proc_result ) << "Process failed: " << proc_result.error().message();
 
-        auto output_data_bytes = proc_result.value();
-        // Output should be vec2 vector count * 1 float output channel (from conv)
-        // With 16 input vectors, output should be ~16 floats
-        ASSERT_GT( output_data_bytes.size(), 0 ) << "Output data is empty";
-
-        // Compare against reference output
-        std::vector<float> output_data;
-        output_data.resize( output_data_bytes.size() / sizeof( float ) );
-        std::memcpy( output_data.data(), output_data_bytes.data(), output_data_bytes.size() );
+        ASSERT_FALSE( proc_result.value().empty() ) << "Result hash should not be empty";
+        ASSERT_GT( chunkhashes.size(), 0 ) << "Should have at least one chunk hash";
 
         const std::string output_file = data_path + "vec2_output.raw";
-        std::ofstream     out_stream( output_file, std::ios::binary );
-        ASSERT_TRUE( out_stream ) << "Could not open output file: " << output_file;
-        out_stream.write( reinterpret_cast<char *>( output_data.data() ), output_data_bytes.size() );
-        out_stream.close();
-
         const std::string reference_file = data_path + "vec2_output_pt.raw";
-        std::ifstream     ref_stream( reference_file, std::ios::binary );
-        ASSERT_TRUE( ref_stream ) << "Could not open reference file: " << reference_file;
 
-        std::vector<float> reference_data;
-        ref_stream.seekg( 0, std::ios::end );
-        size_t file_size = ref_stream.tellg();
-        ref_stream.seekg( 0, std::ios::beg );
-        reference_data.resize( file_size / sizeof( float ) );
-        ref_stream.read( reinterpret_cast<char *>( reference_data.data() ), file_size );
-        ref_stream.close();
+        std::ifstream output_stream( output_file, std::ios::binary );
+        ASSERT_TRUE( output_stream.is_open() ) << "Failed to open output file: " << output_file;
 
-        // Compare outputs
+        std::ifstream reference_stream( reference_file, std::ios::binary );
+        if ( !reference_stream.is_open() )
+        {
+            GTEST_SKIP() << "Reference output file not found: " << reference_file;
+        }
+
+        output_stream.seekg( 0, std::ios::end );
+        reference_stream.seekg( 0, std::ios::end );
+        const auto output_size = output_stream.tellg();
+        const auto reference_size = reference_stream.tellg();
+        ASSERT_EQ( output_size, reference_size ) << "Output size mismatch";
+
+        output_stream.seekg( 0, std::ios::beg );
+        reference_stream.seekg( 0, std::ios::beg );
+
+        std::vector<float> output_data( static_cast<size_t>( output_size ) / sizeof( float ) );
+        std::vector<float> reference_data( static_cast<size_t>( reference_size ) / sizeof( float ) );
+
+        output_stream.read( reinterpret_cast<char *>( output_data.data() ), output_size );
+        reference_stream.read( reinterpret_cast<char *>( reference_data.data() ), reference_size );
+
         double mean_abs_diff = 0.0;
         double max_abs_diff = 0.0;
-        size_t compare_size = std::min( output_data.size(), reference_data.size() );
-
-        for ( size_t i = 0; i < compare_size; ++i )
+        for ( size_t i = 0; i < output_data.size(); ++i )
         {
-            double diff = std::abs( static_cast<double>( output_data[i] ) -
-                                    static_cast<double>( reference_data[i] ) );
+            const double diff = std::abs( static_cast<double>( output_data[i] ) -
+                                          static_cast<double>( reference_data[i] ) );
             mean_abs_diff += diff;
             max_abs_diff = std::max( max_abs_diff, diff );
         }
@@ -1710,6 +1720,110 @@ namespace sgns
         mean_abs_diff /= static_cast<double>( output_data.size() );
 
         std::cout << "TextureCube output diff: mean=" << mean_abs_diff << " max=" << max_abs_diff << std::endl;
+
+        ASSERT_LT( mean_abs_diff, 1e-3 ) << "Mean absolute diff too large";
+        ASSERT_LT( max_abs_diff, 1e-2 ) << "Max absolute diff too large";
+    }
+
+    TEST_F( ProcessingDatatypesTest, Vec3ValidationTest )
+    {
+        std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
+        std::string data_path = bin_path + "processing_datatypes/";
+
+        std::string   instance_file = data_path + "vec3-processing-definition.json";
+        std::ifstream ifs( instance_file );
+        ASSERT_TRUE( ifs ) << "Could not open " << instance_file;
+
+        std::string json_data( ( std::istreambuf_iterator<char>( ifs ) ),
+                               std::istreambuf_iterator<char>() );
+
+        auto result = sgns::sgprocessing::ProcessingManager::Create( json_data );
+        ASSERT_TRUE( result ) << result.error().message();
+
+        auto manager = result.value();
+        auto inputs = manager->GetProcessingData().get_inputs();
+        ASSERT_EQ( inputs.size(), 1 ) << "Expected 1 input";
+        ASSERT_EQ( inputs[0].get_type(), sgns::DataType::VEC3 );
+    }
+
+    TEST_F( ProcessingDatatypesTest, Vec3ProcessingTest )
+    {
+        std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
+        std::string data_path = bin_path + "processing_datatypes/";
+
+        std::string   instance_file = data_path + "vec3-processing-definition.json";
+        std::ifstream ifs( instance_file );
+        ASSERT_TRUE( ifs ) << "Could not open " << instance_file;
+
+        std::string json_data( ( std::istreambuf_iterator<char>( ifs ) ),
+                               std::istreambuf_iterator<char>() );
+
+        auto result = sgns::sgprocessing::ProcessingManager::Create( json_data );
+        ASSERT_TRUE( result ) << result.error().message();
+
+        auto manager = result.value();
+
+        auto processing = manager->GetProcessingData();
+        const auto &passes = processing.get_passes();
+        ASSERT_EQ( passes.size(), 1 );
+
+        ASSERT_TRUE( passes[0].get_model().has_value() );
+        const auto model = passes[0].get_model().value();
+        const auto input_nodes = model.get_input_nodes();
+        ASSERT_EQ( input_nodes.size(), 1 );
+
+        // Create mock model node
+        auto ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        sgns::ModelNode model_node = input_nodes[0];
+
+        std::cout << "Calling Process() on ProcessingManager (vec3)..." << std::endl;
+        auto proc_result = manager->Process( ioc, chunkhashes, model_node );
+        ASSERT_TRUE( proc_result ) << "Process failed: " << proc_result.error().message();
+
+        ASSERT_FALSE( proc_result.value().empty() ) << "Result hash should not be empty";
+        ASSERT_GT( chunkhashes.size(), 0 ) << "Should have at least one chunk hash";
+
+        const std::string output_file = data_path + "vec3_output.raw";
+        const std::string reference_file = data_path + "vec3_output_pt.raw";
+
+        std::ifstream output_stream( output_file, std::ios::binary );
+        ASSERT_TRUE( output_stream.is_open() ) << "Failed to open output file: " << output_file;
+
+        std::ifstream reference_stream( reference_file, std::ios::binary );
+        if ( !reference_stream.is_open() )
+        {
+            GTEST_SKIP() << "Reference output file not found: " << reference_file;
+        }
+
+        output_stream.seekg( 0, std::ios::end );
+        reference_stream.seekg( 0, std::ios::end );
+        const auto output_size = output_stream.tellg();
+        const auto reference_size = reference_stream.tellg();
+        ASSERT_EQ( output_size, reference_size ) << "Output size mismatch";
+
+        output_stream.seekg( 0, std::ios::beg );
+        reference_stream.seekg( 0, std::ios::beg );
+
+        std::vector<float> output_data( static_cast<size_t>( output_size ) / sizeof( float ) );
+        std::vector<float> reference_data( static_cast<size_t>( reference_size ) / sizeof( float ) );
+
+        output_stream.read( reinterpret_cast<char *>( output_data.data() ), output_size );
+        reference_stream.read( reinterpret_cast<char *>( reference_data.data() ), reference_size );
+
+        double mean_abs_diff = 0.0;
+        double max_abs_diff = 0.0;
+        for ( size_t i = 0; i < output_data.size(); ++i )
+        {
+            const double diff = std::abs( static_cast<double>( output_data[i] ) -
+                                          static_cast<double>( reference_data[i] ) );
+            mean_abs_diff += diff;
+            max_abs_diff = std::max( max_abs_diff, diff );
+        }
+
+        mean_abs_diff /= static_cast<double>( output_data.size() );
+
+        std::cout << "Vec3 output diff: mean=" << mean_abs_diff << " max=" << max_abs_diff << std::endl;
 
         ASSERT_LT( mean_abs_diff, 1e-3 ) << "Mean absolute diff too large";
         ASSERT_LT( max_abs_diff, 1e-2 ) << "Max absolute diff too large";

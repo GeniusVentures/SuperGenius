@@ -1,8 +1,11 @@
 {
   "name": "vec2-tiny-test",
   "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "Test Author",
   "description": "A test processing definition for vec2 input using a tiny Conv1D model",
   "tags": ["vec2", "vector", "test"],
+
   "inputs": [
     {
       "name": "inputVec2",
@@ -12,44 +15,60 @@
       "dimensions": {
         "width": 16
       },
-      "format": "float32"
+      "format": "FLOAT32"
     }
   ],
+
   "outputs": [
     {
       "name": "vec2Output",
       "source_uri_param": "file://processing_datatypes/vec2_output.raw",
-      "type": "float",
+      "type": "tensor",
       "description": "Output tensor from vec2 model"
     }
   ],
+
   "parameters": [
     {
-      "name": "modelPath",
-      "type": "string",
-      "required": true,
+      "name": "modelUri",
+      "type": "uri",
       "default": "file://processing_datatypes/vec2_tiny.mnn",
       "description": "URI to the vec2 MNN model"
     }
   ],
+
   "passes": [
     {
       "name": "vec2_inference",
       "type": "inference",
+      "description": "Vec2 model inference",
       "model": {
         "source_uri_param": "file://processing_datatypes/vec2_tiny.mnn",
+        "format": "MNN",
+        "batch_size": 1,
         "input_nodes": [
           {
-            "source": "input:inputVec2"
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputVec2",
+            "shape": [1, 2, 16]
           }
         ],
         "output_nodes": [
           {
-            "target": "output:vec2Output"
+            "name": "output",
+            "type": "tensor",
+            "target": "output:vec2Output",
+            "shape": [1, 16]
           }
         ]
       }
     }
   ],
-  "test_case": "vec2_datatype"
+
+  "metadata": {
+    "created_date": "2026-02-17",
+    "framework": "MNN",
+    "test_case": "vec2_datatype"
+  }
 }
