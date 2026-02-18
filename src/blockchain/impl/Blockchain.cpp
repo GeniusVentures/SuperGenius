@@ -1571,4 +1571,9 @@ namespace sgns
         return consensus_manager_->ResumeProposalHandling( hash );
     }
 
+    bool Blockchain::CheckCertificate( const std::string &subject_hash ) const
+    {
+        return consensus_manager_->CheckCertificateForSubject( subject_hash );
+    }
+
 }

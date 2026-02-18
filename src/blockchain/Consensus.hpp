@@ -40,7 +40,7 @@ namespace sgns
         using Certificate = ConsensusCertificate;
         using Subject     = ConsensusSubject;
 
-        using Signer            = std::function<outcome::result<std::vector<uint8_t>>( std::vector<uint8_t> payload )>;
+        using Signer = std::function<outcome::result<std::vector<uint8_t>>( std::vector<uint8_t> payload )>;
         enum class SubjectCheck
         {
             Approve,
@@ -117,6 +117,8 @@ namespace sgns
         outcome::result<void>                        ResumeProposalHandling( const std::string &subject_hash );
         void                                         ProcessCertificates();
 
+        outcome::result<Certificate> GetCertificateBySubjectHash( const std::string &subject_hash ) const;
+
     protected:
         void ConfigureTimestampWindow( std::chrono::milliseconds window );
         void ConfigureRoundDuration( std::chrono::milliseconds duration );
@@ -131,10 +133,11 @@ namespace sgns
                                    std::string                                consensus_topic );
         void StartRoundTimer();
 
-        static constexpr std::string_view          CONSENSUS_CHANNEL_PREFIX = "consensus-channel-";
-        static constexpr std::chrono::milliseconds DEFAULT_TIMESTAMP_WINDOW = std::chrono::minutes( 5 );
-        static constexpr std::chrono::milliseconds DEFAULT_ROUND_DURATION   = std::chrono::milliseconds( 500 );
-        static constexpr std::chrono::milliseconds DEFAULT_ROUND_SKEW       = std::chrono::milliseconds( 250 );
+        static constexpr std::string_view          CONSENSUS_CHANNEL_PREFIX  = "consensus-channel-";
+        static constexpr std::string_view          CERTIFICATE_BASE_PATH_KEY = "/cert/";
+        static constexpr std::chrono::milliseconds DEFAULT_TIMESTAMP_WINDOW  = std::chrono::minutes( 5 );
+        static constexpr std::chrono::milliseconds DEFAULT_ROUND_DURATION    = std::chrono::milliseconds( 500 );
+        static constexpr std::chrono::milliseconds DEFAULT_ROUND_SKEW        = std::chrono::milliseconds( 250 );
 
         struct ProposalState
         {
@@ -168,8 +171,8 @@ namespace sgns
         outcome::result<ProposalState> FetchProposalState( const Certificate &certificate );
         ProposalState                  CreateProposalState( const Certificate &certificate );
         bool ValidateCertificateBestProposal( const ProposalState &state, const Certificate &certificate ) const;
-        std::vector<Vote> CollectCertificateVotes( const Certificate &certificate ) const;
-        void              ClearProposalState( const Proposal &proposal );
+        std::vector<Vote>            CollectCertificateVotes( const Certificate &certificate ) const;
+        void                         ClearProposalState( const Proposal &proposal );
         outcome::result<std::string> GetSubjectHash( const Subject &subject ) const;
         void                         ContinueProposalAfterSubject( const Proposal &proposal );
         void                         AddPendingProposal( const Proposal &proposal, const std::string &subject_hash );
@@ -178,7 +181,7 @@ namespace sgns
         std::optional<std::vector<crdt::pb::Element>> FilterCertificate( const crdt::pb::Element &element );
         void CertificateReceived( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
         bool ValidateCertificate( const Certificate &certificate ) const;
-
+        bool CheckCertificateForSubject( const std::string &subject_hash ) const;
         static std::string CreateProposalId( const Proposal &proposal );
         static bool        ValidateSubject( const Subject &subject );
 

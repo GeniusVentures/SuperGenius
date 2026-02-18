@@ -174,6 +174,7 @@ namespace sgns
 
         return outcome::success();
     }
+
     bool ConsensusManager::RegisterSubjectHandler( SubjectType type, SubjectHandler handler )
     {
         if ( !handler )
@@ -854,7 +855,7 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        const auto             key = "/cert/" + subject_hash_result.value();
+        const auto             key = CERTIFICATE_BASE_PATH_KEY + subject_hash_result.value();
         crdt::HierarchicalKey  cert_key( key );
         crdt::GlobalDB::Buffer cert_value;
         cert_value.put( serialized );
@@ -1847,6 +1848,39 @@ namespace sgns
             return false;
         }
         return true;
+    }
+
+    outcome::result<Certificate> ConsensusManager::GetCertificateBySubjectHash( const std::string &subject_hash ) const
+    {
+        const auto key = CERTIFICATE_BASE_PATH_KEY + subject_hash;
+
+        OUTCOME_TRY( auto certificate_data, db_->Get( { key } ) );
+
+        Certificate certificate;
+        if ( !certificate.ParseFromArray( value.data(), value.size() ) )
+        {
+            ConsensusManagerLogger()->error( "{}: invalid certificate payload key={}", __func__, key );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto subject_hash = GetSubjectHash( certificate.proposal().subject() );
+        if ( subject_hash.has_error() )
+        {
+            return outcome::failure( subject_hash.error() );
+        }
+
+        return certificate;
+    }
+
+    bool ConsensusManager::CheckCertificateForSubject( const std::string &subject_hash ) const
+    {
+        auto certificate_result = GetCertificateBySubjectHash( subject_hash );
+        if ( certificate_result.has_error() )
+        {
+            return false;
+        }
+        //TODO - Check if we need to call ValidateCertificate here. I don't think so because it was validated before.
+        return true; 
     }
 
 }
