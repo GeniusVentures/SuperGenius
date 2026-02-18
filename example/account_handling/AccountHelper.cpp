@@ -39,7 +39,9 @@ namespace sgns
     AccountHelper::AccountHelper( const AccountKey2   &priv_key_data,
                                   const DevConfig_st2 &dev_config,
                                   const char          *eth_private_key ) :
-        account_( GeniusAccount::New( sgns::TokenID::FromBytes( { 0x00 } ), eth_private_key, "." ) ),
+        account_( GeniusAccount::New( sgns::TokenID::FromBytes( { 0x00 } ),
+                                      eth_private_key,
+                                      boost::filesystem::path( "." ) ) ),
         utxo_manager_(
             true,
             account_->GetAddress(),

@@ -14,7 +14,6 @@
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
-#include <filesystem>
 #include <functional>
 #include <optional>
 #include <set>
@@ -50,6 +49,15 @@ namespace sgns
     class GeniusAccount : public std::enable_shared_from_this<GeniusAccount>
     {
     public:
+        using StorageWithAddress = std::pair<std::shared_ptr<ISecureStorage>,
+                                             std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>;
+
+        struct Credentials
+        {
+            std::string email;
+            std::string password;
+        };
+
         static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;      ///< Predefined ElGamal public key
         static constexpr uint64_t            NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
 
@@ -61,10 +69,27 @@ namespace sgns
          * @param[in]   full_node Whether to initialize as a full node.
          * @return      Valid pointer if succeeds, nullptr otherwise.
          */
-        static std::shared_ptr<GeniusAccount> New( TokenID                 token_id,
-                                                   const char             *eth_private_key,
-                                                   boost::filesystem::path base_path,
-                                                   bool                    full_node = false );
+        static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
+                                                   const char                    *eth_private_key,
+                                                   const boost::filesystem::path &base_path,
+                                                   bool                           full_node = false );
+
+        /**
+         * @brief       Factory constructor of new GeniusAccount
+         * @param[in]   token_id Token ID of the account
+         */
+        static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
+                                                   const Credentials             &credentials,
+                                                   const boost::filesystem::path &base_path,
+                                                   bool                           full_node = false );
+
+        /**
+         * @brief       Factory constructor of new GeniusAccount
+         * @param[in]   token_id Token ID of the account
+         */
+        static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
+                                                   const boost::filesystem::path &base_path,
+                                                   bool                           full_node = false );
 
         /**
          * @brief       Initialize the messenger for the account
@@ -135,21 +160,21 @@ namespace sgns
          * @param[in]   nonce The nonce value to be set
          * @param[in]   address The address of the peer
          */
-        void SetPeerConfirmedNonce( uint64_t nonce, std::string address );
+        void SetPeerConfirmedNonce( uint64_t nonce, const std::string &address );
 
         /**
          * @brief       Rollback the local confirmed nonce for a peer
          * @param[in]   nonce The nonce value to be rolled back to
          * @param[in]   address The address of the peer
          */
-        void RollBackPeerConfirmedNonce( uint64_t nonce, std::string address );
+        void RollBackPeerConfirmedNonce( uint64_t nonce, const std::string &address );
 
         /**
          * @brief       Get the confirmed nonce for a peer
          * @param[in]   address The address of the peer
          * @return      The confirmed nonce of the peer if exists, error otherwise
          */
-        outcome::result<uint64_t> GetPeerNonce( std::string address ) const;
+        outcome::result<uint64_t> GetPeerNonce( const std::string &address ) const;
 
         /**
          * @brief       Get the local confirmed nonce
@@ -199,15 +224,11 @@ namespace sgns
          */
         outcome::result<void> RequestHeads( const std::unordered_set<std::string> &topics ) const;
 
-        /**
-         * @brief       Derives a Genius address from a given Ethereum private key
-         * @param[in]   eth_private_key Ethereum private key in hex format (0x...)
-         * @param       base_path The base path to store/retrieve the key
-         * @return      Pair of ElGamal and Ethereum key generators if succeeds, error otherwise
-         */
-        static outcome::result<std::pair<std::shared_ptr<ISecureStorage>,
-                                         std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
-        GenerateGeniusAddress( const char *eth_private_key, boost::filesystem::path base_path );
+        static outcome::result<StorageWithAddress> GenerateGeniusAddress( const char *eth_private_key,
+                                                                          const boost::filesystem::path &base_path );
+
+        static outcome::result<StorageWithAddress> GenerateGeniusAddress( const Credentials             &credentials,
+                                                                          const boost::filesystem::path &base_path );
 
     protected:
         friend class Blockchain;
@@ -219,6 +240,12 @@ namespace sgns
 
     private:
         static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes
+
+        static outcome::result<StorageWithAddress> LoadGeniusAccount( const boost::filesystem::path &base_path );
+
+        static std::shared_ptr<GeniusAccount> CreateInstanceFromResponse( TokenID            token_id,
+                                                                          StorageWithAddress response_value,
+                                                                          bool               full_node );
 
         TokenID token;         ///< Token ID of the account
         bool    is_full_node_; ///< Whether this account is a full node
