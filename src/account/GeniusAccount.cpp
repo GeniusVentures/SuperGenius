@@ -69,11 +69,9 @@ namespace sgns
 {
     const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED = get_elgamal_pubkey();
 
-    std::shared_ptr<GeniusAccount> GeniusAccount::CreateInstanceFromResponse(
-        TokenID token_id,
-        std::pair<std::shared_ptr<ISecureStorage>, std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>
-             response_value,
-        bool full_node )
+    std::shared_ptr<GeniusAccount> GeniusAccount::CreateInstanceFromResponse( TokenID            token_id,
+                                                                              StorageWithAddress response_value,
+                                                                              bool               full_node )
     {
         auto [storage, addresses]           = std::move( response_value );
         auto [elgamal_address, eth_address] = std::move( addresses );
@@ -153,7 +151,8 @@ namespace sgns
             return CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
         }
 
-        genius_account_logger()->info( "Could not find existing Genius address, generating one with random credentials" );
+        genius_account_logger()->info(
+            "Could not find existing Genius address, generating one with random credentials" );
 
         std::uniform_int_distribution<uint64_t> dist( 0, std::numeric_limits<uint64_t>::max() );
         uint64_t                                num   = dist( eng );
@@ -168,10 +167,8 @@ namespace sgns
         return New( token_id, { std::move( email ), std::move( password ) }, base_path, full_node );
     }
 
-    // Refactored LoadGeniusAccount (mostly unchanged, but uses helper for path)
-    outcome::result<
-        std::pair<std::shared_ptr<ISecureStorage>, std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
-    GeniusAccount::LoadGeniusAccount( const boost::filesystem::path &base_path )
+    outcome::result<GeniusAccount::StorageWithAddress> GeniusAccount::LoadGeniusAccount(
+        const boost::filesystem::path &base_path )
     {
         constexpr std::string_view PREFIX = "SGNS";
 
@@ -217,10 +214,9 @@ namespace sgns
         return CreateStorageAndKeys( key_seed );
     }
 
-    // Refactored GenerateGeniusAddress (credentials version)
-    outcome::result<
-        std::pair<std::shared_ptr<ISecureStorage>, std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
-    GeniusAccount::GenerateGeniusAddress( const Credentials &credentials, const boost::filesystem::path &base_path )
+    outcome::result<GeniusAccount::StorageWithAddress> GeniusAccount::GenerateGeniusAddress(
+        const Credentials             &credentials,
+        const boost::filesystem::path &base_path )
     {
         genius_account_logger()->trace( "Key seed from credentials" );
 
@@ -236,10 +232,9 @@ namespace sgns
         return GenerateGeniusAddress( hexed.data(), base_path );
     }
 
-    // Refactored GenerateGeniusAddress (private key version)
-    outcome::result<
-        std::pair<std::shared_ptr<ISecureStorage>, std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
-    GeniusAccount::GenerateGeniusAddress( const char *eth_private_key, const boost::filesystem::path &base_path )
+    outcome::result<GeniusAccount::StorageWithAddress> GeniusAccount::GenerateGeniusAddress(
+        const char                    *eth_private_key,
+        const boost::filesystem::path &base_path )
     {
         genius_account_logger()->trace( "Key seed from ethereum private key" );
 
@@ -295,8 +290,7 @@ namespace sgns
 
             return outcome::failure( std::errc::owner_dead );
         };
-        methods.verify_signature_ = [weakptr( weak_from_this() )](
-                                        const std::string          &address,
+        methods.verify_signature_ = []( const std::string          &address,
                                         std::string_view            sig,
                                         const std::vector<uint8_t> &data ) -> outcome::result<bool>
         { return VerifySignature( address, sig, data ); };

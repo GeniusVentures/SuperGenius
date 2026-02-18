@@ -49,6 +49,9 @@ namespace sgns
     class GeniusAccount : public std::enable_shared_from_this<GeniusAccount>
     {
     public:
+        using StorageWithAddress = std::pair<std::shared_ptr<ISecureStorage>,
+                                             std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>;
+
         struct Credentials
         {
             std::string email;
@@ -221,13 +224,11 @@ namespace sgns
          */
         outcome::result<void> RequestHeads( const std::unordered_set<std::string> &topics ) const;
 
-        static outcome::result<std::pair<std::shared_ptr<ISecureStorage>,
-                                         std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
-        GenerateGeniusAddress( const char *eth_private_key, const boost::filesystem::path &base_path );
+        static outcome::result<StorageWithAddress> GenerateGeniusAddress( const char *eth_private_key,
+                                                                          const boost::filesystem::path &base_path );
 
-        static outcome::result<std::pair<std::shared_ptr<ISecureStorage>,
-                                         std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
-        GenerateGeniusAddress( const Credentials &credentials, const boost::filesystem::path &base_path );
+        static outcome::result<StorageWithAddress> GenerateGeniusAddress( const Credentials             &credentials,
+                                                                          const boost::filesystem::path &base_path );
 
     protected:
         friend class Blockchain;
@@ -240,15 +241,11 @@ namespace sgns
     private:
         static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes
 
-        static outcome::result<std::pair<std::shared_ptr<ISecureStorage>,
-                                         std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
-        LoadGeniusAccount( const boost::filesystem::path &base_path );
+        static outcome::result<StorageWithAddress> LoadGeniusAccount( const boost::filesystem::path &base_path );
 
-        static std::shared_ptr<GeniusAccount> CreateInstanceFromResponse(
-            TokenID token_id,
-            std::pair<std::shared_ptr<ISecureStorage>, std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>
-                 response_value,
-            bool full_node );
+        static std::shared_ptr<GeniusAccount> CreateInstanceFromResponse( TokenID            token_id,
+                                                                          StorageWithAddress response_value,
+                                                                          bool               full_node );
 
         TokenID token;         ///< Token ID of the account
         bool    is_full_node_; ///< Whether this account is a full node
