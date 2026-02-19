@@ -158,7 +158,8 @@ jobs:
           - target: Linux
             abi: ""
     steps:
-      - name: Check if build should run
+      - name: Check if build should run (Unix)
+        if: ${{ matrix.target != 'Windows' }}
         run: |
           SHOULD_RUN="true"
           if [ '${{ github.event_name }}' == 'workflow_dispatch' ]; then
@@ -199,12 +200,6 @@ jobs:
               Linux-aarch64-Debug)
                 if [ '${{ inputs.build_linux_aarch64_debug }}' != 'true' ]; then SHOULD_RUN="false"; fi
                 ;;
-              Windows-*-Release)
-                if [ '${{ inputs.build_windows_release }}' != 'true' ]; then SHOULD_RUN="false"; fi
-                ;;
-              Windows-*-Debug)
-                if [ '${{ inputs.build_windows_debug }}' != 'true' ]; then SHOULD_RUN="false"; fi
-                ;;
             esac
           fi
           if [ "$SHOULD_RUN" == "false" ]; then
@@ -212,6 +207,26 @@ jobs:
             exit 78
           fi
         shell: bash
+
+      - name: Check if build should run (Windows)
+        if: ${{ matrix.target == 'Windows' }}
+        run: |
+          $SHOULD_RUN = "true"
+          if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            $key = '${{ matrix.target }}-${{ matrix.abi }}-${{ matrix.build-type }}'
+            switch -Wildcard ($key) {
+              'Windows-*-Release' {
+                if ('${{ inputs.build_windows_release }}' -ne 'true') { $SHOULD_RUN = "false" }
+              }
+              'Windows-*-Debug' {
+                if ('${{ inputs.build_windows_debug }}' -ne 'true') { $SHOULD_RUN = "false" }
+              }
+            }
+          }
+          if ($SHOULD_RUN -eq "false") {
+            Write-Output "Skipping build for ${{ matrix.target }} ${{ matrix.abi }} ${{ matrix.build-type }}"
+            exit 78
+          }
 
       - name: Clean workspace (self-hosted runners - Unix)
         if: ${{ runner.environment == 'self-hosted' && matrix.target != 'Windows' }}
@@ -294,6 +309,23 @@ jobs:
         with:
           path: "SuperGenius"
           submodules: "recursive"
+
+      - name: Configure bash on Windows (use Git Bash, not WSL)
+        if: ${{ runner.environment == 'self-hosted' && matrix.target == 'Windows' }}
+        run: |
+          # Prepend Git's bin directories to PATH to prioritize Git Bash over WSL
+          $gitBinPath = "C:\Program Files\Git\bin"
+          $gitUsrBinPath = "C:\Program Files\Git\usr\bin"
+          
+          if (Test-Path $gitBinPath) {
+            echo "$gitBinPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          }
+          if (Test-Path $gitUsrBinPath) {
+            echo "$gitUsrBinPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          }
+          
+          Write-Output "Git Bash will be used for bash shell commands"
+          Write-Output "Bash location: $(where.exe bash.exe | Select-Object -First 1)"
 
       - name: Set build directory
         run: |
