@@ -855,7 +855,7 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        const auto             key = CERTIFICATE_BASE_PATH_KEY + subject_hash_result.value();
+        const auto             key = std::string{CERTIFICATE_BASE_PATH_KEY} + subject_hash_result.value();
         crdt::HierarchicalKey  cert_key( key );
         crdt::GlobalDB::Buffer cert_value;
         cert_value.put( serialized );
@@ -1850,25 +1850,29 @@ namespace sgns
         return true;
     }
 
-    outcome::result<Certificate> ConsensusManager::GetCertificateBySubjectHash( const std::string &subject_hash ) const
+    outcome::result<ConsensusManager::Certificate> ConsensusManager::GetCertificateBySubjectHash( const std::string &subject_hash ) const
     {
-        const auto key = CERTIFICATE_BASE_PATH_KEY + subject_hash;
+        const auto key = std::string{CERTIFICATE_BASE_PATH_KEY} + subject_hash;
 
         OUTCOME_TRY( auto certificate_data, db_->Get( { key } ) );
 
         Certificate certificate;
-        if ( !certificate.ParseFromArray( value.data(), value.size() ) )
+        if ( !certificate.ParseFromArray( certificate_data.data(), certificate_data.size() ) )
         {
             ConsensusManagerLogger()->error( "{}: invalid certificate payload key={}", __func__, key );
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        auto subject_hash = GetSubjectHash( certificate.proposal().subject() );
-        if ( subject_hash.has_error() )
+        auto current_hash = GetSubjectHash( certificate.proposal().subject() );
+        if ( current_hash.has_error() )
         {
-            return outcome::failure( subject_hash.error() );
+            return outcome::failure( current_hash.error() );
         }
-
+        if ( current_hash.value() != subject_hash )
+        {
+            ConsensusManagerLogger()->error( "{}: certificate subject hash mismatch expected={} actual={}", __func__, subject_hash, current_hash.value() );
+            return outcome::failure( std::errc::invalid_argument );
+        }
         return certificate;
     }
 

@@ -118,6 +118,8 @@ namespace sgns
         void                                         ProcessCertificates();
 
         outcome::result<Certificate> GetCertificateBySubjectHash( const std::string &subject_hash ) const;
+        bool CheckCertificateForSubject( const std::string &subject_hash ) const;
+
 
     protected:
         void ConfigureTimestampWindow( std::chrono::milliseconds window );
@@ -181,7 +183,6 @@ namespace sgns
         std::optional<std::vector<crdt::pb::Element>> FilterCertificate( const crdt::pb::Element &element );
         void CertificateReceived( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
         bool ValidateCertificate( const Certificate &certificate ) const;
-        bool CheckCertificateForSubject( const std::string &subject_hash ) const;
         static std::string CreateProposalId( const Proposal &proposal );
         static bool        ValidateSubject( const Subject &subject );
 
