@@ -321,7 +321,7 @@ namespace sgns
                 break;
 
             case State::SYNCING:
-                this->SyncNonce();
+                SyncNonce();
                 break;
 
             case State::READY:
@@ -346,9 +346,10 @@ namespace sgns
                     auto rollback_result = RollbackTransactions( tx_queue_m.front() );
                     if ( rollback_result.has_error() )
                     {
-                        m_logger->error( "[{} - full: {}] RollbackTransactions error, couldn't fetch nonce",
+                        m_logger->error( "[{} - full: {}] {} error, couldn't fetch nonce",
                                          account_m->GetAddress().substr( 0, 8 ),
-                                         full_node_m );
+                                         full_node_m,
+                                         __func__ );
                         break;
                     }
 
@@ -368,17 +369,7 @@ namespace sgns
                     }
                     break;
                 }
-                auto nonces_sent = send_result.value();
-                for ( auto nonce : nonces_sent )
-                {
-                    m_logger->debug( "[{} - full: {}] Confirming local nonce to {}",
-                                     account_m->GetAddress().substr( 0, 8 ),
-                                     full_node_m,
-                                     nonce );
-                    account_m->SetLocalConfirmedNonce( nonce );
-                }
                 tx_queue_m.pop_front();
-                lock.unlock();
             }
             break;
         }
@@ -669,14 +660,14 @@ namespace sgns
             std::unique_lock tx_lock( tx_mutex_m );
             for ( auto &&[tx, _] : element.first )
             {
-                const auto key   = GetTransactionPath( *tx );
-                const auto nonce = tx->dag_st.nonce();
-                // tx visible to status queries immediately
-                tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CREATED, nonce };
-                m_logger->debug( "[{} - full: {}] Setting {} to CREATED",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 tx->GetHash() );
+                auto result = ChangeTransactionState( tx, TransactionStatus::CREATED );
+                if ( !result )
+                {
+                    m_logger->error( "[{} - full: {}] Failed to change transaction state for {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     tx->GetHash() );
+                }
             }
         }
         std::lock_guard lock( mutex_m );
@@ -705,9 +696,8 @@ namespace sgns
         return dag;
     }
 
-    outcome::result<std::unordered_set<uint64_t>> TransactionManager::SendTransactionItem( TransactionItem &item )
+    outcome::result<void> TransactionManager::SendTransactionItem( TransactionItem &item )
     {
-        std::unordered_set<uint64_t> nonces_set;
         auto [transaction_batch, maybe_crdt_transaction]          = item;
         std::shared_ptr<crdt::AtomicTransaction> crdt_transaction = nullptr;
 
@@ -759,16 +749,23 @@ namespace sgns
                 expected_next_nonce = static_cast<uint64_t>( confirmed_nonce ) + 1;
             }
         }
+        std::unordered_set<std::string>                topicSet;
+        std::set<std::shared_ptr<IGeniusTransactions>> transactions_sent;
+        if ( !transaction_batch.empty() )
+        {
+            topicSet.emplace( full_node_topic_m );
+            topicSet.emplace( account_m->GetAddress() );
+        }
 
         for ( auto &[transaction, maybe_proof] : transaction_batch )
         {
-            if ( transaction->dag_st.nonce() != expected_next_nonce )
+            if ( transaction->GetNonce() != expected_next_nonce )
             {
                 m_logger->error( "[{} - full: {}] Transaction with unexpected nonce - Expected: {}, Tried to send: {}",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
                                  expected_next_nonce,
-                                 transaction->dag_st.nonce() );
+                                 transaction->GetNonce() );
 
                 return outcome::failure(
                     boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
@@ -797,155 +794,43 @@ namespace sgns
                                  full_node_m,
                                  proof_key.GetKey() );
 
-                    proof_transaction.put( proof );
-                    BOOST_OUTCOME_TRYV2(
-                        auto &&,
-                        crdt_transaction->Put( std::move( proof_key ), std::move( proof_transaction ) ) );
-                }
-                nonces_set.insert( transaction->dag_st.nonce() );
-                m_logger->debug( "[{} - full: {}] Creating Consensus Proposal for tx {}",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 transaction_path );
-                OUTCOME_TRY( auto &&proposal,
-                             blockchain_->CreateConsensusProposal( transaction->GetSrcAddress(),
-                                                                   transaction->dag_st.nonce(),
-                                                                   transaction->GetHash() ) );
-                OUTCOME_TRY( blockchain_->SubmitProposal( proposal ) );
+                proof_transaction.put( proof );
+                BOOST_OUTCOME_TRYV2( auto &&,
+                                     crdt_transaction->Put( std::move( proof_key ), std::move( proof_transaction ) ) );
             }
-            else
-            {
-                m_logger->error( "[{} - full: {}] Transaction with unexpected nonce - Expected: {}, Tried to send: {}",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 expected_next_nonce,
-                                 transaction->dag_st.nonce() );
+            m_logger->debug( "[{} - full: {}] Creating Consensus Proposal for tx {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             transaction_path );
 
-                return outcome::failure(
-                    boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
-            }
+            topicSet.merge( transaction->GetTopics() );
+            transactions_sent.insert( transaction );
+
             expected_next_nonce++;
         }
 
-        std::unordered_set<std::string> topicSet;
-        if ( !transaction_batch.empty() )
+        OUTCOME_TRY( crdt_transaction->Commit( topicSet ) );
+
+        for ( auto &transaction : transactions_sent )
         {
-            topicSet.emplace( full_node_topic_m );
-            topicSet.emplace( account_m->GetAddress() );
-        }
-        for ( auto &[tx, _] : transaction_batch )
-        {
-            OUTCOME_TRY( ParseTransaction( tx ) );
-            topicSet.merge( tx->GetTopics() );
-            std::unique_lock tx_lock( tx_mutex_m );
-            const auto       key      = GetTransactionPath( *tx );
-            const auto       nonce    = tx->dag_st.nonce();
-            auto             it       = tx_processed_m.find( key );
-            auto             tx_state = TransactionStatus::VERIFYING;
-            if ( full_node_m )
-            {
-                tx_state = TransactionStatus::CONFIRMED;
-            }
-            if ( it != tx_processed_m.end() )
-            {
-                if ( it->second.status != tx_state && tx_state == TransactionStatus::VERIFYING )
-                {
-                    verifying_count_.fetch_add( 1, std::memory_order_relaxed );
-                }
-                it->second.status = tx_state;
-            }
-            else
-            {
-                tx_processed_m[key] = TrackedTx{ tx, tx_state, nonce };
-                if ( tx_state == TransactionStatus::VERIFYING )
-                {
-                    verifying_count_.fetch_add( 1, std::memory_order_relaxed );
-                }
-            }
+            OUTCOME_TRY( auto &&proposal,
+                         blockchain_->CreateConsensusProposal( transaction->GetSrcAddress(),
+                                                               transaction->GetNonce(),
+                                                               transaction->GetHash() ) );
+            OUTCOME_TRY( blockchain_->SubmitProposal( proposal ) );
+
+            OUTCOME_TRY( ChangeTransactionState( transaction, TransactionStatus::SENDING ) );
         }
 
-        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( topicSet ) );
-
-        return nonces_set;
+        return outcome::success();
     }
 
     outcome::result<void> TransactionManager::RollbackTransactions( TransactionItem &item_to_rollback )
     {
-        int64_t confirmed_nonce = -1;
-
-        if ( auto nonce_result = account_m->GetConfirmedNonce( NONCE_REQUEST_TIMEOUT_MS ); nonce_result.has_value() )
+        auto [transaction_batch, _] = item_to_rollback;
+        for ( auto &[transaction, maybe_proof] : transaction_batch )
         {
-            confirmed_nonce = static_cast<int64_t>( nonce_result.value() );
-            m_logger->debug( "[{} - full: {}] Set nonce to {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             confirmed_nonce );
-        }
-        else
-        {
-            m_logger->error( "[{} - full: {}] {}: Could not fetch confirmed nonce ({}). Attempting rollback with "
-                             "local state",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             __func__,
-                             nonce_result.error().message() );
-            auto local_nonce_result = account_m->GetLocalConfirmedNonce();
-            if ( local_nonce_result.has_value() )
-            {
-                confirmed_nonce = static_cast<int64_t>( local_nonce_result.value() );
-                m_logger->debug( "[{} - full: {}] Falling back to local confirmed nonce {}",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 confirmed_nonce );
-            }
-            else
-            {
-                m_logger->error( "[{} - full: {}] No local confirmed nonce available, rolling back assuming none",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m );
-                confirmed_nonce = -1;
-            }
-        }
-
-        auto [transaction_batch, _dontcare] = item_to_rollback;
-
-        for ( auto &[transaction, __dontcare] : transaction_batch )
-        {
-            auto signed_previous_nonce = static_cast<int64_t>( transaction->dag_st.nonce() ) - 1;
-
-            for ( auto tx_nonce = signed_previous_nonce; tx_nonce > confirmed_nonce; --tx_nonce )
-            {
-                //let's verify if we didn't mistakenly confirm any bad transactions.
-                m_logger->debug( "[{} - full: {}] Setting \"VERIFYING\" status to transaction with nonce {}",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 tx_nonce );
-                (void)SetOutgoingStatusByNonce( static_cast<uint64_t>( tx_nonce ), TransactionStatus::VERIFYING );
-            }
-            {
-                std::unique_lock tx_lock( tx_mutex_m );
-                const auto       key   = GetTransactionPath( *transaction );
-                const auto       nonce = transaction->dag_st.nonce();
-
-                if ( auto it = tx_processed_m.find( key ); it != tx_processed_m.end() )
-                {
-                    // Update verifying_count if status is changing from VERIFYING
-                    if ( it->second.status == TransactionStatus::VERIFYING )
-                    {
-                        verifying_count_.fetch_sub( 1, std::memory_order_relaxed );
-                    }
-                    it->second.tx           = transaction;
-                    it->second.status       = TransactionStatus::FAILED;
-                    it->second.cached_nonce = nonce;
-                }
-                else
-                {
-                    // New entry rolled back: start directly as FAILED
-                    tx_processed_m.emplace( key, TrackedTx{ transaction, TransactionStatus::FAILED, nonce } );
-                }
-            }
-            RemoveTransactionFromProcessedMaps( GetTransactionPath( *transaction ) );
-            account_m->ReleaseNonce( transaction->dag_st.nonce() );
+            OUTCOME_TRY( ChangeTransactionState( transaction, TransactionStatus::FAILED ) );
         }
         return outcome::success();
     }
@@ -1225,24 +1110,23 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        auto maybe_parsed = ParseTransaction( transaction );
-        if ( maybe_parsed.has_error() )
+        m_logger->debug( "[{} - full: {}] Checking if the transaction has a valid certificate to be confirmed {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         tx_key );
+
+        auto next_tx_state = TransactionStatus::VERIFYING;
+
+        if ( blockchain_->CheckCertificate( transaction->GetHash() ) )
         {
-            m_logger->debug( "[{} - full: {}] Can't parse the transaction {}",
+            m_logger->debug( "[{} - full: {}] Transaction has a valid certificate, marking as CONFIRMED {}",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              tx_key );
-            return outcome::failure( maybe_parsed.error() );
+            next_tx_state = TransactionStatus::CONFIRMED;
         }
+        OUTCOME_TRY( ChangeTransactionState( transaction, next_tx_state ) );
 
-        const auto nonce = transaction->dag_st.nonce();
-
-        account_m->SetPeerConfirmedNonce( nonce, transaction->dag_st.source_addr() );
-
-        {
-            std::unique_lock tx_lock( tx_mutex_m );
-            tx_processed_m[tx_key] = TrackedTx{ transaction, TransactionStatus::CONFIRMED, nonce };
-        }
         {
             std::lock_guard missing_lock( missing_tx_mutex_ );
             missing_tx_hashes_.erase( transaction->GetHash() );
@@ -2213,7 +2097,9 @@ namespace sgns
 
     bool TransactionManager::SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s )
     {
-        std::unique_lock<std::shared_mutex> tx_lock( tx_mutex_m );
+        bool                                 ret = false;
+        std::shared_ptr<IGeniusTransactions> tx;
+        std::unique_lock<std::shared_mutex>  tx_lock( tx_mutex_m );
         for ( auto &[_, tracked] : tx_processed_m )
         {
             if ( !tracked.tx )
@@ -2228,33 +2114,25 @@ namespace sgns
             {
                 continue;
             }
-
-            auto old_status = tracked.status;
-            tracked.status  = s;
-
-            // Update verifying_count
-            if ( old_status == TransactionStatus::VERIFYING && s != TransactionStatus::VERIFYING )
+            tx = tracked.tx;
+            break;
+        }
+        if ( tx )
+        {
+            auto result = ChangeTransactionState( std::move( tx ), s );
+            if ( !result.has_error() )
             {
-                verifying_count_.fetch_sub( 1, std::memory_order_relaxed );
+                ret = true;
             }
-            else if ( old_status != TransactionStatus::VERIFYING && s == TransactionStatus::VERIFYING )
-            {
-                verifying_count_.fetch_add( 1, std::memory_order_relaxed );
-            }
-
-            m_logger->debug( "[{} - full: {}] Set tx {} (nonce {}) to {}",
+        }
+        else
+        {
+            m_logger->debug( "[{} - full: {}] No outgoing tx found with nonce {}",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
-                             tracked.tx->GetHash(),
-                             nonce,
-                             static_cast<int>( s ) );
-            return true;
+                             nonce );
         }
-        m_logger->debug( "[{} - full: {}] No outgoing tx found with nonce {}",
-                         account_m->GetAddress().substr( 0, 8 ),
-                         full_node_m,
-                         nonce );
-        return false;
+        return ret;
     }
 
     outcome::result<void> TransactionManager::ConfirmTransactions()
@@ -2385,36 +2263,37 @@ namespace sgns
             std::shared_ptr<IGeniusTransactions> conflicting_tx;
 
             auto conflicting_tx_res = GetConflictingTransaction( *new_tx );
-            if ( !conflicting_tx_res.has_value() )
+
+            if ( conflicting_tx_res.has_value() )
             {
-                //maybe it's not been processed yet, but it's on CRDT
-                auto maybe_existing_value = globaldb_m->Get( element.key() );
-                if ( !maybe_existing_value.has_value() )
+                conflicting_tx = std::move( conflicting_tx_res.value() );
+                m_logger->debug( "[{} - full: {}] Found existing conflicting transaction with hash: {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 conflicting_tx->GetHash() );
+                std::unique_lock tx_lock( tx_mutex_m );
+                auto             key = GetTransactionPath( conflicting_tx->GetHash() );
+                auto             it  = tx_processed_m.find( key );
+                if ( it == tx_processed_m.end() )
                 {
-                    m_logger->trace( "[{} - full: {}] No existing transaction, accepting new transaction {}",
+                    m_logger->error( "[{} - full: {}] Conflicting transaction not found in processed maps: {}",
                                      account_m->GetAddress().substr( 0, 8 ),
                                      full_node_m,
-                                     element.key() );
-
+                                     key );
                     break;
                 }
-                m_logger->debug(
-                    "[{} - full: {}] Found transaction with the same key {}, checking mutability window and timestamps",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    element.key() );
-
-                conflicting_tx_res = DeSerializeTransaction( maybe_existing_value.value() );
-                if ( conflicting_tx_res.has_error() )
+                if ( it->second.status == TransactionStatus::CONFIRMED )
                 {
-                    m_logger->warn( "[{} - full: {}] Failed to deserialize existing transaction {}, accepting new one",
-                                    account_m->GetAddress().substr( 0, 8 ),
-                                    full_node_m,
-                                    element.key() );
+                    m_logger->debug(
+                        "[{} - full: {}] Conflicting transaction is already CONFIRMED, checking the incoming transaction {}",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        key );
+
+                    should_delete = true;
                     break;
                 }
             }
-            conflicting_tx = std::move( conflicting_tx_res.value() );
 
             m_logger->debug( "[{} - full: {}] Checking if new tx {} is the correct one",
                              account_m->GetAddress().substr( 0, 8 ),
@@ -2733,9 +2612,8 @@ namespace sgns
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          key );
-        bool should_add_transaction = false;
-        auto tx_hash                = new_tx->GetHash();
-        if ( tx_hash.empty() )
+
+        if ( new_tx->GetHash().empty() )
         {
             m_logger->error( "[{} - full: {}] Empty hash on {}",
                              account_m->GetAddress().substr( 0, 8 ),
@@ -2744,61 +2622,67 @@ namespace sgns
             return outcome::failure( boost::system::error_code{} );
         }
 
-        m_logger->debug( "[{} - full: {}] Checking if we already have this transaction {}",
-                         account_m->GetAddress().substr( 0, 8 ),
-                         full_node_m,
-                         key );
-
-        std::unique_lock tx_lock( tx_mutex_m );
-        auto             it = tx_processed_m.find( key );
-
-        if ( it != tx_processed_m.end() )
-        {
-            m_logger->debug( "[{} - full: {}] Already have the transaction {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             key );
-            return outcome::success();
-        }
         m_logger->debug( "[{} - full: {}] Verifying if we have a conflicting transaction {}",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          key );
-        tx_lock.unlock();
+
         auto conflicting_tx = GetConflictingTransaction( *new_tx );
-        tx_lock.lock();
 
         if ( conflicting_tx.has_value() )
         {
-            m_logger->debug( "[{} - full: {}] Found conflicting transaction with hash: {}, removing it",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             conflicting_tx.value()->GetHash() );
+            // TODO - Evaluate if we need this, because theoretically we already check this on the filter
+            m_logger->warn( "[{} - full: {}] Found conflicting transaction that passed the FILTER with hash: {}",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            conflicting_tx.value()->GetHash() );
+            std::unique_lock tx_lock( tx_mutex_m );
+            auto             it = tx_processed_m.find( GetTransactionPath( conflicting_tx.value()->GetHash() ) );
 
-            const auto conflict_hash = conflicting_tx.value()->GetHash();
-            tx_lock.unlock();
-            OUTCOME_TRY( RemoveTransactionFromProcessedMaps( GetTransactionPath( conflict_hash ), true ) );
-            tx_lock.lock();
+            // No need to check if not found because we already found it on GetConflictingTransaction
+
+            if ( it->second.status == TransactionStatus::CONFIRMED )
+            {
+                m_logger->debug(
+                    "[{} - full: {}] Conflicting transaction is already CONFIRMED, not adding incoming transaction{}",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    key );
+                OUTCOME_TRY( ChangeTransactionState( new_tx, TransactionStatus::FAILED ) );
+                return outcome::failure( boost::system::error_code{} );
+            }
+            m_logger->warn( "[{} - full: {}] Setting conflicting transaction to VERIFYING since it's not confirmed: {}",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            conflicting_tx.value()->GetHash() );
+            OUTCOME_TRY( ChangeTransactionState( conflicting_tx.value(), TransactionStatus::VERIFYING ) );
         }
 
-        m_logger->debug( "[{} - full: {}] Parsing new transaction {}",
+        m_logger->debug( "[{} - full: {}] Checking if the transaction has a valid certificate to be confirmed {}",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          key );
-        OUTCOME_TRY( ParseTransaction( new_tx ) );
 
-        (void)blockchain_->TryResumeProposal( tx_hash );
+        auto next_tx_state = TransactionStatus::VERIFYING;
 
-        const auto nonce = new_tx->dag_st.nonce();
-
+        if ( blockchain_->CheckCertificate( new_tx->GetHash() ) )
         {
-            std::lock_guard missing_lock( missing_tx_mutex_ );
-            missing_tx_hashes_.erase( new_tx->GetHash() );
+            m_logger->debug( "[{} - full: {}] Transaction has a valid certificate, marking as CONFIRMED {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             key );
+            next_tx_state = TransactionStatus::CONFIRMED;
+            if ( conflicting_tx.has_value() )
+            {
+                m_logger->warn(
+                    "[{} - full: {}] Setting conflicting transaction to FAILED because the new has a certificate and it doesn't: {}",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    conflicting_tx.value()->GetHash() );
+                OUTCOME_TRY( ChangeTransactionState( conflicting_tx.value(), TransactionStatus::FAILED ) );
+            }
         }
-
-        account_m->SetPeerConfirmedNonce( nonce, new_tx->dag_st.source_addr() );
-
-        tx_processed_m[key] = TrackedTx{ new_tx, TransactionStatus::CONFIRMED, nonce };
+        OUTCOME_TRY( ChangeTransactionState( new_tx, next_tx_state ) );
 
         return outcome::success();
     }
@@ -3000,8 +2884,8 @@ namespace sgns
     outcome::result<std::shared_ptr<IGeniusTransactions>> TransactionManager::GetConflictingTransaction(
         const IGeniusTransactions &element ) const
     {
-        auto tx = GetTransactionByNonceAndAddress( element.dag_st.nonce(), element.GetSrcAddress() );
-        if ( tx )
+        auto tx = GetTransactionByNonceAndAddress( element.GetNonce(), element.GetSrcAddress() );
+        if ( tx && tx->GetHash() != element.GetHash() )
         {
             return tx;
         }
@@ -3011,64 +2895,33 @@ namespace sgns
 
     void TransactionManager::OnConsensusCertificate( const std::string &tx_hash )
     {
-        auto tracked_tx_ret = GetTrackedTxByHash( tx_hash );
-        if ( !tracked_tx_ret )
+        auto tx = GetTransactionByHash( tx_hash );
+        if ( !tx )
         {
-            m_logger->error( "[{} - full: {}] {}: Tracked transaction not found for hash {}",
+            m_logger->error( "[{} - full: {}] {}: Transaction not found for hash {}",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              __func__,
                              tx_hash );
             return;
         }
-        auto &tracked_tx = tracked_tx_ret.value();
-        if ( tracked_tx.status != TransactionStatus::FAILED && tracked_tx.status != TransactionStatus::INVALID &&
-             tracked_tx.status != TransactionStatus::CONFIRMED )
+
+        auto result = ChangeTransactionState( tx, TransactionStatus::CONFIRMED );
+        if ( result.has_error() )
         {
-            m_logger->debug( "[{} - full: {}] {}: Transaction {} is {}, updating status to CONFIRMED",
+            m_logger->error( "[{} - full: {}] {}: Failed to change transaction state to CONFIRMED for hash {}: {}",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              __func__,
                              tx_hash,
-                             static_cast<int>( tracked_tx.status ) );
-            tracked_tx.status = TransactionStatus::CONFIRMED;
-            if ( tracked_tx.tx )
-            {
-                m_logger->debug( "[{} - full: {}] {}: Parsing transaction {} after consensus certificate",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 __func__,
-                                 tx_hash );
-                auto parse_result = ParseTransaction( tracked_tx.tx );
-                if ( parse_result.has_error() )
-                {
-                    m_logger->error(
-                        "[{} - full: {}] {}: Failed to parse transaction {} after consensus certificate: {}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        __func__,
-                        tx_hash,
-                        parse_result.error().message() );
-                }
-            }
-            else
-            {
-                m_logger->error( "[{} - full: {}] {}: Tracked transaction missing for hash {}",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 __func__,
-                                 tx_hash );
-            }
+                             result.error().message() );
+            return;
         }
-        else
-        {
-            m_logger->debug( "[{} - full: {}] {}: Transaction {} has status {}, not updating to APPROVED",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             __func__,
-                             tx_hash,
-                             static_cast<int>( tracked_tx.status ) );
-        }
+        m_logger->debug( "[{} - full: {}] {}: Transaction {} confirmed by consensus",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         __func__,
+                         tx_hash );
     }
 
     outcome::result<ConsensusManager::SubjectCheck> TransactionManager::HandleNonceConsensusSubject(
@@ -3130,7 +2983,7 @@ namespace sgns
             return ConsensusManager::SubjectCheck::Reject;
         }
 
-        if ( tracked.status == TransactionStatus::FAILED || tracked.status == TransactionStatus::INVALID )
+        if ( tracked.status == TransactionStatus::FAILED )
         {
             m_logger->error( "[{} - full: {}] {}: Transaction status invalid for hash {}",
                              account_m->GetAddress().substr( 0, 8 ),
@@ -3395,7 +3248,7 @@ namespace sgns
         }
 
         const auto confirmed_nonce = nonce_result.value();
-        const auto tx_nonce        = tx.dag_st.nonce();
+        const auto tx_nonce        = tx.GetNonce();
 
         if ( tx_nonce <= confirmed_nonce )
         {
@@ -3437,7 +3290,7 @@ namespace sgns
                                      tx.GetSrcAddress() );
                     return false;
                 }
-                if ( tracked->status == TransactionStatus::FAILED || tracked->status == TransactionStatus::INVALID )
+                if ( tracked->status == TransactionStatus::FAILED )
                 {
                     m_logger->error( "[{} - full: {}] {}: Intermediate nonce {} invalid for address {}",
                                      account_m->GetAddress().substr( 0, 8 ),
@@ -3561,6 +3414,195 @@ namespace sgns
                         __func__,
                         window );
         nonce_window_m = window;
+    }
+
+    outcome::result<void> TransactionManager::ChangeTransactionState( const std::shared_ptr<IGeniusTransactions> &tx,
+                                                                      TransactionStatus new_status )
+    {
+        switch ( new_status )
+        {
+            case TransactionStatus::CREATED:
+            {
+                std::unique_lock tx_lock( tx_mutex_m );
+                const auto       key = GetTransactionPath( *tx );
+                auto             it  = tx_processed_m.find( key );
+                if ( it != tx_processed_m.end() )
+                {
+                    m_logger->error( "[{} - full: {}] {}: Trying to CREATE a transaction that already exists {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     __func__,
+                                     tx->GetHash() );
+                    return outcome::failure( std::errc::file_exists );
+                }
+                m_logger->debug( "[{} - full: {}] {}: Set status of CREATE to transaction {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 __func__,
+                                 tx->GetHash() );
+                tx_processed_m.emplace( key, TrackedTx{ tx, TransactionStatus::CREATED, tx->GetNonce() } );
+            }
+            break;
+            case TransactionStatus::SENDING:
+            {
+                std::unique_lock tx_lock( tx_mutex_m );
+                const auto       key = GetTransactionPath( *tx );
+                auto             it  = tx_processed_m.find( key );
+                if ( it == tx_processed_m.end() )
+                {
+                    m_logger->error( "[{} - full: {}] {}: Trying to SEND a transaction that doesn't exist {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     __func__,
+                                     tx->GetHash() );
+                    return outcome::failure( std::errc::no_such_file_or_directory );
+                }
+                if ( it->second.status != TransactionStatus::CREATED )
+                {
+                    m_logger->error(
+                        "[{} - full: {}] {}: Trying to SEND a transaction that is not in CREATED status {}",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        __func__,
+                        tx->GetHash() );
+                    return outcome::failure( std::errc::invalid_argument );
+                }
+                it->second.status = TransactionStatus::SENDING;
+                m_logger->debug( "[{} - full: {}] {}: Set status of SENDING to transaction {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 __func__,
+                                 tx->GetHash() );
+            }
+            break;
+            case TransactionStatus::VERIFYING:
+            {
+                std::unique_lock tx_lock( tx_mutex_m );
+                const auto       key = GetTransactionPath( *tx );
+                auto             it  = tx_processed_m.find( key );
+
+                if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::VERIFYING )
+                {
+                    m_logger->error( "[{} - full: {}] {}: Trying to VERIFY a transaction that is already in VERIFY {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     __func__,
+                                     tx->GetHash() );
+                    return outcome::failure( std::errc::invalid_argument );
+                }
+                if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
+                {
+                    m_logger->warn( "[{} - full: {}] {}: Unconfirming transaction {} and verifying it again",
+                                    account_m->GetAddress().substr( 0, 8 ),
+                                    full_node_m,
+                                    __func__,
+                                    tx->GetHash() );
+                    OUTCOME_TRY( RevertTransaction( tx ) );
+
+                    OUTCOME_TRY( DeleteTransaction( key, tx->GetTopics() ) );
+
+                    account_m->RollBackPeerConfirmedNonce( it->second.cached_nonce, tx->GetSrcAddress() );
+                }
+                tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce() };
+                verifying_count_.fetch_add( 1, std::memory_order_relaxed );
+                m_logger->debug( "[{} - full: {}] {}: Set status of VERIFYING to transaction {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 __func__,
+                                 tx->GetHash() );
+                m_logger->debug( "[{} - full: {}] {}: Attempting to resume the proposal handling to transaction {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 __func__,
+                                 tx->GetHash() );
+                OUTCOME_TRY( blockchain_->TryResumeProposal( tx->GetHash() ) );
+            }
+
+            break;
+            case TransactionStatus::CONFIRMED:
+            {
+                std::unique_lock tx_lock( tx_mutex_m );
+                const auto       key = GetTransactionPath( *tx );
+                auto             it  = tx_processed_m.find( key );
+                if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
+                {
+                    m_logger->error( "[{} - full: {}] {}: Trying to CONFIRM a transaction that is already CONFIRMED {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     __func__,
+                                     tx->GetHash() );
+                    return outcome::failure( std::errc::file_exists );
+                }
+                if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::VERIFYING )
+                {
+                    m_logger->debug( "[{} - full: {}] {}: Reming verification count on {} before confirming",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     __func__,
+                                     tx->GetHash() );
+                    verifying_count_.fetch_sub( 1, std::memory_order_relaxed );
+                }
+                tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CONFIRMED, tx->GetNonce() };
+
+                m_logger->debug( "[{} - full: {}] {}: Set status of CONFIRMED to transaction {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 __func__,
+                                 tx->GetHash() );
+                OUTCOME_TRY( ParseTransaction( tx ) );
+                account_m->SetPeerConfirmedNonce( tx->GetNonce(), tx->GetSrcAddress() );
+            }
+
+            break;
+            case TransactionStatus::INVALID:
+            case TransactionStatus::FAILED:
+            {
+                std::unique_lock tx_lock( tx_mutex_m );
+                const auto       key = GetTransactionPath( *tx );
+                auto             it  = tx_processed_m.find( key );
+                if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::FAILED )
+                {
+                    m_logger->error( "[{} - full: {}] {}: Trying to FAIL a transaction that is already FAILED {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     __func__,
+                                     tx->GetHash() );
+                    return outcome::failure( std::errc::file_exists );
+                }
+                if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
+                {
+                    m_logger->debug( "[{} - full: {}] {}: Unconfirming transaction {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     __func__,
+                                     tx->GetHash() );
+                    OUTCOME_TRY( RevertTransaction( tx ) );
+
+                    OUTCOME_TRY( DeleteTransaction( key, tx->GetTopics() ) );
+
+                    account_m->RollBackPeerConfirmedNonce( it->second.cached_nonce, tx->GetSrcAddress() );
+                }
+                tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::FAILED, tx->GetNonce() };
+                account_m->ReleaseNonce( tx->GetNonce() );
+
+                m_logger->debug( "[{} - full: {}] {}: Set status of FAILED to transaction {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 __func__,
+                                 tx->GetHash() );
+            }
+
+            break;
+            default:
+                m_logger->error( "[{} - full: {}] {}: Invalid transaction status {} for transaction {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 __func__,
+                                 static_cast<int>( new_status ),
+                                 tx->GetHash() );
+                return outcome::failure( std::errc::invalid_argument );
+        }
+        return outcome::success();
     }
 }
 

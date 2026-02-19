@@ -220,10 +220,10 @@ namespace sgns
         using TransactionParserFn =
             outcome::result<void> ( TransactionManager::* )( const std::shared_ptr<IGeniusTransactions> & );
 
-        SGTransaction::DAGStruct                      FillDAGStruct( std::string transaction_hash = "" ) const;
-        outcome::result<std::unordered_set<uint64_t>> SendTransactionItem( TransactionItem &item );
-        outcome::result<void>                         ConfirmTransactions();
-        outcome::result<void>                         RollbackTransactions( TransactionItem &item_to_rollback );
+        SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" ) const;
+        outcome::result<void>    SendTransactionItem( TransactionItem &item );
+        outcome::result<void>    ConfirmTransactions();
+        outcome::result<void>    RollbackTransactions( TransactionItem &item_to_rollback );
 
         static std::vector<uint16_t>                                 GetMonitoredNetworkIDs();
         static std::string                                           GetBlockChainBase();
@@ -378,6 +378,9 @@ namespace sgns
         bool CheckTransactionTypeRules( const std::shared_ptr<IGeniusTransactions> &tx ) const;
         bool ValidateUTXOParametersForConsensus( const UTXOTxParameters &params, const std::string &address ) const;
         void SetNonceWindow( uint64_t window );
+
+        outcome::result<void> ChangeTransactionState( const std::shared_ptr<IGeniusTransactions> &tx,
+                                                      TransactionStatus                           new_status );
     };
 }
 
