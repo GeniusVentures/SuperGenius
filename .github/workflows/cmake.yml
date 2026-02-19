@@ -314,21 +314,26 @@ jobs:
         if: ${{ runner.environment == 'self-hosted' && matrix.target == 'Windows' }}
         run: |
           # Prepend Git's bin directories to PATH to prioritize Git Bash over WSL
-          $gitBinPath = "C:\Program Files\Git\bin"
           $gitUsrBinPath = "C:\Program Files\Git\usr\bin"
+          $gitBinPath = "C:\Program Files\Git\bin"
           
-          # Update PATH for future steps
+          # Update PATH for future steps (add in reverse order since we're prepending)
           if (Test-Path $gitBinPath) {
-            echo "$gitBinPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+            Add-Content -Path $env:GITHUB_PATH -Value $gitBinPath
             $env:PATH = "$gitBinPath;$env:PATH"
           }
           if (Test-Path $gitUsrBinPath) {
-            echo "$gitUsrBinPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+            Add-Content -Path $env:GITHUB_PATH -Value $gitUsrBinPath
             $env:PATH = "$gitUsrBinPath;$env:PATH"
           }
           
-          Write-Output "Git Bash will be used for bash shell commands"
-          Write-Output "Bash location: $(where.exe bash.exe | Select-Object -First 1)"
+          Write-Output "Git Bash configured for bash shell commands"
+          $bashLocation = (Get-Command bash.exe -ErrorAction SilentlyContinue).Source
+          if ($bashLocation) {
+            Write-Output "Bash location: $bashLocation"
+          } else {
+            Write-Output "WARNING: bash.exe not found in PATH"
+          }
 
       - name: Set build directory
         run: |
