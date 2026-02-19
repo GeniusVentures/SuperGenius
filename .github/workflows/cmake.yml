@@ -213,7 +213,6 @@ jobs:
           fi
         shell: bash
 
-    steps:
       - name: Clean workspace (self-hosted runners - Unix)
         if: ${{ runner.environment == 'self-hosted' && matrix.target != 'Windows' }}
         working-directory: ${{runner.workspace}}
