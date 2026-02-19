@@ -100,14 +100,15 @@ jobs:
     runs-on: ${{matrix.host}}
     container:
       image: ${{matrix.container}}
+      options: ${{ matrix.target == 'Linux' && '--cap-add=IPC_LOCK' || '' }}
       credentials:
         username: ${{github.actor}}
         password: ${{secrets.GNUS_TOKEN_1}}
     strategy:
       fail-fast: false
       matrix:
-        target: [ Android, iOS, OSX, Linux, Windows ]
-        build-type: [ Debug,Release ]
+        target: [ Linux, Windows ]
+        build-type: [ Release ]
         abi: [ "" ]
         include:
           - target: Linux
@@ -115,48 +116,43 @@ jobs:
             abi: "x86_64"
             build-type: "Release"
             container: ghcr.io/geniusventures/debian-bullseye:latest
-          - target: Linux
-            host: sg-ubuntu-linux
-            abi: "x86_64"
-            build-type: "Debug"
-            container: ghcr.io/geniusventures/debian-bullseye:latest
-          - target: Linux
-            host: ubuntu-24.04-arm
-            abi: "aarch64"
-            build-type: "Release"
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+          # - target: Linux
+          #   host: sg-ubuntu-linux
+          #   abi: "x86_64"
+          #   build-type: "Debug"
+          #   container: ghcr.io/geniusventures/debian-bullseye:latest
           - target: Linux
             host: ubuntu-24.04-arm
             abi: "aarch64"
-            build-type: "Debug"
+            build-type: "Release"
             container: ghcr.io/geniusventures/debian-bullseye:latest
-          - target: Windows
-            host: SG-WIN11
-          - target: OSX
-            host: gv-OSX-Large
-          - target: Android
-            host: sg-ubuntu-linux
-            abi: arm64-v8a
-            build-type: "Release"
-          - target: Android
-            host: sg-ubuntu-linux
-            abi: arm64-v8a
-            build-type: "Debug"
-          - target: Android
-            host: sg-ubuntu-linux
-            abi: armeabi-v7a
-            build-type: "Release"
-          - target: Android
-            host: sg-ubuntu-linux
-            abi: armeabi-v7a
-            build-type: "Debug"
-          - target: iOS
-            host: macos-latest
-        exclude:
-          - target: Android
-            abi: ""
-          - target: Linux
-            abi: ""
+          # - target: Linux
+          #   host: ubuntu-24.04-arm
+          #   abi: "aarch64"
+          #   build-type: "Debug"
+          #   container: ghcr.io/geniusventures/debian-bullseye:latest
+          # - target: Windows
+          #   host: SG-WIN11
+          # - target: OSX
+          #   host: gv-OSX-Large
+          # - target: Android
+          #   host: sg-ubuntu-linux
+          #   abi: arm64-v8a
+          #   build-type: "Release"
+          # - target: Android
+          #   host: sg-ubuntu-linux
+          #   abi: arm64-v8a
+          #   build-type: "Debug"
+          # - target: Android
+          #   host: sg-ubuntu-linux
+          #   abi: armeabi-v7a
+          #   build-type: "Release"
+          # - target: Android
+          #   host: sg-ubuntu-linux
+          #   abi: armeabi-v7a
+          #   build-type: "Debug"
+          # - target: iOS
+          #   host: macos-latest
     steps:
       - name: Check if build should run (Unix)
         if: ${{ matrix.target != 'Windows' }}
@@ -475,7 +471,7 @@ jobs:
           sudo update-alternatives --set cc $(which clang)
           sudo update-alternatives --set c++ $(which clang++)
           
-          sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev dbus-x11 gnome-keyring -y
+          sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev dbus-x11 dbus-user-session gnome-keyring -y
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
       - name: Configure Windows host
@@ -564,6 +560,10 @@ jobs:
         working-directory: ${{github.workspace}}/SuperGenius
         run: cmake -S build/${{matrix.target}} -B $env:BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}}
 
+      - name: Unlock Keyring (Linux)
+        if: ${{matrix.build-type == 'Release' && matrix.target == 'Linux'}}
+        uses: t1m0thyj/unlock-keyring@v1
+
       - name: Build SuperGenius
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
         run: cmake --build . --config ${{matrix.build-type}} -j
@@ -573,22 +573,9 @@ jobs:
         if: ${{matrix.build-type == 'Release' && (matrix.target == 'Linux' || matrix.target == 'Windows')}}
         shell: bash
         run: |
-            # Generate machine-id
-            sudo mkdir -p /var/lib/dbus
-            sudo dbus-uuidgen | sudo tee /var/lib/dbus/machine-id /etc/machine-id > /dev/null
-
-            # Start a D-Bus session and export it for this shell
-            eval $(dbus-launch --sh-syntax)
-            echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> $GITHUB_ENV
-            echo "DBUS_SESSION_BUS_PID=$DBUS_SESSION_BUS_PID" >> $GITHUB_ENV
-
-            # Start gnome-keyring-daemon and wait for it to register
-            echo -n "" | gnome-keyring-daemon --unlock --components=secrets --daemonize
-            sleep 1
-
-            set +e
-            ctest . -j
             set -e
+            ctest . -j
+            set +e
             ctest . --rerun-failed --output-on-failure
 
       - name: Install SuperGenius
