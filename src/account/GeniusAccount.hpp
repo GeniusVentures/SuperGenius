@@ -158,12 +158,6 @@ namespace sgns
         std::vector<uint8_t> Sign( const std::vector<uint8_t> &data ) const;
 
         /**
-         * @brief       Set the local confirmed nonce
-         * @param[in]   nonce The nonce value to be set
-         */
-        void SetLocalConfirmedNonce( uint64_t nonce );
-
-        /**
          * @brief       Set the local confirmed nonce for a peer
          * @param[in]   nonce The nonce value to be set
          * @param[in]   address The address of the peer
