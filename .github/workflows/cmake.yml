@@ -317,11 +317,14 @@ jobs:
           $gitBinPath = "C:\Program Files\Git\bin"
           $gitUsrBinPath = "C:\Program Files\Git\usr\bin"
           
+          # Update PATH for future steps
           if (Test-Path $gitBinPath) {
             echo "$gitBinPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+            $env:PATH = "$gitBinPath;$env:PATH"
           }
           if (Test-Path $gitUsrBinPath) {
             echo "$gitUsrBinPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+            $env:PATH = "$gitUsrBinPath;$env:PATH"
           }
           
           Write-Output "Git Bash will be used for bash shell commands"
