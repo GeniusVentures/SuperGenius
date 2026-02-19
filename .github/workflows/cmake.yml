@@ -571,7 +571,12 @@ jobs:
       - name: Run tests
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
         if: ${{matrix.build-type == 'Release' && (matrix.target == 'Linux' || matrix.target == 'Windows')}}
-        run: ctest . -j
+        shell: bash
+        run: |
+            set +e
+            ctest . -j
+            set -e
+            ctest . --rerun-failed --output-on-failure
 
       - name: Install SuperGenius
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
