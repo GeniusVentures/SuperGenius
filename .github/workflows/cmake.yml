@@ -475,7 +475,7 @@ jobs:
           sudo update-alternatives --set cc $(which clang)
           sudo update-alternatives --set c++ $(which clang++)
           
-          sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev -y
+          sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev dbus-x11 gnome-keyring -y
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
       - name: Configure Windows host
@@ -573,6 +573,19 @@ jobs:
         if: ${{matrix.build-type == 'Release' && (matrix.target == 'Linux' || matrix.target == 'Windows')}}
         shell: bash
         run: |
+            # Generate machine-id
+            sudo mkdir -p /var/lib/dbus
+            sudo dbus-uuidgen | sudo tee /var/lib/dbus/machine-id /etc/machine-id > /dev/null
+
+            # Start a D-Bus session and export it for this shell
+            eval $(dbus-launch --sh-syntax)
+            echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> $GITHUB_ENV
+            echo "DBUS_SESSION_BUS_PID=$DBUS_SESSION_BUS_PID" >> $GITHUB_ENV
+
+            # Start gnome-keyring-daemon and wait for it to register
+            echo -n "" | gnome-keyring-daemon --unlock --components=secrets --daemonize
+            sleep 1
+
             set +e
             ctest . -j
             set -e
