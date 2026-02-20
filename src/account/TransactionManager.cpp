@@ -2264,35 +2264,36 @@ namespace sgns
 
             auto conflicting_tx_res = GetConflictingTransaction( *new_tx );
 
-            if ( conflicting_tx_res.has_value() )
+            if ( !conflicting_tx_res.has_value() )
             {
-                conflicting_tx = std::move( conflicting_tx_res.value() );
-                m_logger->debug( "[{} - full: {}] Found existing conflicting transaction with hash: {}",
+                break;
+            }
+            conflicting_tx = std::move( conflicting_tx_res.value() );
+            m_logger->debug( "[{} - full: {}] Found existing conflicting transaction with hash: {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             conflicting_tx->GetHash() );
+            std::unique_lock tx_lock( tx_mutex_m );
+            auto             key = GetTransactionPath( conflicting_tx->GetHash() );
+            auto             it  = tx_processed_m.find( key );
+            if ( it == tx_processed_m.end() )
+            {
+                m_logger->error( "[{} - full: {}] Conflicting transaction not found in processed maps: {}",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
-                                 conflicting_tx->GetHash() );
-                std::unique_lock tx_lock( tx_mutex_m );
-                auto             key = GetTransactionPath( conflicting_tx->GetHash() );
-                auto             it  = tx_processed_m.find( key );
-                if ( it == tx_processed_m.end() )
-                {
-                    m_logger->error( "[{} - full: {}] Conflicting transaction not found in processed maps: {}",
-                                     account_m->GetAddress().substr( 0, 8 ),
-                                     full_node_m,
-                                     key );
-                    break;
-                }
-                if ( it->second.status == TransactionStatus::CONFIRMED )
-                {
-                    m_logger->debug(
-                        "[{} - full: {}] Conflicting transaction is already CONFIRMED, checking the incoming transaction {}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        key );
+                                 key );
+                break;
+            }
+            if ( it->second.status == TransactionStatus::CONFIRMED )
+            {
+                m_logger->debug(
+                    "[{} - full: {}] Conflicting transaction is already CONFIRMED, checking the incoming transaction {}",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    key );
 
-                    should_delete = true;
-                    break;
-                }
+                should_delete = true;
+                break;
             }
 
             m_logger->debug( "[{} - full: {}] Checking if new tx {} is the correct one",
@@ -2380,6 +2381,9 @@ namespace sgns
     bool TransactionManager::ShouldReplaceTransaction( const IGeniusTransactions &existing_tx,
                                                        const IGeniusTransactions &new_tx ) const
     {
+        m_logger->debug( "[{} - full: {}] ShouldReplaceTransaction?",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m );
         // First check if the existing transaction is immutable
         if ( existing_tx.GetHash() == new_tx.GetHash() )
         {
@@ -2395,6 +2399,9 @@ namespace sgns
                             full_node_m );
             return false;
         }
+        m_logger->debug( "[{} - full: {}] ShouldReplaceTransaction?1111",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m );
 
         // Get timestamps and elapsed times
         auto existing_timestamp = existing_tx.GetTimestamp();
@@ -2648,7 +2655,7 @@ namespace sgns
                     account_m->GetAddress().substr( 0, 8 ),
                     full_node_m,
                     key );
-                    tx_lock.unlock();
+                tx_lock.unlock();
                 OUTCOME_TRY( ChangeTransactionState( new_tx, TransactionStatus::FAILED ) );
                 tx_lock.lock();
                 return outcome::failure( boost::system::error_code{} );
@@ -2657,7 +2664,7 @@ namespace sgns
                             account_m->GetAddress().substr( 0, 8 ),
                             full_node_m,
                             conflicting_tx.value()->GetHash() );
-                            tx_lock.unlock();
+            tx_lock.unlock();
             OUTCOME_TRY( ChangeTransactionState( conflicting_tx.value(), TransactionStatus::VERIFYING ) );
         }
 
@@ -3242,11 +3249,20 @@ namespace sgns
         auto nonce_result = account_m->GetPeerNonce( tx.GetSrcAddress() );
         if ( nonce_result.has_error() )
         {
+            if ( tx.GetNonce() == 0 )
+            {
+                m_logger->debug( "[{} - full: {}] {}: No peer nonce required for tx with nonce=0",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 __func__ );
+                return true;
+            }
             m_logger->error( "[{} - full: {}] {}: Missing peer nonce for address {}",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              __func__,
                              tx.GetSrcAddress() );
+
             return false;
         }
 
@@ -3524,7 +3540,13 @@ namespace sgns
                                  full_node_m,
                                  __func__,
                                  tx->GetHash() );
+                tx_lock.unlock();
                 OUTCOME_TRY( blockchain_->TryResumeProposal( tx->GetHash() ) );
+                m_logger->debug( "[{} - full: {}] {}: Resumed the proposal handling to transaction {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 __func__,
+                                 tx->GetHash() );
             }
 
             break;
