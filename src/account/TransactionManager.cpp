@@ -657,7 +657,6 @@ namespace sgns
     {
         m_logger->debug( "[{} - full: {}] Transaction enqueuing", account_m->GetAddress().substr( 0, 8 ), full_node_m );
         {
-            std::unique_lock tx_lock( tx_mutex_m );
             for ( auto &&[tx, _] : element.first )
             {
                 auto result = ChangeTransactionState( tx, TransactionStatus::CREATED );
@@ -2117,6 +2116,7 @@ namespace sgns
             tx = tracked.tx;
             break;
         }
+        tx_lock.unlock();
         if ( tx )
         {
             auto result = ChangeTransactionState( std::move( tx ), s );
@@ -2648,13 +2648,16 @@ namespace sgns
                     account_m->GetAddress().substr( 0, 8 ),
                     full_node_m,
                     key );
+                    tx_lock.unlock();
                 OUTCOME_TRY( ChangeTransactionState( new_tx, TransactionStatus::FAILED ) );
+                tx_lock.lock();
                 return outcome::failure( boost::system::error_code{} );
             }
             m_logger->warn( "[{} - full: {}] Setting conflicting transaction to VERIFYING since it's not confirmed: {}",
                             account_m->GetAddress().substr( 0, 8 ),
                             full_node_m,
                             conflicting_tx.value()->GetHash() );
+                            tx_lock.unlock();
             OUTCOME_TRY( ChangeTransactionState( conflicting_tx.value(), TransactionStatus::VERIFYING ) );
         }
 
@@ -3419,6 +3422,12 @@ namespace sgns
     outcome::result<void> TransactionManager::ChangeTransactionState( const std::shared_ptr<IGeniusTransactions> &tx,
                                                                       TransactionStatus new_status )
     {
+        m_logger->debug( "[{} - full: {}] {}: Changing transaction state to {} for transaction {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         __func__,
+                         static_cast<int>( new_status ),
+                         tx->GetHash() );
         switch ( new_status )
         {
             case TransactionStatus::CREATED:
@@ -3602,6 +3611,13 @@ namespace sgns
                                  tx->GetHash() );
                 return outcome::failure( std::errc::invalid_argument );
         }
+
+        m_logger->debug( "[{} - full: {}] {}: Transaction {} state changed to {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         __func__,
+                         tx->GetHash(),
+                         static_cast<int>( new_status ) );
         return outcome::success();
     }
 }
