@@ -2127,101 +2127,7 @@ namespace sgns
         return ret;
     }
 
-    outcome::result<void> TransactionManager::ConfirmTransactions()
-    {
-        // Fast path: check if there are any VERIFYING transactions
-        if ( verifying_count_.load( std::memory_order_relaxed ) == 0 )
-        {
-            m_logger->trace( "[{} - full: {}] No VERIFYING transactions, skipping nonce check in ConfirmTransactions",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m );
-            return outcome::success();
-        }
 
-        // Collect nonces of VERIFYING transactions using index
-        std::vector<uint64_t> verifying_nonces;
-        {
-            std::shared_lock tx_lock( tx_mutex_m );
-            for ( const auto &[_, tracked] : tx_processed_m )
-            {
-                if ( !tracked.tx )
-                {
-                    continue;
-                }
-                if ( tracked.tx->GetSrcAddress() != account_m->GetAddress() )
-                {
-                    continue;
-                }
-                if ( tracked.status == TransactionStatus::VERIFYING )
-                {
-                    verifying_nonces.push_back( tracked.cached_nonce );
-                }
-            }
-        }
-
-        // If nothing to confirm after lock, skip
-        if ( verifying_nonces.empty() )
-        {
-            m_logger->trace( "[{} - full: {}] No VERIFYING transactions after lock check",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m );
-            return outcome::success();
-        }
-
-        // Fetch confirmed nonce only if we have VERIFYING transactions
-        auto nonce_result = account_m->GetConfirmedNonce( NONCE_REQUEST_TIMEOUT_MS );
-        if ( !nonce_result.has_value() )
-        {
-            m_logger->debug( "[{} - full: {}] Can't fetch nonce from the network in ConfirmTransactions",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m );
-            return outcome::failure( boost::system::error_code{} );
-        }
-
-        uint64_t confirmed_nonce = nonce_result.value();
-        m_logger->debug( "[{} - full: {}] Confirmed nonce from network: {}",
-                         account_m->GetAddress().substr( 0, 8 ),
-                         full_node_m,
-                         confirmed_nonce );
-
-        // Use nonce index for O(1) lookup and update
-        {
-            std::unique_lock<std::shared_mutex> tx_lock( tx_mutex_m );
-            for ( uint64_t nonce : verifying_nonces )
-            {
-                if ( nonce <= confirmed_nonce )
-                {
-                    for ( auto &[key, tracked] : tx_processed_m )
-                    {
-                        if ( !tracked.tx )
-                        {
-                            continue;
-                        }
-                        if ( tracked.tx->GetSrcAddress() != account_m->GetAddress() )
-                        {
-                            continue;
-                        }
-                        if ( tracked.cached_nonce != nonce )
-                        {
-                            continue;
-                        }
-                        if ( tracked.status == TransactionStatus::VERIFYING )
-                        {
-                            tracked.status = TransactionStatus::CONFIRMED;
-                            verifying_count_.fetch_sub( 1, std::memory_order_relaxed );
-                            m_logger->debug( "[{} - full: {}] Transaction {} (nonce {}) set to CONFIRMED",
-                                             account_m->GetAddress().substr( 0, 8 ),
-                                             full_node_m,
-                                             key,
-                                             nonce );
-                        }
-                    }
-                }
-            }
-        }
-
-        return outcome::success();
-    }
 
     std::optional<std::vector<crdt::pb::Element>> TransactionManager::FilterTransaction(
         const crdt::pb::Element &element )
@@ -2575,10 +2481,6 @@ namespace sgns
                     }
                     account_m->RollBackPeerConfirmedNonce( it->second.cached_nonce,
                                                            it->second.tx->dag_st.source_addr() );
-                    if ( it->second.status == TransactionStatus::VERIFYING )
-                    {
-                        verifying_count_.fetch_sub( 1, std::memory_order_relaxed );
-                    }
                 }
                 tx_processed_m.erase( it );
                 found = true;
@@ -3521,7 +3423,6 @@ namespace sgns
                     account_m->RollBackPeerConfirmedNonce( it->second.cached_nonce, tx->GetSrcAddress() );
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce() };
-                verifying_count_.fetch_add( 1, std::memory_order_relaxed );
                 m_logger->debug( "[{} - full: {}] {}: Set status of VERIFYING to transaction {}",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
@@ -3563,7 +3464,6 @@ namespace sgns
                                      full_node_m,
                                      __func__,
                                      tx->GetHash() );
-                    verifying_count_.fetch_sub( 1, std::memory_order_relaxed );
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CONFIRMED, tx->GetNonce() };
 

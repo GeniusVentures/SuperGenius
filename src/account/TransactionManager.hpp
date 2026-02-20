@@ -222,7 +222,6 @@ namespace sgns
 
         SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" ) const;
         outcome::result<void>    SendTransactionItem( TransactionItem &item );
-        outcome::result<void>    ConfirmTransactions();
         outcome::result<void>    RollbackTransactions( TransactionItem &item_to_rollback );
 
         static std::vector<uint16_t>                                 GetMonitoredNetworkIDs();
@@ -292,7 +291,6 @@ namespace sgns
 
         mutable std::shared_mutex                  tx_mutex_m;
         std::unordered_map<std::string, TrackedTx> tx_processed_m;
-        std::atomic<size_t>                        verifying_count_{ 0 }; // Count of VERIFYING transactions
         std::unordered_map<std::string, ConsensusManager::Proposal> pending_proposals_;
         std::function<void()>                                       task_m;
         std::atomic<bool>                                           stopped_{ false };
