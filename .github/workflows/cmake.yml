@@ -99,7 +99,7 @@ jobs:
       GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
     runs-on: ${{matrix.host}}
     container:
-      image: ${{matrix.container}}
+      image: ${{ matrix.container }}
       options: ${{ matrix.target == 'Linux' && '--cap-add=IPC_LOCK' || '' }}
       credentials:
         username: ${{github.actor}}
@@ -558,7 +558,7 @@ jobs:
       - name: Configure CMake for Linux
         if: ${{matrix.target == 'Linux'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}}
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}} -DSGNS_PRINT_LOGS=ON
 
       - name: Configure CMake for Windows
         if: ${{matrix.target == 'Windows'}}
@@ -578,10 +578,8 @@ jobs:
         if: ${{matrix.build-type == 'Release' && (matrix.target == 'Linux' || matrix.target == 'Windows')}}
         shell: bash
         run: |
-            set -e
+            ./test_bin/migration_sync_test
             ctest . -j
-            set +e
-            ctest . --rerun-failed --output-on-failure
 
       - name: Install SuperGenius
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
