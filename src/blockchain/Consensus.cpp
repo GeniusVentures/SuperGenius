@@ -855,7 +855,7 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        const auto             key = std::string{CERTIFICATE_BASE_PATH_KEY} + subject_hash_result.value();
+        const auto             key = std::string{ CERTIFICATE_BASE_PATH_KEY } + subject_hash_result.value();
         crdt::HierarchicalKey  cert_key( key );
         crdt::GlobalDB::Buffer cert_value;
         cert_value.put( serialized );
@@ -978,6 +978,7 @@ namespace sgns
         {
             return outcome::failure( std::errc::invalid_argument );
         }
+        ConsensusManagerLogger()->trace( "{}: called subject_hash={}", __func__, subject_hash );
 
         auto to_process = TakePendingProposals( subject_hash );
 
@@ -1038,11 +1039,9 @@ namespace sgns
         auto registry_result = registry_->LoadRegistry();
         if ( registry_result.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: aborted: registry load error={}",
-                                             __func__,
-                                             registry_result.error().message() );
             return;
         }
+        //ConsensusManagerLogger()->trace( "{}: Checking if need to process certificates", __func__ );
         const auto &registry = registry_result.value();
 
         std::vector<ProposalState> to_process;
@@ -1053,6 +1052,10 @@ namespace sgns
                 auto &state = kv.second;
                 if ( !state.quorum_reached )
                 {
+                    ConsensusManagerLogger()->debug( "{}: Found proposal without quorum reached proposal_id={}",
+                                                     __func__,
+                                                     state.proposal.proposal_id() );
+
                     continue;
                 }
                 to_process.push_back( state );
@@ -1061,13 +1064,23 @@ namespace sgns
 
         for ( auto &state : to_process )
         {
+            ConsensusManagerLogger()->debug( "{}: Processing proposal with quorum reached proposal_id={}",
+                                             __func__,
+                                             state.proposal.proposal_id() );
             const auto round = GetCurrentRound( state.proposal.timestamp() );
-            if ( round == state.last_attempt_round )
+            if ( state.last_attempt_round != NO_ROUND && round == state.last_attempt_round )
             {
+                ConsensusManagerLogger()->debug( "{}: proposal already attempted in round proposal_id={} round={}",
+                                                 __func__,
+                                                 state.proposal.proposal_id(),
+                                                 round );
                 continue;
             }
             if ( !IsCurrentAggregator( state.proposal, registry ) )
             {
+                ConsensusManagerLogger()->debug( "{}: not aggregator for proposal proposal_id={}",
+                                                 __func__,
+                                                 state.proposal.proposal_id() );
                 continue;
             }
 
@@ -1079,7 +1092,10 @@ namespace sgns
                     it->second.last_attempt_round = round;
                 }
             }
-
+            ConsensusManagerLogger()->debug( "{}: Attempting to create certificate proposal_id={} round={}",
+                                             __func__,
+                                             state.proposal.proposal_id(),
+                                             round );
             auto certificate_result = CreateCertificate( state.proposal, state.votes );
             if ( certificate_result.has_error() )
             {
@@ -1807,11 +1823,6 @@ namespace sgns
             ConsensusManagerLogger()->error( "{}: Registry CID missing ", __func__ );
             return false;
         }
-        if ( proposal.registry_epoch() == 0 )
-        {
-            ConsensusManagerLogger()->error( "{}: Registry EPOCH is zero ", __func__ );
-            return false;
-        }
         if ( !proposal.has_subject() )
         {
             ConsensusManagerLogger()->error( "{}: Proposal without subject ", __func__ );
@@ -1850,9 +1861,10 @@ namespace sgns
         return true;
     }
 
-    outcome::result<ConsensusManager::Certificate> ConsensusManager::GetCertificateBySubjectHash( const std::string &subject_hash ) const
+    outcome::result<ConsensusManager::Certificate> ConsensusManager::GetCertificateBySubjectHash(
+        const std::string &subject_hash ) const
     {
-        const auto key = std::string{CERTIFICATE_BASE_PATH_KEY} + subject_hash;
+        const auto key = std::string{ CERTIFICATE_BASE_PATH_KEY } + subject_hash;
 
         OUTCOME_TRY( auto certificate_data, db_->Get( { key } ) );
 
@@ -1870,7 +1882,10 @@ namespace sgns
         }
         if ( current_hash.value() != subject_hash )
         {
-            ConsensusManagerLogger()->error( "{}: certificate subject hash mismatch expected={} actual={}", __func__, subject_hash, current_hash.value() );
+            ConsensusManagerLogger()->error( "{}: certificate subject hash mismatch expected={} actual={}",
+                                             __func__,
+                                             subject_hash,
+                                             current_hash.value() );
             return outcome::failure( std::errc::invalid_argument );
         }
         return certificate;
@@ -1884,7 +1899,7 @@ namespace sgns
             return false;
         }
         //TODO - Check if we need to call ValidateCertificate here. I don't think so because it was validated before.
-        return true; 
+        return true;
     }
 
 }

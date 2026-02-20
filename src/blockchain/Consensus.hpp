@@ -20,6 +20,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+#include <limits>
 
 #include "blockchain/ValidatorRegistry.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
@@ -140,6 +141,7 @@ namespace sgns
         static constexpr std::chrono::milliseconds DEFAULT_TIMESTAMP_WINDOW  = std::chrono::minutes( 5 );
         static constexpr std::chrono::milliseconds DEFAULT_ROUND_DURATION    = std::chrono::milliseconds( 500 );
         static constexpr std::chrono::milliseconds DEFAULT_ROUND_SKEW        = std::chrono::milliseconds( 250 );
+        static constexpr uint64_t                 NO_ROUND                   = std::numeric_limits<uint64_t>::max();
 
         struct ProposalState
         {
@@ -150,7 +152,7 @@ namespace sgns
             uint64_t                        approved_weight = 0;
             std::unordered_set<std::string> seen_voters;
             bool                            quorum_reached     = false;
-            uint64_t                        last_attempt_round = 0;
+            uint64_t                        last_attempt_round = NO_ROUND;
         };
 
         struct SlotState
