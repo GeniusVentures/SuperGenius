@@ -648,10 +648,6 @@ namespace sgns
         const ValidatorRegistry::Registry &registry,
         const std::string                 &registry_cid ) const
     {
-        ConsensusManagerLogger()->error( "{}: failed: registry cid mismatch proposal={} registry={}",
-                                         __func__,
-                                         proposal.registry_cid(),
-                                         registry_cid );
         if ( !proposal.registry_cid().empty() && !registry_cid.empty() && proposal.registry_cid() != registry_cid )
         {
             ConsensusManagerLogger()->error( "{}: failed: registry cid mismatch proposal={} registry={}",
@@ -806,7 +802,7 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> ConsensusManager::SubmitVote( const Vote &vote )
+    outcome::result<void> ConsensusManager::SubmitVote( const Vote &vote, bool self_handle )
     {
         ConsensusManagerLogger()->trace( "{}: called proposal_id={} voter_id={}",
                                          __func__,
@@ -824,6 +820,10 @@ namespace sgns
                                          __func__,
                                          vote.proposal_id(),
                                          vote.voter_id() );
+        if ( self_handle )
+        {
+            HandleVote( vote );
+        }
         return result;
     }
 

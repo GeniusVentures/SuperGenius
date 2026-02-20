@@ -113,7 +113,7 @@ namespace sgns
                                                                               const std::string &task_result_hash,
                                                                               uint64_t           result_epoch );
         outcome::result<void>                        SubmitProposal( const Proposal &proposal, bool self_vote = true );
-        outcome::result<void>                        SubmitVote( const Vote &vote );
+        outcome::result<void>                        SubmitVote( const Vote &vote, bool self_handle = true );
         outcome::result<void>                        SubmitCertificate( const Certificate &certificate );
         outcome::result<void>                        ResumeProposalHandling( const std::string &subject_hash );
         void                                         ProcessCertificates();
