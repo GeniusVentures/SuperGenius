@@ -475,9 +475,18 @@ jobs:
           sudo update-alternatives --install /usr/bin/c++ c++ $(which clang++) 100
           sudo update-alternatives --set cc $(which clang)
           sudo update-alternatives --set c++ $(which clang++)
-          
+
           sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev dbus-x11 dbus-user-session gnome-keyring -y
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
+
+      - name: Unlock Keyring (Linux)
+        if: ${{ matrix.build-type == 'Release' && matrix.target == 'Linux' }}
+        run: |
+          eval $(dbus-launch --sh-syntax)
+          echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> $GITHUB_ENV
+          echo "DBUS_SESSION_BUS_PID=$DBUS_SESSION_BUS_PID" >> $GITHUB_ENV
+          echo -n "test" | gnome-keyring-daemon --unlock --components=secrets,pkcs11,ssh &
+          sleep 2
 
       - name: Configure Windows host
         if: ${{ runner.os == 'Windows'}}
@@ -564,10 +573,6 @@ jobs:
         if: ${{matrix.target == 'Windows'}}
         working-directory: ${{github.workspace}}/SuperGenius
         run: cmake -S build/${{matrix.target}} -B $env:BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}}
-
-      - name: Unlock Keyring (Linux)
-        if: ${{matrix.build-type == 'Release' && matrix.target == 'Linux'}}
-        uses: t1m0thyj/unlock-keyring@v1
 
       - name: Build SuperGenius
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
