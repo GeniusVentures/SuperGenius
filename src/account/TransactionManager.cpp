@@ -374,13 +374,6 @@ namespace sgns
             break;
         }
 
-        auto confirm_result = ConfirmTransactions();
-        if ( confirm_result.has_error() )
-        {
-            m_logger->trace( "[{} - full: {}] Unknown ConfirmTransactions error",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m );
-        }
 
         // Periodic sync - request heads every 10 minutes to stay synchronized across devices/instances
         // Use 30 second interval until we get first response, then switch to 10 minutes
@@ -2014,8 +2007,7 @@ namespace sgns
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              tx_hash );
-            if ( tracked.tx && tracked.tx->GetHash() == tx_hash &&
-                 tracked.tx->GetSrcAddress() == account_m->GetAddress() )
+            if ( tracked.tx && tracked.tx->GetHash() == tx_hash )
             {
                 return tracked.tx;
             }

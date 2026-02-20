@@ -497,17 +497,17 @@ namespace sgns
         auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
         auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
-        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::debug );
-        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::debug );
-        auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
-        auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::trace );
-        auto loggerValidator        = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::debug );
-        auto loggerProcMgr          = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
-        auto loggerProcessor        = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
-        auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
-        auto loggerCoinPrices       = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
-        auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
-        auto loggerConsensusManager = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::trace );
+        auto loggerAccountMessenger  = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::debug );
+        auto loggerGeniusAccount     = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::debug );
+        auto loggerKeyPair           = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
+        auto loggerBlockchain        = ConfigureLogger( "Blockchain", logdir, spdlog::level::debug );
+        auto loggerValidator         = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::debug );
+        auto loggerProcMgr           = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
+        auto loggerProcessor         = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
+        auto loggerCrdtCallback      = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
+        auto loggerCoinPrices        = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
+        auto loggerUTXOManager       = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
+        auto loggerConsensusManager  = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::trace );
         // AsyncIOManager loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
         auto asioFileManager = ConfigureLogger( "FileManager", logdir, spdlog::level::err );
@@ -554,17 +554,17 @@ namespace sgns
         auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
         auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
-        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
-        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
-        auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
-        auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::err );
-        auto loggerValidator        = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::err );
-        auto loggerProcMgr          = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
-        auto loggerProcessor        = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
-        auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
-        auto loggerCoinPrices       = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
-        auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
-        auto loggerConsensusManager = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::err );
+        auto loggerAccountMessenger  = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
+        auto loggerGeniusAccount     = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerKeyPair           = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
+        auto loggerBlockchain        = ConfigureLogger( "Blockchain", logdir, spdlog::level::err );
+        auto loggerValidator         = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::err );
+        auto loggerProcMgr           = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
+        auto loggerProcessor         = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
+        auto loggerCrdtCallback      = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
+        auto loggerCoinPrices        = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
+        auto loggerUTXOManager       = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
+        auto loggerConsensusManager  = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::err );
 
         //AsyncIOManager Loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
