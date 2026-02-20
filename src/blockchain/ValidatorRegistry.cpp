@@ -467,16 +467,20 @@ namespace sgns
 
         OUTCOME_TRY( auto cid_content, db_->GetCIDContent( cid ) );
         ValidatorRegistryLogger()->trace( "{}: Got CID content with {} entries ", __func__, cid_content.size() );
+        crdt::HierarchicalKey registry_key{ std::string( RegistryKey() ) };
         for ( auto &[key, registry_content] : cid_content )
         {
             ValidatorRegistryLogger()->trace( "{}: Processing CID content key={}", __func__, key );
-            if ( key != std::string( RegistryKey() ) )
+            if ( key != registry_key.GetKey() )
             {
-                ValidatorRegistryLogger()->debug( "{}: Skipping non-registry content key={}", __func__, key );
+                ValidatorRegistryLogger()->debug( "{}: Skipping non-registry content key={}, registry_key={}",
+                                                  __func__,
+                                                  key,
+                                                  registry_key.GetKey() );
                 continue;
             }
             std::vector<uint8_t> bytes( registry_content.begin(), registry_content.end() );
-            auto decoded = DeserializeRegistryUpdate( bytes );
+            auto                 decoded = DeserializeRegistryUpdate( bytes );
             if ( decoded.has_error() )
             {
                 ValidatorRegistryLogger()->error( "{}: failed to parse registry update ", __func__ );
