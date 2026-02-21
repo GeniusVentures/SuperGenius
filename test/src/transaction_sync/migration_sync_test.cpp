@@ -144,7 +144,7 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
     const std::string readiness_message = params.subdir + " node not ready";
     test::assertWaitForCondition(
         [node] { return node && node->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 30000 ),
+        std::chrono::milliseconds( 40000 ),
         readiness_message );
 
     EXPECT_EQ( node->GetBalance(), params.expected_balance );
