@@ -100,6 +100,7 @@ jobs:
     runs-on: ${{matrix.host}}
     container:
       image: ${{ matrix.container }}
+      options: ${{ '--cap-add=IPC_LOCK' }}
       credentials:
         username: ${{github.actor}}
         password: ${{secrets.GNUS_TOKEN_1}}
@@ -107,7 +108,7 @@ jobs:
       fail-fast: false
       matrix:
         target: [ Android, iOS, OSX, Linux, Windows ]
-        build-type: [ Release ]
+        build-type: [ Debug, Release ]
         abi: [ "" ]
         include:
           - target: Linux
@@ -571,7 +572,7 @@ jobs:
       - name: Run tests (Windows)
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
         if: ${{matrix.build-type == 'Release' && (matrix.target == 'Windows')}}
-        run: ctest . -j
+        run: ctest . -j -C ${{matrix.build-type}}
         
       - name: Run tests (Linux)
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
@@ -586,7 +587,7 @@ jobs:
             lock-on-idle=false
             lock-after=false" > ~/.local/share/keyrings/login.keyring && \
             eval $(printf "\n" | gnome-keyring-daemon --unlock --components=secrets) && \
-            ctest . -j'
+            ctest . -j -C ${{matrix.build-type}}'
 
       - name: Install SuperGenius
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
