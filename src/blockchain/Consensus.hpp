@@ -35,6 +35,7 @@ namespace sgns
     {
     public:
         ~ConsensusManager();
+        void Close();
         using Proposal    = ConsensusProposal;
         using Vote        = ConsensusVote;
         using VoteBundle  = ConsensusVoteBundle;
@@ -189,6 +190,7 @@ namespace sgns
         static bool        ValidateSubject( const Subject &subject );
 
         void        OnConsensusMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message );
+        void        UpdateCertificatesPending();
         static bool CheckSubject( const Subject &subject );
         static bool CheckProposal( const Proposal &proposal );
         static bool CheckVote( const Vote &vote );
@@ -214,6 +216,7 @@ namespace sgns
         std::chrono::milliseconds round_duration_{ DEFAULT_ROUND_DURATION };
         std::chrono::milliseconds round_skew_{ DEFAULT_ROUND_SKEW };
         std::atomic<bool>         stop_timer_{ false };
+        std::atomic<bool>         certificates_pending_{ false };
         std::condition_variable   timer_cv_;
         std::mutex                timer_mutex_;
         std::thread               round_timer_;

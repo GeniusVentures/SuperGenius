@@ -330,6 +330,10 @@ namespace sgns
     Blockchain::~Blockchain()
     {
         logger_->debug( "[{}] ~Blockchain destructor called", account_->GetAddress().substr( 0, 8 ) );
+        if ( consensus_manager_ )
+        {
+            consensus_manager_->Close();
+        }
         if ( db_ )
         {
             const std::string genesis_pattern = "/?" + std::string( GENESIS_KEY );
@@ -1404,6 +1408,10 @@ namespace sgns
     outcome::result<void> Blockchain::Stop()
     {
         logger_->info( "[{}] Stopping blockchain", account_->GetAddress().substr( 0, 8 ) );
+        if ( consensus_manager_ )
+        {
+            consensus_manager_->Close();
+        }
         //db_->RemoveListenTopic( std::string( BLOCKCHAIN_TOPIC ) );
         return outcome::success();
     }

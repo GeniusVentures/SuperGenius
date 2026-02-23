@@ -116,6 +116,12 @@ namespace sgns
     {
         stop_timer_.store( true );
         timer_cv_.notify_all();
+    }
+
+    void ConsensusManager::Close()
+    {
+        stop_timer_.store( true );
+        timer_cv_.notify_all();
         if ( round_timer_.joinable() )
         {
             round_timer_.join();
@@ -125,6 +131,10 @@ namespace sgns
     void ConsensusManager::StartRoundTimer()
     {
         if ( round_timer_.joinable() )
+        {
+            return;
+        }
+        if ( stop_timer_.load() )
         {
             return;
         }
@@ -147,12 +157,27 @@ namespace sgns
                     {
                         interval = DEFAULT_ROUND_DURATION / 2;
                     }
-                    if ( self->timer_cv_.wait_for( lock, interval, [self]() { return self->stop_timer_.load(); } ) )
+                    self->timer_cv_.wait( lock, [self]() {
+                        return self->stop_timer_.load() || self->certificates_pending_.load();
+                    } );
+                    if ( self->stop_timer_.load() )
                     {
                         return;
                     }
                     lock.unlock();
                     self->ProcessCertificates();
+                    self->UpdateCertificatesPending();
+                    lock.lock();
+                    if ( self->certificates_pending_.load() && !self->stop_timer_.load() )
+                    {
+                        self->timer_cv_.wait_for( lock, interval, [self]() {
+                            return self->stop_timer_.load() || !self->certificates_pending_.load();
+                        } );
+                    }
+                    if ( self->stop_timer_.load() )
+                    {
+                        return;
+                    }
                 }
             } );
     }
@@ -1113,6 +1138,27 @@ namespace sgns
         }
     }
 
+    void ConsensusManager::UpdateCertificatesPending()
+    {
+        bool has_pending = false;
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            for ( const auto &kv : proposals_ )
+            {
+                if ( kv.second.quorum_reached )
+                {
+                    has_pending = true;
+                    break;
+                }
+            }
+        }
+        certificates_pending_.store( has_pending );
+        if ( !has_pending )
+        {
+            timer_cv_.notify_all();
+        }
+    }
+
     bool ConsensusManager::RegisterCertificateFilter()
     {
         const std::string pattern = "^/?cert/[^/]+";
@@ -1395,6 +1441,11 @@ namespace sgns
             }
             state = it->second;
         }
+        if ( has_quorum )
+        {
+            certificates_pending_.store( true );
+            timer_cv_.notify_all();
+        }
     }
 
     void ConsensusManager::HandleVoteBundle( const VoteBundle &bundle )
@@ -1534,6 +1585,21 @@ namespace sgns
         {
             auto &vec = kv.second;
             vec.erase( std::remove( vec.begin(), vec.end(), proposal.proposal_id() ), vec.end() );
+        }
+
+        bool has_pending = false;
+        for ( const auto &kv : proposals_ )
+        {
+            if ( kv.second.quorum_reached )
+            {
+                has_pending = true;
+                break;
+            }
+        }
+        certificates_pending_.store( has_pending );
+        if ( !has_pending )
+        {
+            timer_cv_.notify_all();
         }
     }
 
