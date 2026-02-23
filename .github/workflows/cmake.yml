@@ -100,14 +100,13 @@ jobs:
     runs-on: ${{matrix.host}}
     container:
       image: ${{ matrix.container }}
-      options: ${{ matrix.target == 'Linux' && '--cap-add=IPC_LOCK' || '' }}
       credentials:
         username: ${{github.actor}}
         password: ${{secrets.GNUS_TOKEN_1}}
     strategy:
       fail-fast: false
       matrix:
-        target: [ Linux, Windows ]
+        target: [ Android, iOS, OSX, Linux, Windows ]
         build-type: [ Release ]
         abi: [ "" ]
         include:
@@ -116,43 +115,43 @@ jobs:
             abi: "x86_64"
             build-type: "Release"
             container: ghcr.io/geniusventures/debian-bullseye:latest
-          # - target: Linux
-          #   host: sg-ubuntu-linux
-          #   abi: "x86_64"
-          #   build-type: "Debug"
-          #   container: ghcr.io/geniusventures/debian-bullseye:latest
+          - target: Linux
+            host: sg-ubuntu-linux
+            abi: "x86_64"
+            build-type: "Debug"
+            container: ghcr.io/geniusventures/debian-bullseye:latest
           - target: Linux
             host: ubuntu-24.04-arm
             abi: "aarch64"
             build-type: "Release"
             container: ghcr.io/geniusventures/debian-bullseye:latest
-          # - target: Linux
-          #   host: ubuntu-24.04-arm
-          #   abi: "aarch64"
-          #   build-type: "Debug"
-          #   container: ghcr.io/geniusventures/debian-bullseye:latest
+          - target: Linux
+            host: ubuntu-24.04-arm
+            abi: "aarch64"
+            build-type: "Debug"
+            container: ghcr.io/geniusventures/debian-bullseye:latest
           - target: Windows
             host: SG-WIN11
-        #   - target: OSX
-        #     host: gv-OSX-Large
-          # - target: Android
-          #   host: sg-ubuntu-linux
-          #   abi: arm64-v8a
-          #   build-type: "Release"
-          # - target: Android
-          #   host: sg-ubuntu-linux
-          #   abi: arm64-v8a
-          #   build-type: "Debug"
-          # - target: Android
-          #   host: sg-ubuntu-linux
-          #   abi: armeabi-v7a
-          #   build-type: "Release"
-          # - target: Android
-          #   host: sg-ubuntu-linux
-          #   abi: armeabi-v7a
-          #   build-type: "Debug"
-          # - target: iOS
-          #   host: macos-latest
+          - target: OSX
+            host: gv-OSX-Large
+          - target: Android
+            host: sg-ubuntu-linux
+            abi: arm64-v8a
+            build-type: "Release"
+          - target: Android
+            host: sg-ubuntu-linux
+            abi: arm64-v8a
+            build-type: "Debug"
+          - target: Android
+            host: sg-ubuntu-linux
+            abi: armeabi-v7a
+            build-type: "Release"
+          - target: Android
+            host: sg-ubuntu-linux
+            abi: armeabi-v7a
+            build-type: "Debug"
+          - target: iOS
+            host: macos-latest
         exclude:
           - target: Android
             abi: ""
@@ -569,7 +568,12 @@ jobs:
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
         run: cmake --build . --config ${{matrix.build-type}} -j
 
-      - name: Run tests
+      - name: Run tests (Windows)
+        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
+        if: ${{matrix.build-type == 'Release' && (matrix.target == 'Windows')}}
+        run: ctest . -j
+        
+      - name: Run tests (Linux)
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
         if: ${{matrix.build-type == 'Release' && (matrix.target == 'Linux')}}
         shell: bash
@@ -582,8 +586,7 @@ jobs:
             lock-on-idle=false
             lock-after=false" > ~/.local/share/keyrings/login.keyring && \
             eval $(printf "\n" | gnome-keyring-daemon --unlock --components=secrets) && \
-            ./test_bin/migration_sync_test'
-
+            ctest . -j'
 
       - name: Install SuperGenius
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
