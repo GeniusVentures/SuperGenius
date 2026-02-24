@@ -340,8 +340,6 @@ namespace sgns
                   { &TransactionManager::ParseEscrowReleaseTransaction,
                     &TransactionManager::RevertEscrowReleaseTransaction } } };
 
-        base::Logger m_logger = base::createLogger( "TransactionManager" );
-
         std::optional<std::vector<crdt::pb::Element>> FilterTransaction( const crdt::pb::Element &element );
         std::optional<std::vector<crdt::pb::Element>> FilterProof( const crdt::pb::Element &element );
 
@@ -384,6 +382,8 @@ namespace sgns
                                                       TransactionStatus                           new_status );
 
         bool IsGoingToOverwrite( const std::string &key ) const;
+
+        static bool IsBetterTransaction( const std::string &existing_hash, const std::string &new_hash );
     };
 }
 
