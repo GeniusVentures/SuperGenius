@@ -352,7 +352,7 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
         correct_tokens_transferred = 13000000000;
     }
     test::assertWaitForCondition(
-        [&]() { return node_same_addr_1->GetBalance() == node_same_addr_1->GetBalance() - correct_tokens_transferred; },
+        [&]() { return node_same_addr_1->GetBalance() == ( balance_node1_after_mint - correct_tokens_transferred ); },
         std::chrono::milliseconds( 50000 ),
         "node_same_addr_2 balance not synced" );
     test::assertWaitForCondition( [&]() { return node_same_addr_2->GetBalance() == node_same_addr_1->GetBalance(); },
