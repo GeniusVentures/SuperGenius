@@ -112,6 +112,9 @@ namespace sgns
 
         std::vector<std::vector<uint8_t>> GetOutTransactions() const;
         std::vector<std::vector<uint8_t>> GetInTransactions() const;
+        std::vector<std::vector<uint8_t>> GetTransactions(
+            std::optional<TransactionStatus> tx_status = std::nullopt ) const;
+        std::vector<std::vector<uint8_t>> GetTransactions() const;
 
         outcome::result<std::string> TransferFunds( uint64_t amount, const std::string &destination, TokenID token_id );
         outcome::result<std::string> MintFunds( uint64_t    amount,
@@ -289,8 +292,8 @@ namespace sgns
         mutable std::mutex          mutex_m;
         std::deque<TransactionItem> tx_queue_m;
 
-        mutable std::shared_mutex                  tx_mutex_m;
-        std::unordered_map<std::string, TrackedTx> tx_processed_m;
+        mutable std::shared_mutex                                   tx_mutex_m;
+        std::unordered_map<std::string, TrackedTx>                  tx_processed_m;
         std::unordered_map<std::string, ConsensusManager::Proposal> pending_proposals_;
         std::function<void()>                                       task_m;
         std::atomic<bool>                                           stopped_{ false };
@@ -379,6 +382,8 @@ namespace sgns
 
         outcome::result<void> ChangeTransactionState( const std::shared_ptr<IGeniusTransactions> &tx,
                                                       TransactionStatus                           new_status );
+
+        bool IsGoingToOverwrite( const std::string &key ) const;
     };
 }
 

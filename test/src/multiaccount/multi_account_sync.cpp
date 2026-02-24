@@ -280,9 +280,9 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
                   balance_full_start );
 
     // Get initial transaction counts
-    auto tx_count_node1_start = node_same_addr_1->GetOutTransactions().size();
-    auto tx_count_node2_start = node_same_addr_2->GetOutTransactions().size();
-    auto tx_count_full_start  = node_full->GetOutTransactions().size();
+    auto tx_count_node1_start = node_same_addr_1->GetTransactions(TransactionManager::TransactionStatus::CONFIRMED).size();
+    auto tx_count_node2_start = node_same_addr_2->GetTransactions(TransactionManager::TransactionStatus::CONFIRMED).size();
+    auto tx_count_full_start  = node_full->GetTransactions(TransactionManager::TransactionStatus::CONFIRMED).size();
 
     fmt::println( "Initial tx counts - Node1: {}, Node2: {}, Full: {}",
                   tx_count_node1_start,
@@ -351,6 +351,8 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
                                   std::chrono::milliseconds( 50000 ),
                                   "node_same_addr_2 balance not synced" );
 
+    fmt::println( "Balances after bootstrap - Node1: {}, Node2: {}", node_same_addr_2->GetBalance(), node_same_addr_1->GetBalance() );
+
     std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
 
     // Get final balances after CRDT resolution
@@ -364,8 +366,8 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
                   balance_full_final );
 
     // Get final transaction counts
-    auto tx_count_node1_final = node_same_addr_1->GetOutTransactions().size();
-    auto tx_count_node2_final = node_same_addr_2->GetOutTransactions().size();
+    auto tx_count_node1_final = node_same_addr_1->GetTransactions(TransactionManager::TransactionStatus::CONFIRMED).size();
+    auto tx_count_node2_final = node_same_addr_2->GetTransactions(TransactionManager::TransactionStatus::CONFIRMED).size();
 
     fmt::println( "Final tx counts - Node1: {}, Node2: {}", tx_count_node1_final, tx_count_node2_final );
 

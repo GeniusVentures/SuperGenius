@@ -175,6 +175,17 @@ namespace sgns
             return manager_result.value()->GetOutTransactions();
         }
 
+        [[nodiscard]] const std::vector<std::vector<uint8_t>> GetTransactions(
+            std::optional<TransactionManager::TransactionStatus> tx_status = std::nullopt ) const
+        {
+            auto manager_result = GetTransactionManager();
+            if ( !manager_result.has_value() )
+            {
+                return {};
+            }
+            return manager_result.value()->GetTransactions( tx_status );
+        }
+
         std::string GetAddress() const
         {
             return account_->GetAddress();

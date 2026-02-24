@@ -374,7 +374,6 @@ namespace sgns
             break;
         }
 
-
         // Periodic sync - request heads every 10 minutes to stay synchronized across devices/instances
         // Use 30 second interval until we get first response, then switch to 10 minutes
         bool should_sync = false;
@@ -1374,6 +1373,24 @@ namespace sgns
         return result;
     }
 
+    std::vector<std::vector<uint8_t>> TransactionManager::GetTransactions(
+        std::optional<TransactionStatus> tx_status ) const
+    {
+        std::vector<std::vector<std::uint8_t>> result;
+        {
+            std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
+            result.reserve( tx_processed_m.size() );
+            for ( const auto &[_, value] : tx_processed_m )
+            {
+                if ( !tx_status || value.status == tx_status.value() )
+                {
+                    result.push_back( value.tx->SerializeByteVector() );
+                }
+            }
+        }
+        return result;
+    }
+
     TransactionManager::TransactionStatus TransactionManager::WaitForTransactionIncoming(
         const std::string        &txId,
         std::chrono::milliseconds timeout ) const
@@ -2127,13 +2144,11 @@ namespace sgns
         return ret;
     }
 
-
-
     std::optional<std::vector<crdt::pb::Element>> TransactionManager::FilterTransaction(
         const crdt::pb::Element &element )
     {
         std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
-        bool                                          should_delete = false;
+        bool                                          should_delete = true;
         std::shared_ptr<IGeniusTransactions>          new_tx;
         do
         {
@@ -2144,7 +2159,6 @@ namespace sgns
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
                                  element.key() );
-                should_delete = true;
                 break;
             }
             new_tx = maybe_new_tx.value();
@@ -2155,51 +2169,17 @@ namespace sgns
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
                                  element.key() );
-                should_delete = true;
                 break;
             }
-            std::shared_ptr<IGeniusTransactions> conflicting_tx;
-
-            auto conflicting_tx_res = GetConflictingTransaction( *new_tx );
-
-            if ( !conflicting_tx_res.has_value() )
+            if ( IsGoingToOverwrite( GetTransactionPath( *new_tx ); ) )
             {
-                break;
-            }
-            conflicting_tx = std::move( conflicting_tx_res.value() );
-            m_logger->debug( "[{} - full: {}] Found existing conflicting transaction with hash: {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             conflicting_tx->GetHash() );
-            std::unique_lock tx_lock( tx_mutex_m );
-            auto             key = GetTransactionPath( conflicting_tx->GetHash() );
-            auto             it  = tx_processed_m.find( key );
-            if ( it == tx_processed_m.end() )
-            {
-                m_logger->error( "[{} - full: {}] Conflicting transaction not found in processed maps: {}",
+                m_logger->debug( "[{} - full: {}] New transaction {} would overwrite an existing one. Preventing that",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
-                                 key );
+                                 new_tx->GetHash() );
                 break;
             }
-            if ( it->second.status == TransactionStatus::CONFIRMED )
-            {
-                m_logger->debug(
-                    "[{} - full: {}] Conflicting transaction is already CONFIRMED, checking the incoming transaction {}",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    key );
-
-                should_delete = true;
-                break;
-            }
-
-            m_logger->debug( "[{} - full: {}] Checking if new tx {} is the correct one",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             new_tx->GetHash() );
-
-            should_delete = !ShouldReplaceTransaction( *conflicting_tx, *new_tx );
+            should_delete = false;
 
         } while ( 0 );
 
@@ -2279,10 +2259,13 @@ namespace sgns
     bool TransactionManager::ShouldReplaceTransaction( const IGeniusTransactions &existing_tx,
                                                        const IGeniusTransactions &new_tx ) const
     {
-        m_logger->debug( "[{} - full: {}] ShouldReplaceTransaction?",
+        m_logger->debug( "[{} - full: {}] {}: Checking if new transaction {} should replace existing one {}",
                          account_m->GetAddress().substr( 0, 8 ),
-                         full_node_m );
-        // First check if the existing transaction is immutable
+                         full_node_m,
+                         __func__,
+                         new_tx.GetHash(),
+                         existing_tx.GetHash() );
+
         if ( existing_tx.GetHash() == new_tx.GetHash() )
         {
             m_logger->info( "[{} - full: {}] Already have the same transaction, rejecting replacement attempt",
@@ -2290,65 +2273,24 @@ namespace sgns
                             full_node_m );
             return false;
         }
-        if ( IsTransactionImmutable( existing_tx ) )
+        const bool replace = new_tx.GetHash() < existing_tx.GetHash();
+        if ( replace )
         {
-            m_logger->info( "[{} - full: {}] Existing transaction is immutable, rejecting replacement attempt",
+            m_logger->info( "[{} - full: {}] Deterministic replacement by hash: new {} < existing {}",
                             account_m->GetAddress().substr( 0, 8 ),
-                            full_node_m );
-            return false;
+                            full_node_m,
+                            new_tx.GetHash(),
+                            existing_tx.GetHash() );
         }
-        m_logger->debug( "[{} - full: {}] ShouldReplaceTransaction?1111",
-                         account_m->GetAddress().substr( 0, 8 ),
-                         full_node_m );
-
-        // Get timestamps and elapsed times
-        auto existing_timestamp = existing_tx.GetTimestamp();
-        auto new_timestamp      = new_tx.GetTimestamp();
-        auto time_diff          = GetElapsedTime( new_timestamp, existing_timestamp ); // preserve original semantics
-
-        // If new tx is earlier than existing (time_diff > 0) allow replacement.
-        // If timestamp_tolerance_m > 0 enforce the tolerance window; otherwise only the sign of time_diff is considered.
-        if ( time_diff > 0 )
+        else
         {
-            if ( timestamp_tolerance_m.count() == 0 )
-            {
-                m_logger->debug(
-                    "[{} - full: {}] Timestamp tolerance disabled — new tx earlier (diff {} ms): allowing replacement",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    time_diff );
-                return true;
-            }
-
-            if ( time_diff < timestamp_tolerance_m.count() )
-            {
-                m_logger->debug(
-                    "[{} - full: {}] Timestamps within tolerance ({} ms). Existing: {} , New: {} , Diff: {}",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    timestamp_tolerance_m.count(),
-                    existing_timestamp,
-                    new_timestamp,
-                    time_diff );
-
-                m_logger->info( "[{} - full: {}] New transaction is earlier (ts: {} vs {}), will replace existing",
-                                account_m->GetAddress().substr( 0, 8 ),
-                                full_node_m,
-                                new_timestamp,
-                                existing_timestamp );
-                return true;
-            }
+            m_logger->info( "[{} - full: {}] Deterministic replacement by hash: new {} >= existing {}",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            new_tx.GetHash(),
+                            existing_tx.GetHash() );
         }
-
-        m_logger->warn(
-            "[{} - full: {}] New transaction not eligible for replacement. Existing: {} , New: {} , Diff: {} ms, Tolerance: {} ms",
-            account_m->GetAddress().substr( 0, 8 ),
-            full_node_m,
-            existing_timestamp,
-            new_timestamp,
-            time_diff,
-            timestamp_tolerance_m.count() );
-        return false;
+        return replace;
     }
 
     uint64_t TransactionManager::GetCurrentTimestamp()
@@ -2532,7 +2474,6 @@ namespace sgns
 
         if ( conflicting_tx.has_value() )
         {
-            // TODO - Evaluate if we need this, because theoretically we already check this on the filter
             m_logger->warn( "[{} - full: {}] Found conflicting transaction that passed the FILTER with hash: {}",
                             account_m->GetAddress().substr( 0, 8 ),
                             full_node_m,
@@ -2799,6 +2740,11 @@ namespace sgns
 
     void TransactionManager::OnConsensusCertificate( const std::string &tx_hash )
     {
+        m_logger->debug( "[{} - full: {}] {}: Consensus certificate arrived for transaction {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         __func__,
+                         tx_hash );
         auto tx = GetTransactionByHash( tx_hash );
         if ( !tx )
         {
@@ -2808,6 +2754,85 @@ namespace sgns
                              __func__,
                              tx_hash );
             return;
+        }
+        m_logger->debug( "[{} - full: {}] {}: Checking for conflicting transaction with {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         __func__,
+                         tx_hash );
+
+        auto conflicting_tx = GetConflictingTransaction( *tx );
+
+        if ( conflicting_tx.has_value() )
+        {
+            m_logger->warn( "[{} - full: {}] Found conflicting transaction: {}",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            conflicting_tx.value()->GetHash() );
+            std::unique_lock tx_lock( tx_mutex_m );
+            auto             it = tx_processed_m.find( GetTransactionPath( conflicting_tx.value()->GetHash() ) );
+
+            // No need to check if not found because we already found it on GetConflictingTransaction
+
+            if ( it->second.status == TransactionStatus::CONFIRMED )
+            {
+                m_logger->error(
+                    "[{} - full: {}] Conflicting transaction {} is CONFIRMED as well as incoming {}, not sure what to do {}",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    conflicting_tx.value()->GetHash(),
+                    tx_hash );
+                tx_lock.unlock();
+                if ( ShouldReplaceTransaction( *conflicting_tx, *tx ) )
+                {
+                    auto result = ChangeTransactionState( conflicting_tx.value(), TransactionStatus::FAILED );
+                    if ( result.has_error() )
+                    {
+                        m_logger->error(
+                            "[{} - full: {}] {}: Failed to change conflicting transaction state to FAILED for current tx {}: {}",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            __func__,
+                            conflicting_tx.value()->GetHash(),
+                            result.error().message() );
+                    }
+                }
+                else
+                {
+                    auto result = ChangeTransactionState( tx, TransactionStatus::FAILED );
+                    if ( result.has_error() )
+                    {
+                        m_logger->error(
+                            "[{} - full: {}] {}: Failed to change transaction state to FAILED for new tx {}: {}",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            __func__,
+                            tx_hash,
+                            result.error().message() );
+                    }
+                    return;
+                }
+            }
+            else
+            {
+                m_logger->warn(
+                    "[{} - full: {}] Setting conflicting transaction {} to FAILED since the new one {} is confirmed: ",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    conflicting_tx.value()->GetHash(),
+                    tx_hash );
+                tx_lock.unlock();
+                auto result = ChangeTransactionState( conflicting_tx.value(), TransactionStatus::FAILED );
+                if ( result.has_error() )
+                {
+                    m_logger->error( "[{} - full: {}] {}: Failed to change transaction state to FAILED for hash {}: {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     __func__,
+                                     tx_hash,
+                                     result.error().message() );
+                }
+            }
         }
 
         auto result = ChangeTransactionState( tx, TransactionStatus::CONFIRMED );
@@ -3407,7 +3432,7 @@ namespace sgns
                                      full_node_m,
                                      __func__,
                                      tx->GetHash() );
-                    return outcome::failure( std::errc::invalid_argument );
+                    break;
                 }
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
                 {
@@ -3455,15 +3480,7 @@ namespace sgns
                                      full_node_m,
                                      __func__,
                                      tx->GetHash() );
-                    return outcome::failure( std::errc::file_exists );
-                }
-                if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::VERIFYING )
-                {
-                    m_logger->debug( "[{} - full: {}] {}: Reming verification count on {} before confirming",
-                                     account_m->GetAddress().substr( 0, 8 ),
-                                     full_node_m,
-                                     __func__,
-                                     tx->GetHash() );
+                    break;
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CONFIRMED, tx->GetNonce() };
 
@@ -3490,7 +3507,7 @@ namespace sgns
                                      full_node_m,
                                      __func__,
                                      tx->GetHash() );
-                    return outcome::failure( std::errc::file_exists );
+                    break;
                 }
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
                 {
@@ -3533,6 +3550,29 @@ namespace sgns
                          tx->GetHash(),
                          static_cast<int>( new_status ) );
         return outcome::success();
+    }
+        bool TransactionManager::IsGoingToOverwrite( const std::string &key ) const
+    {
+        auto existing_data_result = globaldb_m->Get( key );
+        if ( existing_data_result.has_value() )
+        {
+            m_logger->debug( "[{} - full: {}] {}: Key {} already exists in global DB, will overwrite",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             __func__,
+                             key );
+            auto maybe_old_tx = DeSerializeTransaction( existing_data_result.value() );
+            if ( maybe_old_tx.has_error() )
+            {
+                m_logger->error( "[{} - full: {}] Failed to deserialize existing transaction, allow to replace it {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 key );
+                return false;
+            }
+            return true;
+        }
+        return false;
     }
 }
 

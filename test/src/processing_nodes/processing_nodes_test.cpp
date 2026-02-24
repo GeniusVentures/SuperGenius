@@ -169,9 +169,9 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
     node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
     node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
-    int transcount_main  = node_main->GetOutTransactions().size();
-    int transcount_node1 = node_proc1->GetOutTransactions().size();
-    int transcount_node2 = node_proc2->GetOutTransactions().size();
+    int transcount_main  = node_main->GetTransactions(TransactionManager::TransactionStatus::CONFIRMED).size();
+    int transcount_node1 = node_proc1->GetTransactions(TransactionManager::TransactionStatus::CONFIRMED).size();
+    int transcount_node2 = node_proc2->GetTransactions(TransactionManager::TransactionStatus::CONFIRMED).size();
     std::cout << "Count 1" << transcount_main << std::endl;
     //std::cout << "Count 2" << transcount_node1 << std::endl;
     std::cout << "Count 3" << transcount_node2 << std::endl;
