@@ -93,7 +93,9 @@ namespace sgns
         bool                            RegisterFilter();
         outcome::result<RegistryUpdate> CreateUpdateFromCertificate( const sgns::ConsensusCertificate &certificate );
         outcome::result<void>           StoreRegistryUpdate( const RegistryUpdate &update );
-        void                            SetMaxNewValidatorsPerUpdate( size_t max_new );
+        outcome::result<std::shared_ptr<crdt::AtomicTransaction>> BeginRegistryUpdateTransaction(
+            const RegistryUpdate &update );
+        void SetMaxNewValidatorsPerUpdate( size_t max_new );
 
         outcome::result<std::vector<uint8_t>> SerializeRegistry( const Registry &registry ) const;
         outcome::result<Registry>             DeserializeRegistry( const std::vector<uint8_t> &buffer ) const;

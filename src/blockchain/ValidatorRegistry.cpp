@@ -584,6 +584,39 @@ namespace sgns
         return outcome::success();
     }
 
+    outcome::result<std::shared_ptr<crdt::AtomicTransaction>> ValidatorRegistry::BeginRegistryUpdateTransaction(
+        const RegistryUpdate &update )
+    {
+        logger_->trace( "{}: entry epoch={}", __func__, update.registry().epoch() );
+        auto serialized_update = SerializeRegistryUpdate( update );
+        if ( serialized_update.has_error() )
+        {
+            logger_->error( "{}: failed to serialize registry update", __func__ );
+            return outcome::failure( serialized_update.error() );
+        }
+
+        base::Buffer update_buffer(
+            gsl::span<const uint8_t>( serialized_update.value().data(), serialized_update.value().size() ) );
+
+        auto tx = db_->BeginTransaction();
+        if ( !tx )
+        {
+            logger_->error( "{}: failed to begin atomic transaction", __func__ );
+            return outcome::failure( std::errc::not_enough_memory );
+        }
+
+        crdt::HierarchicalKey registry_key{ std::string( RegistryKey() ) };
+        auto                  registry_put = tx->Put( registry_key, update_buffer );
+        if ( registry_put.has_error() )
+        {
+            logger_->error( "{}: failed to stage registry update in transaction", __func__ );
+            return outcome::failure( registry_put.error() );
+        }
+
+        logger_->debug( "{}: staged registry update in transaction", __func__ );
+        return tx;
+    }
+
     void ValidatorRegistry::SetMaxNewValidatorsPerUpdate( size_t max_new )
     {
         logger_->trace( "{}: entry max_new={}", __func__, max_new );

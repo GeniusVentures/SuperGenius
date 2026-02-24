@@ -885,11 +885,42 @@ namespace sgns
         crdt::GlobalDB::Buffer cert_value;
         cert_value.put( serialized );
 
-        auto put_result = db_->Put( cert_key, cert_value, { consensus_datastore_topic_ } );
-        if ( put_result.has_error() )
+        auto update_result = registry_->CreateUpdateFromCertificate( certificate );
+        if ( update_result.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: failed: crdt put error={}", __func__, put_result.error().message() );
-            return outcome::failure( put_result.error() );
+            ConsensusManagerLogger()->error( "{}: failed: registry update creation error={}",
+                                             __func__,
+                                             update_result.error().message() );
+            return outcome::failure( update_result.error() );
+        }
+
+        auto tx_result = registry_->BeginRegistryUpdateTransaction( update_result.value() );
+        if ( tx_result.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: failed: begin registry update transaction error={}",
+                                             __func__,
+                                             tx_result.error().message() );
+            return outcome::failure( tx_result.error() );
+        }
+
+        auto tx = tx_result.value();
+        auto cert_put = tx->Put( cert_key, cert_value );
+        if ( cert_put.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: failed: stage certificate put error={}",
+                                             __func__,
+                                             cert_put.error().message() );
+            return outcome::failure( cert_put.error() );
+        }
+
+        auto commit_result = tx->Commit(
+            { consensus_datastore_topic_, std::string( ValidatorRegistry::ValidatorTopic() ) } );
+        if ( commit_result.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: failed: transaction commit error={}",
+                                             __func__,
+                                             commit_result.error().message() );
+            return outcome::failure( commit_result.error() );
         }
 
         ConsensusManagerLogger()->debug( "{}: success proposal_id={}", __func__, certificate.proposal_id() );
