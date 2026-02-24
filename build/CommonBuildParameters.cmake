@@ -101,10 +101,10 @@ endif()
 
 # OpenSSL
 set(OpenSSL_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build/lib/cmake/OpenSSL" CACHE PATH "Path to OpenSSL install folder")
-set(OpenSSL_USE_STATIC_LIBS ON CACHE BOOL "OpenSSL use static libs")
-set(OpenSSL_MSVC_STATIC_RT ON CACHE BOOL "OpenSSL use static RT")
-set(OpenSSL_ROOT_DIR "{_THIRDPARTY_BUILD_DIR}/openssl/build/" CACHE PATH "Path to OpenSSL install root folder")
-set(OpenSSL_INCLUDE_DIR "{_THIRDPARTY_BUILD_DIR}/openssl/build/include" CACHE PATH "Path to OpenSSL include folder")
+set(OPENSSL_ROOT_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build" CACHE PATH "Path to OpenSSL install root folder")
+set(OPENSSL_USE_STATIC_LIBS ON CACHE BOOL "OpenSSL use static libs")
+set(OPENSSL_MSVC_STATIC_RT ON CACHE BOOL "OpenSSL use static RT")
+set(OPENSSL_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build/include" CACHE PATH "Path to OpenSSL include folder")
 
 find_package(OpenSSL REQUIRED CONFIG)
 
