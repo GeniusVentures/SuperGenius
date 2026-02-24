@@ -88,6 +88,20 @@ namespace sgns
 
         virtual std::unordered_set<std::string> GetTopics() const;
 
+        void FillHash();
+        bool CheckHash();
+
+        std::vector<uint8_t> MakeSignature( GeniusAccount &account );
+        bool                 CheckSignature();
+        bool                 CheckDAGSignatureLegacy();
+
+        SGTransaction::DAGStruct dag_st;
+
+    private:
+        static inline std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;
+        const std::string                                                       transaction_type;
+
+    public:
         /**
          * @brief       Registers a deserializer function for a specific transaction type.
          * @param[in]   transaction_type The transaction type for which the deserializer is registered.
@@ -102,19 +116,6 @@ namespace sgns
         {
             return deserializers_map;
         }
-
-        void FillHash();
-        bool CheckHash();
-
-        std::vector<uint8_t> MakeSignature( GeniusAccount &account );
-        bool                 CheckSignature();
-        bool                 CheckDAGSignatureLegacy();
-
-        SGTransaction::DAGStruct                                                dag_st;
-        static inline std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;
-
-    private:
-        const std::string transaction_type;
     };
 }
 
