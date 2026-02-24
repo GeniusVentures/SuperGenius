@@ -244,18 +244,18 @@ jobs:
           # Clean contents of SuperGenius directory but keep the directory itself
           if [ -d "SuperGenius" ]; then
             echo "Cleaning SuperGenius directory contents..."
-            rm -rf SuperGenius/* SuperGenius/.* 2>/dev/null || true
+            sudo rm -rf SuperGenius/* SuperGenius/.* 2>/dev/null || true
             echo "SuperGenius directory cleaned (kept the directory)"
           fi
           
           # Delete sibling dependency directories completely
           if [ -d "thirdparty" ]; then
             echo "Removing thirdparty directory..."
-            rm -rf thirdparty
+            sudo rm -rf thirdparty
           fi
           if [ -d "zkLLVM" ]; then
             echo "Removing zkLLVM directory..."
-            rm -rf zkLLVM
+            sudo rm -rf zkLLVM
           fi
 
           echo "=== POST-CLEANUP DEBUG ==="
