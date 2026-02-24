@@ -2191,7 +2191,7 @@ namespace sgns
                                                    element.key() );
                 break;
             }
-            if ( IsGoingToOverwrite( GetTransactionPath( *new_tx ); ) )
+            if ( IsGoingToOverwrite( GetTransactionPath( *new_tx ) ) )
             {
                 TransactionManagerLogger()->debug(
                     "[{} - full: {}] New transaction {} would overwrite an existing one. Preventing that",
@@ -2288,7 +2288,7 @@ namespace sgns
             new_tx.GetHash(),
             existing_tx.GetHash() );
 
-        return IsBetterTransaction( existing_tx.GetHash(), new_tx.GetHash() );
+        return blockchain_->BestHash( existing_tx.GetHash(), new_tx.GetHash() ) == new_tx.GetHash();
     }
 
     uint64_t TransactionManager::GetCurrentTimestamp()
@@ -2789,7 +2789,7 @@ namespace sgns
                     conflicting_tx.value()->GetHash(),
                     tx_hash );
                 tx_lock.unlock();
-                if ( ShouldReplaceTransaction( *conflicting_tx, *tx ) )
+                if ( ShouldReplaceTransaction( *conflicting_tx.value(), *tx ) )
                 {
                     auto result = ChangeTransactionState( conflicting_tx.value(), TransactionStatus::FAILED );
                     if ( result.has_error() )
@@ -3594,36 +3594,6 @@ namespace sgns
             return true;
         }
         return false;
-    }
-        bool TransactionManager::IsBetterTransaction( const std::string &existing_hash, const std::string &new_hash )
-    {
-        if ( existing_hash == new_hash )
-        {
-            TransactionManagerLogger()->info(
-                "[{} - full: {}] Already have the same transaction, rejecting replacement attempt",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m );
-            return false;
-        }
-        const bool replace = new_hash < existing_hash;
-        if ( replace )
-        {
-            TransactionManagerLogger()->info( "[{} - full: {}] Deterministic replacement by hash: new {} < existing {}",
-                                              account_m->GetAddress().substr( 0, 8 ),
-                                              full_node_m,
-                                              new_hash,
-                                              existing_hash );
-        }
-        else
-        {
-            TransactionManagerLogger()->info(
-                "[{} - full: {}] Deterministic replacement by hash: new {} >= existing {}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                new_hash,
-                existing_hash );
-        }
-        return replace;
     }
 
 }

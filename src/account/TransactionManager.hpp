@@ -382,8 +382,6 @@ namespace sgns
                                                       TransactionStatus                           new_status );
 
         bool IsGoingToOverwrite( const std::string &key ) const;
-
-        static bool IsBetterTransaction( const std::string &existing_hash, const std::string &new_hash );
     };
 }
 

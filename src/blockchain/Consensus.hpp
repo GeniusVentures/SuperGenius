@@ -113,6 +113,7 @@ namespace sgns
                                                                               const std::string &escrow_path,
                                                                               const std::string &task_result_hash,
                                                                               uint64_t           result_epoch );
+        static const std::string &                   BestHash( const std::string &a, const std::string &b );
         outcome::result<void>                        SubmitProposal( const Proposal &proposal, bool self_vote = true );
         outcome::result<void>                        SubmitVote( const Vote &vote, bool self_handle = true );
         outcome::result<void>                        SubmitCertificate( const Certificate &certificate );

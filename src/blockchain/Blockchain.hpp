@@ -120,7 +120,8 @@ namespace sgns
 
         outcome::result<void> TryResumeProposal( const std::string &hash );
 
-        bool CheckCertificate(const std::string &subject_hash) const;
+        bool CheckCertificate( const std::string &subject_hash ) const;
+        const std::string &BestHash( const std::string &a, const std::string &b ) const;
 
     protected:
         friend class Migration3_5_1To3_6_0;
