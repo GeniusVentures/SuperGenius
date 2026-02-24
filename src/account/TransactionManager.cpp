@@ -173,65 +173,7 @@ namespace sgns
             return;
         }
 
-        auto utxo_result = utxo_manager_.LoadUTXOs( globaldb_m->GetDataStore() );
-        if ( utxo_result.has_error() )
-        {
-            m_logger->error( "Failed to load UTXOs from storage" );
-        }
-        if ( utxo_result.has_error() || !utxo_result.value() )
-        {
-            m_logger->info( "Loading transactions to mount UTXOs" );
-            QueryTransactions();
-        }
-        else
-        {
-            auto utxo_map           = utxo_manager_.GetAllUTXOs();
-            auto monitored_networks = GetMonitoredNetworkIDs();
-
-            for ( const auto &[address, utxo_data_vector] : utxo_map )
-            {
-                m_logger->debug( "[{} - full: {}] Loaded {} UTXOs for address {}",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 utxo_data_vector.size(),
-                                 address.substr( 0, 8 ) );
-                for ( auto &utxo_data : utxo_data_vector )
-                {
-                    auto &[utxo_state, utxo] = utxo_data;
-                    m_logger->debug( "[{} - full: {}] UTXO - state: {}, tx_hash: {}, index: {}, amount: {}",
-                                     account_m->GetAddress().substr( 0, 8 ),
-                                     full_node_m,
-                                     static_cast<uint8_t>( utxo_state ),
-                                     utxo.GetTxID().toReadableString(),
-                                     utxo.GetOutputIdx(),
-                                     utxo.GetAmount() );
-
-                    if ( utxo_state != UTXOManager::UTXOState::UTXO_READY )
-                    {
-                        m_logger->debug( "[{} - full: {}] Skipping UTXO in state {} for tx {}",
-                                         account_m->GetAddress().substr( 0, 8 ),
-                                         full_node_m,
-                                         static_cast<uint8_t>( utxo_state ),
-                                         utxo.GetTxID().toReadableString() );
-                        continue;
-                    }
-
-                    for ( auto network_id : monitored_networks )
-                    {
-                        auto tx_path        = GetTransactionPath( network_id, utxo.GetTxID().toReadableString() );
-                        auto process_result = FetchAndProcessTransaction( tx_path );
-                        if ( !process_result.has_error() )
-                        {
-                            m_logger->debug( "[{} - full: {}] Processed transaction in {}",
-                                             account_m->GetAddress().substr( 0, 8 ),
-                                             full_node_m,
-                                             tx_path );
-                            break;
-                        }
-                    }
-                }
-            }
-        }
+        InitializeUTXOs();
 
         // First kick: keep self alive during the first dispatch only
         boost::asio::post( *ctx_m, [self = shared_from_this()]() { self->TickOnce(); } );
@@ -294,7 +236,7 @@ namespace sgns
         switch ( GetState() )
         {
             case State::INITIALIZING:
-                InitNonce( 8000 );
+                InitTransactions();
                 if ( GetState() == State::READY )
                 {
                     m_logger->debug( "[{} - full: {}] Transaction Manager is now READY - starting regular updates",
@@ -1136,8 +1078,14 @@ namespace sgns
     {
         {
             std::shared_lock tx_lock( tx_mutex_m );
-            if ( tx_processed_m.find( tx_key ) != tx_processed_m.end() )
+            auto             tracked = tx_processed_m.find( tx_key );
+            if ( tracked != tx_processed_m.end() )
             {
+                if ( tracked->second.tx )
+                {
+                    std::lock_guard missing_lock( missing_tx_mutex_ );
+                    missing_tx_hashes_.erase( tracked->second.tx->GetHash() );
+                }
                 m_logger->trace( "[{} - full: {}] Transaction already processed: {}",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
@@ -1201,6 +1149,11 @@ namespace sgns
             std::unique_lock tx_lock( tx_mutex_m );
             tx_processed_m[tx_key] = TrackedTx{ transaction, TransactionStatus::CONFIRMED, nonce };
         }
+        {
+            std::lock_guard missing_lock( missing_tx_mutex_ );
+            missing_tx_hashes_.erase( transaction->GetHash() );
+        }
+
         return outcome::success();
     }
 
@@ -1582,56 +1535,101 @@ namespace sgns
         return retval; // Will be INVALID if not seen within timeout
     }
 
-    void TransactionManager::InitNonce( uint64_t timeout_ms )
+    void TransactionManager::InitializeUTXOs()
     {
-        m_logger->debug( "[{} - full: {}] Trying to get confirmed nonce",
-                         account_m->GetAddress().substr( 0, 8 ),
-                         full_node_m );
-
-        auto nonce_result = account_m->GetConfirmedNonce( NONCE_REQUEST_TIMEOUT_MS );
-        if ( nonce_result.has_value() )
         {
-            auto network_confirmed_nonce = nonce_result.value();
-            m_logger->debug( "[{} - full: {}] Nonce from the network received {}",
+            std::lock_guard missing_lock( missing_tx_mutex_ );
+            missing_tx_hashes_.clear();
+        }
+
+        auto utxo_result = utxo_manager_.LoadUTXOs( globaldb_m->GetDataStore() );
+        if ( utxo_result.has_error() )
+        {
+            m_logger->error( "Failed to load UTXOs from storage" );
+        }
+        if ( utxo_result.has_error() || !utxo_result.value() )
+        {
+            m_logger->info( "Loading transactions to mount UTXOs" );
+            QueryTransactions();
+            return;
+        }
+
+        auto utxo_map           = utxo_manager_.GetAllUTXOs();
+        auto monitored_networks = GetMonitoredNetworkIDs();
+
+        for ( const auto &[address, utxo_data_vector] : utxo_map )
+        {
+            m_logger->debug( "[{} - full: {}] Loaded {} UTXOs for address {}",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
-                             network_confirmed_nonce );
-            bool synced = true;
-            for ( uint64_t i = 1; i <= network_confirmed_nonce; ++i )
+                             utxo_data_vector.size(),
+                             address.substr( 0, 8 ) );
+            for ( auto &utxo_data : utxo_data_vector )
             {
-                if ( auto tx = GetTransactionByNonceAndAddress( i, account_m->GetAddress() ); !tx )
+                auto &[utxo_state, utxo] = utxo_data;
+                const auto tx_hash       = utxo.GetTxID().toReadableString();
+                m_logger->debug( "[{} - full: {}] UTXO - state: {}, tx_hash: {}, index: {}, amount: {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 static_cast<uint8_t>( utxo_state ),
+                                 tx_hash,
+                                 utxo.GetOutputIdx(),
+                                 utxo.GetAmount() );
+
+                if ( utxo_state != UTXOManager::UTXOState::UTXO_READY )
                 {
-                    synced = false;
-                    m_logger->debug( "[{} - full: {}] Missing transaction with nonce {}",
+                    m_logger->debug( "[{} - full: {}] Skipping UTXO in state {} for tx {}",
                                      account_m->GetAddress().substr( 0, 8 ),
                                      full_node_m,
-                                     i );
-                    break;
+                                     static_cast<uint8_t>( utxo_state ),
+                                     tx_hash );
+                    continue;
+                }
+
+                bool processed = false;
+                for ( auto network_id : monitored_networks )
+                {
+                    auto tx_path        = GetTransactionPath( network_id, tx_hash );
+                    auto process_result = FetchAndProcessTransaction( tx_path );
+                    if ( !process_result.has_error() )
+                    {
+                        m_logger->debug( "[{} - full: {}] Processed transaction in {}",
+                                         account_m->GetAddress().substr( 0, 8 ),
+                                         full_node_m,
+                                         tx_path );
+                        processed = true;
+                        break;
+                    }
+                }
+
+                if ( !processed )
+                {
+                    std::lock_guard missing_lock( missing_tx_mutex_ );
+                    missing_tx_hashes_.insert( tx_hash );
                 }
             }
-            if ( synced )
-            {
-                ChangeState( State::READY );
-            }
-            else
-            {
-                // We're missing transactions - request heads to help sync faster
-                uint64_t gap = network_confirmed_nonce - account_m->GetProposedNonce() + 1;
-                m_logger->info( "[{} - full: {}] Missing transactions during init, gap: {}",
-                                account_m->GetAddress().substr( 0, 8 ),
-                                full_node_m,
-                                gap );
-                RequestRelevantHeads();
-            }
         }
-        else
+    }
+
+    void TransactionManager::InitTransactions()
+    {
+        size_t missing_count = 0;
         {
-            //TODO - Have the full node respond it doesn't have it to check for connectivity
-            m_logger->debug( "[{} - full: {}] No node from the network, assume we are updated",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m );
-            ChangeState( State::READY );
+            std::lock_guard missing_lock( missing_tx_mutex_ );
+            missing_count = missing_tx_hashes_.size();
         }
+
+        if ( missing_count == 0 )
+        {
+            ChangeState( State::READY );
+            return;
+        }
+
+        m_logger->info( "[{} - full: {}] Missing {} transactions during init",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        missing_count );
+        RequestRelevantHeads();
     }
 
     void TransactionManager::SyncNonce()

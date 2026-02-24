@@ -225,7 +225,8 @@ namespace sgns
         outcome::result<void> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> RevertTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
-        void InitNonce( uint64_t timeout_ms );
+        void InitializeUTXOs();
+        void InitTransactions();
         void SyncNonce();
 
         /**
@@ -297,6 +298,9 @@ namespace sgns
         std::mutex                                         deleted_data_queue_mutex_; // Separate mutex for the queue
 
         std::chrono::steady_clock::time_point last_loop_time_;
+
+        std::mutex                        missing_tx_mutex_;
+        std::unordered_set<std::string>   missing_tx_hashes_;
 
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
