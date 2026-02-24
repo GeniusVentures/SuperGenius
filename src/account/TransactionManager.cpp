@@ -8,6 +8,7 @@
 
 #include <utility>
 #include <thread>
+#include <system_error>
 
 #include <boost/asio/post.hpp>
 #include <openssl/err.h>
@@ -80,7 +81,7 @@ namespace sgns
                 {
                     if ( auto strong = weak_ptr.lock() )
                     {
-                        strong->NewElementCallback( std::move( new_data ) );
+                        strong->NewElementCallback( std::move( new_data ), cid );
                     }
                 } );
             (void)instance->globaldb_m->RegisterDeletedElementCallback(
@@ -2470,6 +2471,7 @@ namespace sgns
                              key );
             return outcome::failure( boost::system::error_code{} );
         }
+
         m_logger->debug( "[{} - full: {}] Checking if we already have this transaction {}",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
@@ -2541,6 +2543,39 @@ namespace sgns
         }
     }
 
+    outcome::result<void> TransactionManager::StoreTransactionCID( const std::string &key,
+                                                                   const std::string &cid )
+    {
+        if ( cid.empty() )
+        {
+            return outcome::success();
+        }
+
+        auto datastore = globaldb_m ? globaldb_m->GetDataStore() : nullptr;
+        if ( !datastore )
+        {
+            m_logger->error( "[{} - full: {}] RocksDB datastore unavailable, cannot store CID for tx {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             key );
+            return outcome::failure( std::errc::bad_file_descriptor );
+        }
+
+        crdt::GlobalDB::Buffer key_buffer;
+        key_buffer.put( key );
+
+        crdt::GlobalDB::Buffer value_buffer;
+        value_buffer.put( cid );
+
+        auto put_result = datastore->put( key_buffer, value_buffer );
+        if ( put_result.has_error() )
+        {
+            return outcome::failure( put_result.error() );
+        }
+
+        return outcome::success();
+    }
+
     void TransactionManager::ProcessNewData( crdt::CRDTCallbackManager::NewDataPair new_data )
     {
         m_logger->debug( "[{} - full: {}] Processing new data with key {}",
@@ -2573,17 +2608,28 @@ namespace sgns
         }
     }
 
-    void TransactionManager::NewElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data )
+    void TransactionManager::NewElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data, std::string cid )
     {
+        auto store_cid_res = StoreTransactionCID( new_data.first, cid );
+        if ( store_cid_res.has_error() )
+        {
+            m_logger->error( "[{} - full: {}] Failed to store CID for key {}: {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             new_data.first,
+                             store_cid_res.error().message() );
+        }
+
+        auto key = new_data.first;
         {
             std::lock_guard queue_lock( new_data_queue_mutex_ );
-            new_data_queue_.push( new_data );
+            new_data_queue_.push( std::move( new_data ) );
         }
 
         m_logger->debug( "[{} - full: {}] CRDT new data queued, {} - (queue size: {})",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
-                         new_data.first,
+                         key,
                          new_data_queue_.size() );
 
         // Notify the condition variable to wake up the main loop

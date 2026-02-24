@@ -340,11 +340,12 @@ namespace sgns
         outcome::result<void> RemoveTransactionFromProcessedMaps( const std::string &transaction_key,
                                                                   bool               delete_from_crdt = false );
         outcome::result<void> AddTransactionToProcessedMaps( crdt::CRDTCallbackManager::NewDataPair new_data );
+        outcome::result<void> StoreTransactionCID( const std::string &key, const std::string &cid );
 
         void ProcessDeletion( std::string deleted_key );
         void ProcessNewData( crdt::CRDTCallbackManager::NewDataPair new_data );
 
-        void NewElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data );
+        void NewElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data, std::string cid );
         void DeleteElementCallback( std::string deleted_key );
 
         void ChangeState( State new_state );
