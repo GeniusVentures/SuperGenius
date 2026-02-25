@@ -18,6 +18,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <chrono>
+#include <set>
+#include <optional>
 
 #include <boost/optional.hpp>
 
@@ -43,6 +45,7 @@ namespace sgns
             NO_RESPONSE_RECEIVED,      ///< No response received from network
             RESPONSE_WITHOUT_NONCE,    ///< Response received but without nonce data
             GENESIS_REQUEST_ERROR,     ///< Genesis request failed
+            UTXO_REQUEST_ERROR,        ///< UTXO request failed
         };
 
         /**
@@ -66,6 +69,13 @@ namespace sgns
 
             /// @brief Check if a CID is locally available
             std::function<outcome::result<bool>( const std::string &cid )> has_block_cid_;
+
+            /// @brief Get local UTXOs as a list of strings for a given address
+            std::function<outcome::result<std::vector<std::string>>( const std::string &address )> get_utxos_;
+
+            /// @brief Get validator weight for an address (empty if not a validator)
+            std::function<outcome::result<std::optional<uint64_t>>( const std::string &address )>
+                get_validator_weight_;
         };
 
         // Global block response handler type
@@ -129,6 +139,17 @@ namespace sgns
                                                    std::function<void( outcome::result<std::string> )> callback = nullptr );
 
         /**
+         * @brief       Request UTXOs for a specific address and return the selected response
+         * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
+         * @param[in]   address Address to request UTXOs for
+         * @param[in]   silent_time_ms Time to wait for subsequent responses after first one
+         * @return      Set of UTXO strings based on selection criteria, or error otherwise
+         */
+        outcome::result<std::set<std::string>> RequestUTXOs( uint64_t           timeout_ms,
+                                                             const std::string &address,
+                                                             uint64_t           silent_time_ms = 150 );
+
+        /**
          * @brief       Register global block response handler
          * @param[in]   handler Function to call for all block responses
          */
@@ -186,6 +207,17 @@ namespace sgns
                    block_first_response_time_; ///< Timestamp of the first block response
         std::mutex block_responses_mutex_;     ///< Mutex protecting block_responses_
 
+        struct UTXOResponseData
+        {
+            std::string              responder_address;
+            std::vector<std::string> utxos;
+            bool                     has_utxos{ false };
+        };
+
+        std::unordered_map<uint64_t, std::vector<UTXOResponseData>> utxo_responses_;
+        std::unordered_map<uint64_t, std::chrono::steady_clock::time_point> utxo_first_response_time_;
+        std::mutex utxo_responses_mutex_;
+
         InterfaceMethods methods_; ///< Interface methods
 
         std::random_device rd_; ///< Random device for request IDs
@@ -204,7 +236,8 @@ namespace sgns
             Nonce,
             Genesis,
             AccountCreation,
-            BlockByCid
+            BlockByCid,
+            UTXO
         };
 
         struct RequestTask
@@ -214,8 +247,10 @@ namespace sgns
             uint64_t                                            silent_time_ms{ 150 };
             uint8_t                                             block_index{ 0 };
             std::string                                         cid;
+            std::string                                         utxo_address;
             std::function<void( outcome::result<std::string> )> callback;
             std::shared_ptr<std::promise<outcome::result<uint64_t>>> nonce_promise;
+            std::shared_ptr<std::promise<outcome::result<std::set<std::string>>>> utxo_promise;
         };
 
         std::thread                     worker_thread_;
@@ -229,6 +264,9 @@ namespace sgns
         outcome::result<uint64_t> PerformNonceRequest( uint64_t timeout_ms, uint64_t silent_time_ms );
         outcome::result<std::set<std::string>> PerformBlockRequest( uint64_t timeout_ms, uint8_t block_index );
         outcome::result<std::set<std::string>> PerformBlockCidRequest( uint64_t timeout_ms, const std::string &cid );
+        outcome::result<std::set<std::string>> PerformUTXORequest( uint64_t           timeout_ms,
+                                                                   const std::string &address,
+                                                                   uint64_t           silent_time_ms );
 
         /**
          * @brief       Private constructor of the Account Messenger 
@@ -259,6 +297,7 @@ namespace sgns
          * @param[in]   cid CID to request
          */
         outcome::result<void> RequestBlockByCid( uint64_t req_id, const std::string &cid );
+        outcome::result<void> RequestUTXO( uint64_t req_id, const std::string &address );
 
         /**
          * @brief       Callback of pubsub message when a response was received
@@ -311,6 +350,18 @@ namespace sgns
          * @param[in]   req The proto head request package
          */
         void HandleHeadRequest( const accountComm::SignedHeadRequest &req );
+
+        /**
+         * @brief       Handles the UTXO request package
+         * @param[in]   req The proto UTXO request package
+         */
+        void HandleUTXORequest( const accountComm::SignedUTXORequest &req );
+
+        /**
+         * @brief       Handles the UTXO response package
+         * @param[in]   resp The proto UTXO response package
+         */
+        void HandleUTXOResponse( const accountComm::SignedUTXOResponse &resp );
 
         /// The logger instance
         base::Logger logger_ = sgns::base::createLogger( "AccountMessenger" );

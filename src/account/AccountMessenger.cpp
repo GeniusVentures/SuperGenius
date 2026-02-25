@@ -8,6 +8,7 @@
 #include <random>
 #include <boost/format.hpp>
 #include <future>
+#include <algorithm>
 #include "AccountMessenger.hpp"
 #include "base/sgns_version.hpp"
 #include "crypto/hasher/hasher_impl.hpp"
@@ -32,6 +33,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, AccountMessenger::Error, e )
             return "Response received but without nonce data";
         case AccountCommError::GENESIS_REQUEST_ERROR:
             return "Genesis request failed";
+        case AccountCommError::UTXO_REQUEST_ERROR:
+            return "UTXO request failed";
     }
     return "Unknown error";
 }
@@ -209,8 +212,12 @@ namespace sgns
                 case accountComm::AccountMessage::kBlockCidRequest:
                     HandleBlockCidRequest( acc_msg.block_cid_request() );
                     break;
+                case accountComm::AccountMessage::kUtxoRequest:
+                    HandleUTXORequest( acc_msg.utxo_request() );
+                    break;
                 case accountComm::AccountMessage::kNonceResponse:
                 case accountComm::AccountMessage::kBlockResponse:
+                case accountComm::AccountMessage::kUtxoResponse:
                     logger_->error( "{}: Unexpected response received ", __func__ );
                     break;
                 default:
@@ -244,6 +251,12 @@ namespace sgns
                     HandleBlockResponse( acc_msg.block_response() );
                     break;
                 case accountComm::AccountMessage::kBlockCidRequest:
+                    logger_->error( "{}: Unexpected response received ", __func__ );
+                    break;
+                case accountComm::AccountMessage::kUtxoResponse:
+                    HandleUTXOResponse( acc_msg.utxo_response() );
+                    break;
+                case accountComm::AccountMessage::kUtxoRequest:
                     logger_->error( "{}: Unexpected response received ", __func__ );
                     break;
                 default:
@@ -287,26 +300,70 @@ namespace sgns
         auto promise = std::make_shared<std::promise<outcome::result<uint64_t>>>();
         auto future  = promise->get_future();
 
-        EnqueueTask(
-            { RequestType::Nonce, timeout_ms, silent_time_ms, 0, std::string{}, nullptr, std::move( promise ) } );
+        EnqueueTask( { RequestType::Nonce,
+                       timeout_ms,
+                       silent_time_ms,
+                       0,
+                       std::string{},
+                       std::string{},
+                       nullptr,
+                       std::move( promise ),
+                       nullptr } );
 
         return future.get();
     }
 
     outcome::result<void> AccountMessenger::RequestGenesis(
-        uint64_t timeout_ms, std::function<void( outcome::result<std::string> )> callback )
+        uint64_t                                            timeout_ms,
+        std::function<void( outcome::result<std::string> )> callback )
     {
-        EnqueueTask( { RequestType::Genesis, timeout_ms, 150, 0, std::string{}, std::move( callback ), nullptr } );
+        EnqueueTask( { RequestType::Genesis,
+                       timeout_ms,
+                       150,
+                       0,
+                       std::string{},
+                       std::string{},
+                       std::move( callback ),
+                       nullptr,
+                       nullptr } );
         return outcome::success();
     }
 
-    outcome::result<void> AccountMessenger::RequestRegularBlock( uint64_t                                            timeout_ms,
-                                                                 std::string                                         cid,
-                                                                 std::function<void( outcome::result<std::string> )> callback )
+    outcome::result<void> AccountMessenger::RequestRegularBlock(
+        uint64_t                                            timeout_ms,
+        std::string                                         cid,
+        std::function<void( outcome::result<std::string> )> callback )
     {
-        EnqueueTask(
-            { RequestType::BlockByCid, timeout_ms, 150, 0, std::move( cid ), std::move( callback ), nullptr } );
+        EnqueueTask( { RequestType::BlockByCid,
+                       timeout_ms,
+                       150,
+                       0,
+                       std::move( cid ),
+                       std::string{},
+                       std::move( callback ),
+                       nullptr,
+                       nullptr } );
         return outcome::success();
+    }
+
+    outcome::result<std::set<std::string>> AccountMessenger::RequestUTXOs( uint64_t           timeout_ms,
+                                                                           const std::string &address,
+                                                                           uint64_t           silent_time_ms )
+    {
+        auto promise = std::make_shared<std::promise<outcome::result<std::set<std::string>>>>();
+        auto future  = promise->get_future();
+
+        EnqueueTask( { RequestType::UTXO,
+                       timeout_ms,
+                       silent_time_ms,
+                       0,
+                       std::string{},
+                       address,
+                       nullptr,
+                       nullptr,
+                       std::move( promise ) } );
+
+        return future.get();
     }
 
     outcome::result<void> AccountMessenger::RequestBlock( uint64_t req_id, uint8_t block_index )
@@ -347,9 +404,7 @@ namespace sgns
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
         req.set_cid( cid );
-        logger_->debug( "[{}] Requesting block by CID {} with req_id {}",
-                        address_.substr( 0, 8 ),
-                        cid, req_id );
+        logger_->debug( "[{}] Requesting block by CID {} with req_id {}", address_.substr( 0, 8 ), cid, req_id );
         std::string encoded;
         if ( !req.SerializeToString( &encoded ) )
         {
@@ -365,6 +420,35 @@ namespace sgns
 
         accountComm::AccountMessage envelope;
         *envelope.mutable_block_cid_request() = signed_req;
+
+        return SendAccountMessage( envelope, { requests_topic_ } );
+    }
+
+    outcome::result<void> AccountMessenger::RequestUTXO( uint64_t req_id, const std::string &address )
+    {
+        accountComm::UTXORequest req;
+        req.set_requester_address( address_ );
+        req.set_target_address( address );
+        req.set_request_id( req_id );
+        req.set_timestamp(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
+
+        std::string encoded;
+        if ( !req.SerializeToString( &encoded ) )
+        {
+            return outcome::failure( Error::PROTO_SERIALIZATION );
+        }
+
+        std::vector<uint8_t> serialized_vec( encoded.begin(), encoded.end() );
+        OUTCOME_TRY( auto &&signature, methods_.sign_( serialized_vec ) );
+
+        accountComm::SignedUTXORequest signed_req;
+        *signed_req.mutable_data() = req;
+        signed_req.set_signature( signature.data(), signature.size() );
+
+        accountComm::AccountMessage envelope;
+        *envelope.mutable_utxo_request() = signed_req;
 
         return SendAccountMessage( envelope, { requests_topic_ } );
     }
@@ -515,7 +599,7 @@ namespace sgns
         if ( methods_.has_block_cid_ )
         {
             auto has_cid_result = methods_.has_block_cid_( req.cid() );
-            have_cid = has_cid_result.has_value() && has_cid_result.value();
+            have_cid            = has_cid_result.has_value() && has_cid_result.value();
         }
         else
         {
@@ -692,10 +776,18 @@ namespace sgns
     }
 
     outcome::result<void> AccountMessenger::RequestAccountCreation(
-        uint64_t timeout_ms, std::function<void( outcome::result<std::string> )> callback )
+        uint64_t                                            timeout_ms,
+        std::function<void( outcome::result<std::string> )> callback )
     {
-        EnqueueTask(
-            { RequestType::AccountCreation, timeout_ms, 150, 1, std::string{}, std::move( callback ), nullptr } );
+        EnqueueTask( { RequestType::AccountCreation,
+                       timeout_ms,
+                       150,
+                       1,
+                       std::string{},
+                       std::string{},
+                       std::move( callback ),
+                       nullptr,
+                       nullptr } );
         return outcome::success();
     }
 
@@ -825,6 +917,15 @@ namespace sgns
                     }
                     break;
                 }
+                case RequestType::UTXO:
+                {
+                    auto res = PerformUTXORequest( task.timeout_ms, task.utxo_address, task.silent_time_ms );
+                    if ( task.utxo_promise )
+                    {
+                        task.utxo_promise->set_value( res );
+                    }
+                    break;
+                }
                 default:
                     break;
             }
@@ -867,9 +968,9 @@ namespace sgns
 
         OUTCOME_TRY( RequestNonce( req_id ) );
 
-        const auto start_time        = std::chrono::steady_clock::now();
-        const auto full_timeout      = std::chrono::milliseconds( timeout_ms );
-        const auto silent_time       = std::chrono::milliseconds( silent_time_ms );
+        const auto start_time   = std::chrono::steady_clock::now();
+        const auto full_timeout = std::chrono::milliseconds( timeout_ms );
+        const auto silent_time  = std::chrono::milliseconds( silent_time_ms );
 
         bool first_seen = false;
 
@@ -989,9 +1090,9 @@ namespace sgns
             return request_result.error();
         }
 
-        const auto start_time        = std::chrono::steady_clock::now();
-        const auto full_timeout      = std::chrono::milliseconds( timeout_ms );
-        const auto silent_time       = std::chrono::milliseconds( 150 );
+        const auto start_time   = std::chrono::steady_clock::now();
+        const auto full_timeout = std::chrono::milliseconds( timeout_ms );
+        const auto silent_time  = std::chrono::milliseconds( 150 );
 
         bool first_seen = false;
 
@@ -1019,7 +1120,6 @@ namespace sgns
                     }
                 }
             }
-
 
             if ( std::chrono::steady_clock::now() - start_time >= full_timeout )
             {
@@ -1055,8 +1155,8 @@ namespace sgns
         return outcome::success( cids );
     }
 
-    outcome::result<std::set<std::string>> AccountMessenger::PerformBlockCidRequest( uint64_t timeout_ms,
-                                                                                      const std::string &cid )
+    outcome::result<std::set<std::string>> AccountMessenger::PerformBlockCidRequest( uint64_t           timeout_ms,
+                                                                                     const std::string &cid )
     {
         std::mt19937_64 gen( rd_() );
         uint64_t        random_value = gen();
@@ -1084,15 +1184,13 @@ namespace sgns
         auto request_result = RequestBlockByCid( req_id, cid );
         if ( request_result.has_error() )
         {
-            logger_->error( "[{}] Failed to request block CID {}",
-                            address_.substr( 0, 8 ),
-                            cid );
+            logger_->error( "[{}] Failed to request block CID {}", address_.substr( 0, 8 ), cid );
             return request_result.error();
         }
 
-        const auto start_time        = std::chrono::steady_clock::now();
-        const auto full_timeout      = std::chrono::milliseconds( timeout_ms );
-        const auto silent_time       = std::chrono::milliseconds( 150 );
+        const auto start_time   = std::chrono::steady_clock::now();
+        const auto full_timeout = std::chrono::milliseconds( timeout_ms );
+        const auto silent_time  = std::chrono::milliseconds( 150 );
 
         bool first_seen = false;
 
@@ -1153,6 +1251,214 @@ namespace sgns
         }
 
         return outcome::success( cids );
+    }
+
+    outcome::result<std::set<std::string>> AccountMessenger::PerformUTXORequest( uint64_t           timeout_ms,
+                                                                                 const std::string &address,
+                                                                                 uint64_t           silent_time_ms )
+    {
+        std::mt19937_64 gen( rd_() );
+        uint64_t        random_value = gen();
+
+        std::string              to_hash = address_ + std::to_string( random_value );
+        sgns::crypto::HasherImpl hasher;
+        auto                     hash = hasher.sha2_256(
+            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( to_hash.data() ), to_hash.size() ) );
+
+        uint64_t req_id = 0;
+        std::memcpy( &req_id, hash.data(), sizeof( req_id ) );
+
+        logger_->debug( "[{}] Requesting UTXOs for {} with req_id {} and timeout {}",
+                        address_.substr( 0, 8 ),
+                        address.substr( 0, 8 ),
+                        req_id,
+                        timeout_ms );
+
+        {
+            std::lock_guard lock( utxo_responses_mutex_ );
+            utxo_responses_.erase( req_id );
+            utxo_first_response_time_.erase( req_id );
+        }
+
+        auto request_result = RequestUTXO( req_id, address );
+        if ( request_result.has_error() )
+        {
+            logger_->error( "[{}] Failed to request UTXOs for {}", address_.substr( 0, 8 ), address.substr( 0, 8 ) );
+            return request_result.error();
+        }
+
+        const auto start_time   = std::chrono::steady_clock::now();
+        const auto full_timeout = std::chrono::milliseconds( timeout_ms );
+        const auto silent_time  = std::chrono::milliseconds( silent_time_ms );
+
+        bool first_seen = false;
+
+        while ( true )
+        {
+            {
+                std::lock_guard lock( utxo_responses_mutex_ );
+                auto            it = utxo_responses_.find( req_id );
+                if ( it != utxo_responses_.end() && !it->second.empty() )
+                {
+                    if ( !first_seen )
+                    {
+                        first_seen                        = true;
+                        utxo_first_response_time_[req_id] = std::chrono::steady_clock::now();
+                    }
+                    else
+                    {
+                        auto elapsed = std::chrono::steady_clock::now() - utxo_first_response_time_[req_id];
+                        if ( elapsed >= silent_time )
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if ( std::chrono::steady_clock::now() - start_time >= full_timeout )
+            {
+                logger_->debug( "[{}] Timeout: no UTXOResponse received for req_id {}",
+                                address_.substr( 0, 8 ),
+                                req_id );
+                return outcome::failure( Error::NO_RESPONSE_RECEIVED );
+            }
+
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
+
+        std::vector<UTXOResponseData> responses;
+        {
+            std::lock_guard lock( utxo_responses_mutex_ );
+            auto            it = utxo_responses_.find( req_id );
+            if ( it != utxo_responses_.end() )
+            {
+                responses = std::move( it->second );
+            }
+            utxo_responses_.erase( req_id );
+            utxo_first_response_time_.erase( req_id );
+        }
+
+        if ( responses.empty() )
+        {
+            logger_->warn( "[{}] No UTXO responses recorded for req_id {}", address_.substr( 0, 8 ), req_id );
+            return outcome::failure( Error::NO_RESPONSE_RECEIVED );
+        }
+
+        struct Vote
+        {
+            uint64_t                 total_weight{ 0 };
+            uint64_t                 count{ 0 };
+            bool                     has_utxos{ false };
+            std::vector<std::string> utxos;
+        };
+
+        auto make_key = []( bool has_utxos, const std::vector<std::string> &utxos ) -> std::string
+        {
+            if ( !has_utxos )
+            {
+                return "none";
+            }
+            std::string key;
+            for ( const auto &u : utxos )
+            {
+                key.append( u );
+                key.push_back( '\x1f' );
+            }
+            return key;
+        };
+
+        struct WeightedResponse
+        {
+            UTXOResponseData        data;
+            std::optional<uint64_t> validator_weight;
+        };
+
+        std::vector<WeightedResponse> weighted;
+        weighted.reserve( responses.size() );
+
+        bool any_validator = false;
+        for ( auto &resp : responses )
+        {
+            if ( resp.has_utxos )
+            {
+                std::sort( resp.utxos.begin(), resp.utxos.end() );
+                resp.utxos.erase( std::unique( resp.utxos.begin(), resp.utxos.end() ), resp.utxos.end() );
+            }
+            else
+            {
+                resp.utxos.clear();
+            }
+
+            std::optional<uint64_t> weight;
+            if ( methods_.get_validator_weight_ )
+            {
+                auto weight_res = methods_.get_validator_weight_( resp.responder_address );
+                if ( weight_res.has_value() )
+                {
+                    weight = weight_res.value();
+                }
+            }
+
+            if ( weight.has_value() && weight.value() > 0 )
+            {
+                any_validator = true;
+            }
+
+            weighted.push_back( { std::move( resp ), weight } );
+        }
+
+        std::unordered_map<std::string, Vote> votes;
+        for ( const auto &entry : weighted )
+        {
+            const bool is_validator = entry.validator_weight.has_value() && entry.validator_weight.value() > 0;
+            if ( any_validator && !is_validator )
+            {
+                continue;
+            }
+
+            const uint64_t weight = any_validator ? entry.validator_weight.value() : 1;
+            const auto     key    = make_key( entry.data.has_utxos, entry.data.utxos );
+            auto          &vote   = votes[key];
+            if ( vote.count == 0 )
+            {
+                vote.has_utxos = entry.data.has_utxos;
+                vote.utxos     = entry.data.utxos;
+            }
+            vote.total_weight += weight;
+            vote.count        += 1;
+        }
+
+        if ( votes.empty() )
+        {
+            logger_->warn( "[{}] No eligible UTXO responses after applying validator preference",
+                           address_.substr( 0, 8 ) );
+            return outcome::failure( Error::NO_RESPONSE_RECEIVED );
+        }
+
+        std::string best_key;
+        Vote        best_vote;
+        bool        first = true;
+
+        for ( const auto &[key, vote] : votes )
+        {
+            if ( first || vote.total_weight > best_vote.total_weight ||
+                 ( vote.total_weight == best_vote.total_weight && vote.count > best_vote.count ) ||
+                 ( vote.total_weight == best_vote.total_weight && vote.count == best_vote.count && key < best_key ) )
+            {
+                best_key  = key;
+                best_vote = vote;
+                first     = false;
+            }
+        }
+
+        std::set<std::string> result;
+        if ( best_vote.has_utxos )
+        {
+            result.insert( best_vote.utxos.begin(), best_vote.utxos.end() );
+        }
+
+        return outcome::success( result );
     }
 
     void AccountMessenger::HandleNonceRequest( const accountComm::SignedNonceRequest &signed_req )
@@ -1297,6 +1603,137 @@ namespace sgns
             // Track addresses that responded with no nonce
             no_nonce_responses_[resp.request_id()].insert( resp.responder_address() );
         }
+    }
+
+    void AccountMessenger::HandleUTXORequest( const accountComm::SignedUTXORequest &signed_req )
+    {
+        const auto &req = signed_req.data();
+
+        logger_->debug( "[{}] Received a UTXO request req_id {} for {}",
+                        address_.substr( 0, 8 ),
+                        req.request_id(),
+                        req.target_address().substr( 0, 8 ) );
+
+        std::string serialized;
+        if ( !req.SerializeToString( &serialized ) )
+        {
+            logger_->error( "Failed to serialize UTXORequest for signature check" );
+            return;
+        }
+
+        std::vector<uint8_t> serialized_vec( serialized.begin(), serialized.end() );
+        auto                 verify_signature_result = methods_.verify_signature_( req.requester_address(),
+                                                                   signed_req.signature(),
+                                                                   serialized_vec );
+        if ( verify_signature_result.has_error() || !verify_signature_result.value() )
+        {
+            logger_->error( "Invalid signature on UTXORequest from {}", req.requester_address() );
+            return;
+        }
+
+        accountComm::UTXOResponse resp;
+        resp.set_responder_address( address_ );
+        resp.set_requester_address( req.requester_address() );
+        resp.set_target_address( req.target_address() );
+        resp.set_request_id( req.request_id() );
+        resp.set_timestamp(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
+
+        bool have_utxos = false;
+
+        auto utxos_res = methods_.get_utxos_( req.target_address() );
+        if ( utxos_res.has_value() )
+        {
+            auto utxos = utxos_res.value();
+            for ( auto &utxo : utxos )
+            {
+                resp.add_utxos( std::move( utxo ) );
+            }
+            have_utxos = !utxos.empty();
+        }
+
+        resp.set_has_utxos( have_utxos );
+
+        std::string resp_serialized;
+        if ( !resp.SerializeToString( &resp_serialized ) )
+        {
+            logger_->error( "Failed to serialize UTXOResponse" );
+            return;
+        }
+
+        std::vector<uint8_t> resp_bytes( resp_serialized.begin(), resp_serialized.end() );
+        auto                 signature_res = methods_.sign_( resp_bytes );
+        if ( signature_res.has_error() )
+        {
+            logger_->error( "Failed to sign UTXOResponse" );
+            return;
+        }
+
+        accountComm::SignedUTXOResponse signed_resp;
+        *signed_resp.mutable_data() = resp;
+        auto signature              = signature_res.value();
+        signed_resp.set_signature( signature.data(), signature.size() );
+
+        accountComm::AccountMessage msg;
+        *msg.mutable_utxo_response() = signed_resp;
+
+        auto account_topic = req.requester_address() + std::string( ACCOUNT_COMM ) +
+                             sgns::version::GetNetAndVersionAppendix();
+
+        auto send_ret = SendAccountMessage( msg, { account_topic } );
+        if ( send_ret.has_error() )
+        {
+            logger_->error( "[{}] Failed to send UTXOResponse for req_id {}",
+                            address_.substr( 0, 8 ),
+                            req.request_id() );
+        }
+    }
+
+    void AccountMessenger::HandleUTXOResponse( const accountComm::SignedUTXOResponse &signed_resp )
+    {
+        const auto &resp = signed_resp.data();
+
+        logger_->debug( "[{}] Received a UTXO response from {} (has_utxos={}, count={}) and req_id {}",
+                        address_.substr( 0, 8 ),
+                        resp.responder_address().substr( 0, 8 ),
+                        resp.has_utxos(),
+                        resp.utxos_size(),
+                        resp.request_id() );
+
+        std::string serialized;
+        if ( !resp.SerializeToString( &serialized ) )
+        {
+            logger_->error( "Failed to serialize UTXOResponse for signature check" );
+            return;
+        }
+
+        std::vector<uint8_t> data_vec( serialized.begin(), serialized.end() );
+        auto                 verify_signature_result = methods_.verify_signature_( resp.responder_address(),
+                                                                   signed_resp.signature(),
+                                                                   data_vec );
+        if ( verify_signature_result.has_error() || !verify_signature_result.value() )
+        {
+            logger_->error( "Invalid signature on UTXOResponse from {}", resp.responder_address() );
+            return;
+        }
+
+        UTXOResponseData entry;
+        entry.responder_address = resp.responder_address();
+        entry.has_utxos         = resp.has_utxos();
+        entry.utxos.reserve( resp.utxos_size() );
+        for ( const auto &utxo : resp.utxos() )
+        {
+            entry.utxos.emplace_back( utxo );
+        }
+
+        std::lock_guard lock( utxo_responses_mutex_ );
+        auto           &list_ref = utxo_responses_[resp.request_id()];
+        if ( list_ref.empty() )
+        {
+            utxo_first_response_time_[resp.request_id()] = std::chrono::steady_clock::now();
+        }
+        list_ref.push_back( std::move( entry ) );
     }
 
     void AccountMessenger::HandleHeadRequest( const accountComm::SignedHeadRequest &signed_req )

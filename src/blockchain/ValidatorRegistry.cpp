@@ -456,6 +456,24 @@ namespace sgns::blockchain
         return outcome::failure( std::errc::no_such_file_or_directory );
     }
 
+    outcome::result<std::optional<uint64_t>> ValidatorRegistry::GetValidatorWeight(
+        const std::string &validator_id ) const
+    {
+        std::shared_lock<std::shared_mutex> lock( cache_mutex_ );
+        if ( !cache_initialized_ || !cached_registry_ )
+        {
+            return outcome::success( std::optional<uint64_t>{} );
+        }
+
+        const auto *validator = FindValidator( cached_registry_.value(), validator_id );
+        if ( !validator || validator->status() != Status::ACTIVE )
+        {
+            return outcome::success( std::optional<uint64_t>{} );
+        }
+
+        return outcome::success( std::optional<uint64_t>{ validator->weight() } );
+    }
+
     bool ValidatorRegistry::RegisterFilter()
     {
         logger_->trace( "{}: entry", __func__ );

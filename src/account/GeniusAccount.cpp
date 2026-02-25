@@ -336,6 +336,38 @@ namespace sgns
 
             return outcome::failure( std::errc::owner_dead );
         };
+        methods.get_utxos_ =
+            [weakptr( weak_from_this() )]( const std::string &address ) -> outcome::result<std::vector<std::string>>
+        {
+            if ( auto self = weakptr.lock() )
+            {
+                std::lock_guard lock( self->get_cids_mutex_ );
+                if ( self->get_utxos_method_ )
+                {
+                    return self->get_utxos_method_( address );
+                }
+
+                return outcome::failure( AccountMessenger::Error::UTXO_REQUEST_ERROR );
+            }
+
+            return outcome::failure( std::errc::owner_dead );
+        };
+        methods.get_validator_weight_ =
+            [weakptr( weak_from_this() )]( const std::string &address ) -> outcome::result<std::optional<uint64_t>>
+        {
+            if ( auto self = weakptr.lock() )
+            {
+                std::lock_guard lock( self->get_cids_mutex_ );
+                if ( self->get_validator_weight_method_ )
+                {
+                    return self->get_validator_weight_method_( address );
+                }
+
+                return outcome::failure( AccountMessenger::Error::UTXO_REQUEST_ERROR );
+            }
+
+            return outcome::failure( std::errc::owner_dead );
+        };
         messenger_ = AccountMessenger::New( eth_keypair_->GetEntirePubValue(),
                                             std::move( pubsub ),
                                             std::move( methods ) );
@@ -766,6 +798,19 @@ namespace sgns
         return messenger_->RequestRegularBlock( timeout_ms, cid, std::move( callback ) );
     }
 
+    outcome::result<std::set<std::string>> GeniusAccount::RequestUTXOs( uint64_t           timeout_ms,
+                                                                        const std::string &address,
+                                                                        uint64_t           silent_time_ms ) const
+    {
+        if ( !messenger_ )
+        {
+            return outcome::failure( std::errc::no_such_device );
+        }
+        genius_account_logger()->debug( "Requesting UTXOs for {}", address.substr( 0, 8 ) );
+
+        return messenger_->RequestUTXOs( timeout_ms, address, silent_time_ms );
+    }
+
     void GeniusAccount::SetGetBlockChainCIDMethod(
         std::function<outcome::result<std::string>( uint8_t, const std::string & )> method )
     {
@@ -789,5 +834,31 @@ namespace sgns
     {
         std::lock_guard lock( get_cids_mutex_ );
         has_cid_method_ = nullptr;
+    }
+
+    void GeniusAccount::SetGetUTXOsMethod(
+        std::function<outcome::result<std::vector<std::string>>( const std::string & )> method )
+    {
+        std::lock_guard lock( get_cids_mutex_ );
+        get_utxos_method_ = std::move( method );
+    }
+
+    void GeniusAccount::ClearGetUTXOsMethod()
+    {
+        std::lock_guard lock( get_cids_mutex_ );
+        get_utxos_method_ = nullptr;
+    }
+
+    void GeniusAccount::SetGetValidatorWeightMethod(
+        std::function<outcome::result<std::optional<uint64_t>>( const std::string & )> method )
+    {
+        std::lock_guard lock( get_cids_mutex_ );
+        get_validator_weight_method_ = std::move( method );
+    }
+
+    void GeniusAccount::ClearGetValidatorWeightMethod()
+    {
+        std::lock_guard lock( get_cids_mutex_ );
+        get_validator_weight_method_ = nullptr;
     }
 }

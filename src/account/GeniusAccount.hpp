@@ -45,6 +45,7 @@ namespace sgns
         class GlobalDB;
     }
     class AccountMessenger;
+    class GeniusNode;
 
     class GeniusAccount : public std::enable_shared_from_this<GeniusAccount>
     {
@@ -218,6 +219,16 @@ namespace sgns
             const std::string                                  &cid,
             std::function<void( outcome::result<std::string> )> callback = nullptr ) const;
         /**
+         * @brief       Request UTXOs for a specific address and return the selected response
+         * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
+         * @param[in]   address Address to request UTXOs for
+         * @param[in]   silent_time_ms Time to wait for subsequent responses after first one
+         * @return      Set of UTXO strings based on selection criteria, or error otherwise
+         */
+        outcome::result<std::set<std::string>> RequestUTXOs( uint64_t           timeout_ms,
+                                                             const std::string &address,
+                                                             uint64_t           silent_time_ms = 150 ) const;
+        /**
          * @brief       Request heads broadcast for specific topics
          * @param[in]   topics Vector of topic names to request heads for
          * @return      outcome::success if request was sent, error otherwise
@@ -232,11 +243,18 @@ namespace sgns
 
     protected:
         friend class Blockchain;
+        friend class GeniusNode;
         void SetGetBlockChainCIDMethod(
             std::function<outcome::result<std::string>( uint8_t, const std::string & )> method );
         void ClearGetBlockChainCIDMethod();
         void SetHasBlockCidMethod( std::function<outcome::result<bool>( const std::string & )> method );
         void ClearHasBlockCidMethod();
+        void SetGetUTXOsMethod(
+            std::function<outcome::result<std::vector<std::string>>( const std::string & )> method );
+        void ClearGetUTXOsMethod();
+        void SetGetValidatorWeightMethod(
+            std::function<outcome::result<std::optional<uint64_t>>( const std::string & )> method );
+        void ClearGetValidatorWeightMethod();
 
     private:
         static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes
@@ -271,6 +289,10 @@ namespace sgns
         std::function<outcome::result<std::string>( uint8_t, const std::string & )>
             get_cids_method_; ///< Function to get blockchain CIDs
         std::function<outcome::result<bool>( const std::string & )> has_cid_method_; ///< Function to check CID presence
+        std::function<outcome::result<std::vector<std::string>>( const std::string & )>
+            get_utxos_method_; ///< Function to get UTXOs for an address
+        std::function<outcome::result<std::optional<uint64_t>>( const std::string & )>
+            get_validator_weight_method_; ///< Function to get validator weight for an address
 
         uint64_t GetNextNonceLocked() const;
 

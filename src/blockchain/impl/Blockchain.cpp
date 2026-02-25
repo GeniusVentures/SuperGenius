@@ -207,6 +207,17 @@ namespace sgns
                 return outcome::failure( std::errc::owner_dead );
             } );
 
+        instance->account_->SetGetValidatorWeightMethod(
+            [weak_ptr( std::weak_ptr<Blockchain>(
+                instance ) )]( const std::string &address ) -> outcome::result<std::optional<uint64_t>>
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    return strong->validator_registry_->GetValidatorWeight( address );
+                }
+                return outcome::failure( std::errc::owner_dead );
+            } );
+
         instance->logger_->debug( "[{}] Block callback registered", instance->account_->GetAddress().substr( 0, 8 ) );
 
         return instance;
