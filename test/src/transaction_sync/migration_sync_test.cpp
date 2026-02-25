@@ -38,7 +38,7 @@ protected:
         ""                                    // BaseWritePath
     };
 
-    static constexpr char DB_PREFIX[]        = "SuperGNUSNode.TestNet.2a.01.";
+    static constexpr char DB_PREFIX[]        = "SuperGNUSNode.TestNet.2a.00.";
     static constexpr int  STARTUP_DELAY_MS   = 1000;
     static constexpr char FULL_NODE_SUBDIR[] = "migration_full_node";
     static constexpr char FULL_NODE_ADDR[]   = "0xcafe";
@@ -63,8 +63,8 @@ protected:
             if ( entry.is_directory() )
             {
                 auto name = entry.path().filename().string();
-                // Only remove new (01) database directories, preserving legacy (00) test data
-                if ( name.rfind( DB_PREFIX, 0 ) == 0 )
+                // Remove new database directories, preserving legacy (00) test data
+                if ( name.find( DB_PREFIX ) == std::string::npos )
                 {
                     fs::remove_all( entry.path(), ec );
                     // On Windows, file locks may not be immediately released
