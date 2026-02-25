@@ -4,18 +4,15 @@
  * @date       2024-04-12
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#include <boost/asio/post.hpp>
-
 #include "account/TransactionManager.hpp"
 
 #include <utility>
 #include <thread>
 
-#include <ProofSystem/EthereumKeyPairParams.hpp>
-
-#include <openssl/ssl.h>
+#include <boost/asio/post.hpp>
 #include <openssl/err.h>
 
+#include <ProofSystem/EthereumKeyPairParams.hpp>
 #include "TransferTransaction.hpp"
 #include "MintTransaction.hpp"
 #include "EscrowTransaction.hpp"
@@ -26,7 +23,6 @@
 #include "crdt/proto/delta.pb.h"
 #include "base/sgns_version.hpp"
 
-#include "proof/TransferProof.hpp"
 #include "proof/ProcessingProof.hpp"
 
 namespace sgns
@@ -219,7 +215,7 @@ namespace sgns
                                          utxo.GetTxID().toReadableString() );
                         continue;
                     }
-                    
+
                     for ( auto network_id : monitored_networks )
                     {
                         auto tx_path        = GetTransactionPath( network_id, utxo.GetTxID().toReadableString() );
@@ -2636,8 +2632,8 @@ namespace sgns
                 m_logger->info( "[{} - full: {}] State changed from {} to {}",
                                 account_m->GetAddress().substr( 0, 8 ),
                                 full_node_m,
-                                static_cast<int>( state_m ),
-                                static_cast<int>( new_state ) );
+                                state_m,
+                                new_state );
                 auto old_state = state_m;
                 state_m        = new_state;
                 if ( state_change_callback_ )
@@ -2659,4 +2655,31 @@ namespace sgns
 
         return outcome::failure( std::errc::no_such_file_or_directory );
     }
+}
+
+fmt::format_context::iterator fmt::formatter<sgns::TransactionManager::State>::format(
+    sgns::TransactionManager::State s,
+    format_context                 &ctx ) const
+{
+    using State = sgns::TransactionManager::State;
+
+    string_view name = "UNKNOWN";
+
+    switch ( s )
+    {
+        case State::CREATING:
+            name = "CREATING";
+            break;
+        case State::INITIALIZING:
+            name = "INITIALIZING";
+            break;
+        case State::SYNCING:
+            name = "SYNCING";
+            break;
+        case State::READY:
+            name = "READY";
+            break;
+    }
+
+    return formatter<string_view>::format( name, ctx );
 }

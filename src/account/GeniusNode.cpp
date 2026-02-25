@@ -1550,9 +1550,7 @@ namespace sgns
 
     void GeniusNode::TransactionStateChanged( TransactionManager::State old_state, TransactionManager::State new_state )
     {
-        node_logger_->info( "Transaction Manager State changed from {} to {}",
-                            TransactionManager::StateToString( old_state ),
-                            TransactionManager::StateToString( new_state ) );
+        node_logger_->info( "Transaction Manager state changed from {} to {}", old_state, new_state );
 
         switch ( new_state )
         {

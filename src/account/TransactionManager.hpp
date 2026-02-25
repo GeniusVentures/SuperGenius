@@ -48,7 +48,7 @@ namespace sgns
         /**
          * @brief       State of the Transaction Manager
          */
-        enum class State
+        enum class State : uint8_t
         {
             CREATING = 0, ///< Creating the object
             INITIALIZING, ///< Initializing the object
@@ -346,5 +346,11 @@ namespace sgns
         void ChangeState( State new_state );
     };
 }
+
+template <>
+struct fmt::formatter<sgns::TransactionManager::State> : formatter<std::string_view>
+{
+    format_context::iterator format( sgns::TransactionManager::State s, format_context &ctx ) const;
+};
 
 #endif
