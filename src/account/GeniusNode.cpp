@@ -395,6 +395,20 @@ namespace sgns
 
             case NodeState::INITIALIZING_TRANSACTIONS:
             {
+                account_->SetGetUTXOsMethod(
+                    [this]( const std::string &address ) -> outcome::result<std::vector<std::string>>
+                    {
+                        std::vector<std::string> results;
+                        auto                     utxos = utxo_manager_.GetUTXOs( address );
+                        results.reserve( utxos.size() );
+
+                        for ( const auto &utxo : utxos )
+                        {
+                            results.push_back( utxo.GetTxID().toReadableString() );
+                        }
+                        return results;
+                    } );
+
                 transaction_manager_ = TransactionManager::New( tx_globaldb_,
                                                                 io_,
                                                                 utxo_manager_,
