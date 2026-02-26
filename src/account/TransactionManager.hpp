@@ -349,6 +349,9 @@ namespace sgns
         void DeleteElementCallback( std::string deleted_key );
 
         void ChangeState( State new_state );
+
+    public:
+        outcome::result<std::string> GetTransactionCID( const std::string &tx_hash ) const;
     };
 }
 

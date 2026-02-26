@@ -9,6 +9,8 @@
 #include <utility>
 #include <thread>
 #include <system_error>
+#include <set>
+#include <unordered_set>
 
 #include <boost/asio/post.hpp>
 #include <openssl/err.h>
@@ -1548,66 +1550,115 @@ namespace sgns
         {
             m_logger->error( "Failed to load UTXOs from storage" );
         }
-        if ( utxo_result.has_error() || !utxo_result.value() )
+
+        const bool has_local_utxos    = utxo_result.has_value() && utxo_result.value();
+        auto       monitored_networks = GetMonitoredNetworkIDs();
+
+        std::unordered_set<std::string> network_hashes;
+        bool                            has_network_utxos = false;
+
+        if ( !has_local_utxos )
+        {
+            auto network_utxos = account_m->RequestUTXOs( 8000, account_m->GetAddress() );
+            if ( network_utxos.has_value() && !network_utxos.value().empty() )
+            {
+                network_hashes    = network_utxos.value();
+                has_network_utxos = true;
+            }
+            else
+            {
+                m_logger->debug( "No UTXO response received from network during init" );
+            }
+        }
+
+        if ( !has_local_utxos && !has_network_utxos )
         {
             m_logger->info( "Loading transactions to mount UTXOs" );
             QueryTransactions();
             return;
         }
 
-        auto utxo_map           = utxo_manager_.GetAllUTXOs();
-        auto monitored_networks = GetMonitoredNetworkIDs();
+        auto utxo_map = utxo_manager_.GetAllUTXOs();
 
-        for ( const auto &[address, utxo_data_vector] : utxo_map )
+        if ( has_local_utxos )
         {
-            m_logger->debug( "[{} - full: {}] Loaded {} UTXOs for address {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             utxo_data_vector.size(),
-                             address.substr( 0, 8 ) );
-            for ( auto &utxo_data : utxo_data_vector )
+            for ( const auto &[address, utxo_data_vector] : utxo_map )
             {
-                auto &[utxo_state, utxo] = utxo_data;
-                const auto tx_hash       = utxo.GetTxID().toReadableString();
-                m_logger->debug( "[{} - full: {}] UTXO - state: {}, tx_hash: {}, index: {}, amount: {}",
+                m_logger->debug( "[{} - full: {}] Loaded {} UTXOs for address {}",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
-                                 static_cast<uint8_t>( utxo_state ),
-                                 tx_hash,
-                                 utxo.GetOutputIdx(),
-                                 utxo.GetAmount() );
-
-                if ( utxo_state != UTXOManager::UTXOState::UTXO_READY )
+                                 utxo_data_vector.size(),
+                                 address.substr( 0, 8 ) );
+                for ( auto &utxo_data : utxo_data_vector )
                 {
-                    m_logger->debug( "[{} - full: {}] Skipping UTXO in state {} for tx {}",
+                    auto &[utxo_state, utxo] = utxo_data;
+                    const auto tx_hash       = utxo.GetTxID().toReadableString();
+                    m_logger->debug( "[{} - full: {}] UTXO - state: {}, tx_hash: {}, index: {}, amount: {}",
                                      account_m->GetAddress().substr( 0, 8 ),
                                      full_node_m,
                                      static_cast<uint8_t>( utxo_state ),
-                                     tx_hash );
-                    continue;
-                }
+                                     tx_hash,
+                                     utxo.GetOutputIdx(),
+                                     utxo.GetAmount() );
 
-                bool processed = false;
-                for ( auto network_id : monitored_networks )
-                {
-                    auto tx_path        = GetTransactionPath( network_id, tx_hash );
-                    auto process_result = FetchAndProcessTransaction( tx_path );
-                    if ( !process_result.has_error() )
+                    if ( utxo_state != UTXOManager::UTXOState::UTXO_READY )
                     {
-                        m_logger->debug( "[{} - full: {}] Processed transaction in {}",
+                        m_logger->debug( "[{} - full: {}] Skipping UTXO in state {} for tx {}",
                                          account_m->GetAddress().substr( 0, 8 ),
                                          full_node_m,
-                                         tx_path );
-                        processed = true;
-                        break;
+                                         static_cast<uint8_t>( utxo_state ),
+                                         tx_hash );
+                        continue;
+                    }
+
+                    bool processed = false;
+                    for ( auto network_id : monitored_networks )
+                    {
+                        auto tx_path        = GetTransactionPath( network_id, tx_hash );
+                        auto process_result = FetchAndProcessTransaction( tx_path );
+                        if ( !process_result.has_error() )
+                        {
+                            m_logger->debug( "[{} - full: {}] Processed transaction in {}",
+                                             account_m->GetAddress().substr( 0, 8 ),
+                                             full_node_m,
+                                             tx_path );
+                            processed = true;
+                            break;
+                        }
+                    }
+
+                    if ( !processed )
+                    {
+                        std::lock_guard missing_lock( missing_tx_mutex_ );
+                        missing_tx_hashes_.insert( tx_hash );
                     }
                 }
+            }
+            return;
+        }
 
-                if ( !processed )
+        for ( const auto &tx_hash : network_hashes )
+        {
+            bool processed = false;
+            for ( auto network_id : monitored_networks )
+            {
+                auto tx_path        = GetTransactionPath( network_id, tx_hash );
+                auto process_result = FetchAndProcessTransaction( tx_path );
+                if ( !process_result.has_error() )
                 {
-                    std::lock_guard missing_lock( missing_tx_mutex_ );
-                    missing_tx_hashes_.insert( tx_hash );
+                    m_logger->debug( "[{} - full: {}] Processed transaction in {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     tx_path );
+                    processed = true;
+                    break;
                 }
+            }
+
+            if ( !processed )
+            {
+                std::lock_guard missing_lock( missing_tx_mutex_ );
+                missing_tx_hashes_.insert( tx_hash );
             }
         }
     }
@@ -2543,8 +2594,7 @@ namespace sgns
         }
     }
 
-    outcome::result<void> TransactionManager::StoreTransactionCID( const std::string &key,
-                                                                   const std::string &cid )
+    outcome::result<void> TransactionManager::StoreTransactionCID( const std::string &key, const std::string &cid )
     {
         if ( cid.empty() )
         {
@@ -2686,6 +2736,37 @@ namespace sgns
                 }
             }
         }
+    }
+
+    outcome::result<std::string> TransactionManager::GetTransactionCID( const std::string &tx_hash ) const
+    {
+        auto datastore = globaldb_m->GetDataStore();
+        if ( !datastore )
+        {
+            return outcome::failure( std::errc::bad_file_descriptor );
+        }
+
+        auto monitored_networks = GetMonitoredNetworkIDs();
+        for ( auto network_id : monitored_networks )
+        {
+            m_logger->debug( "[{} - full: {}] Looking for CID of tx {} in network {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             tx_hash,
+                             network_id );
+            auto                   key = GetTransactionPath( network_id, tx_hash );
+            crdt::GlobalDB::Buffer key_buffer;
+
+            key_buffer.put( key );
+
+            auto value_res = datastore->get( key_buffer );
+            if ( value_res.has_value() )
+            {
+                return std::string( value_res.value().toString() );
+            }
+        }
+
+        return outcome::failure( std::errc::no_such_file_or_directory );
     }
 
     outcome::result<std::shared_ptr<IGeniusTransactions>> TransactionManager::GetConflictingTransaction(
