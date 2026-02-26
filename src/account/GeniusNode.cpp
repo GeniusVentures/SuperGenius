@@ -416,6 +416,19 @@ namespace sgns
                                                                 std::make_shared<crypto::HasherImpl>(),
                                                                 is_full_node_ );
 
+                account_->SetNonceStore( tx_globaldb_->GetDataStore() );
+
+                account_->SetGetTransactionCIDMethod(
+                    [weak_tm = std::weak_ptr<TransactionManager>( transaction_manager_ )]( const std::string &tx_hash )
+                        -> outcome::result<std::string>
+                    {
+                        if ( auto tm = weak_tm.lock() )
+                        {
+                            return tm->GetTransactionCID( tx_hash );
+                        }
+                        return outcome::failure( std::errc::owner_dead );
+                    } );
+
                 transaction_manager_->RegisterStateChangeCallback(
                     [weak_self = weak_from_this()]( TransactionManager::State old_state,
                                                     TransactionManager::State new_state )

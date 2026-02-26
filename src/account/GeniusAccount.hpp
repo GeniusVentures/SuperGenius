@@ -17,6 +17,8 @@
 #include <functional>
 #include <optional>
 #include <set>
+#include <storage/rocksdb/rocksdb.hpp>
+#include <string_view>
 
 #include <boost/multiprecision/cpp_int.hpp>
 
@@ -218,6 +220,10 @@ namespace sgns
             uint64_t                                            timeout_ms,
             const std::string                                  &cid,
             std::function<void( outcome::result<std::string> )> callback = nullptr ) const;
+        outcome::result<void> RequestTransaction(
+            uint64_t                                            timeout_ms,
+            const std::string                                  &tx_hash,
+            std::function<void( outcome::result<std::string> )> callback = nullptr ) const;
         /**
          * @brief       Request UTXOs for a specific address and return the selected response
          * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
@@ -225,9 +231,9 @@ namespace sgns
          * @param[in]   silent_time_ms Time to wait for subsequent responses after first one
          * @return      Set of UTXO strings based on selection criteria, or error otherwise
          */
-        outcome::result<std::set<std::string>> RequestUTXOs( uint64_t           timeout_ms,
-                                                             const std::string &address,
-                                                             uint64_t           silent_time_ms = 150 ) const;
+        outcome::result<std::unordered_set<std::string>> RequestUTXOs( uint64_t           timeout_ms,
+                                                                       const std::string &address,
+                                                                       uint64_t           silent_time_ms = 150 ) const;
         /**
          * @brief       Request heads broadcast for specific topics
          * @param[in]   topics Vector of topic names to request heads for
@@ -255,6 +261,10 @@ namespace sgns
         void SetGetValidatorWeightMethod(
             std::function<outcome::result<std::optional<uint64_t>>( const std::string & )> method );
         void ClearGetValidatorWeightMethod();
+        void SetGetTransactionCIDMethod(
+            std::function<outcome::result<std::string>( const std::string & )> method );
+        void ClearGetTransactionCIDMethod();
+        void SetNonceStore( std::shared_ptr<storage::rocksdb> db );
 
     private:
         static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes
@@ -293,6 +303,15 @@ namespace sgns
             get_utxos_method_; ///< Function to get UTXOs for an address
         std::function<outcome::result<std::optional<uint64_t>>( const std::string & )>
             get_validator_weight_method_; ///< Function to get validator weight for an address
+        std::function<outcome::result<std::string>( const std::string & )>
+            get_transaction_cid_method_; ///< Function to get transaction CID by hash
+        std::shared_ptr<storage::rocksdb> nonce_db_; ///< RocksDB for nonce persistence
+
+        static constexpr std::string_view NONCE_KEY_PREFIX = "gnus-confirmed-nonce-";
+        
+
+        void LoadConfirmedNonces();
+        void PersistConfirmedNonce( const std::string &address, uint64_t nonce );
 
         uint64_t GetNextNonceLocked() const;
 

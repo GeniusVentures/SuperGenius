@@ -368,6 +368,22 @@ namespace sgns
 
             return outcome::failure( std::errc::owner_dead );
         };
+        methods.get_transaction_cid_ =
+            [weakptr( weak_from_this() )]( const std::string &tx_hash ) -> outcome::result<std::string>
+        {
+            if ( auto self = weakptr.lock() )
+            {
+                std::lock_guard lock( self->get_cids_mutex_ );
+                if ( self->get_transaction_cid_method_ )
+                {
+                    return self->get_transaction_cid_method_( tx_hash );
+                }
+
+                return outcome::failure( AccountMessenger::Error::GENESIS_REQUEST_ERROR );
+            }
+
+            return outcome::failure( std::errc::owner_dead );
+        };
         messenger_ = AccountMessenger::New( eth_keypair_->GetEntirePubValue(),
                                             std::move( pubsub ),
                                             std::move( methods ) );
@@ -537,8 +553,8 @@ namespace sgns
 
     void GeniusAccount::SetPeerConfirmedNonce( uint64_t nonce, const std::string &address )
     {
-        std::lock_guard lock( nonce_mutex_ );
-        auto            current_confirmed_nonce = confirmed_nonces_[address];
+        std::unique_lock lock( nonce_mutex_ );
+        auto             current_confirmed_nonce = confirmed_nonces_[address];
         genius_account_logger()->debug( "Setting the max value between {} and {} as a confirmed nonce for address {}",
                                         current_confirmed_nonce,
                                         nonce,
@@ -559,6 +575,9 @@ namespace sgns
                 it = pending_nonces_.erase( it );
             }
         }
+
+        lock.unlock();
+        PersistConfirmedNonce( address, updated_nonce );
     }
 
     void GeniusAccount::RollBackPeerConfirmedNonce( uint64_t nonce, const std::string &address )
@@ -798,9 +817,23 @@ namespace sgns
         return messenger_->RequestRegularBlock( timeout_ms, cid, std::move( callback ) );
     }
 
-    outcome::result<std::set<std::string>> GeniusAccount::RequestUTXOs( uint64_t           timeout_ms,
-                                                                        const std::string &address,
-                                                                        uint64_t           silent_time_ms ) const
+    outcome::result<void> GeniusAccount::RequestTransaction(
+        uint64_t                                            timeout_ms,
+        const std::string                                  &tx_hash,
+        std::function<void( outcome::result<std::string> )> callback ) const
+    {
+        if ( !messenger_ )
+        {
+            return outcome::failure( std::errc::no_such_device );
+        }
+        genius_account_logger()->debug( "Requesting transaction {}", tx_hash.substr( 0, 8 ) );
+
+        return messenger_->RequestTransaction( timeout_ms, tx_hash, std::move( callback ) );
+    }
+
+    outcome::result<std::unordered_set<std::string>> GeniusAccount::RequestUTXOs( uint64_t           timeout_ms,
+                                                                                  const std::string &address,
+                                                                                  uint64_t silent_time_ms ) const
     {
         if ( !messenger_ )
         {
@@ -860,5 +893,95 @@ namespace sgns
     {
         std::lock_guard lock( get_cids_mutex_ );
         get_validator_weight_method_ = nullptr;
+    }
+
+    void GeniusAccount::SetGetTransactionCIDMethod(
+        std::function<outcome::result<std::string>( const std::string & )> method )
+    {
+        std::lock_guard lock( get_cids_mutex_ );
+        get_transaction_cid_method_ = std::move( method );
+    }
+
+    void GeniusAccount::ClearGetTransactionCIDMethod()
+    {
+        std::lock_guard lock( get_cids_mutex_ );
+        get_transaction_cid_method_ = nullptr;
+    }
+
+    void GeniusAccount::SetNonceStore( std::shared_ptr<storage::rocksdb> db )
+    {
+        nonce_db_ = std::move( db );
+        LoadConfirmedNonces();
+    }
+
+    void GeniusAccount::LoadConfirmedNonces()
+    {
+        if ( !nonce_db_ )
+        {
+            return;
+        }
+
+        base::Buffer prefix;
+        prefix.put( std::string( NONCE_KEY_PREFIX ) );
+        auto query_res = nonce_db_->query( prefix );
+        if ( query_res.has_error() )
+        {
+            return;
+        }
+
+        std::unordered_map<std::string, uint64_t> loaded;
+        uint64_t                                  max_local = 0;
+        bool                                      has_local = false;
+
+        for ( const auto &[key_buf, val_buf] : query_res.value() )
+        {
+            const auto key = std::string( key_buf.toString() );
+
+            if ( key.rfind( std::string( NONCE_KEY_PREFIX ) ) != 0 )
+            {
+                continue;
+            }
+
+            auto address = key.substr( std::string( NONCE_KEY_PREFIX ).size() );
+            try
+            {
+                uint64_t nonce  = std::stoull( std::string( val_buf.toString() ) );
+                loaded[address] = nonce;
+            }
+            catch ( const std::exception & )
+            {
+            }
+        }
+
+        std::lock_guard lock( nonce_mutex_ );
+        for ( const auto &[address, nonce] : loaded )
+        {
+            confirmed_nonces_[address] = nonce;
+        }
+
+        if ( has_local )
+        {
+            local_confirmed_nonce_ = max_local;
+        }
+    }
+
+    void GeniusAccount::PersistConfirmedNonce( const std::string &address, uint64_t nonce )
+    {
+        if ( !nonce_db_ )
+        {
+            return;
+        }
+
+        base::Buffer key;
+
+        key.put( std::string( NONCE_KEY_PREFIX ) + address );
+
+        base::Buffer value;
+        value.put( std::to_string( nonce ) );
+        auto put_res = nonce_db_->put( key, value );
+        if ( put_res.has_error() )
+        {
+            genius_account_logger()->error( "Failed to persist nonce for {}", address.substr( 0, 8 ) );
+        }
     }
 }
