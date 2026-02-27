@@ -47,7 +47,7 @@ namespace sgns
         class GlobalDB;
     }
     class AccountMessenger;
-    class GeniusNode;
+    class TransactionManager;
 
     class GeniusAccount : public std::enable_shared_from_this<GeniusAccount>
     {
@@ -106,7 +106,7 @@ namespace sgns
          * @param[in]   global_db GlobalDB instance used to store fetched block CIDs.
          * @return      true if successfully configured, false otherwise.
          */
-        bool ConfigureMessengerHandlers( std::shared_ptr<crdt::GlobalDB> global_db );
+        bool ConfigureDatabaseDependencies( std::shared_ptr<crdt::GlobalDB> global_db );
 
         /**
          * @brief       Destroy the Genius Account object
@@ -249,7 +249,7 @@ namespace sgns
 
     protected:
         friend class Blockchain;
-        friend class GeniusNode;
+        friend class TransactionManager;
         void SetGetBlockChainCIDMethod(
             std::function<outcome::result<std::string>( uint8_t, const std::string & )> method );
         void ClearGetBlockChainCIDMethod();

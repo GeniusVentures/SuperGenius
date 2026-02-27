@@ -287,7 +287,7 @@ namespace sgns
                     node_logger_->error( "GlobalDB initialization error" );
                     return;
                 }
-                account_->ConfigureMessengerHandlers( tx_globaldb_ );
+                account_->ConfigureDatabaseDependencies( tx_globaldb_ );
                 tx_globaldb_->AddListenTopic( processing_channel_topic_ );
                 StateTransition( NodeState::INITIALIZING_PROCESSING );
                 break;
@@ -410,39 +410,12 @@ namespace sgns
 
             case NodeState::INITIALIZING_TRANSACTIONS:
             {
-                account_->SetGetUTXOsMethod(
-                    [this]( const std::string &address ) -> outcome::result<std::vector<std::string>>
-                    {
-                        std::vector<std::string> results;
-                        auto                     utxos = utxo_manager_.GetUTXOs( address );
-                        results.reserve( utxos.size() );
-
-                        for ( const auto &utxo : utxos )
-                        {
-                            results.push_back( utxo.GetTxID().toReadableString() );
-                        }
-                        return results;
-                    } );
-
                 transaction_manager_ = TransactionManager::New( tx_globaldb_,
                                                                 io_,
                                                                 utxo_manager_,
                                                                 account_,
                                                                 std::make_shared<crypto::HasherImpl>(),
                                                                 is_full_node_ );
-
-                account_->SetNonceStore( tx_globaldb_->GetDataStore() );
-
-                account_->SetGetTransactionCIDMethod(
-                    [weak_tm = std::weak_ptr<TransactionManager>( transaction_manager_ )]( const std::string &tx_hash )
-                        -> outcome::result<std::string>
-                    {
-                        if ( auto tm = weak_tm.lock() )
-                        {
-                            return tm->GetTransactionCID( tx_hash );
-                        }
-                        return outcome::failure( std::errc::owner_dead );
-                    } );
 
                 transaction_manager_->RegisterStateChangeCallback(
                     [weak_self = weak_from_this()]( TransactionManager::State old_state,

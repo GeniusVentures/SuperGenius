@@ -119,7 +119,7 @@ namespace sgns
 
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
 
-        account_->ConfigureMessengerHandlers( db_3_5_0_ );
+        account_->ConfigureDatabaseDependencies( db_3_5_0_ );
 
         db_3_5_0_->Start();
         //init blockchain

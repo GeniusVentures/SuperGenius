@@ -396,9 +396,11 @@ namespace sgns
         return ret;
     }
 
-    bool GeniusAccount::ConfigureMessengerHandlers( std::shared_ptr<crdt::GlobalDB> global_db )
+    bool GeniusAccount::ConfigureDatabaseDependencies( std::shared_ptr<crdt::GlobalDB> global_db )
     {
         bool ret = false;
+
+        SetNonceStore( global_db->GetDataStore() );
         if ( messenger_ )
         {
             messenger_->RegisterBlockResponseHandler(
