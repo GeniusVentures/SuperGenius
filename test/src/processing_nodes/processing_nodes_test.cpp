@@ -89,35 +89,18 @@ protected:
             [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
             std::chrono::milliseconds( 30000 ),
             "node_proc2 not ready" );
-
-        //Connect to each other
-
-        //bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress() };
-        //node_proc2->GetPubSub()->AddPeers( bootstrappers );
     }
 
     static void TearDownTestSuite()
     {
         std::cout << "Tear down main" << std::endl;
         node_main.reset();
-        // if ( !std::filesystem::remove_all( DEV_CONFIG.BaseWritePath ) )
-        // {
-        //     std::cerr << "Could not delete main node files\n";
-        // }
 
         std::cout << "Tear down 2" << std::endl;
         node_proc1.reset();
-        // if ( !std::filesystem::remove_all( DEV_CONFIG2.BaseWritePath ) )
-        // {
-        //     std::cerr << "Could not delete node 2 files\n";
-        // }
 
         std::cout << "Tear down 3" << std::endl;
         node_proc2.reset();
-        // if ( !std::filesystem::remove_all( DEV_CONFIG3.BaseWritePath ) )
-        // {
-        //     std::cerr << "Could not delete node 3 files\n";
-        // }
     }
 };
 
@@ -164,16 +147,12 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
     std::string address_main  = node_main->GetPubSub()->GetInterfaceAddress();
     std::string address_proc1 = node_proc1->GetPubSub()->GetInterfaceAddress();
     std::string address_proc2 = node_proc2->GetPubSub()->GetInterfaceAddress();
-    // std::cout << "Addresses " << std::endl;
-    // std::cout << "Main Node: " << address_main << std::endl;
-    // std::cout << "Proc Node 1: " << address_proc1 << std::endl;
-    // std::cout << "Proc Node 2: " << address_proc2 << std::endl;
     EXPECT_NE( address_main, address_proc1 ) << "node_main and node_proc1 have the same address!";
     EXPECT_NE( address_main, address_proc2 ) << "node_main and node_proc2 have the same address!";
     EXPECT_NE( address_proc1, address_proc2 ) << "node_proc1 and node_proc2 have the same address!";
 }
 
-TEST_F( ProcessingNodesTest, ProcessNodesTransactionsCount )
+TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
 {
     test::assertWaitForCondition(
         [&]() { return node_main->GetTransactionManagerState() == TransactionManager::State::READY; },

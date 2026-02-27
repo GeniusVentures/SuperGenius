@@ -139,7 +139,7 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
     auto binaryParent = boost::dll::program_location().parent_path().string();
     auto node         = CreateNodeInstance( binaryParent, params.subdir, params.key_hex );
 
-    node->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetLocalAddress() } );
+    node->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
     const std::string readiness_message = params.subdir + " node not ready";
     test::assertWaitForCondition(
