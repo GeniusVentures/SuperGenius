@@ -384,7 +384,22 @@ namespace sgns
                                     strong->blockchain_->SetFullNodeMode();
                                 }
 
-                                strong->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
+                                // Move transaction initialization off the AccountMessenger worker thread.
+                                boost::asio::post( *strong->io_, [weak_self]()
+                                {
+                                    if ( auto strong = weak_self.lock() )
+                                    {
+                                        auto current_state = strong->state_.load();
+                                        if ( current_state != NodeState::INITIALIZING_BLOCKCHAIN )
+                                        {
+                                            strong->node_logger_->debug(
+                                                "Skipping transaction initialization, unexpected state: {}",
+                                                NodeStateToString( current_state ) );
+                                            return;
+                                        }
+                                        strong->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
+                                    }
+                                } );
                             }
                         } );
                 }
@@ -506,8 +521,8 @@ namespace sgns
         auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
         auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
-        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
-        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::debug );
+        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::debug );
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
         auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::trace );
         auto loggerValidator        = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::debug );
