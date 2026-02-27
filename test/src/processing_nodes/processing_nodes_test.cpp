@@ -1,22 +1,10 @@
 #include <gtest/gtest.h>
 
-#include <cmath>
 #include <fstream>
 #include <memory>
 #include <iostream>
-#include <cstdint>
-
-#ifdef _WIN32
-//#include <windows.h>
-#else
-#include <termios.h>
-#include <unistd.h>
-#endif
-
-#include <functional>
 #include <thread>
 
-#include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
 #include "account/GeniusNode.hpp"
@@ -30,9 +18,9 @@ using namespace sgns::test;
 class ProcessingNodesTest : public ::testing::Test
 {
 protected:
-    static std::shared_ptr<sgns::GeniusNode> node_main;
-    static std::shared_ptr<sgns::GeniusNode> node_proc1;
-    static std::shared_ptr<sgns::GeniusNode> node_proc2;
+    static std::shared_ptr<GeniusNode> node_main;
+    static std::shared_ptr<GeniusNode> node_proc1;
+    static std::shared_ptr<GeniusNode> node_proc2;
 
     static DevConfig_st DEV_CONFIG;
     static DevConfig_st DEV_CONFIG2;
@@ -211,13 +199,6 @@ TEST_F( ProcessingNodesTest, ProcessNodesTransactionsCount )
 
     //ASSERT_EQ( transcount_main, 2 );
     // ASSERT_EQ( transcount_node1, transcount_node2 );
-}
-
-TEST_F( ProcessingNodesTest, DISABLED_ProcessingNodeTransfer )
-{
-    double balance_main  = node_main->GetBalance();
-    double balance_node1 = node_proc1->GetBalance();
-    double balance_node2 = node_proc2->GetBalance();
 }
 
 TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCost )
