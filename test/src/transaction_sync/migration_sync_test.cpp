@@ -73,7 +73,7 @@ protected:
                     {
                         std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
                         ec.clear();
-                        fs::remove_all( entry.path(), ec );
+                        fs::remove_all( entry.path() );
                     }
                 }
             }
