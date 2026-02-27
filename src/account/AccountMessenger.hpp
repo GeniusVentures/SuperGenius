@@ -7,11 +7,9 @@
 #pragma once
 
 #include <string>
-#include <cstdint>
 #include <memory>
 #include <functional>
 #include <vector>
-#include <cstdlib>
 #include <future>
 #include <condition_variable>
 #include <queue>
