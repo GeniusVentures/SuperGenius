@@ -149,7 +149,7 @@ namespace sgns
             return;
         }
 
-        m_logger->info( "[{} - full: {}] Initializing values by reading whole blockchain",
+        m_logger->info( "[{} - full: {}] Starting Transaction Manager",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m );
 
@@ -1544,11 +1544,12 @@ namespace sgns
             std::lock_guard missing_lock( missing_tx_mutex_ );
             missing_tx_hashes_.clear();
         }
+        m_logger->debug( "[{} - full: {}] Initializing UTXOs", account_m->GetAddress().substr( 0, 8 ), full_node_m );
 
         auto utxo_result = utxo_manager_.LoadUTXOs( globaldb_m->GetDataStore() );
         if ( utxo_result.has_error() )
         {
-            m_logger->error( "Failed to load UTXOs from storage" );
+            m_logger->error( "[{} - full: {}] Failed to load UTXOs from storage", account_m->GetAddress().substr( 0, 8 ), full_node_m );
         }
 
         const bool has_local_utxos    = utxo_result.has_value() && utxo_result.value();
@@ -1559,21 +1560,23 @@ namespace sgns
 
         if ( !has_local_utxos )
         {
+            m_logger->debug( "[{} - full: {}] No local UTXOs found, requesting from network", account_m->GetAddress().substr( 0, 8 ), full_node_m );
             auto network_utxos = account_m->RequestUTXOs( 8000, account_m->GetAddress() );
             if ( network_utxos.has_value() && !network_utxos.value().empty() )
             {
                 network_hashes    = network_utxos.value();
                 has_network_utxos = true;
+                m_logger->debug( "[{} - full: {}] Received {} UTXOs from network", account_m->GetAddress().substr( 0, 8 ), full_node_m, network_hashes.size() );
             }
             else
             {
-                m_logger->debug( "No UTXO response received from network during init" );
+                m_logger->debug( "[{} - full: {}] No UTXO response received from network during init", account_m->GetAddress().substr( 0, 8 ), full_node_m );
             }
         }
 
         if ( !has_local_utxos && !has_network_utxos )
         {
-            m_logger->info( "Loading transactions to mount UTXOs" );
+            m_logger->info( "[{} - full: {}] No local or network UTXOs found, querying transactions to mount UTXOs", account_m->GetAddress().substr( 0, 8 ), full_node_m );
             QueryTransactions();
             return;
         }
@@ -1666,8 +1669,10 @@ namespace sgns
     void TransactionManager::InitTransactions()
     {
         size_t missing_count = 0;
+        std::unordered_set<std::string> missing_tx_hashes_copy;
         {
             std::lock_guard missing_lock( missing_tx_mutex_ );
+            missing_tx_hashes_copy = missing_tx_hashes_;
             missing_count = missing_tx_hashes_.size();
         }
 
@@ -1681,7 +1686,22 @@ namespace sgns
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
                         missing_count );
-        RequestRelevantHeads();
+
+        for (const auto &tx_hash : missing_tx_hashes_copy )
+        {
+            m_logger->debug( "[{} - full: {}] Requesting transaction with hash {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             tx_hash );
+            auto request_result = account_m->RequestTransaction( 5000,tx_hash );
+            if ( request_result.has_error() )
+            {
+                m_logger->error( "[{} - full: {}] Failed to request transaction with hash {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 tx_hash );
+            }
+        }
     }
 
     void TransactionManager::SyncNonce()
