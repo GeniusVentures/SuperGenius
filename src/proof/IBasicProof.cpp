@@ -39,6 +39,11 @@ namespace sgns
 
     IBasicProof::IBasicProof( std::string bytecode_payload ) : bytecode_payload_( std::move( bytecode_payload ) ) {}
 
+    void IBasicProof::RegisterDeserializer( const std::string &proof_type, PublicParamDeserializeFn fn )
+    {
+        PublicParamDeSerializers[proof_type] = std::move(fn);
+    }
+
     outcome::result<SGProof::BaseProofProto> IBasicProof::DeSerializeBaseProof( const std::vector<uint8_t> &proof_data )
     {
         SGProof::BaseProofProto base_proof_struct;
