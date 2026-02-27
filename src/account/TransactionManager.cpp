@@ -1558,20 +1558,22 @@ namespace sgns
         std::unordered_set<std::string> network_hashes;
         bool                            has_network_utxos = false;
 
-        if ( !has_local_utxos )
+        m_logger->debug( "[{} - full: {}] Requesting UTXOs from network during init", account_m->GetAddress().substr( 0, 8 ), full_node_m );
+        auto network_utxos = account_m->RequestUTXOs( 8000, account_m->GetAddress() );
+        if ( network_utxos.has_value() && !network_utxos.value().empty() )
         {
-            m_logger->debug( "[{} - full: {}] No local UTXOs found, requesting from network", account_m->GetAddress().substr( 0, 8 ), full_node_m );
-            auto network_utxos = account_m->RequestUTXOs( 8000, account_m->GetAddress() );
-            if ( network_utxos.has_value() && !network_utxos.value().empty() )
-            {
-                network_hashes    = network_utxos.value();
-                has_network_utxos = true;
-                m_logger->debug( "[{} - full: {}] Received {} UTXOs from network", account_m->GetAddress().substr( 0, 8 ), full_node_m, network_hashes.size() );
-            }
-            else
-            {
-                m_logger->debug( "[{} - full: {}] No UTXO response received from network during init", account_m->GetAddress().substr( 0, 8 ), full_node_m );
-            }
+            network_hashes    = network_utxos.value();
+            has_network_utxos = true;
+            m_logger->debug( "[{} - full: {}] Received {} UTXOs from network",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             network_hashes.size() );
+        }
+        else
+        {
+            m_logger->debug( "[{} - full: {}] No UTXO response received from network during init",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m );
         }
 
         if ( !has_local_utxos && !has_network_utxos )
@@ -1637,31 +1639,33 @@ namespace sgns
                     }
                 }
             }
-            return;
         }
 
-        for ( const auto &tx_hash : network_hashes )
+        if ( has_network_utxos )
         {
-            bool processed = false;
-            for ( auto network_id : monitored_networks )
+            for ( const auto &tx_hash : network_hashes )
             {
-                auto tx_path        = GetTransactionPath( network_id, tx_hash );
-                auto process_result = FetchAndProcessTransaction( tx_path );
-                if ( !process_result.has_error() )
+                bool processed = false;
+                for ( auto network_id : monitored_networks )
                 {
-                    m_logger->debug( "[{} - full: {}] Processed transaction in {}",
-                                     account_m->GetAddress().substr( 0, 8 ),
-                                     full_node_m,
-                                     tx_path );
-                    processed = true;
-                    break;
+                    auto tx_path        = GetTransactionPath( network_id, tx_hash );
+                    auto process_result = FetchAndProcessTransaction( tx_path );
+                    if ( !process_result.has_error() )
+                    {
+                        m_logger->debug( "[{} - full: {}] Processed transaction in {}",
+                                         account_m->GetAddress().substr( 0, 8 ),
+                                         full_node_m,
+                                         tx_path );
+                        processed = true;
+                        break;
+                    }
                 }
-            }
 
-            if ( !processed )
-            {
-                std::lock_guard missing_lock( missing_tx_mutex_ );
-                missing_tx_hashes_.insert( tx_hash );
+                if ( !processed )
+                {
+                    std::lock_guard missing_lock( missing_tx_mutex_ );
+                    missing_tx_hashes_.insert( tx_hash );
+                }
             }
         }
     }
