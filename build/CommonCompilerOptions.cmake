@@ -57,7 +57,7 @@ if(NOT DEFINED ZKLLVM_BUILD_DIR)
 
         # Get absolute path
         cmake_path(SET ZKLLVM_BUILD_DIR NORMALIZE "${ZKLLVM_BUILD_DIR}")
-    elseif(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../zkLLVM/build/${BUILD_PLATFORM_NAME}/Release${ABI_SUBFOLDER_NAME}")
+    elseif((NOT WIN32 OR "${CMAKE_BUILD_TYPE}" STREQUAL "Release") AND EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../zkLLVM/build/${BUILD_PLATFORM_NAME}/Release${ABI_SUBFOLDER_NAME}")
         message(STATUS "Setting default zkLLVM directory to release as a fallback")
 
         set(ZKLLVM_BUILD_DIR "${CMAKE_CURRENT_LIST_DIR}/../../zkLLVM/build/${BUILD_PLATFORM_NAME}/Release${ABI_SUBFOLDER_NAME}" CACHE STRING "Default zkLLVM Library")
@@ -121,22 +121,65 @@ endif()
 
 
 if(NOT DEFINED THIRDPARTY_BUILD_DIR)
-    # Define third party directory
-    if(NOT DEFINED THIRDPARTY_DIR)
-        if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../thirdparty/README.md")
-            message(STATUS "Setting default third party directory")
-            set(THIRDPARTY_DIR "${CMAKE_CURRENT_LIST_DIR}/../../thirdparty")
-
-            # # get absolute path
-            cmake_path(SET THIRDPARTY_DIR NORMALIZE "${THIRDPARTY_DIR}")
-        else()
-            message(FATAL_ERROR "Cannot find thirdparty directory required to build")
-        endif()
-    endif()
-    message(STATUS "Setting third party build directory default")
-
     get_filename_component(BUILD_PLATFORM_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
-    set(THIRDPARTY_BUILD_DIR "${THIRDPARTY_DIR}/build/${BUILD_PLATFORM_NAME}/${CMAKE_BUILD_TYPE}${ABI_SUBFOLDER_NAME}")
+
+    if(NOT DEFINED THIRDPARTY_DIR)
+        set(THIRDPARTY_DIR "${CMAKE_CURRENT_LIST_DIR}/../../thirdparty")
+    endif()
+    cmake_path(SET THIRDPARTY_DIR NORMALIZE "${THIRDPARTY_DIR}")
+
+    if(EXISTS "${THIRDPARTY_DIR}/build/${BUILD_PLATFORM_NAME}/${CMAKE_BUILD_TYPE}${ABI_SUBFOLDER_NAME}")
+        message(STATUS "Setting default thirdparty directory to same as build type")
+        set(THIRDPARTY_BUILD_DIR "${THIRDPARTY_DIR}/build/${BUILD_PLATFORM_NAME}/${CMAKE_BUILD_TYPE}${ABI_SUBFOLDER_NAME}")
+        cmake_path(SET THIRDPARTY_BUILD_DIR NORMALIZE "${THIRDPARTY_BUILD_DIR}")
+    elseif((NOT WIN32 OR "${CMAKE_BUILD_TYPE}" STREQUAL "Release") AND EXISTS "${THIRDPARTY_DIR}/build/${BUILD_PLATFORM_NAME}/Release${ABI_SUBFOLDER_NAME}")
+        message(STATUS "Setting default thirdparty directory to release as a fallback")
+        set(THIRDPARTY_BUILD_DIR "${THIRDPARTY_DIR}/build/${BUILD_PLATFORM_NAME}/Release${ABI_SUBFOLDER_NAME}")
+        cmake_path(SET THIRDPARTY_BUILD_DIR NORMALIZE "${THIRDPARTY_BUILD_DIR}")
+    else()
+        message(STATUS "thirdparty build directory not found for current platform/config, fetching release package...")
+
+        set(THIRDPARTY_REPO "GeniusVentures/thirdparty")
+        set(THIRDPARTY_TARGET_BRANCH "develop")
+
+        if(ANDROID)
+            set(THIRDPARTY_ARCHIVE_NAME "${BUILD_PLATFORM_NAME}-${ANDROID_ABI}-${CMAKE_BUILD_TYPE}.tar.gz")
+            set(THIRDPARTY_RELEASE_TAG "${BUILD_PLATFORM_NAME}-${ANDROID_ABI}-${THIRDPARTY_TARGET_BRANCH}-${CMAKE_BUILD_TYPE}")
+        elseif(DEFINED ARCH AND NOT "${ARCH}" STREQUAL "")
+            set(THIRDPARTY_ARCHIVE_NAME "${BUILD_PLATFORM_NAME}-${ARCH}-${CMAKE_BUILD_TYPE}.tar.gz")
+            set(THIRDPARTY_RELEASE_TAG "${BUILD_PLATFORM_NAME}-${ARCH}-${THIRDPARTY_TARGET_BRANCH}-${CMAKE_BUILD_TYPE}")
+        else()
+            set(THIRDPARTY_ARCHIVE_NAME "${BUILD_PLATFORM_NAME}-${CMAKE_BUILD_TYPE}.tar.gz")
+            set(THIRDPARTY_RELEASE_TAG "${BUILD_PLATFORM_NAME}-${THIRDPARTY_TARGET_BRANCH}-${CMAKE_BUILD_TYPE}")
+        endif()
+
+        set(THIRDPARTY_RELEASE_URL "https://github.com/${THIRDPARTY_REPO}/releases/download/${THIRDPARTY_RELEASE_TAG}/${THIRDPARTY_ARCHIVE_NAME}")
+        set(THIRDPARTY_ARCHIVE "${CMAKE_BINARY_DIR}/${THIRDPARTY_ARCHIVE_NAME}")
+
+        execute_process(
+            COMMAND curl -L -o ${THIRDPARTY_ARCHIVE} ${THIRDPARTY_RELEASE_URL}
+            RESULT_VARIABLE THIRDPARTY_DOWNLOAD_RESULT
+        )
+
+        if(NOT THIRDPARTY_DOWNLOAD_RESULT EQUAL 0)
+            message(FATAL_ERROR "Failed to download thirdparty archive from ${THIRDPARTY_RELEASE_URL}")
+        endif()
+
+        file(MAKE_DIRECTORY ${THIRDPARTY_DIR})
+        execute_process(
+            COMMAND ${CMAKE_COMMAND} -E tar xzf ${THIRDPARTY_ARCHIVE}
+            WORKING_DIRECTORY ${THIRDPARTY_DIR}
+            RESULT_VARIABLE THIRDPARTY_EXTRACT_RESULT
+        )
+
+        if(NOT THIRDPARTY_EXTRACT_RESULT EQUAL 0)
+            message(FATAL_ERROR "Failed to extract thirdparty archive")
+        endif()
+
+        set(THIRDPARTY_BUILD_DIR "${THIRDPARTY_DIR}/build/${BUILD_PLATFORM_NAME}/${CMAKE_BUILD_TYPE}${ABI_SUBFOLDER_NAME}")
+        cmake_path(SET THIRDPARTY_BUILD_DIR NORMALIZE "${THIRDPARTY_BUILD_DIR}")
+        message(STATUS "thirdparty downloaded and extracted to ${THIRDPARTY_BUILD_DIR}")
+    endif()
 endif()
 
 set(_THIRDPARTY_BUILD_DIR "${THIRDPARTY_BUILD_DIR}")
