@@ -193,6 +193,13 @@ namespace sgns
         outcome::result<uint64_t> GetConfirmedNonce( uint64_t timeout_ms ) const;
 
         /**
+         * @brief       Fetch the latest nonce from the network without relying on cached values
+         * @param[in]   timeout_ms Timeout in miliseconds to get the confirmed nonce
+         * @return      Error if no response received, optional nonce if success
+         */
+        outcome::result<std::optional<uint64_t>> FetchNetworkNonce( uint64_t timeout_ms ) const;
+
+        /**
          * @brief       Get the next available nonce without reserving it
          * @return      The nonce that would be assigned to the next transaction
          */
@@ -261,8 +268,7 @@ namespace sgns
         void SetGetValidatorWeightMethod(
             std::function<outcome::result<std::optional<uint64_t>>( const std::string & )> method );
         void ClearGetValidatorWeightMethod();
-        void SetGetTransactionCIDMethod(
-            std::function<outcome::result<std::string>( const std::string & )> method );
+        void SetGetTransactionCIDMethod( std::function<outcome::result<std::string>( const std::string & )> method );
         void ClearGetTransactionCIDMethod();
         void SetNonceStore( std::shared_ptr<storage::rocksdb> db );
 
@@ -304,11 +310,10 @@ namespace sgns
         std::function<outcome::result<std::optional<uint64_t>>( const std::string & )>
             get_validator_weight_method_; ///< Function to get validator weight for an address
         std::function<outcome::result<std::string>( const std::string & )>
-            get_transaction_cid_method_; ///< Function to get transaction CID by hash
-        std::shared_ptr<storage::rocksdb> nonce_db_; ///< RocksDB for nonce persistence
+                                          get_transaction_cid_method_; ///< Function to get transaction CID by hash
+        std::shared_ptr<storage::rocksdb> nonce_db_;                   ///< RocksDB for nonce persistence
 
         static constexpr std::string_view NONCE_KEY_PREFIX = "gnus-confirmed-nonce-";
-        
 
         void LoadConfirmedNonces();
         void PersistConfirmedNonce( const std::string &address, uint64_t nonce );

@@ -12,6 +12,7 @@
 #include <memory>
 #include <deque>
 #include <cstdint>
+#include <chrono>
 #include <unordered_map>
 #include <unordered_set>
 #include <optional>
@@ -227,6 +228,7 @@ namespace sgns
 
         void InitializeUTXOs();
         void InitTransactions();
+        bool CheckNonce() const;
         void SyncNonce();
 
         /**
@@ -299,8 +301,10 @@ namespace sgns
 
         std::chrono::steady_clock::time_point last_loop_time_;
 
-        std::mutex                        missing_tx_mutex_;
-        std::unordered_set<std::string>   missing_tx_hashes_;
+        std::mutex                            missing_tx_mutex_;
+        std::unordered_set<std::string>       missing_tx_hashes_;
+        std::chrono::steady_clock::time_point last_init_tx_request_time_{};
+        static constexpr uint64_t             k_init_tx_request_cooldown_ms = 5000;
 
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );

@@ -1717,7 +1717,10 @@ namespace sgns
 
         if ( missing_count == 0 )
         {
-            ChangeState( State::READY );
+            if ( CheckNonce() )
+            {
+                ChangeState( State::READY );
+            }
             return;
         }
 
@@ -1726,13 +1729,26 @@ namespace sgns
                         full_node_m,
                         missing_count );
 
+        auto now = std::chrono::steady_clock::now();
+        if ( last_init_tx_request_time_ != std::chrono::steady_clock::time_point{} &&
+             now - last_init_tx_request_time_ < std::chrono::milliseconds( k_init_tx_request_cooldown_ms ) )
+        {
+            m_logger->debug( "[{} - full: {}] Skipping tx requests (init cooldown)",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m );
+            return;
+        }
+        last_init_tx_request_time_ = now;
+
+        const auto request_timeout = std::chrono::milliseconds( k_init_tx_request_cooldown_ms );
         for ( const auto &tx_hash : missing_tx_hashes_copy )
         {
-            m_logger->debug( "[{} - full: {}] Requesting transaction with hash {}",
+            m_logger->debug( "[{} - full: {}] Requesting transaction with hash {} (this: {})",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
-                             tx_hash );
-            auto request_result = account_m->RequestTransaction( 5000, tx_hash );
+                             tx_hash,
+                             reinterpret_cast<uint64_t>( this ) );
+            auto request_result = account_m->RequestTransaction( request_timeout.count(), tx_hash );
             if ( request_result.has_error() )
             {
                 m_logger->error( "[{} - full: {}] Failed to request transaction with hash {}",
@@ -1740,7 +1756,76 @@ namespace sgns
                                  full_node_m,
                                  tx_hash );
             }
+            else
+            {
+                m_logger->debug( "[{} - full: {}] Successfully requested transaction with hash {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 tx_hash );
+            }
         }
+    }
+
+    bool TransactionManager::CheckNonce() const
+    {
+        m_logger->debug( "[{} - full: {}] Checking if my local confirmed nonce is in sync with the network",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m );
+
+        auto nonce_from_network_result = account_m->FetchNetworkNonce( NONCE_REQUEST_TIMEOUT_MS );
+        if ( nonce_from_network_result.has_error() )
+        {
+            m_logger->error( "[{} - full: {}] Failed to fetch network nonce: {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             nonce_from_network_result.error().message() );
+            if ( full_node_m )
+            {
+                m_logger->debug(
+                    "[{} - full: {}] Network nonce fetch failed, but we have a full node configured. Allowing for it to boot",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m );
+                return true;
+            }
+            return false;
+        }
+        auto maybe_nonce = nonce_from_network_result.value();
+        if ( !maybe_nonce.has_value() )
+        {
+            m_logger->error( "[{} - full: {}] Network doesn't have nonce info, trusting local nonce",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m );
+            return true;
+        }
+
+        auto network_nonce      = maybe_nonce.value();
+        auto local_nonce_result = account_m->GetPeerNonce( account_m->GetAddress() );
+        if ( local_nonce_result.has_error() )
+        {
+            m_logger->debug( "[{} - full: {}] No local nonce found. Network nonce exists: {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             network_nonce );
+            return false;
+        }
+        auto local_nonce = local_nonce_result.value();
+
+        if ( network_nonce > local_nonce )
+        {
+            m_logger->error( "[{} - full: {}] Nonce mismatch - Network: {}, Local: {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             network_nonce,
+                             local_nonce );
+
+            return false;
+        }
+        m_logger->debug( "[{} - full: {}] Nonce is in sync with the network - Network: {}, Local: {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         network_nonce,
+                         local_nonce );
+        return true;
     }
 
     void TransactionManager::SyncNonce()
@@ -2626,6 +2711,11 @@ namespace sgns
         OUTCOME_TRY( ParseTransaction( new_tx ) );
 
         const auto nonce = new_tx->dag_st.nonce();
+
+        {
+            std::lock_guard missing_lock( missing_tx_mutex_ );
+            missing_tx_hashes_.erase( new_tx->GetHash() );
+        }
 
         account_m->SetPeerConfirmedNonce( nonce, new_tx->dag_st.source_addr() );
 

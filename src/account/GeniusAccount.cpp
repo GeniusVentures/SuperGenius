@@ -674,6 +674,29 @@ namespace sgns
         return GetPeerNonce( eth_keypair_->GetEntirePubValue() );
     }
 
+    outcome::result<std::optional<uint64_t>> GeniusAccount::FetchNetworkNonce( uint64_t timeout_ms ) const
+    {
+        if ( !messenger_ )
+        {
+            return outcome::failure( std::errc::no_such_device );
+        }
+        genius_account_logger()->debug( "Fetching nonce from the network with timeout {} ms", timeout_ms );
+
+        auto result = messenger_->GetLatestNonce( timeout_ms );
+        if ( result.has_value() )
+        {
+            genius_account_logger()->debug( "Nonce replied with value {}", result.value() );
+            return result.value();
+        }
+        else if ( result.error() == AccountMessenger::Error::RESPONSE_WITHOUT_NONCE )
+        {
+            genius_account_logger()->debug( "Network didn't answer nonce request" );
+            return outcome::success( std::nullopt );
+        }
+
+        return outcome::failure( result.error() );
+    }
+
     outcome::result<uint64_t> GeniusAccount::GetConfirmedNonce( uint64_t timeout_ms ) const
     {
         if ( !messenger_ )
