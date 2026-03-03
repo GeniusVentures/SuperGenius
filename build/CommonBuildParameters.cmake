@@ -100,13 +100,13 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
 endif()
 
 # OpenSSL
-set(OPENSSL_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build" CACHE PATH "Path to OpenSSL install folder")
+set(OpenSSL_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build/lib/cmake/OpenSSL" CACHE PATH "Path to OpenSSL install folder")
+set(OPENSSL_ROOT_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build" CACHE PATH "Path to OpenSSL install root folder")
 set(OPENSSL_USE_STATIC_LIBS ON CACHE BOOL "OpenSSL use static libs")
 set(OPENSSL_MSVC_STATIC_RT ON CACHE BOOL "OpenSSL use static RT")
-set(OPENSSL_ROOT_DIR "${OPENSSL_DIR}" CACHE PATH "Path to OpenSSL install root folder")
-set(OPENSSL_INCLUDE_DIR "${OPENSSL_DIR}/include" CACHE PATH "Path to OpenSSL include folder")
+set(OPENSSL_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build/include" CACHE PATH "Path to OpenSSL include folder")
 
-find_package(OpenSSL REQUIRED)
+find_package(OpenSSL REQUIRED CONFIG)
 
 # rocksdb
 set(RocksDB_DIR "${_THIRDPARTY_BUILD_DIR}/rocksdb/lib/cmake/rocksdb")

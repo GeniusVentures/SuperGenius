@@ -142,10 +142,7 @@ namespace sgns
          * @param[in]   proof_type The proof type for which the deserializer is registered.
          * @param[in]   fn The deserializer function to be registered.
          */
-        static void RegisterDeserializer( const std::string &proof_type, PublicParamDeserializeFn fn )
-        {
-            PublicParamDeSerializers[proof_type] = fn;
-        }
+        static void RegisterDeserializer( const std::string &proof_type, PublicParamDeserializeFn fn );
 
         /**
          * @brief       Registers a bytecode for a specific proof type.

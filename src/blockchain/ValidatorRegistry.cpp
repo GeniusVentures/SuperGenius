@@ -68,8 +68,8 @@ namespace sgns::blockchain
         quorum_denominator_( quorum_denominator ),
         weight_config_( std::move( weight_config ) ),
         genesis_authority_( std::move( genesis_authority ) ),
-        request_block_by_cid_( std::move( block_request_method ) ),
-        init_callback_( std::move( init_callback ) )
+        init_callback_( std::move( init_callback ) ),
+        request_block_by_cid_( std::move( block_request_method ) )
     {
         logger_->trace( "{}: constructed", __func__ );
     }
@@ -353,7 +353,7 @@ namespace sgns::blockchain
     {
         logger_->trace( "{}: entry genesis_id={}", __func__, genesis_validator_id.substr( 0, 8 ) );
         {
-            std::shared_lock<std::shared_mutex> lock( cache_mutex_ );
+            std::shared_lock lock( cache_mutex_ );
             if ( cache_initialized_ && cached_registry_ && !cached_registry_->validators().empty() )
             {
                 logger_->info( "{}: registry already initialized, skipping", __func__ );
@@ -521,13 +521,12 @@ namespace sgns::blockchain
         return std::nullopt;
     }
 
-    void ValidatorRegistry::RegistryUpdateReceived( crdt::CRDTCallbackManager::NewDataPair new_data,
-                                                    const std::string                     &cid )
+    void ValidatorRegistry::RegistryUpdateReceived( const crdt::CRDTCallbackManager::NewDataPair &new_data,
+                                                    const std::string                            &cid )
     {
         logger_->trace( "{}: entry cid={}", __func__, cid );
-        const auto          &buffer = new_data.second;
-        std::vector<uint8_t> bytes( buffer.data(), buffer.data() + buffer.size() );
-        auto                 decoded = DeserializeRegistryUpdate( bytes );
+        const auto &buffer  = new_data.second;
+        auto        decoded = DeserializeRegistryUpdate( buffer.toVector() );
         if ( decoded.has_error() )
         {
             logger_->error( "{}: failed to parse registry update for cache refresh", __func__ );
@@ -551,7 +550,7 @@ namespace sgns::blockchain
         const RegistryUpdate &update ) const
     {
         logger_->trace( "{}: entry validators={}", __func__, update.registry().validators().size() );
-        sgns::blockchain::validator::RegistrySigningPayload payload;
+        validator::RegistrySigningPayload payload;
         *payload.mutable_registry() = update.registry();
         payload.set_prev_registry_hash( update.prev_registry_hash() );
 
@@ -609,7 +608,7 @@ namespace sgns::blockchain
         const std::string prev_registry_cid = update.prev_registry_hash();
         std::string       current_id;
         {
-            std::shared_lock<std::shared_mutex> lock( cache_mutex_ );
+            std::shared_lock lock( cache_mutex_ );
             current_id = cached_registry_id_;
         }
         if ( current_id.empty() || prev_registry_cid != current_id )
@@ -696,9 +695,8 @@ namespace sgns::blockchain
             logger_->error( "{}: registry content not found during cache init", __func__ );
             return;
         }
-        const auto          &buffer = registry_get.value();
-        std::vector<uint8_t> bytes( buffer.data(), buffer.data() + buffer.size() );
-        auto                 decoded = DeserializeRegistryUpdate( bytes );
+        const auto &buffer  = registry_get.value();
+        auto        decoded = DeserializeRegistryUpdate( buffer.toVector() );
         if ( !decoded.has_value() )
         {
             logger_->error( "{}: failed to parse registry content during cache init", __func__ );
@@ -750,12 +748,12 @@ namespace sgns::blockchain
         }
     }
 
-    void ValidatorRegistry::PersistLocalState( const std::string &cid )
+    void ValidatorRegistry::PersistLocalState( const std::string &cid ) const
     {
         logger_->trace( "{}: entry cid={}", __func__, cid );
-        sgns::crdt::GlobalDB::Buffer registry_cid_key;
+        crdt::GlobalDB::Buffer registry_cid_key;
         registry_cid_key.put( std::string( RegistryCidKey() ) );
-        sgns::crdt::GlobalDB::Buffer registry_cid;
+        crdt::GlobalDB::Buffer registry_cid;
         registry_cid.put( cid );
         (void)db_->GetDataStore()->put( registry_cid_key, registry_cid );
         logger_->debug( "{}: persisted CID", __func__ );
@@ -820,7 +818,7 @@ namespace sgns::blockchain
         }
     }
 
-    void ValidatorRegistry::NotifyInitialized( bool success )
+    void ValidatorRegistry::NotifyInitialized( bool success ) const
     {
         logger_->trace( "{}: entry success={}", __func__, success );
         if ( init_callback_ )

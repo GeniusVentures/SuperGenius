@@ -24,72 +24,72 @@ on:
       build_android_arm64v8a_release:
         description: 'Build Android arm64-v8a Release'
         required: true
-        default: 'true'
+        default: true
         type: boolean
       build_android_arm64v8a_debug:
         description: 'Build Android arm64-v8a Debug'
         required: true
-        default: 'true'
+        default: true
         type: boolean
       build_android_armv7a_release:
         description: 'Build Android armeabi-v7a Release'
         required: true
-        default: 'true'
+        default: true
         type: boolean
       build_android_armv7a_debug:
         description: 'Build Android armeabi-v7a Debug'
         required: true
-        default: 'true'
+        default: true
         type: boolean
       build_ios_release:
         description: 'Build iOS Release'
         required: true
-        default: 'true'
+        default: true
         type: boolean
       build_ios_debug:
         description: 'Build iOS Debug'
         required: true
-        default: 'true'
+        default: true
         type: boolean
       build_osx_release:
         description: 'Build OSX Release'
         required: true
-        default: 'true'
+        default: true
         type: boolean
       build_osx_debug:
         description: 'Build OSX Debug'
         required: true
-        default: 'true'
+        default: true
         type: boolean
       build_linux_x86_64_release:
         description: 'Build Linux x86_64 Release'
         required: true
-        default: 'true'
+        default: true
         type: boolean
       build_linux_x86_64_debug:
         description: 'Build Linux x86_64 Debug'
         required: true
-        default: 'true'
+        default: true
         type: boolean
       build_linux_aarch64_release:
         description: 'Build Linux aarch64 Release'
         required: true
-        default: 'true'
+        default: true
         type: boolean
       build_linux_aarch64_debug:
         description: 'Build Linux aarch64 Debug'
         required: true
-        default: 'true'
+        default: true
         type: boolean
       build_windows_release:
         description: 'Build Windows Release'
         required: true
-        default: 'true'
+        default: true
         type: boolean
       build_windows_debug:
         description: 'Build Windows Debug'
         required: true
-        default: 'true'
+        default: true
         type: boolean
 
 jobs:
@@ -97,17 +97,18 @@ jobs:
     env:
       GRPC_BUILD_ENABLE_CCACHE: "ON"
       GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
-    runs-on: ${{matrix.host}}
+    runs-on: ${{ matrix.host }}
     container:
-      image: ${{matrix.container}}
+      image: ${{ matrix.container }}
+      options: ${{ '--cap-add=IPC_LOCK' }}
       credentials:
-        username: ${{github.actor}}
-        password: ${{secrets.GNUS_TOKEN_1}}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GNUS_TOKEN_1 }}
     strategy:
       fail-fast: false
       matrix:
         target: [ Android, iOS, OSX, Linux, Windows ]
-        build-type: [ Debug,Release ]
+        build-type: [ Debug, Release ]
         abi: [ "" ]
         include:
           - target: Linux
@@ -121,12 +122,12 @@ jobs:
             build-type: "Debug"
             container: ghcr.io/geniusventures/debian-bullseye:latest
           - target: Linux
-            host: ubuntu-24.04-arm
+            host: sg-arm-linux
             abi: "aarch64"
             build-type: "Release"
             container: ghcr.io/geniusventures/debian-bullseye:latest
           - target: Linux
-            host: ubuntu-24.04-arm
+            host: sg-arm-linux
             abi: "aarch64"
             build-type: "Debug"
             container: ghcr.io/geniusventures/debian-bullseye:latest
@@ -158,111 +159,127 @@ jobs:
           - target: Linux
             abi: ""
     steps:
-      - name: Check if build should run
+      - name: Check if build should run (Unix)
+        if: ${{ matrix.target != 'Windows' }}
         run: |
           SHOULD_RUN="true"
           if [ '${{ github.event_name }}' == 'workflow_dispatch' ]; then
             case '${{ matrix.target }}-${{ matrix.abi }}-${{ matrix.build-type }}' in
-              Android-arm64-v8a-Release)
-                if [ '${{ inputs.build_android_arm64v8a_release }}' != 'true' ]; then SHOULD_RUN="false"; fi
-                ;;
-              Android-arm64-v8a-Debug)
-                if [ '${{ inputs.build_android_arm64v8a_debug }}' != 'true' ]; then SHOULD_RUN="false"; fi
-                ;;
-              Android-armeabi-v7a-Release)
-                if [ '${{ inputs.build_android_armv7a_release }}' != 'true' ]; then SHOULD_RUN="false"; fi
-                ;;
-              Android-armeabi-v7a-Debug)
-                if [ '${{ inputs.build_android_armv7a_debug }}' != 'true' ]; then SHOULD_RUN="false"; fi
-                ;;
-              iOS-*-Release)
-                if [ '${{ inputs.build_ios_release }}' != 'true' ]; then SHOULD_RUN="false"; fi
-                ;;
-              iOS-*-Debug)
-                if [ '${{ inputs.build_ios_debug }}' != 'true' ]; then SHOULD_RUN="false"; fi
-                ;;
-              OSX-*-Release)
-                if [ '${{ inputs.build_osx_release }}' != 'true' ]; then SHOULD_RUN="false"; fi
-                ;;
-              OSX-*-Debug)
-                if [ '${{ inputs.build_osx_debug }}' != 'true' ]; then SHOULD_RUN="false"; fi
-                ;;
-              Linux-x86_64-Release)
-                if [ '${{ inputs.build_linux_x86_64_release }}' != 'true' ]; then SHOULD_RUN="false"; fi
-                ;;
-              Linux-x86_64-Debug)
-                if [ '${{ inputs.build_linux_x86_64_debug }}' != 'true' ]; then SHOULD_RUN="false"; fi
-                ;;
-              Linux-aarch64-Release)
-                if [ '${{ inputs.build_linux_aarch64_release }}' != 'true' ]; then SHOULD_RUN="false"; fi
-                ;;
-              Linux-aarch64-Debug)
-                if [ '${{ inputs.build_linux_aarch64_debug }}' != 'true' ]; then SHOULD_RUN="false"; fi
-                ;;
-              Windows-*-Release)
-                if [ '${{ inputs.build_windows_release }}' != 'true' ]; then SHOULD_RUN="false"; fi
-                ;;
-              Windows-*-Debug)
-                if [ '${{ inputs.build_windows_debug }}' != 'true' ]; then SHOULD_RUN="false"; fi
-                ;;
+              Android-arm64-v8a-Release)   [ '${{ inputs.build_android_arm64v8a_release }}' != 'true' ] && SHOULD_RUN="false" ;;
+              Android-arm64-v8a-Debug)     [ '${{ inputs.build_android_arm64v8a_debug }}'   != 'true' ] && SHOULD_RUN="false" ;;
+              Android-armeabi-v7a-Release) [ '${{ inputs.build_android_armv7a_release }}'   != 'true' ] && SHOULD_RUN="false" ;;
+              Android-armeabi-v7a-Debug)   [ '${{ inputs.build_android_armv7a_debug }}'     != 'true' ] && SHOULD_RUN="false" ;;
+              iOS-*-Release)               [ '${{ inputs.build_ios_release }}'               != 'true' ] && SHOULD_RUN="false" ;;
+              iOS-*-Debug)                 [ '${{ inputs.build_ios_debug }}'                 != 'true' ] && SHOULD_RUN="false" ;;
+              OSX-*-Release)               [ '${{ inputs.build_osx_release }}'               != 'true' ] && SHOULD_RUN="false" ;;
+              OSX-*-Debug)                 [ '${{ inputs.build_osx_debug }}'                 != 'true' ] && SHOULD_RUN="false" ;;
+              Linux-x86_64-Release)        [ '${{ inputs.build_linux_x86_64_release }}'      != 'true' ] && SHOULD_RUN="false" ;;
+              Linux-x86_64-Debug)          [ '${{ inputs.build_linux_x86_64_debug }}'        != 'true' ] && SHOULD_RUN="false" ;;
+              Linux-aarch64-Release)       [ '${{ inputs.build_linux_aarch64_release }}'     != 'true' ] && SHOULD_RUN="false" ;;
+              Linux-aarch64-Debug)         [ '${{ inputs.build_linux_aarch64_debug }}'       != 'true' ] && SHOULD_RUN="false" ;;
             esac
           fi
           if [ "$SHOULD_RUN" == "false" ]; then
             echo "Skipping build for ${{ matrix.target }} ${{ matrix.abi }} ${{ matrix.build-type }}"
             exit 78
           fi
-        shell: bash
 
-      - name: Clean workspace (self-hosted runners)
-        if: ${{ runner.environment == 'self-hosted' }}
+      - name: Check if build should run (Windows)
+        if: ${{ matrix.target == 'Windows' }}
+        run: |
+          $SHOULD_RUN = "true"
+          if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            $key = '${{ matrix.target }}-${{ matrix.abi }}-${{ matrix.build-type }}'
+            switch -Wildcard ($key) {
+              'Windows-*-Release' {
+                if ('${{ inputs.build_windows_release }}' -ne 'true') { $SHOULD_RUN = "false" }
+              }
+              'Windows-*-Debug' {
+                if ('${{ inputs.build_windows_debug }}' -ne 'true') { $SHOULD_RUN = "false" }
+              }
+            }
+          }
+          if ($SHOULD_RUN -eq "false") {
+            Write-Output "Skipping build for ${{ matrix.target }} ${{ matrix.abi }} ${{ matrix.build-type }}"
+            exit 78
+          }
+
+      - name: Clean workspace (self-hosted runners - Unix)
+        if: ${{ runner.environment == 'self-hosted' && matrix.target != 'Windows' }}
+        working-directory: ${{ runner.workspace }}
+        shell: bash
         run: |
           echo "=== PRE-CLEANUP DEBUG ==="
           echo "Current working directory: $(pwd)"
-          echo "Workspace: ${{github.workspace}}"
-          
-          if [ -d "${{github.workspace}}" ]; then
-            cd "${{github.workspace}}"
-            echo "Changed to workspace directory: $(pwd)"
-            echo "Contents:"
-            ls -la
-            
-            if [ -d ".git" ]; then
-              echo "Git repository detected, performing deep clean..."
-              # Remove stale lock files first
-              echo "Removing stale git lock files..."
-              find . -name "index.lock" -type f -delete 2>/dev/null || true
-              find . -name "*.lock" -path "*/.git/*" -type f -delete 2>/dev/null || true
-              
-              git clean -xfd
-              git submodule foreach --recursive git clean -xfd
-              git reset --hard
-              git submodule foreach --recursive git reset --hard
-              echo "Git clean completed"
-            else
-              echo "Not a git repository, skipping git clean"
-            fi
-          else
-            echo "Workspace directory does not exist yet, skipping cleanup"
-          fi
-          
+          echo "Runner workspace: ${{ runner.workspace }}"
+          echo "GitHub workspace: ${{ github.workspace }}"
+
           echo "=== CLEANUP ARTIFACTS ==="
           # Clean up artifacts from previous runs (self-hosted runners only)
-          if [ -d "thirdparty" ]; then
-            echo "Removing thirdparty directory..."
-            rm -rf thirdparty
+          
+          # Use sudo on Linux to handle root-owned files left by container jobs
+          SUDO=""
+          if [ "$(uname)" = "Linux" ]; then
+            SUDO="sudo"
           fi
-          if [ -d "zkLLVM" ]; then
-            echo "Removing zkLLVM directory..."
-            rm -rf zkLLVM
+
+          # Clean contents of SuperGenius directory but keep the directory itself
+          if [ -d "SuperGenius" ]; then
+            echo "Cleaning SuperGenius directory contents..."
+            $SUDO rm -rf SuperGenius/* SuperGenius/.* 2>/dev/null || true
+            echo "SuperGenius directory cleaned (kept the directory)"
           fi
           
+          # Delete sibling dependency directories completely
+          for dir in thirdparty zkLLVM; do
+            if [ -d "$dir" ]; then
+              echo "Removing $dir directory..."
+              $SUDO rm -rf "$dir"
+            fi
+          done
+
           echo "=== POST-CLEANUP DEBUG ==="
-          if [ -d "${{github.workspace}}" ]; then
-            cd "${{github.workspace}}"
-            echo "Final workspace contents:"
-            ls -la
+          echo "Runner workspace contents:"
+          ls -la
+          if [ -d "SuperGenius" ]; then
+            echo "SuperGenius directory exists and contains:"
+            ls -la SuperGenius/ 2>/dev/null || echo "  (empty)"
           fi
-        shell: bash
+
+      - name: Clean workspace (self-hosted runners - Windows)
+        if: ${{ runner.environment == 'self-hosted' && matrix.target == 'Windows' }}
+        working-directory: ${{ runner.workspace }}
+        run: |
+          Write-Output "=== PRE-CLEANUP DEBUG ==="
+          Write-Output "Current working directory: $(Get-Location)"
+          Write-Output "Runner workspace: ${{ runner.workspace }}"
+          Write-Output "GitHub workspace: ${{ github.workspace }}"
+
+          Write-Output "=== CLEANUP ARTIFACTS ==="
+          # Clean up artifacts from previous runs (self-hosted runners only)
+          
+          # Clean contents of SuperGenius directory but keep the directory itself
+          if (Test-Path "SuperGenius") {
+            Write-Output "Cleaning SuperGenius directory contents..."
+            Get-ChildItem -Path "SuperGenius" -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Output "SuperGenius directory cleaned (kept the directory)"
+          }
+          
+          # Delete sibling dependency directories completely
+          foreach ($dir in @("thirdparty", "zkLLVM")) {
+            if (Test-Path $dir) {
+              Write-Output "Removing $dir directory..."
+              Remove-Item -Path $dir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+          }
+
+          Write-Output "=== POST-CLEANUP DEBUG ==="
+          Write-Output "Runner workspace contents:"
+          Get-ChildItem -Force
+          if (Test-Path "SuperGenius") {
+            Write-Output "SuperGenius directory exists and contains:"
+            Get-ChildItem -Path "SuperGenius" -Force -ErrorAction SilentlyContinue
+          }
 
       - name: Checkout SuperGenius repository
         uses: actions/checkout@v6
@@ -270,159 +287,140 @@ jobs:
           path: "SuperGenius"
           submodules: "recursive"
 
-      - name: Set build directory
+      - name: Configure bash on Windows (use Git Bash, not WSL)
+        if: ${{ runner.environment == 'self-hosted' && matrix.target == 'Windows' }}
         run: |
-          if [ '${{matrix.abi}}' ]; then
-            BUILD_DIRECTORY=build/${{matrix.target}}/${{matrix.build-type}}/${{matrix.abi}}
+          $gitUsrBinPath = "C:\Program Files\Git\usr\bin"
+          $gitBinPath = "C:\Program Files\Git\bin"
+          
+          foreach ($p in @($gitBinPath, $gitUsrBinPath)) {
+            if (Test-Path $p) {
+              Add-Content -Path $env:GITHUB_PATH -Value $p
+              $env:PATH = "$p;$env:PATH"
+            }
+          }
+          
+          Write-Output "Git Bash configured for bash shell commands"
+          $bashLocation = (Get-Command bash.exe -ErrorAction SilentlyContinue).Source
+          if ($bashLocation) {
+            Write-Output "Bash location: $bashLocation"
+          } else {
+            Write-Output "WARNING: bash.exe not found in PATH"
+          }
+
+      - name: Set build directory
+        shell: bash
+        run: |
+          if [ '${{ matrix.abi }}' ]; then
+            BUILD_DIRECTORY=build/${{ matrix.target }}/${{ matrix.build-type }}/${{ matrix.abi }}
           else
-            BUILD_DIRECTORY=build/${{matrix.target}}/${{matrix.build-type}}
+            BUILD_DIRECTORY=build/${{ matrix.target }}/${{ matrix.build-type }}
           fi
           echo "BUILD_DIRECTORY=$BUILD_DIRECTORY" >> $GITHUB_ENV
+
+      - name: Resolve branch/tag
         shell: bash
-
-      - name: Download thirdparty release
-        working-directory: ${{github.workspace}}
         run: |
-          # Determine current branch or tag
           if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.tag }}" ]; then
-              CURRENT_BRANCH="${{ github.event.inputs.tag }}"
-              IS_TAG=true
-          elif ${{github.event_name == 'pull_request'}}; then
-              CURRENT_BRANCH=${{ github.event.pull_request.head.ref }}
-              IS_TAG=false
+            CURRENT_BRANCH="${{ github.event.inputs.tag }}"
+            IS_TAG=true
+          elif ${{ github.event_name == 'pull_request' }}; then
+            CURRENT_BRANCH=${{ github.event.pull_request.head.ref }}
+            IS_TAG=false
           else
-              CURRENT_BRANCH=$GITHUB_REF_NAME
-              IS_TAG=false
+            CURRENT_BRANCH=$GITHUB_REF_NAME
+            IS_TAG=false
           fi
-
           echo "Identified current branch/tag as ${CURRENT_BRANCH}"
-          echo "CURRENT_BRANCH=${CURRENT_BRANCH}" >>$GITHUB_ENV
-          echo "IS_TAG=${IS_TAG}" >>$GITHUB_ENV
+          echo "CURRENT_BRANCH=${CURRENT_BRANCH}" >> $GITHUB_ENV
+          echo "IS_TAG=${IS_TAG}" >> $GITHUB_ENV
 
-          # Determine thirdparty branch to use
           if [ "$IS_TAG" == "true" ]; then
-            # For tags, use the exact tag name for thirdparty
-            thirdparty_branch="$CURRENT_BRANCH"
+            RESOLVED_BRANCH="$CURRENT_BRANCH"
           elif [ "$CURRENT_BRANCH" == "main" ]; then
-            thirdparty_branch="main"
+            RESOLVED_BRANCH="main"
           else
-            thirdparty_branch="develop"
+            RESOLVED_BRANCH="develop"
           fi
+          echo "RESOLVED_BRANCH=${RESOLVED_BRANCH}" >> $GITHUB_ENV
 
-          echo "Using ${thirdparty_branch} for thirdparty"
-
-          if [ '${{matrix.abi}}' ]; then
-            FILE_NAME=${{matrix.target}}-${{matrix.abi}}-${{matrix.build-type}}.tar.gz
+          if [ '${{ matrix.abi }}' ]; then
+            FILE_NAME=${{ matrix.target }}-${{ matrix.abi }}-${{ matrix.build-type }}.tar.gz
           else
-            FILE_NAME=${{matrix.target}}-${{matrix.build-type}}.tar.gz
+            FILE_NAME=${{ matrix.target }}-${{ matrix.build-type }}.tar.gz
           fi
           echo "FILE_NAME=${FILE_NAME}" >> $GITHUB_ENV
 
-          mkdir thirdparty
-          cd thirdparty
-
+      - name: Download thirdparty release
+        working-directory: ${{ github.workspace }}
+        shell: bash
+        run: |
+          mkdir thirdparty && cd thirdparty
           if [ "$IS_TAG" == "true" ]; then
-            # For tags, use just the tag name
-            tag_name="${thirdparty_branch}"
+            tag_name="${RESOLVED_BRANCH}"
+          elif [ '${{ matrix.abi }}' ]; then
+            tag_name="${{ matrix.target }}-${{ matrix.abi }}-${RESOLVED_BRANCH}-${{ matrix.build-type }}"
           else
-            # For branches, use the platform-branch-buildtype format
-            if [ '${{matrix.abi}}' ]; then
-              tag_name="${{matrix.target}}-${{matrix.abi}}-${thirdparty_branch}-${{matrix.build-type}}"
-            else
-              tag_name="${{matrix.target}}-${thirdparty_branch}-${{matrix.build-type}}"
-            fi
+            tag_name="${{ matrix.target }}-${RESOLVED_BRANCH}-${{ matrix.build-type }}"
           fi
-
           gh release download ${tag_name} --repo GeniusVentures/thirdparty -p "${FILE_NAME}"
           tar -zxf "${FILE_NAME}"
-          
-          # Set THIRDPARTY_BUILD_DIR to the actual location where files were extracted
-          
           if [ "${{ matrix.target }}" = "Windows" ]; then
-            # Convert Unix path to Windows path for Windows builds
             echo "THIRDPARTY_BUILD_DIR=$(pwd -W)/${BUILD_DIRECTORY}" >> $GITHUB_ENV
           else
             echo "THIRDPARTY_BUILD_DIR=$(pwd)/${BUILD_DIRECTORY}" >> $GITHUB_ENV
           fi
-        shell: bash
 
       - name: Download zkLLVM release
-        working-directory: ${{github.workspace}}
+        working-directory: ${{ github.workspace }}
+        shell: bash
         run: |
-          # Use same branch determination logic for zkLLVM
-          if [ "$IS_TAG" == "true" ]; then
-            # For tags, use the exact tag name for zkLLVM
-            zkLLVM_branch="$CURRENT_BRANCH"
-          elif [ "$CURRENT_BRANCH" == "main" ]; then
-            zkLLVM_branch="main"
-          else
-            zkLLVM_branch="develop"
-          fi
-
-          mkdir zkLLVM
-          cd zkLLVM
+          mkdir zkLLVM && cd zkLLVM
 
           if [ "${{ matrix.target }}" = "Windows" ]; then
-              ZKLLVM_FILE_NAME=${{matrix.target}}-${{matrix.build-type}}.tar.gz
-              ZKLLVM_BUILD_DIR=build/${{matrix.target}}/${{matrix.build-type}}
-              if [ "$IS_TAG" == "true" ]; then
-                tag_name="${zkLLVM_branch}"
-              else
-                tag_name=${{matrix.target}}-${zkLLVM_branch}-${{matrix.build-type}}
-              fi
-          elif [ '${{matrix.abi}}' ]; then
-              ZKLLVM_FILE_NAME=${{matrix.target}}-${{matrix.abi}}-Release.tar.gz
-              ZKLLVM_BUILD_DIR=build/${{matrix.target}}/Release/${{matrix.abi}}
-              if [ "$IS_TAG" == "true" ]; then
-                tag_name="${zkLLVM_branch}"
-              else
-                tag_name=${{matrix.target}}-${{matrix.abi}}-${zkLLVM_branch}-Release
-              fi
+            ZKLLVM_FILE_NAME=${{ matrix.target }}-${{ matrix.build-type }}.tar.gz
+            ZKLLVM_BUILD_DIR=build/${{ matrix.target }}/${{ matrix.build-type }}
+            tag_name=$( [ "$IS_TAG" == "true" ] && echo "${RESOLVED_BRANCH}" || echo "${{ matrix.target }}-${RESOLVED_BRANCH}-${{ matrix.build-type }}" )
+          elif [ '${{ matrix.abi }}' ]; then
+            ZKLLVM_FILE_NAME=${{ matrix.target }}-${{ matrix.abi }}-Release.tar.gz
+            ZKLLVM_BUILD_DIR=build/${{ matrix.target }}/Release/${{ matrix.abi }}
+            tag_name=$( [ "$IS_TAG" == "true" ] && echo "${RESOLVED_BRANCH}" || echo "${{ matrix.target }}-${{ matrix.abi }}-${RESOLVED_BRANCH}-Release" )
           else
-              ZKLLVM_FILE_NAME=${{matrix.target}}-Release.tar.gz
-              ZKLLVM_BUILD_DIR=build/${{matrix.target}}/Release
-              if [ "$IS_TAG" == "true" ]; then
-                tag_name="${zkLLVM_branch}"
-              else
-                tag_name=${{matrix.target}}-${zkLLVM_branch}-Release
-              fi
+            ZKLLVM_FILE_NAME=${{ matrix.target }}-Release.tar.gz
+            ZKLLVM_BUILD_DIR=build/${{ matrix.target }}/Release
+            tag_name=$( [ "$IS_TAG" == "true" ] && echo "${RESOLVED_BRANCH}" || echo "${{ matrix.target }}-${RESOLVED_BRANCH}-Release" )
           fi
 
           gh release download ${tag_name} --repo GeniusVentures/zkLLVM -p "${ZKLLVM_FILE_NAME}"
 
           tar --exclude='*bin/assigner' --exclude='*bin/clang-zkllvm' --exclude='*bin/llvm-link-zkllvm' --exclude='*bin/transpiler' -xzf "${ZKLLVM_FILE_NAME}"
-          
-          # Set ZKLLVM_BUILD_DIR to the actual location where files were extracted
-          
+
+
           if [ "${{ matrix.target }}" = "Windows" ]; then
-            # Convert Unix path to Windows path for Windows builds
             echo "ZKLLVM_BUILD_DIR=$(pwd -W)/${ZKLLVM_BUILD_DIR}" >> $GITHUB_ENV
           else
             echo "ZKLLVM_BUILD_DIR=$(pwd)/${ZKLLVM_BUILD_DIR}" >> $GITHUB_ENV
           fi
-        shell: bash
 
       - name: Configure Linux host
-        if: ${{ runner.os == 'Linux'}}
+        if: ${{ runner.os == 'Linux' }}
         run: |
           sudo update-alternatives --install /usr/bin/cc cc $(which clang) 100
           sudo update-alternatives --install /usr/bin/c++ c++ $(which clang++) 100
           sudo update-alternatives --set cc $(which clang)
           sudo update-alternatives --set c++ $(which clang++)
-          
-          sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev -y
+          sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev dbus gnome-keyring -y
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
       - name: Configure Windows host
-        if: ${{ runner.os == 'Windows'}}
-        run: |
-          choco install ccache -A
+        if: ${{ runner.os == 'Windows' }}
+        run: choco install ccache -A
 
       - name: Configure macOS host
-        if: ${{ runner.os == 'macOS'}}
+        if: ${{ runner.os == 'macOS' }}
         run: |
           brew install ninja bash gnu-tar
-          
+
           # Ensure GNU tar is first in PATH - check both possible Homebrew locations
           if [ -d "/opt/homebrew/opt/gnu-tar/libexec/gnubin" ]; then
             echo "PATH=/opt/homebrew/opt/gnu-tar/libexec/gnubin:$PATH" >> $GITHUB_ENV
@@ -434,11 +432,11 @@ jobs:
             echo "WARNING: GNU tar installation not found in expected locations"
             echo "Available tar: $(which tar)"
           fi
-          
+
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
       - name: Add Darwin toolchain
-        if: ${{ matrix.target == 'OSX'}}
+        if: ${{ matrix.target == 'OSX' }}
         run: rustup target add x86_64-apple-darwin
 
       - name: Add iOS toolchain
@@ -453,18 +451,16 @@ jobs:
         run: |
           NDK_VERSION="r27b"
           NDK_DIR="$HOME/android-ndk-$NDK_VERSION"
-          
+
           if [ ! -d "$NDK_DIR" ]; then
             echo "Downloading Android NDK..."
             wget https://dl.google.com/android/repository/android-ndk-$NDK_VERSION-linux.zip -O ndk.zip
             unzip -o ndk.zip -d $HOME
             rm ndk.zip
-          else
-            echo "Android NDK already exists at $NDK_DIR, skipping download"
           fi
 
           echo "ANDROID_NDK_HOME=$NDK_DIR" >> $GITHUB_ENV
-
+          
           rustup target add aarch64-linux-android
           rustup target add armv7-linux-androideabi
 
@@ -491,8 +487,8 @@ jobs:
 
       - name: Configure CMake for Linux
         if: ${{matrix.target == 'Linux'}}
-        working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}}
+        working-directory: ${{ github.workspace }}/SuperGenius
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}} -DSGNS_PRINT_LOGS=ON
 
       - name: Configure CMake for Windows
         if: ${{matrix.target == 'Windows'}}
@@ -500,68 +496,83 @@ jobs:
         run: cmake -S build/${{matrix.target}} -B $env:BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}}
 
       - name: Build SuperGenius
-        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
-        run: cmake --build . --config ${{matrix.build-type}} -j
+        working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
+        run: cmake --build . --config ${{ matrix.build-type }} -j
+
+      - name: Run tests (Windows)
+        working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
+        if: ${{ matrix.build-type == 'Release' && matrix.target == 'Windows' }}
+        run: ctest . -j -C ${{ matrix.build-type }}
+
+      - name: Run tests (Linux)
+        working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
+        if: ${{ matrix.build-type == 'Release' && matrix.target == 'Linux' }}
+        shell: bash
+        run: |
+          dbus-run-session -- bash -c '\
+            mkdir -p ~/.cache ~/.local/share/keyrings && \
+            echo -n "login" > ~/.local/share/keyrings/default && \
+            echo "[keyring]
+            display-name=login
+            lock-on-idle=false
+            lock-after=false" > ~/.local/share/keyrings/login.keyring && \
+            eval $(printf "\n" | gnome-keyring-daemon --unlock --components=secrets) && \
+            ctest . -j -C ${{ matrix.build-type }}'
 
       - name: Install SuperGenius
-        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
-        run: cmake --install . --config ${{matrix.build-type}}
+        working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
+        run: cmake --install . --config ${{ matrix.build-type }}
 
       - name: Compress build artifacts
-        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
+        working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
         if: github.ref_name == 'main' || github.ref_name == 'develop' || env.IS_TAG == 'true'
-        run: |
-          tar --exclude=.git -czvf ${FILE_NAME} --transform 's|^|${{env.BUILD_DIRECTORY}}/|' SuperGenius/
         shell: bash
+        run: tar --exclude=.git -czvf ${FILE_NAME} --transform 's|^|${{ env.BUILD_DIRECTORY }}/|' SuperGenius/
 
       - name: Set release tag
         shell: bash
         run: |
           if ${{ github.event_name == 'workflow_dispatch' }} && [ '${{ github.event.inputs.tag }}' ]; then
-              RELEASE_TAG="${{ github.event.inputs.tag }}"
-              IS_TAG_RELEASE="true"
+            RELEASE_TAG="${{ github.event.inputs.tag }}"
+            IS_TAG_RELEASE="true"
           else
-              if [ '${{ matrix.abi }}' ]; then
-                  RELEASE_TAG="${{ matrix.target }}-${{ matrix.abi }}-${{ github.ref_name }}-${{ matrix.build-type }}"
-              else
-                  RELEASE_TAG="${{ matrix.target }}-${{ github.ref_name }}-${{ matrix.build-type }}"
-              fi
-              IS_TAG_RELEASE="false"
+            if [ '${{ matrix.abi }}' ]; then
+              RELEASE_TAG="${{ matrix.target }}-${{ matrix.abi }}-${{ github.ref_name }}-${{ matrix.build-type }}"
+            else
+              RELEASE_TAG="${{ matrix.target }}-${{ github.ref_name }}-${{ matrix.build-type }}"
+            fi
+            IS_TAG_RELEASE="false"
           fi
-
           echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
           echo "IS_TAG_RELEASE=$IS_TAG_RELEASE" >> $GITHUB_ENV
 
       - name: Create release tag
         if: github.ref_name == 'main' || github.ref_name == 'develop'
-        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
+        working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
         id: create-release-tag
+        shell: bash
         run: |
           echo "Checking if release $RELEASE_TAG exists..."
-
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-              if [ "$IS_TAG_RELEASE" == "false" ]; then
-                  echo "Deleting existing release/tag $RELEASE_TAG..."
-                  gh release delete "$RELEASE_TAG" --yes || true
-                  git push origin ":refs/tags/$RELEASE_TAG" || true
-                  git tag -d "$RELEASE_TAG" || true
-              fi
+            if [ "$IS_TAG_RELEASE" == "false" ]; then
+              echo "Deleting existing release/tag $RELEASE_TAG..."
+              gh release delete "$RELEASE_TAG" --yes || true
+              git push origin ":refs/tags/$RELEASE_TAG" || true
+              git tag -d "$RELEASE_TAG" || true
+            fi
           fi
-
           echo "Creating new tag $RELEASE_TAG..."
           git tag -f "$RELEASE_TAG" "${{ github.sha }}"
           git push origin "$RELEASE_TAG" --force
-
           echo "Creating GitHub release $RELEASE_TAG..."
           gh release create "$RELEASE_TAG" \
-          --target "${{ github.sha }}" \
-          -t "${{ matrix.target }} ${{ github.ref_name }} ${{ matrix.build-type }} build" \
-          -n "Branch: ${{ github.ref_name }} | SHA: ${{ github.sha }}" \
-          $( [ "$IS_TAG_RELEASE" = "true" ] && echo "" || echo "--prerelease" )
-        shell: bash
+            --target "${{ github.sha }}" \
+            -t "${{ matrix.target }} ${{ github.ref_name }} ${{ matrix.build-type }} build" \
+            -n "Branch: ${{ github.ref_name }} | SHA: ${{ github.sha }}" \
+            $( [ "$IS_TAG_RELEASE" = "true" ] && echo "" || echo "--prerelease" )
 
       - name: Upload file
         if: github.ref_name == 'main' || github.ref_name == 'develop' || env.IS_TAG == 'true'
-        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
-        run: gh release upload ${{env.RELEASE_TAG}} ${{env.FILE_NAME}} --clobber
+        working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
         shell: bash
+        run: gh release upload ${{ env.RELEASE_TAG }} ${{ env.FILE_NAME }} --clobber

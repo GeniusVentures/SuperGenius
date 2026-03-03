@@ -110,13 +110,13 @@ namespace sgns::blockchain
                            InitCallback                    init_callback );
 
         std::optional<std::vector<crdt::pb::Element>> FilterRegistryUpdate( const crdt::pb::Element &element );
-        void RegistryUpdateReceived( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
+        void RegistryUpdateReceived( const crdt::CRDTCallbackManager::NewDataPair &new_data, const std::string &cid );
         outcome::result<std::vector<uint8_t>> ComputeUpdateSigningBytes( const RegistryUpdate &update ) const;
         bool                  VerifyUpdate( const RegistryUpdate &update, const Registry *current_registry ) const;
         const ValidatorEntry *FindValidator( const Registry &registry, const std::string &validator_id ) const;
         void                  InitializeCache();
-        void                  NotifyInitialized( bool success );
-        void                  PersistLocalState( const std::string &cid );
+        void                  NotifyInitialized( bool success ) const;
+        void                  PersistLocalState( const std::string &cid ) const;
         void                  RequestHeadCids( const std::set<CID> &cids );
 
         std::shared_ptr<crdt::GlobalDB> db_;

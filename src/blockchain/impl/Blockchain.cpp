@@ -47,12 +47,14 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, Blockchain::Error, err )
 
 namespace sgns
 {
-
-    base::Logger blockchain_logger()
+    namespace
     {
-        // Always call base::createLogger to get the current logger
-        // This will return existing logger or create new one as needed
-        return base::createLogger( "Blockchain" );
+        base::Logger blockchain_logger()
+        {
+            // Always call base::createLogger to get the current logger
+            // This will return existing logger or create new one as needed
+            return base::createLogger( "Blockchain" );
+        }
     }
 
     std::string &Blockchain::AuthorizedFullNodeAddressStorage()
@@ -412,76 +414,66 @@ namespace sgns
             InformBlockchainResult( outcome::success() );
             return outcome::success();
         }
+        logger_->info( "[{}] Account creation block not found locally, proceeding to check genesis block",
+                       account_->GetAddress().substr( 0, 8 ) );
+        // Try to get genesis block first
+        auto get_genesis_result = db_->Get( crdt::HierarchicalKey( std::string( GENESIS_KEY ) ) );
+        if ( !get_genesis_result.has_error() )
+        {
+            logger_->info( "[{}] Genesis block found locally, verifying", account_->GetAddress().substr( 0, 8 ) );
+            OUTCOME_TRY( OnGenesisBlockReceived( get_genesis_result.value() ) );
+            OUTCOME_TRY( InitGenesisCID() );
+            OUTCOME_TRY( EnsureValidatorRegistry() );
+
+            logger_->info( "[{}] Genesis block verification completed successfully",
+                           account_->GetAddress().substr( 0, 8 ) );
+            logger_->info( "[{}] Requesting account creation block via pubsub", account_->GetAddress().substr( 0, 8 ) );
+
+            account_->RequestAccountCreation(
+                TIMEOUT_ACC_CREATION_BLOCK_MS,
+                [weakptr( weak_from_this() )]( outcome::result<std::string> creation_cid_res )
+                {
+                    if ( auto self = weakptr.lock() )
+                    {
+                        self->logger_->debug( "[{}] Account creation request finished",
+                                              self->account_->GetAddress().substr( 0, 8 ) );
+
+                        self->InformAccountCreationResponse( std::move( creation_cid_res ) );
+                    }
+                } );
+        }
         else
         {
-            logger_->info( "[{}] Account creation block not found locally, proceeding to check genesis block",
+            logger_->info( "[{}] Genesis block not found locally, proceeding to creation/request",
                            account_->GetAddress().substr( 0, 8 ) );
-            // Try to get genesis block first
-            auto get_genesis_result = db_->Get( crdt::HierarchicalKey( std::string( GENESIS_KEY ) ) );
-            if ( !get_genesis_result.has_error() )
+            // Genesis block not found locally
+            if ( account_->GetAddress() == GetAuthorizedFullNodeAddress() )
             {
-                logger_->info( "[{}] Genesis block found locally, verifying", account_->GetAddress().substr( 0, 8 ) );
-                OUTCOME_TRY( OnGenesisBlockReceived( get_genesis_result.value() ) );
-                OUTCOME_TRY( InitGenesisCID() );
-                OUTCOME_TRY( EnsureValidatorRegistry() );
-
-                logger_->info( "[{}] Genesis block verification completed successfully",
+                logger_->info( "[{}] Full node detected, creating genesis block",
                                account_->GetAddress().substr( 0, 8 ) );
-                logger_->info( "[{}] Requesting account creation block via pubsub",
-                               account_->GetAddress().substr( 0, 8 ) );
-
-                account_->RequestAccountCreation(
-                    TIMEOUT_ACC_CREATION_BLOCK_MS,
-                    [weakptr( weak_from_this() )]( outcome::result<std::string> creation_cid_res )
-                    {
-                        if ( auto self = weakptr.lock() )
-                        {
-                            self->logger_->debug( "[{}] Account creation request finished",
-                                                  self->account_->GetAddress().substr( 0, 8 ) );
-
-                            self->InformAccountCreationResponse( std::move( creation_cid_res ) );
-                        }
-                    } );
+                auto create_result = CreateGenesisBlock();
+                return create_result;
             }
-            else
+            logger_->info( "[{}] Regular node detected, requesting genesis block via pubsub",
+                           account_->GetAddress().substr( 0, 8 ) );
+            auto genesis_request_result = account_->RequestGenesis(
+                TIMEOUT_GENESIS_BLOCK_MS,
+                [weakptr( weak_from_this() )]( outcome::result<std::string> genesis_cid_res )
+                {
+                    if ( auto self = weakptr.lock() )
+                    {
+                        self->logger_->debug( "[{}] Genesis request finished",
+                                              self->account_->GetAddress().substr( 0, 8 ) );
+                        self->InformGenesisResult( std::move( genesis_cid_res ) );
+                    }
+                } );
+            if ( genesis_request_result.has_error() )
             {
-                logger_->info( "[{}] Genesis block not found locally, proceeding to creation/request",
-                               account_->GetAddress().substr( 0, 8 ) );
-                // Genesis block not found locally
-                if ( account_->GetAddress() == GetAuthorizedFullNodeAddress() )
-                {
-                    logger_->info( "[{}] Full node detected, creating genesis block",
-                                   account_->GetAddress().substr( 0, 8 ) );
-                    auto create_result = CreateGenesisBlock();
-                    return create_result;
-                }
-                else
-                {
-                    logger_->info( "[{}] Regular node detected, requesting genesis block via pubsub",
-                                   account_->GetAddress().substr( 0, 8 ) );
-                    auto genesis_request_result = account_->RequestGenesis(
-                        TIMEOUT_GENESIS_BLOCK_MS,
-                        [weakptr( weak_from_this() )]( outcome::result<std::string> genesis_cid_res )
-                        {
-                            if ( auto self = weakptr.lock() )
-                            {
-                                self->logger_->debug( "[{}] Genesis request finished",
-                                                      self->account_->GetAddress().substr( 0, 8 ) );
-                                self->InformGenesisResult( std::move( genesis_cid_res ) );
-                            }
-                        } );
-                    if ( genesis_request_result.has_error() )
-                    {
-                        logger_->error( "[{}] Genesis request failed: no response received",
-                                        account_->GetAddress().substr( 0, 8 ) );
-                        return outcome::failure( Error::GENESIS_BLOCK_MISSING );
-                    }
-                    else
-                    {
-                        logger_->info( "[{}] Request succeeded for Genesis", account_->GetAddress().substr( 0, 8 ) );
-                    }
-                }
+                logger_->error( "[{}] Genesis request failed: no response received",
+                                account_->GetAddress().substr( 0, 8 ) );
+                return outcome::failure( Error::GENESIS_BLOCK_MISSING );
             }
+            logger_->info( "[{}] Request succeeded for Genesis", account_->GetAddress().substr( 0, 8 ) );
         }
 
         return outcome::success();
@@ -500,16 +492,16 @@ namespace sgns
         return outcome::failure( std::errc::no_such_file_or_directory );
     }
 
-    outcome::result<void> Blockchain::EnsureValidatorRegistry()
+    outcome::result<void> Blockchain::EnsureValidatorRegistry() const
     {
         if ( account_->GetAddress() != GetAuthorizedFullNodeAddress() )
         {
             return outcome::success();
         }
 
-        auto registry_result = validator_registry_->StoreGenesisRegistry(
-            GetAuthorizedFullNodeAddress(),
-            [this]( std::vector<uint8_t> data ) { return account_->Sign( std::move( data ) ); } );
+        auto registry_result = validator_registry_->StoreGenesisRegistry( GetAuthorizedFullNodeAddress(),
+                                                                          [this]( const std::vector<uint8_t> &data )
+                                                                          { return account_->Sign( data ); } );
         if ( registry_result.has_error() )
         {
             logger_->error( "[{}] Failed to ensure validator registry", account_->GetAddress().substr( 0, 8 ) );
@@ -606,7 +598,7 @@ namespace sgns
         return VerifyGenesisBlock( std::string( serialized_genesis.toString() ) );
     }
 
-    outcome::result<void> Blockchain::InformBlockchainResult( outcome::result<void> result )
+    outcome::result<void> Blockchain::InformBlockchainResult( outcome::result<void> result ) const
     {
         // Only inform if both genesis and account creation are ready
         if ( blockchain_processed_callback_ )
@@ -642,7 +634,7 @@ namespace sgns
             logger_->debug( "[{}] Received empty account creation CID, no account created yet",
                             account_->GetAddress().substr( 0, 8 ) );
 
-            auto account_creation_result = CreateAccountCreationBlock();
+            CreateAccountCreationBlock();
         }
         else
         {
@@ -727,7 +719,8 @@ namespace sgns
             .detach();
     }
 
-    void Blockchain::GenesisReceivedCallback( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid )
+    void Blockchain::GenesisReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair &new_data,
+                                              const std::string                            &cid )
     {
         logger_->debug( "[{}] Genesis received callback triggered with CID: {}",
                         account_->GetAddress().substr( 0, 8 ),
@@ -776,7 +769,7 @@ namespace sgns
             {
                 if ( auto s = weakself.lock() )
                 {
-                    s->InformAccountCreationResponse( creation_cid_res );
+                    s->InformAccountCreationResponse( std::move( creation_cid_res ) );
                 }
             } );
         if ( result.has_error() )
@@ -873,9 +866,9 @@ namespace sgns
             return outcome::failure( Error::GENESIS_BLOCK_CREATION_FAILED );
         }
 
-        auto registry_result = validator_registry_->StoreGenesisRegistry(
-            GetAuthorizedFullNodeAddress(),
-            [this]( std::vector<uint8_t> data ) { return account_->Sign( std::move( data ) ); } );
+        auto registry_result = validator_registry_->StoreGenesisRegistry( GetAuthorizedFullNodeAddress(),
+                                                                          [this]( const std::vector<uint8_t> &data )
+                                                                          { return account_->Sign( data ); } );
         if ( registry_result.has_error() )
         {
             logger_->error( "[{}] Failed to store validator registry in CRDT", account_->GetAddress().substr( 0, 8 ) );
@@ -931,12 +924,12 @@ namespace sgns
         return outcome::success();
     }
 
-    std::vector<uint8_t> Blockchain::ComputeSignatureData( const sgns::blockchain::GenesisBlock &g )
+    std::vector<uint8_t> Blockchain::ComputeSignatureData( const blockchain::GenesisBlock &g ) const
     {
         logger_->trace( "[{}] Computing signature data for genesis block", account_->GetAddress().substr( 0, 8 ) );
 
         // Create a copy without signature for deterministic signing
-        sgns::blockchain::GenesisBlock g_copy = g;
+        blockchain::GenesisBlock g_copy = g;
         g_copy.clear_signature();
 
         // Serialize the unsigned block
@@ -950,10 +943,10 @@ namespace sgns
         return signature_data;
     }
 
-    std::vector<uint8_t> Blockchain::ComputeSignatureData( const sgns::blockchain::AccountCreationBlock &ac )
+    std::vector<uint8_t> Blockchain::ComputeSignatureData( const blockchain::AccountCreationBlock &ac ) const
     {
         // Create a copy without signature for deterministic signing
-        sgns::blockchain::AccountCreationBlock ac_copy = ac;
+        blockchain::AccountCreationBlock ac_copy = ac;
         ac_copy.clear_signature();
 
         size_t               size = ac_copy.ByteSizeLong();
@@ -963,7 +956,7 @@ namespace sgns
         return signature_data;
     }
 
-    bool Blockchain::VerifySignature( const sgns::blockchain::GenesisBlock &g )
+    bool Blockchain::VerifySignature( const blockchain::GenesisBlock &g ) const
     {
         logger_->trace( "[{}] Verifying genesis block signature", account_->GetAddress().substr( 0, 8 ) );
 
@@ -997,7 +990,7 @@ namespace sgns
         return verification_result;
     }
 
-    bool Blockchain::VerifySignature( const sgns::blockchain::AccountCreationBlock &ac )
+    bool Blockchain::VerifySignature( const blockchain::AccountCreationBlock &ac ) const
     {
         logger_->trace( "[{}] Verifying account creation block signature", account_->GetAddress().substr( 0, 8 ) );
 
@@ -1353,8 +1346,8 @@ namespace sgns
         return std::nullopt;
     }
 
-    bool Blockchain::ShouldReplaceGenesis( const sgns::blockchain::GenesisBlock &existing,
-                                           const sgns::blockchain::GenesisBlock &candidate ) const
+    bool Blockchain::ShouldReplaceGenesis( const blockchain::GenesisBlock &existing,
+                                           const blockchain::GenesisBlock &candidate )
     {
         if ( candidate.timestamp() == existing.timestamp() )
         {
@@ -1363,8 +1356,8 @@ namespace sgns
         return candidate.timestamp() < existing.timestamp();
     }
 
-    bool Blockchain::ShouldReplaceAccountCreation( const sgns::blockchain::AccountCreationBlock &existing,
-                                                   const sgns::blockchain::AccountCreationBlock &candidate ) const
+    bool Blockchain::ShouldReplaceAccountCreation( const blockchain::AccountCreationBlock &existing,
+                                                   const blockchain::AccountCreationBlock &candidate )
     {
         if ( candidate.timestamp() == existing.timestamp() )
         {
@@ -1380,14 +1373,13 @@ namespace sgns
         return outcome::success();
     }
 
-    void Blockchain::AccountCreationReceivedCallback( crdt::CRDTCallbackManager::NewDataPair new_data,
-                                                      const std::string                     &cid )
+    void Blockchain::AccountCreationReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair &new_data,
+                                                      const std::string                            &cid )
     {
         logger_->debug( "[{}] Account creation received callback triggered with CID: {}",
                         account_->GetAddress().substr( 0, 8 ),
                         cid );
 
-        std::string           creation_address;
         bool                  notify_blockchain  = false;
         outcome::result<void> new_account_return = outcome::success();
         do
@@ -1401,10 +1393,9 @@ namespace sgns
             {
                 key_address.erase( key_address.begin() );
             }
-            const std::string prefix = std::string( ACCOUNT_CREATION_KEY_PREFIX );
-            if ( key_address.rfind( prefix, 0 ) == 0 )
+            if ( key_address.rfind( ACCOUNT_CREATION_KEY_PREFIX, 0 ) == 0 )
             {
-                key_address = key_address.substr( prefix.size() );
+                key_address = key_address.substr( ACCOUNT_CREATION_KEY_PREFIX.size() );
             }
             else
             {
@@ -1425,7 +1416,7 @@ namespace sgns
                 break;
             }
 
-            creation_address = account_creation_block_.account_address();
+            std::string creation_address = account_creation_block_.account_address();
             if ( creation_address.empty() )
             {
                 logger_->error( "[{}] Account creation block with empty address",
@@ -1459,7 +1450,6 @@ namespace sgns
 
             logger_->info( "[{}] Account creation block processed successfully",
                            account_->GetAddress().substr( 0, 8 ) );
-
         } while ( 0 );
 
         if ( notify_blockchain )

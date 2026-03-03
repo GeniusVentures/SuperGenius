@@ -77,8 +77,15 @@ namespace test
 
     CRDTFixture::~CRDTFixture()
     {
-        fs::remove_all( basePath );
-        fs::remove_all( basePath + ".unit" );
+        try
+        {
+            fs::remove_all( basePath );
+            fs::remove_all( basePath + ".unit" );
+        }
+        catch ( const fs::filesystem_error &err )
+        {
+            std::cerr << err.what() << std::endl;
+        }
     }
 
     void CRDTFixture::SetUpTestSuite()
