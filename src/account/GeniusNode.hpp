@@ -52,6 +52,13 @@ namespace sgns
     {
     public:
         static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
+                                                bool                autodht      = true,
+                                                bool                isprocessor  = true,
+                                                uint16_t            base_port    = 40001,
+                                                bool                is_full_node = false,
+                                                bool                use_upnp     = true );
+
+        static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
                                                 const char         *eth_private_key,
                                                 bool                autodht      = true,
                                                 bool                isprocessor  = true,
@@ -59,9 +66,17 @@ namespace sgns
                                                 bool                is_full_node = false,
                                                 bool                use_upnp     = true );
 
+        static std::shared_ptr<GeniusNode> New( const DevConfig_st               &dev_config,
+                                                const GeniusAccount::Credentials &credentials,
+                                                bool                              autodht      = true,
+                                                bool                              isprocessor  = true,
+                                                uint16_t                          base_port    = 40001,
+                                                bool                              is_full_node = false,
+                                                bool                              use_upnp     = true );
+
         ~GeniusNode() override;
 
-        enum class NodeState
+        enum class NodeState: uint8_t
         {
             CREATING = 0,
             MIGRATING_DATABASE,
@@ -76,7 +91,7 @@ namespace sgns
         /**
          * @brief      GeniusNode Error class
          */
-        enum class Error
+        enum class Error: uint8_t
         {
             INSUFFICIENT_FUNDS       = 1,  ///< Insufficient funds for a transaction
             DATABASE_WRITE_ERROR     = 2,  ///< Error writing data into the database
@@ -292,13 +307,14 @@ namespace sgns
         uint16_t                                              pubsubport_;
         std::shared_ptr<Blockchain>                           blockchain_;
 
-        GeniusNode( const DevConfig_st &dev_config,
-                    const char         *eth_private_key,
-                    bool                autodht,
-                    bool                isprocessor,
-                    uint16_t            base_port,
-                    bool                is_full_node,
-                    bool                use_upnp );
+        GeniusNode( const DevConfig_st            &dev_config,
+                    std::shared_ptr<GeniusAccount> account,
+                    bool                           autodht,
+                    bool                           isprocessor,
+                    uint16_t                       base_port,
+                    bool                           is_full_node,
+                    bool                           use_upnp );
+
         void         InitOpenSSL();
         bool         InitLoggers( const std::string &base_path );
         base::Logger ConfigureLogger( const std::string        &tag,

@@ -122,7 +122,6 @@ namespace sgns
     }
 
     std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config,
-                                                 const char         *eth_private_key,
                                                  bool                autodht,
                                                  bool                isprocessor,
                                                  uint16_t            base_port,
@@ -130,21 +129,81 @@ namespace sgns
                                                  bool                use_upnp )
     {
         auto instance = std::shared_ptr<GeniusNode>(
-            new GeniusNode( dev_config, eth_private_key, autodht, isprocessor, base_port, is_full_node, use_upnp ) );
+            new GeniusNode( dev_config,
+                            GeniusAccount::New( dev_config.TokenID, dev_config.BaseWritePath, is_full_node ),
+                            autodht,
+                            isprocessor,
+                            base_port,
+                            is_full_node,
+                            use_upnp ) );
 
-        instance->BeginDBInitialization();
+        if ( instance )
+        {
+            instance->BeginDBInitialization();
+        }
+
         return instance;
     }
 
-    GeniusNode::GeniusNode( const DevConfig_st &dev_config,
-                            const char         *eth_private_key,
-                            bool                autodht,
-                            bool                isprocessor,
-                            uint16_t            base_port,
-                            bool                is_full_node,
-                            bool                use_upnp ) :
+    std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config,
+                                                 const char         *eth_private_key,
+                                                 bool                autodht,
+                                                 bool                isprocessor,
+                                                 uint16_t            base_port,
+                                                 bool                is_full_node,
+                                                 bool                use_upnp )
+    {
+        auto instance = std::shared_ptr<GeniusNode>( new GeniusNode(
+            dev_config,
+            GeniusAccount::New( dev_config.TokenID, eth_private_key, dev_config.BaseWritePath, is_full_node ),
+            autodht,
+            isprocessor,
+            base_port,
+            is_full_node,
+            use_upnp ) );
+
+        if ( instance )
+        {
+            instance->BeginDBInitialization();
+        }
+
+        return instance;
+    }
+
+    std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st               &dev_config,
+                                                 const GeniusAccount::Credentials &credentials,
+                                                 bool                              autodht,
+                                                 bool                              isprocessor,
+                                                 uint16_t                          base_port,
+                                                 bool                              is_full_node,
+                                                 bool                              use_upnp )
+    {
+        auto instance = std::shared_ptr<GeniusNode>( new GeniusNode(
+            dev_config,
+            GeniusAccount::New( dev_config.TokenID, credentials, dev_config.BaseWritePath, is_full_node ),
+            autodht,
+            isprocessor,
+            base_port,
+            is_full_node,
+            use_upnp ) );
+
+        if ( instance )
+        {
+            instance->BeginDBInitialization();
+        }
+
+        return instance;
+    }
+
+    GeniusNode::GeniusNode( const DevConfig_st            &dev_config,
+                            std::shared_ptr<GeniusAccount> account,
+                            bool                           autodht,
+                            bool                           isprocessor,
+                            uint16_t                       base_port,
+                            bool                           is_full_node,
+                            bool                           use_upnp ) :
         write_base_path_( dev_config.BaseWritePath ),
-        account_( GeniusAccount::New( dev_config.TokenID, eth_private_key, write_base_path_, is_full_node ) ),
+        account_( std::move( account ) ),
         utxo_manager_(
             is_full_node,
             account_->GetAddress(),
