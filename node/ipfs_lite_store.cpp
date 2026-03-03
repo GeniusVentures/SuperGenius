@@ -1,5 +1,6 @@
-/// \\file for implementing ipfs_lite_store class
-/// \\author ruymaster
+/// \file ipfs_lite_store.cpp
+/// \brief Implementation of ipfs_lite_store class
+/// \author ruymaster
 
 #include <secure/buffer.hpp>
 #include <secure/versioning.hpp>

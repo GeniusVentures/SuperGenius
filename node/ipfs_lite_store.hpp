@@ -1,8 +1,8 @@
 ///====================================================================================
-/// \\file ipfs_lite_store.hpp
-/// \\brief Header file for storing block into ipfs-lite
-/// \\date 07/06/2020
-/// \\author ruymaster
+/// \file ipfs_lite_store.hpp
+/// \brief Header file for storing block into ipfs-lite
+/// \date 07/06/2020
+/// \author ruymaster
 ///====================================================================================
 
 #ifndef SUPERGENIUS_IPFS_LITE_STORE_HPP
