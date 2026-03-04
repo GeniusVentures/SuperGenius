@@ -84,32 +84,37 @@ jobs:
     steps:
       - name: Clean workspace (self-hosted runners - Unix)
         if: ${{ runner.environment == 'self-hosted' && matrix.target != 'Windows' }}
-        working-directory: ${{runner.workspace}}
+        working-directory: ${{ runner.workspace }}
+        shell: bash
         run: |
           echo "=== PRE-CLEANUP DEBUG ==="
           echo "Current working directory: $(pwd)"
-          echo "Runner workspace: ${{runner.workspace}}"
-          echo "GitHub workspace: ${{github.workspace}}"
+          echo "Runner workspace: ${{ runner.workspace }}"
+          echo "GitHub workspace: ${{ github.workspace }}"
 
           echo "=== CLEANUP ARTIFACTS ==="
           # Clean up artifacts from previous runs (self-hosted runners only)
           
+          # Use sudo on Linux to handle root-owned files left by container jobs
+          SUDO=""
+          if [ "$(uname)" = "Linux" ]; then
+            SUDO="sudo"
+          fi
+
           # Clean contents of SuperGenius directory but keep the directory itself
           if [ -d "SuperGenius" ]; then
             echo "Cleaning SuperGenius directory contents..."
-            rm -rf SuperGenius/* SuperGenius/.* 2>/dev/null || true
+            $SUDO rm -rf SuperGenius/* SuperGenius/.* 2>/dev/null || true
             echo "SuperGenius directory cleaned (kept the directory)"
           fi
           
           # Delete sibling dependency directories completely
-          if [ -d "thirdparty" ]; then
-            echo "Removing thirdparty directory..."
-            rm -rf thirdparty
-          fi
-          if [ -d "zkLLVM" ]; then
-            echo "Removing zkLLVM directory..."
-            rm -rf zkLLVM
-          fi
+          for dir in thirdparty zkLLVM; do
+            if [ -d "$dir" ]; then
+              echo "Removing $dir directory..."
+              $SUDO rm -rf "$dir"
+            fi
+          done
 
           echo "=== POST-CLEANUP DEBUG ==="
           echo "Runner workspace contents:"
@@ -118,7 +123,6 @@ jobs:
             echo "SuperGenius directory exists and contains:"
             ls -la SuperGenius/ 2>/dev/null || echo "  (empty)"
           fi
-        shell: bash
 
       - name: Clean workspace (self-hosted runners - Windows)
         if: ${{ runner.environment == 'self-hosted' && matrix.target == 'Windows' }}
@@ -185,7 +189,7 @@ jobs:
           } else {
             Write-Output "WARNING: bash.exe not found in PATH"
           }
-          
+
       - name: Set build directory
         run: |
           if [ '${{matrix.abi}}' ]; then
