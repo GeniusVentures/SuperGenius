@@ -564,7 +564,7 @@ jobs:
 
       - name: Run tests (Linux)
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
-        if: ${{ matrix.build-type == 'Release' && matrix.target == 'Linux' }}
+        if: ${{ matrix.target == 'Linux' }}
         shell: bash
         run: |
           dbus-run-session -- bash -c '\
@@ -575,4 +575,4 @@ jobs:
             lock-on-idle=false
             lock-after=false" > ~/.local/share/keyrings/login.keyring && \
             eval $(printf "\n" | gnome-keyring-daemon --unlock --components=secrets) && \
-            ctest . -j -C ${{ matrix.build-type }}'
+            ctest . --verbose -j -C ${{ matrix.build-type }}'
