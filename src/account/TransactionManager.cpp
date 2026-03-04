@@ -1723,6 +1723,8 @@ namespace sgns
             }
             return;
         }
+        // TODO - Remove this once we remove the passive heads processing or we want transactions we are not subscribed here
+        return;
 
         m_logger->info( "[{} - full: {}] Missing {} transactions during init",
                         account_m->GetAddress().substr( 0, 8 ),
