@@ -137,7 +137,8 @@ namespace sgns
                         if ( result.has_error() )
                         {
                             strong->logger_->error( "Error starting blockchain: {}", result.error().message() );
-                            strong->account_->RequestHeads({std::string(sgns::blockchain::ValidatorRegistry::ValidatorTopic())});
+                            strong->account_->RequestHeads(
+                                { std::string( sgns::blockchain::ValidatorRegistry::ValidatorTopic() ) } );
                             strong->blockchain_status_.store( Status::ST_ERROR );
                             return;
                         }
@@ -233,7 +234,7 @@ namespace sgns
             return outcome::failure( MigrationManager::Error::BLOCKCHAIN_INIT_FAILED );
         }
 
-        auto                  crdt_transaction_ = db_3_5_0_->BeginTransaction();
+        auto                            crdt_transaction_ = db_3_5_0_->BeginTransaction();
         std::unordered_set<std::string> topics_;
 
         topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
@@ -481,6 +482,7 @@ namespace sgns
 
     outcome::result<void> Migration3_4_0To3_5_0::ShutDown()
     {
+        account_->DeconfigureDatabaseDependencies();
         db_3_4_0_.reset();
         db_3_5_0_.reset();
         blockchain_.reset();

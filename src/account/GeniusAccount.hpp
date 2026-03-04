@@ -109,6 +109,11 @@ namespace sgns
         bool ConfigureDatabaseDependencies( std::shared_ptr<crdt::GlobalDB> global_db );
 
         /**
+         * @brief       Clears handlers and methods set by ConfigureDatabaseDependencies.
+         */
+        void DeconfigureDatabaseDependencies();
+
+        /**
          * @brief       Destroy the Genius Account object
          */
         ~GeniusAccount();

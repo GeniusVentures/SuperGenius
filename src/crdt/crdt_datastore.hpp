@@ -451,7 +451,6 @@ namespace sgns::crdt
         std::condition_variable         rebroadcastCv_;
         std::unordered_set<std::string> topicNames_;
         mutable std::mutex              topicNamesMutex_;
-        bool                            isFullNode = false;
         std::mutex                      pendingBroadcastMutex_;
         std::unordered_set<std::string> pendingBroadcastTopics_;
 

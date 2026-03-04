@@ -461,6 +461,20 @@ namespace sgns
         return ret;
     }
 
+    void GeniusAccount::DeconfigureDatabaseDependencies()
+    {
+        SetNonceStore( nullptr );
+
+        if ( messenger_ )
+        {
+            messenger_->ClearBlockResponseHandler();
+            messenger_->ClearHeadRequestHandler();
+        }
+
+        ClearHasBlockCidMethod();
+        genius_account_logger()->debug( "Cleared database dependency handlers" );
+    }
+
     GeniusAccount::GeniusAccount( TokenID token_id, std::shared_ptr<ISecureStorage> storage, bool full_node ) :
         token( token_id ),
         storage_( std::move( storage ) ),
