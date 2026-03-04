@@ -45,12 +45,20 @@ public class KeyStoreHelper {
         synchronized (sLock) {
             if (sInstance == null) {
                 sInstance = new KeyStoreHelper(context);
+                // Initialize native side with app ClassLoader
+                nativeInit(context);
                 Log.i(TAG, "KeyStoreHelper initialized");
             } else {
                 Log.w(TAG, "KeyStoreHelper already initialized");
             }
         }
     }
+    
+    /**
+     * Native initialization - called from Java to cache the class reference
+     * using the app's ClassLoader instead of system ClassLoader
+     */
+    private static native void nativeInit(Context context);
     
     /**
      * Get the singleton instance.
