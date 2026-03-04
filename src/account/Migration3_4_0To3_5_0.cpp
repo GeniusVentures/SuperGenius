@@ -13,9 +13,11 @@
 #include "account/TransactionManager.hpp"
 #include "account/MigrationManager.hpp"
 #include "account/TransferTransaction.hpp"
+#include "blockchain/ValidatorRegistry.hpp"
 
 namespace sgns
 {
+
     namespace
     {
         std::string BuildLegacyTransactionPath_3_5_0( const IGeniusTransactions &tx )
@@ -135,6 +137,7 @@ namespace sgns
                         if ( result.has_error() )
                         {
                             strong->logger_->error( "Error starting blockchain: {}", result.error().message() );
+                            strong->account_->RequestHeads({std::string(sgns::blockchain::ValidatorRegistry::ValidatorTopic())});
                             strong->blockchain_status_.store( Status::ST_ERROR );
                             return;
                         }

@@ -364,6 +364,7 @@ namespace sgns
                                     strong->node_logger_->error( "Error starting blockchain: {}",
                                                                  result.error().message() );
                                     strong->node_logger_->info( "Scheduling blockchain retry after failure" );
+                                    strong->account_->RequestHeads({std::string(blockchain::ValidatorRegistry::ValidatorTopic())});
                                     strong->ScheduleBlockchainRetry();
                                     return;
                                 }
