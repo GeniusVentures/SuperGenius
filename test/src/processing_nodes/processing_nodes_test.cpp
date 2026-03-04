@@ -472,6 +472,14 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
     auto        cost      = node_main->GetProcessCost( procmgr.value() );
 
+    auto mint_result = node_main->MintTokens( 50000000000,
+                                              "",
+                                              "",
+                                              sgns::TokenID::FromBytes( { 0x00 } ),
+                                              std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+
+    ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
+
     std::replace( bin_path.begin(), bin_path.end(), '\\', '/' );
     boost::replace_all( json_data, "[basepath]", bin_path );
     std::cout << "Json Data: " << json_data << std::endl;
