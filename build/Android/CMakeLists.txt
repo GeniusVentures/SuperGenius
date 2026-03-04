@@ -54,3 +54,6 @@ find_library(android-lib android)
 
 # Include common build parameters
 include(../CommonBuildParameters.cmake)
+
+# Add Android AAR build for secure storage
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/securestorage ${CMAKE_BINARY_DIR}/android_aar)
