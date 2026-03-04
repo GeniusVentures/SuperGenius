@@ -35,8 +35,8 @@ target_link_libraries(sgns_genius_account
 )
 
 target_precompile_headers(sgns_genius_account PUBLIC
-    <ProofSystem/ElGamalKeyGenerator.hpp>
-    <ProofSystem/EthereumKeyGenerator.hpp>
+    $<BUILD_INTERFACE:<ProofSystem/ElGamalKeyGenerator.hpp$<ANGLE-R>>
+    $<BUILD_INTERFACE:<ProofSystem/EthereumKeyGenerator.hpp$<ANGLE-R>>
 )
 
 target_include_directories(
