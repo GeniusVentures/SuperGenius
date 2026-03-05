@@ -366,8 +366,8 @@ jobs:
             echo "Android NDK already exists at $NDK_DIR, skipping download"
           fi
 
-          echo "ANDROID_HOME=$ANDROID_SDK_ROOT"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
           echo "ANDROID_NDK_HOME=$NDK_DIR" >> $GITHUB_ENV
 
           rustup target add aarch64-linux-android
