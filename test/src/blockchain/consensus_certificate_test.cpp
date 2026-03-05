@@ -12,10 +12,18 @@
 namespace
 {
     constexpr const char *kTestPrivateKey = "0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce8b1a6f0d4f3b9b7f0a1b2";
+    constexpr const char *kTestPrivateKey2 = "0x6c3e7b1a8d3f2c9b0f1e2d3c4b5a69788796a5b4c3d2e1f0a9b8c7d6e5f4a3b2";
 
     std::shared_ptr<sgns::GeniusAccount> MakeAccount( const std::string &path )
     {
         auto account = sgns::GeniusAccount::New( sgns::TokenID::FromBytes( { 0x00 } ), kTestPrivateKey, path, false );
+        EXPECT_TRUE( account );
+        return account;
+    }
+
+    std::shared_ptr<sgns::GeniusAccount> MakeAccount( const std::string &path, const char *private_key )
+    {
+        auto account = sgns::GeniusAccount::New( sgns::TokenID::FromBytes( { 0x00 } ), private_key, path, false );
         EXPECT_TRUE( account );
         return account;
     }
@@ -51,6 +59,21 @@ namespace
 
         return registry;
     }
+
+    std::shared_ptr<sgns::ConsensusManager> MakeManager( const std::shared_ptr<sgns::ValidatorRegistry> &registry,
+                                                         const std::shared_ptr<sgns::crdt::GlobalDB>      &db,
+                                                         const std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> &pubs,
+                                                         const std::shared_ptr<sgns::GeniusAccount>       &account )
+    {
+        auto manager = sgns::ConsensusManager::New(
+            registry,
+            db,
+            pubs,
+            [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); },
+            account->GetAddress() );
+        EXPECT_TRUE( manager );
+        return manager;
+    }
 }
 
 namespace sgns::test
@@ -71,12 +94,7 @@ namespace sgns::test
         auto account  = MakeAccount( getPathString() );
         auto registry = MakeRegistry( db_, account );
 
-        auto manager = ConsensusManager::New(
-            registry,
-            db_,
-            pubs_,
-            [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); },
-            account->GetAddress() );
+        auto manager = MakeManager( registry, db_, pubs_, account );
 
         std::string tx_hash        = "0x010203";
         auto        subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(), 1, tx_hash );
@@ -108,12 +126,7 @@ namespace sgns::test
         auto account  = MakeAccount( getPathString() );
         auto registry = MakeRegistry( db_, account );
 
-        auto manager = ConsensusManager::New(
-            registry,
-            db_,
-            pubs_,
-            [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); },
-            account->GetAddress() );
+        auto manager = MakeManager( registry, db_, pubs_, account );
 
         std::string tx_hash        = "0x010203";
         auto        subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(), 7, tx_hash );
@@ -154,5 +167,301 @@ namespace sgns::test
 
         manager->HandleCertificate( cert );
         EXPECT_TRUE( manager->proposals_.find( proposal_result.value().proposal_id() ) != manager->proposals_.end() );
+    }
+
+    TEST_F( ConsensusCertificateTest, NewRejectsInvalidInputs )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+
+        EXPECT_EQ( ConsensusManager::New( nullptr,
+                                          db_,
+                                          pubs_,
+                                          [account]( std::vector<uint8_t> payload )
+                                          { return account->Sign( std::move( payload ) ); },
+                                          account->GetAddress() ),
+                   nullptr );
+        EXPECT_EQ( ConsensusManager::New( registry,
+                                          nullptr,
+                                          pubs_,
+                                          [account]( std::vector<uint8_t> payload )
+                                          { return account->Sign( std::move( payload ) ); },
+                                          account->GetAddress() ),
+                   nullptr );
+        EXPECT_EQ( ConsensusManager::New( registry,
+                                          db_,
+                                          nullptr,
+                                          [account]( std::vector<uint8_t> payload )
+                                          { return account->Sign( std::move( payload ) ); },
+                                          account->GetAddress() ),
+                   nullptr );
+        EXPECT_EQ( ConsensusManager::New( registry, db_, pubs_, nullptr, account->GetAddress() ), nullptr );
+        EXPECT_EQ( ConsensusManager::New( registry,
+                                          db_,
+                                          pubs_,
+                                          [account]( std::vector<uint8_t> payload )
+                                          { return account->Sign( std::move( payload ) ); },
+                                          "" ),
+                   nullptr );
+    }
+
+    TEST_F( ConsensusCertificateTest, RegisterAndUnregisterHandlers )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager  = MakeManager( registry, db_, pubs_, account );
+
+        EXPECT_TRUE( manager->RegisterSubjectHandler( SubjectType::SUBJECT_NONCE,
+                                                      []( const ConsensusManager::Subject & )
+                                                      { return ConsensusManager::SubjectCheck::Approve; } ) );
+        EXPECT_TRUE( manager->RegisterCertificateHandler( SubjectType::SUBJECT_NONCE,
+                                                          []( const std::string &,
+                                                              const ConsensusManager::Certificate & )
+                                                          { } ) );
+        EXPECT_TRUE( manager->subject_handlers_.find( static_cast<int>( SubjectType::SUBJECT_NONCE ) ) !=
+                     manager->subject_handlers_.end() );
+        EXPECT_TRUE( manager->certificate_subject_handlers_.find( static_cast<int>( SubjectType::SUBJECT_NONCE ) ) !=
+                     manager->certificate_subject_handlers_.end() );
+
+        manager->UnregisterSubjectHandler( SubjectType::SUBJECT_NONCE );
+        manager->UnregisterCertificateHandler( SubjectType::SUBJECT_NONCE );
+        EXPECT_TRUE( manager->subject_handlers_.find( static_cast<int>( SubjectType::SUBJECT_NONCE ) ) ==
+                     manager->subject_handlers_.end() );
+        EXPECT_TRUE( manager->certificate_subject_handlers_.find( static_cast<int>( SubjectType::SUBJECT_NONCE ) ) ==
+                     manager->certificate_subject_handlers_.end() );
+    }
+
+    TEST_F( ConsensusCertificateTest, CreateVoteBundleAndSigningBytes )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager  = MakeManager( registry, db_, pubs_, account );
+
+        auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(), 2, "0x0a0b0c" );
+        ASSERT_TRUE( subject_result.has_value() );
+
+        auto proposal_result = manager->CreateProposal( subject_result.value(),
+                                                        account->GetAddress(),
+                                                        registry->GetRegistryCid(),
+                                                        registry->GetRegistryEpoch() );
+        ASSERT_TRUE( proposal_result.has_value() );
+
+        auto vote_result = manager->CreateVote( proposal_result.value().proposal_id(),
+                                                account->GetAddress(),
+                                                true,
+                                                [account]( std::vector<uint8_t> payload )
+                                                { return account->Sign( std::move( payload ) ); } );
+        ASSERT_TRUE( vote_result.has_value() );
+
+        auto bundle_result = manager->CreateVoteBundle( proposal_result.value().proposal_id(),
+                                                        account->GetAddress(),
+                                                        { vote_result.value() },
+                                                        [account]( std::vector<uint8_t> payload )
+                                                        { return account->Sign( std::move( payload ) ); } );
+        ASSERT_TRUE( bundle_result.has_value() );
+        EXPECT_EQ( bundle_result.value().votes_size(), 1 );
+
+        auto proposal_bytes = ConsensusManager::ProposalSigningBytes( proposal_result.value() );
+        ASSERT_TRUE( proposal_bytes.has_value() );
+        EXPECT_FALSE( proposal_bytes.value().empty() );
+
+        auto vote_bytes = ConsensusManager::VoteSigningBytes( vote_result.value() );
+        ASSERT_TRUE( vote_bytes.has_value() );
+        EXPECT_FALSE( vote_bytes.value().empty() );
+
+        auto bundle_bytes = ConsensusManager::VoteBundleSigningBytes( bundle_result.value() );
+        ASSERT_TRUE( bundle_bytes.has_value() );
+        EXPECT_FALSE( bundle_bytes.value().empty() );
+    }
+
+    TEST_F( ConsensusCertificateTest, CreateTaskResultSubjectAndComputeSubjectId )
+    {
+        auto account = MakeAccount( getPathString() );
+        auto subject_result = ConsensusManager::CreateTaskResultSubject( account->GetAddress(),
+                                                                         "escrow/path",
+                                                                         "0xdeadbeef",
+                                                                         12 );
+        ASSERT_TRUE( subject_result.has_value() );
+        EXPECT_FALSE( subject_result.value().subject_id().empty() );
+
+        auto computed = ConsensusManager::ComputeSubjectId( subject_result.value() );
+        ASSERT_TRUE( computed.has_value() );
+        EXPECT_EQ( computed.value(), subject_result.value().subject_id() );
+    }
+
+    TEST_F( ConsensusCertificateTest, TallyVotesWithRegistry )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto account2 = MakeAccount( getPathString() + "/acc2", kTestPrivateKey2 );
+        auto registry = MakeRegistry( db_, account );
+        auto manager  = MakeManager( registry, db_, pubs_, account );
+
+        auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(), 3, "0x111213" );
+        ASSERT_TRUE( subject_result.has_value() );
+
+        auto proposal_result = manager->CreateProposal( subject_result.value(),
+                                                        account->GetAddress(),
+                                                        registry->GetRegistryCid(),
+                                                        registry->GetRegistryEpoch() );
+        ASSERT_TRUE( proposal_result.has_value() );
+
+        auto vote_result = manager->CreateVote( proposal_result.value().proposal_id(),
+                                                account->GetAddress(),
+                                                true,
+                                                [account]( std::vector<uint8_t> payload )
+                                                { return account->Sign( std::move( payload ) ); } );
+        ASSERT_TRUE( vote_result.has_value() );
+
+        auto vote2_result = manager->CreateVote( proposal_result.value().proposal_id(),
+                                                 account2->GetAddress(),
+                                                 true,
+                                                 [account2]( std::vector<uint8_t> payload )
+                                                 { return account2->Sign( std::move( payload ) ); } );
+        ASSERT_TRUE( vote2_result.has_value() );
+
+        auto registry_result = registry->LoadRegistry();
+        ASSERT_TRUE( registry_result.has_value() );
+
+        auto tally = manager->TallyVotes( proposal_result.value(),
+                                          { vote_result.value(), vote2_result.value() },
+                                          registry_result.value(),
+                                          registry->GetRegistryCid() );
+        ASSERT_TRUE( tally.has_value() );
+        EXPECT_TRUE( tally.value().has_quorum );
+        EXPECT_EQ( tally.value().total_weight, ValidatorRegistry::TotalWeight( registry_result.value() ) );
+        auto *validator = ValidatorRegistry::FindValidator( registry_result.value(), account->GetAddress() );
+        ASSERT_TRUE( validator );
+        EXPECT_EQ( tally.value().approved_weight, validator->weight() );
+
+        auto tally_mismatch = manager->TallyVotes( proposal_result.value(),
+                                                   { vote_result.value() },
+                                                   registry_result.value(),
+                                                   "bad-cid" );
+        EXPECT_TRUE( tally_mismatch.has_error() );
+    }
+
+    TEST_F( ConsensusCertificateTest, SubmitProposalVoteCertificateAndProcess )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager  = MakeManager( registry, db_, pubs_, account );
+
+        auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(), 4, "0x222324" );
+        ASSERT_TRUE( subject_result.has_value() );
+
+        auto proposal_result = manager->CreateProposal( subject_result.value(),
+                                                        account->GetAddress(),
+                                                        registry->GetRegistryCid(),
+                                                        registry->GetRegistryEpoch() );
+        ASSERT_TRUE( proposal_result.has_value() );
+
+        manager->RegisterSubjectHandler( SubjectType::SUBJECT_NONCE,
+                                         []( const ConsensusManager::Subject & )
+                                         { return ConsensusManager::SubjectCheck::Approve; } );
+
+        auto submit_prop = manager->SubmitProposal( proposal_result.value(), false );
+        EXPECT_FALSE( submit_prop.has_error() );
+        EXPECT_TRUE( manager->proposals_.find( proposal_result.value().proposal_id() ) != manager->proposals_.end() );
+
+        auto vote_result = manager->CreateVote( proposal_result.value().proposal_id(),
+                                                account->GetAddress(),
+                                                true,
+                                                [account]( std::vector<uint8_t> payload )
+                                                { return account->Sign( std::move( payload ) ); } );
+        ASSERT_TRUE( vote_result.has_value() );
+
+        auto submit_vote = manager->SubmitVote( vote_result.value() );
+        EXPECT_FALSE( submit_vote.has_error() );
+
+        manager->HandleProposal( proposal_result.value() );
+        manager->HandleVote( vote_result.value() );
+        EXPECT_TRUE( manager->proposals_.at( proposal_result.value().proposal_id() ).quorum_reached );
+
+        manager->ProcessCertificates();
+        EXPECT_TRUE( manager->proposals_.find( proposal_result.value().proposal_id() ) == manager->proposals_.end() );
+    }
+
+    TEST_F( ConsensusCertificateTest, ResumeProposalHandlingFromPending )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager  = MakeManager( registry, db_, pubs_, account );
+
+        auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(), 5, "0x333435" );
+        ASSERT_TRUE( subject_result.has_value() );
+
+        auto proposal_result = manager->CreateProposal( subject_result.value(),
+                                                        account->GetAddress(),
+                                                        registry->GetRegistryCid(),
+                                                        registry->GetRegistryEpoch() );
+        ASSERT_TRUE( proposal_result.has_value() );
+
+        manager->RegisterSubjectHandler( SubjectType::SUBJECT_NONCE,
+                                         []( const ConsensusManager::Subject & )
+                                         { return ConsensusManager::SubjectCheck::Pending; } );
+        manager->HandleProposal( proposal_result.value() );
+        EXPECT_TRUE( manager->pending_proposals_.find( proposal_result.value().proposal_id() ) !=
+                     manager->pending_proposals_.end() );
+
+        manager->RegisterSubjectHandler( SubjectType::SUBJECT_NONCE,
+                                         []( const ConsensusManager::Subject & )
+                                         { return ConsensusManager::SubjectCheck::Approve; } );
+
+        auto resume = manager->ResumeProposalHandling( subject_result.value().nonce().tx_hash() );
+        EXPECT_FALSE( resume.has_error() );
+        EXPECT_TRUE( manager->pending_proposals_.find( proposal_result.value().proposal_id() ) ==
+                     manager->pending_proposals_.end() );
+        EXPECT_TRUE( manager->proposals_.find( proposal_result.value().proposal_id() ) != manager->proposals_.end() );
+    }
+
+    TEST_F( ConsensusCertificateTest, SubmitCertificateStoresInCrdt )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager  = MakeManager( registry, db_, pubs_, account );
+
+        std::string tx_hash = "0x444546";
+        auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(), 6, tx_hash );
+        ASSERT_TRUE( subject_result.has_value() );
+
+        auto proposal_result = manager->CreateProposal( subject_result.value(),
+                                                        account->GetAddress(),
+                                                        registry->GetRegistryCid(),
+                                                        registry->GetRegistryEpoch() );
+        ASSERT_TRUE( proposal_result.has_value() );
+
+        auto vote_result = manager->CreateVote( proposal_result.value().proposal_id(),
+                                                account->GetAddress(),
+                                                true,
+                                                [account]( std::vector<uint8_t> payload )
+                                                { return account->Sign( std::move( payload ) ); } );
+        ASSERT_TRUE( vote_result.has_value() );
+
+        auto cert_result = manager->CreateCertificate( proposal_result.value(), { vote_result.value() } );
+        ASSERT_TRUE( cert_result.has_value() );
+
+        std::atomic<bool> handler_called{ false };
+        manager->RegisterCertificateHandler(
+            SubjectType::SUBJECT_NONCE,
+            [&handler_called, &tx_hash]( const std::string &subject_hash, const ConsensusManager::Certificate & )
+            {
+                if ( subject_hash == tx_hash )
+                {
+                    handler_called.store( true );
+                }
+            } );
+
+        auto submit_result = manager->SubmitCertificate( cert_result.value() );
+        EXPECT_FALSE( submit_result.has_error() );
+
+        crdt::HierarchicalKey cert_key( "/cert/" + tx_hash );
+        auto cert_get = db_->Get( cert_key );
+        EXPECT_TRUE( cert_get.has_value() );
+
+        ASSERT_WAIT_FOR_CONDITION(
+            [&handler_called]() { return handler_called.load(); },
+            std::chrono::milliseconds( 2000 ),
+            "certificate handler",
+            nullptr );
     }
 } // namespace sgns::test
