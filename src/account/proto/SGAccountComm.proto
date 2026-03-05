@@ -10,6 +10,9 @@ message AccountMessage {
     SignedBlockResponse block_response = 4;
     SignedHeadRequest head_request = 5;
     SignedBlockCidRequest block_cid_request = 6;
+    SignedUTXORequest utxo_request = 7;
+    SignedUTXOResponse utxo_response = 8;
+    SignedTransactionRequest transaction_request = 9;
   }
 }
 
@@ -63,6 +66,18 @@ message SignedBlockCidRequest {
   bytes signature = 2;
 }
 
+message TransactionRequest {
+  string requester_address = 1;
+  uint64 request_id = 2;
+  uint64 timestamp = 3;
+  string tx_hash = 4;
+}
+
+message SignedTransactionRequest {
+  TransactionRequest data = 1;
+  bytes signature = 2;
+}
+
 
 message BlockInfo {
   bytes cid = 1;
@@ -94,5 +109,32 @@ message HeadRequest {
 
 message SignedHeadRequest {
   HeadRequest data = 1;
+  bytes signature = 2;
+}
+
+message UTXORequest {
+  string requester_address = 1;
+  string target_address = 2;
+  uint64 request_id = 3;
+  uint64 timestamp = 4;
+}
+
+message SignedUTXORequest {
+  UTXORequest data = 1;
+  bytes signature = 2;
+}
+
+message UTXOResponse {
+  string responder_address = 1;
+  string requester_address = 2;
+  string target_address = 3;
+  uint64 request_id = 4;
+  uint64 timestamp = 5;
+  repeated string utxos = 6;
+  bool has_utxos = 7;
+}
+
+message SignedUTXOResponse {
+  UTXOResponse data = 1;
   bytes signature = 2;
 }

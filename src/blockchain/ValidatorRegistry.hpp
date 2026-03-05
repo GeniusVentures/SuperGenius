@@ -72,6 +72,7 @@ namespace sgns::blockchain
                                                               std::function<std::vector<uint8_t>( std::vector<uint8_t> )> sign );
         outcome::result<Registry>       LoadRegistry() const;
         outcome::result<RegistryUpdate> LoadRegistryUpdate() const;
+        outcome::result<std::optional<uint64_t>> GetValidatorWeight( const std::string &validator_id ) const;
         bool                            RegisterFilter();
 
         outcome::result<std::vector<uint8_t>> SerializeRegistry( const Registry &registry ) const;

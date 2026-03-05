@@ -17,6 +17,8 @@
 #include <functional>
 #include <optional>
 #include <set>
+#include <storage/rocksdb/rocksdb.hpp>
+#include <string_view>
 
 #include <boost/multiprecision/cpp_int.hpp>
 
@@ -45,6 +47,7 @@ namespace sgns
         class GlobalDB;
     }
     class AccountMessenger;
+    class TransactionManager;
 
     class GeniusAccount : public std::enable_shared_from_this<GeniusAccount>
     {
@@ -103,7 +106,12 @@ namespace sgns
          * @param[in]   global_db GlobalDB instance used to store fetched block CIDs.
          * @return      true if successfully configured, false otherwise.
          */
-        bool ConfigureMessengerHandlers( std::shared_ptr<crdt::GlobalDB> global_db );
+        bool ConfigureDatabaseDependencies( std::shared_ptr<crdt::GlobalDB> global_db );
+
+        /**
+         * @brief       Clears handlers and methods set by ConfigureDatabaseDependencies.
+         */
+        void DeconfigureDatabaseDependencies();
 
         /**
          * @brief       Destroy the Genius Account object
@@ -190,6 +198,13 @@ namespace sgns
         outcome::result<uint64_t> GetConfirmedNonce( uint64_t timeout_ms ) const;
 
         /**
+         * @brief       Fetch the latest nonce from the network without relying on cached values
+         * @param[in]   timeout_ms Timeout in miliseconds to get the confirmed nonce
+         * @return      Error if no response received, optional nonce if success
+         */
+        outcome::result<std::optional<uint64_t>> FetchNetworkNonce( uint64_t timeout_ms ) const;
+
+        /**
          * @brief       Get the next available nonce without reserving it
          * @return      The nonce that would be assigned to the next transaction
          */
@@ -217,6 +232,20 @@ namespace sgns
             uint64_t                                            timeout_ms,
             const std::string                                  &cid,
             std::function<void( outcome::result<std::string> )> callback = nullptr ) const;
+        outcome::result<void> RequestTransaction(
+            uint64_t                                            timeout_ms,
+            const std::string                                  &tx_hash,
+            std::function<void( outcome::result<std::string> )> callback = nullptr ) const;
+        /**
+         * @brief       Request UTXOs for a specific address and return the selected response
+         * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
+         * @param[in]   address Address to request UTXOs for
+         * @param[in]   silent_time_ms Time to wait for subsequent responses after first one
+         * @return      Set of UTXO strings based on selection criteria, or error otherwise
+         */
+        outcome::result<std::unordered_set<std::string>> RequestUTXOs( uint64_t           timeout_ms,
+                                                                       const std::string &address,
+                                                                       uint64_t           silent_time_ms = 150 ) const;
         /**
          * @brief       Request heads broadcast for specific topics
          * @param[in]   topics Vector of topic names to request heads for
@@ -232,11 +261,21 @@ namespace sgns
 
     protected:
         friend class Blockchain;
+        friend class TransactionManager;
         void SetGetBlockChainCIDMethod(
             std::function<outcome::result<std::string>( uint8_t, const std::string & )> method );
         void ClearGetBlockChainCIDMethod();
         void SetHasBlockCidMethod( std::function<outcome::result<bool>( const std::string & )> method );
         void ClearHasBlockCidMethod();
+        void SetGetUTXOsMethod(
+            std::function<outcome::result<std::vector<std::string>>( const std::string & )> method );
+        void ClearGetUTXOsMethod();
+        void SetGetValidatorWeightMethod(
+            std::function<outcome::result<std::optional<uint64_t>>( const std::string & )> method );
+        void ClearGetValidatorWeightMethod();
+        void SetGetTransactionCIDMethod( std::function<outcome::result<std::string>( const std::string & )> method );
+        void ClearGetTransactionCIDMethod();
+        void SetNonceStore( std::shared_ptr<storage::rocksdb> db );
 
     private:
         static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes
@@ -271,6 +310,18 @@ namespace sgns
         std::function<outcome::result<std::string>( uint8_t, const std::string & )>
             get_cids_method_; ///< Function to get blockchain CIDs
         std::function<outcome::result<bool>( const std::string & )> has_cid_method_; ///< Function to check CID presence
+        std::function<outcome::result<std::vector<std::string>>( const std::string & )>
+            get_utxos_method_; ///< Function to get UTXOs for an address
+        std::function<outcome::result<std::optional<uint64_t>>( const std::string & )>
+            get_validator_weight_method_; ///< Function to get validator weight for an address
+        std::function<outcome::result<std::string>( const std::string & )>
+                                          get_transaction_cid_method_; ///< Function to get transaction CID by hash
+        std::shared_ptr<storage::rocksdb> nonce_db_;                   ///< RocksDB for nonce persistence
+
+        static constexpr std::string_view NONCE_KEY_PREFIX = "gnus-confirmed-nonce-";
+
+        void LoadConfirmedNonces();
+        void PersistConfirmedNonce( const std::string &address, uint64_t nonce );
 
         uint64_t GetNextNonceLocked() const;
 

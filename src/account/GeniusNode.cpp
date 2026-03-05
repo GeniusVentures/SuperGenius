@@ -287,7 +287,7 @@ namespace sgns
                     node_logger_->error( "GlobalDB initialization error" );
                     return;
                 }
-                account_->ConfigureMessengerHandlers( tx_globaldb_ );
+                account_->ConfigureDatabaseDependencies( tx_globaldb_ );
                 tx_globaldb_->AddListenTopic( processing_channel_topic_ );
                 StateTransition( NodeState::INITIALIZING_PROCESSING );
                 break;
@@ -364,6 +364,7 @@ namespace sgns
                                     strong->node_logger_->error( "Error starting blockchain: {}",
                                                                  result.error().message() );
                                     strong->node_logger_->info( "Scheduling blockchain retry after failure" );
+                                    strong->account_->RequestHeads({std::string(blockchain::ValidatorRegistry::ValidatorTopic())});
                                     strong->ScheduleBlockchainRetry();
                                     return;
                                 }
@@ -384,7 +385,22 @@ namespace sgns
                                     strong->blockchain_->SetFullNodeMode();
                                 }
 
-                                strong->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
+                                // Move transaction initialization off the AccountMessenger worker thread.
+                                boost::asio::post( *strong->io_, [weak_self]()
+                                {
+                                    if ( auto strong = weak_self.lock() )
+                                    {
+                                        auto current_state = strong->state_.load();
+                                        if ( current_state != NodeState::INITIALIZING_BLOCKCHAIN )
+                                        {
+                                            strong->node_logger_->debug(
+                                                "Skipping transaction initialization, unexpected state: {}",
+                                                NodeStateToString( current_state ) );
+                                            return;
+                                        }
+                                        strong->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
+                                    }
+                                } );
                             }
                         } );
                 }
@@ -459,7 +475,7 @@ namespace sgns
         // Debug mode
         node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::debug );
         auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::debug );
-        auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::err );
+        auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::debug );
         auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
         auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
         auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
@@ -479,8 +495,8 @@ namespace sgns
         auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
         auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
-        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
-        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::debug );
+        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::debug );
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
         auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::trace );
         auto loggerValidator        = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::debug );

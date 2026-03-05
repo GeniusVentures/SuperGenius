@@ -12,6 +12,7 @@
 #include <memory>
 #include <deque>
 #include <cstdint>
+#include <chrono>
 #include <unordered_map>
 #include <unordered_set>
 #include <optional>
@@ -43,7 +44,7 @@ namespace sgns
         static constexpr std::string_view GNUS_FULL_NODES_TOPIC        = "SuperGNUSNode.TestNet.FullNode";
         static constexpr std::string_view GNUS_FULL_NODES_TOPIC_LEGACY = "SuperGNUSNode.TestNet.FullNode.963";
         static constexpr uint64_t         NONCE_REQUEST_TIMEOUT_MS =
-            10000; ///< Unified timeout for all nonce requests (10 seconds)
+            5000; ///< Unified timeout for all nonce requests (10 seconds)
 
         /**
          * @brief       State of the Transaction Manager
@@ -225,7 +226,9 @@ namespace sgns
         outcome::result<void> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> RevertTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
-        void InitNonce( uint64_t timeout_ms );
+        void InitializeUTXOs();
+        void InitTransactions();
+        bool CheckNonce() const;
         void SyncNonce();
 
         /**
@@ -298,6 +301,11 @@ namespace sgns
 
         std::chrono::steady_clock::time_point last_loop_time_;
 
+        std::mutex                            missing_tx_mutex_;
+        std::unordered_set<std::string>       missing_tx_hashes_;
+        std::chrono::steady_clock::time_point last_init_tx_request_time_{};
+        static constexpr uint64_t             k_init_tx_request_cooldown_ms = 5000;
+
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
@@ -336,14 +344,18 @@ namespace sgns
         outcome::result<void> RemoveTransactionFromProcessedMaps( const std::string &transaction_key,
                                                                   bool               delete_from_crdt = false );
         outcome::result<void> AddTransactionToProcessedMaps( crdt::CRDTCallbackManager::NewDataPair new_data );
+        outcome::result<void> StoreTransactionCID( const std::string &key, const std::string &cid );
 
         void ProcessDeletion( std::string deleted_key );
         void ProcessNewData( crdt::CRDTCallbackManager::NewDataPair new_data );
 
-        void NewElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data );
+        void NewElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data, std::string cid );
         void DeleteElementCallback( std::string deleted_key );
 
         void ChangeState( State new_state );
+
+    public:
+        outcome::result<std::string> GetTransactionCID( const std::string &tx_hash ) const;
     };
 }
 
