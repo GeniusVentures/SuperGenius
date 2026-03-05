@@ -989,6 +989,8 @@ namespace sgns
             }
             catch ( const std::exception & )
             {
+                genius_account_logger()->error( "Failed to parse nonce for {}: ", address.substr( 0, 8 ),
+                                                val_buf.toString() );
             }
         }
 

@@ -1343,17 +1343,12 @@ namespace sgns
             std::vector<std::string> utxos; // canonical sorted list
         };
 
-        auto make_key = []( bool has_utxos, const std::vector<std::string> &utxos ) -> std::string
+        auto make_key = []( const std::vector<std::string> &utxos ) -> std::string
         {
-            if ( !has_utxos )
-            {
-                return "none";
-            }
             std::string key;
             for ( const auto &u : utxos )
             {
                 key.append( u );
-                key.push_back( '\x1f' );
             }
             return key;
         };
@@ -1404,22 +1399,24 @@ namespace sgns
 
             const uint64_t weight = any_validator ? entry.validator_weight.value() : 1;
 
-            std::vector<std::string> canonical_utxos;
-            if ( entry.data.has_utxos )
+            if ( !entry.data.has_utxos )
             {
-                canonical_utxos.reserve( entry.data.utxos.size() );
-                for ( const auto &u : entry.data.utxos )
-                {
-                    canonical_utxos.push_back( u );
-                }
-                std::sort( canonical_utxos.begin(), canonical_utxos.end() );
+                continue;
             }
 
-            const auto key  = make_key( entry.data.has_utxos, canonical_utxos );
+            std::vector<std::string> canonical_utxos;
+            canonical_utxos.reserve( entry.data.utxos.size() );
+            for ( const auto &u : entry.data.utxos )
+            {
+                canonical_utxos.push_back( u );
+            }
+            std::sort( canonical_utxos.begin(), canonical_utxos.end() );
+
+            const auto key  = make_key( canonical_utxos );
             auto      &vote = votes[key];
             if ( vote.count == 0 )
             {
-                vote.has_utxos = entry.data.has_utxos;
+                vote.has_utxos = true;
                 vote.utxos     = canonical_utxos;
             }
             vote.total_weight += weight;
