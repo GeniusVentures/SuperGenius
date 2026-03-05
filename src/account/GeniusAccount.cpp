@@ -702,7 +702,7 @@ namespace sgns
             genius_account_logger()->debug( "Nonce replied with value {}", result.value() );
             return result.value();
         }
-        else if ( result.error() == AccountMessenger::Error::RESPONSE_WITHOUT_NONCE )
+        if ( result.error() == AccountMessenger::Error::RESPONSE_WITHOUT_NONCE )
         {
             genius_account_logger()->debug( "Network didn't answer nonce request" );
             return outcome::success( std::nullopt );
