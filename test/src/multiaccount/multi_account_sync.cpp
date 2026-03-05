@@ -343,6 +343,10 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
         transfer1_res.value(),
         std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
 
+    test::assertWaitForCondition(
+        [&]() { return node_same_addr_2->GetBalance() == ( balance_node1_after_mint - 10000000000 ); },
+        std::chrono::milliseconds( 50000 ),
+        "node_same_addr_2 balance not synced" );
     test::assertWaitForCondition( [&]() { return node_same_addr_2->GetBalance() == node_same_addr_1->GetBalance(); },
                                   std::chrono::milliseconds( 50000 ),
                                   "node_same_addr_2 balance not synced" );
