@@ -112,7 +112,7 @@ namespace sgns
                                                        bool                    full_node )
     {
         std::shared_ptr<GeniusAccount> instance;
-
+        genius_account_logger()->set_level( spdlog::level::trace );
         if ( auto response = GenerateGeniusAddress( eth_private_key, base_path ); response.has_value() )
         {
             auto [storage, maybe_address]                 = response.value();
@@ -361,22 +361,22 @@ namespace sgns
         constexpr std::string_view FILE_NAME = "secure_storage_id";
 
         // Convert to absolute path to handle relative paths properly
-        base_path = boost::filesystem::absolute( base_path );
+        auto base_directory = boost::filesystem::absolute( base_path );
 
-        boost::filesystem::create_directories( base_path );
+        boost::filesystem::create_directories( base_directory );
 
         // Use canonical() after directory exists to get fully normalized path
-        base_path  = boost::filesystem::canonical( base_path );
-        base_path /= FILE_NAME;
+        base_directory = boost::filesystem::canonical( base_directory );
+        auto storage_id_path = base_directory / FILE_NAME;
 
-        genius_account_logger()->info( "Secure storage ID path: {}", base_path.string() );
+        genius_account_logger()->info( "Secure storage ID path: {}", storage_id_path.string() );
 
         // Try to load existing storage
         std::shared_ptr<ISecureStorage>         storage;
         nil::crypto3::multiprecision::uint256_t key_seed;
         bool                                    key_seed_loaded = false;
 
-        if ( std::ifstream file( base_path.string() ); file.is_open() )
+        if ( std::ifstream file( storage_id_path.string() ); file.is_open() )
         {
             std::string public_key;
             file >> public_key;
@@ -389,7 +389,8 @@ namespace sgns
             genius_account_logger()->info( "Unhexed public key vector size: {}", vec.size() );
 
             // Create storage using the public key from the file
-            OUTCOME_TRY( auto storage, LoadSecureStorage( base_path, vec ) );
+            OUTCOME_TRY( auto loaded_storage, LoadSecureStorage( base_directory, vec ) );
+            storage = std::move( loaded_storage );
 
             if ( auto load_res = storage->Load( "sgns_key" ) )
             {
@@ -420,7 +421,41 @@ namespace sgns
         }
         else
         {
-            genius_account_logger()->debug( "Secure storage ID file does not exist, will create new one" );
+            genius_account_logger()->debug( "Secure storage ID file does not exist, trying legacy secure_storage.json" );
+
+            auto legacy_storage = std::make_shared<JSONSecureStorage>( base_directory.generic_string() + "/" );
+            if ( auto legacy_seed_res = legacy_storage->Load( "sgns_key" ) )
+            {
+                key_seed = nil::crypto3::multiprecision::uint256_t( legacy_seed_res.value() );
+
+                ethereum::EthereumKeyGenerator temp_eth_key( key_seed );
+                auto                           pub_key = temp_eth_key.GetEntirePubValue();
+
+                OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( pub_key ) );
+                OUTCOME_TRY( auto loaded_storage, LoadSecureStorage( base_directory, vec ) );
+                storage = std::move( loaded_storage );
+
+                if ( auto load_res = storage->Load( "sgns_key" ) )
+                {
+                    key_seed        = nil::crypto3::multiprecision::uint256_t( load_res.value() );
+                    key_seed_loaded = true;
+                    genius_account_logger()->info( "Loaded key seed from legacy secure storage migration" );
+
+                    std::ofstream out_file( storage_id_path.string() );
+                    if ( out_file.is_open() )
+                    {
+                        out_file << pub_key << std::endl;
+                    }
+                    else
+                    {
+                        genius_account_logger()->warn( "Could not write secure_storage_id after legacy migration" );
+                    }
+                }
+                else
+                {
+                    genius_account_logger()->warn( "Legacy seed found but could not be loaded from secure storage" );
+                }
+            }
         }
 
         // Generate key_seed from ethereum private key if not loaded
@@ -457,7 +492,7 @@ namespace sgns
             BOOST_OUTCOME_TRYV2( auto &&, storage->Save( "sgns_key", key_seed.str() ) );
 
             // Write public key to file
-            std::ofstream out_file( base_path.string() );
+            std::ofstream out_file( storage_id_path.string() );
             if ( !out_file.is_open() )
             {
                 return outcome::failure( std::errc::bad_file_descriptor );
