@@ -1,21 +1,26 @@
 #include "GeniusAccount.hpp"
+
 #include <nil/crypto3/algebra/marshalling.hpp>
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
 #include <nil/crypto3/pubkey/algorithm/verify.hpp>
-#include "WalletCore/Hash.h"
-#include "local_secure_storage/ISecureStorage.hpp"
-#include "singleton/CComponentFactory.hpp"
-#include "WalletCore/PrivateKey.h"
-#include "crypto/hasher/hasher_impl.hpp"
-#include "ipfs_pubsub/gossip_pubsub.hpp"
+#include <openssl/rand.h>
+#include <WalletCore/Hash.h>
+#include <WalletCore/PrivateKey.h>
+#include <ipfs_pubsub/gossip_pubsub.hpp>
+
+#include "base/hexutil.hpp"
+#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
+#include "local_secure_storage/SecureStorage.hpp"
+#include "outcome/outcome.hpp"
 #include "account/AccountMessenger.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
-#include "local_secure_storage/SecureStorage.hpp"
 #include "primitives/cid/cid.hpp"
 
 namespace
 {
+    using namespace sgns;
+
     std::array<uint8_t, 32> get_elgamal_pubkey()
     {
         const auto              elgamal_key = KeyGenerator::ElGamal( 0x1234_cppui256 ).GetPublicKey().public_key_value;
@@ -23,6 +28,69 @@ namespace
         export_bits( elgamal_key, exported.begin(), 8, false );
 
         return exported;
+    }
+
+    base::Logger genius_account_logger()
+    {
+        // Always call base::createLogger to get the current logger
+        // This will return existing logger or create new one as needed
+        return base::createLogger( "GeniusAccount" );
+    }
+
+    outcome::result<std::shared_ptr<ISecureStorage>>
+
+    LoadSecureStorage( const boost::filesystem::path &base_path, const std::vector<uint8_t> &public_key )
+    {
+        constexpr std::string_view PREFIX = "SGNS";
+
+        auto secure_storage          = std::make_shared<SecureStorageImpl>( std::string( PREFIX ) +
+                                                                   libp2p::multi::detail::encodeBase58( public_key ) );
+        auto current_secure_storage_ = secure_storage->LoadJSON();
+        if ( current_secure_storage_.has_value() &&
+             ( ( current_secure_storage_.value().IsArray() && !current_secure_storage_.value().Empty() ) ||
+               ( current_secure_storage_.value().IsObject() && !current_secure_storage_.value().ObjectEmpty() ) ) )
+        {
+            genius_account_logger()->debug( "Secure storage already migrated, returning it" );
+            return secure_storage;
+        }
+
+        auto json_storage_ = std::make_shared<JSONSecureStorage>( base_path.generic_string() );
+        auto old_json      = json_storage_->LoadJSON();
+
+        if ( old_json.has_error() )
+        {
+            if ( old_json.error() == std::errc::no_such_file_or_directory )
+            {
+                genius_account_logger()->debug( "There were no legacy JSON storage file to migrate from" );
+            }
+            else
+            {
+                genius_account_logger()->error( "Could not load legacy JSON storage at {}: {}",
+                                                base_path.c_str(),
+                                                old_json.error().message() );
+            }
+            return secure_storage;
+        }
+
+        auto maybe_field = old_json.value().FindMember( "GeniusAccount" );
+        if ( maybe_field == old_json.value().MemberEnd() || !maybe_field->value.IsObject() )
+        {
+            genius_account_logger()->error( "Failed to find GeniusAccount member in old JSON storage" );
+            return secure_storage;
+        }
+
+        rj::Document new_doc;
+        new_doc.CopyFrom( maybe_field->value, new_doc.GetAllocator() );
+
+        if ( auto res = secure_storage->SaveJSON( std::move( new_doc ) ); res.has_error() )
+        {
+            genius_account_logger()->error( "Failed to migrate JSON secure storage" );
+            return res.error();
+        }
+
+        genius_account_logger()->debug( "Sucessfully migrated JSON secure storage" );
+
+        return secure_storage;
     }
 }
 
@@ -38,10 +106,10 @@ namespace sgns
 
     const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED = get_elgamal_pubkey();
 
-    std::shared_ptr<GeniusAccount> GeniusAccount::New( TokenID               token_id,
-                                                       const char           *eth_private_key,
+    std::shared_ptr<GeniusAccount> GeniusAccount::New( TokenID                 token_id,
+                                                       const char             *eth_private_key,
                                                        boost::filesystem::path base_path,
-                                                       bool                  full_node )
+                                                       bool                    full_node )
     {
         std::shared_ptr<GeniusAccount> instance;
 
@@ -158,8 +226,7 @@ namespace sgns
                 } );
 
             messenger_->RegisterHeadRequestHandler(
-                [weak_globaldb = std::weak_ptr<crdt::GlobalDB>( global_db )](
-                    const std::set<std::string> &topics )
+                [weak_globaldb = std::weak_ptr<crdt::GlobalDB>( global_db )]( const std::set<std::string> &topics )
                 {
                     if ( auto globaldb = weak_globaldb.lock() )
                     {
@@ -297,13 +364,13 @@ namespace sgns
         base_path = boost::filesystem::absolute( base_path );
 
         boost::filesystem::create_directories( base_path );
-        
+
         // Use canonical() after directory exists to get fully normalized path
-        base_path = boost::filesystem::canonical( base_path );
+        base_path  = boost::filesystem::canonical( base_path );
         base_path /= FILE_NAME;
-        
+
         genius_account_logger()->info( "Secure storage ID path: {}", base_path.string() );
-        
+
         // Try to load existing storage
         std::shared_ptr<ISecureStorage>         storage;
         nil::crypto3::multiprecision::uint256_t key_seed;
@@ -313,27 +380,26 @@ namespace sgns
         {
             std::string public_key;
             file >> public_key;
-            genius_account_logger()->info( "Loaded public key from file: {} (length: {})", 
-                                          public_key.substr( 0, 16 ) + "...", 
-                                          public_key.length() );
+            genius_account_logger()->info( "Loaded public key from file: {} (length: {})",
+                                           public_key.substr( 0, 16 ) + "...",
+                                           public_key.length() );
 
             OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( public_key ) );
-            
+
             genius_account_logger()->info( "Unhexed public key vector size: {}", vec.size() );
 
             // Create storage using the public key from the file
-            storage = std::make_shared<SecureStorageImpl>( std::string( PREFIX ) +
-                                                           libp2p::multi::detail::encodeBase58( vec ) );
+            OUTCOME_TRY( auto storage, LoadSecureStorage( base_path, vec ) );
 
             if ( auto load_res = storage->Load( "sgns_key" ) )
             {
                 genius_account_logger()->info( "Successfully loaded key_seed from storage" );
-                key_seed        = nil::crypto3::multiprecision::uint256_t( load_res.value() );
-                
+                key_seed = nil::crypto3::multiprecision::uint256_t( load_res.value() );
+
                 // Validate that the loaded key_seed produces the same public key
                 ethereum::EthereumKeyGenerator temp_eth_key( key_seed );
-                auto regenerated_pub_key = temp_eth_key.GetEntirePubValue();
-                
+                auto                           regenerated_pub_key = temp_eth_key.GetEntirePubValue();
+
                 if ( regenerated_pub_key == public_key )
                 {
                     genius_account_logger()->info( "Validation successful: key_seed matches stored public key" );

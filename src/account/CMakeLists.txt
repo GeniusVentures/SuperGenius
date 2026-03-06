@@ -23,6 +23,7 @@ target_link_libraries(sgns_genius_account
     ipfs-pubsub
     PRIVATE
     secure_storage
+    json_secure_storage
     component_factory
     SGAccountCommProto
     ${WIN_API_LIBRARY}
@@ -63,7 +64,6 @@ add_library(genius_node
     Migration0_2_0To1_0_0.cpp
     Migration1_0_0To3_4_0.cpp
     Migration3_4_0To3_5_0.cpp
-    Migration3_5_0To3_5_1.cpp
     GeniusNode.cpp
 )
 
@@ -82,7 +82,6 @@ target_link_libraries(genius_node
     blockchain_genesis
 	ProcessingBase
     PRIVATE
-    json_secure_storage
     secure_storage
     component_factory
     block_header_repository
