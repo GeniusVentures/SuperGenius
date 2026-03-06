@@ -66,7 +66,7 @@ namespace
             else
             {
                 genius_account_logger()->error( "Could not load legacy JSON storage at {}: {}",
-                                                base_path.c_str(),
+                                                base_path.string(),
                                                 old_json.error().message() );
             }
             return secure_storage;
