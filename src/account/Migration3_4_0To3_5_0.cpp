@@ -139,7 +139,7 @@ namespace sgns
                         {
                             strong->logger_->error( "Error starting blockchain: {}", result.error().message() );
                             strong->account_->RequestHeads(
-                                { std::string( sgns::blockchain::ValidatorRegistry::ValidatorTopic() ) } );
+                                { std::string( sgns::ValidatorRegistry::ValidatorTopic() ) } );
                             strong->blockchain_status_.store( Status::ST_ERROR );
                             return;
                         }
