@@ -1,4 +1,4 @@
-#include "Migration3_5_1To3_6_0.hpp"
+#include "Migration3_5_0To3_6_0.hpp"
 
 #include "account/MigrationManager.hpp"
 #include "account/TransactionManager.hpp"
@@ -13,7 +13,7 @@
 
 namespace sgns
 {
-    Migration3_5_1To3_6_0::Migration3_5_1To3_6_0(
+    Migration3_5_0To3_6_0::Migration3_5_0To3_6_0(
         std::shared_ptr<boost::asio::io_context>                        ioContext,
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
@@ -31,17 +31,17 @@ namespace sgns
     {
     }
 
-    std::string Migration3_5_1To3_6_0::FromVersion() const
+    std::string Migration3_5_0To3_6_0::FromVersion() const
     {
         return "3.5.1";
     }
 
-    std::string Migration3_5_1To3_6_0::ToVersion() const
+    std::string Migration3_5_0To3_6_0::ToVersion() const
     {
         return "3.6.0";
     }
 
-    outcome::result<bool> Migration3_5_1To3_6_0::IsRequired() const
+    outcome::result<bool> Migration3_5_0To3_6_0::IsRequired() const
     {
         if ( !db_3_5_1_ )
         {
@@ -73,7 +73,7 @@ namespace sgns
         return true;
     }
 
-    outcome::result<void> Migration3_5_1To3_6_0::Init()
+    outcome::result<void> Migration3_5_0To3_6_0::Init()
     {
         OUTCOME_TRY( auto &&legacy_db, InitLegacyDb() );
         db_3_5_1_ = std::move( legacy_db );
@@ -85,7 +85,7 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> Migration3_5_1To3_6_0::Apply()
+    outcome::result<void> Migration3_5_0To3_6_0::Apply()
     {
         if ( !db_3_5_1_ )
         {
@@ -137,7 +137,7 @@ namespace sgns
                     logger_->error( "Can't fetch transaction for key {}", transaction_key );
                     continue;
                 }
-                auto tx = maybe_transaction.value();
+                auto& tx = maybe_transaction.value();
 
                 logger_->debug( "{}: Fetched transaction on {}", __func__, transaction_key );
                 if ( tx->GetHash().empty() )
@@ -199,7 +199,7 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> Migration3_5_1To3_6_0::ShutDown()
+    outcome::result<void> Migration3_5_0To3_6_0::ShutDown()
     {
         db_3_5_1_.reset();
         db_3_6_0_.reset();
@@ -207,7 +207,7 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration3_5_1To3_6_0::InitLegacyDb() const
+    outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration3_5_0To3_6_0::InitLegacyDb() const
     {
         static constexpr std::string_view GNUS_NETWORK_PATH_3_5_1 = "SuperGNUSNode.Node";
 
@@ -240,7 +240,7 @@ namespace sgns
         return std::move( maybe_db_3_5_1.value() );
     }
 
-    outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration3_5_1To3_6_0::InitTargetDb() const
+    outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration3_5_0To3_6_0::InitTargetDb() const
     {
         static constexpr std::string_view GNUS_NETWORK_PATH_3_6_0 = "SuperGNUSNode.Node";
 

@@ -27,7 +27,7 @@
 
 namespace sgns
 {
-    class Migration3_5_1To3_6_0;
+    class Migration3_5_0To3_6_0;
 }
 
 namespace sgns::blockchain
@@ -96,7 +96,7 @@ namespace sgns::blockchain
         }
 
     protected:
-        friend class sgns::Migration3_5_1To3_6_0;
+        friend class sgns::Migration3_5_0To3_6_0;
 
         static outcome::result<void> MigrateCids( const std::shared_ptr<crdt::GlobalDB> &old_db,
                                                   const std::shared_ptr<crdt::GlobalDB> &new_db );

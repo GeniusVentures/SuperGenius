@@ -1,22 +1,20 @@
 #include "GeniusAccount.hpp"
 
-#include <limits>
 #include <nil/crypto3/algebra/marshalling.hpp>
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
 #include <nil/crypto3/pubkey/algorithm/verify.hpp>
 #include <openssl/rand.h>
-#include <random>
-#include "WalletCore/Hash.h"
+#include <WalletCore/Hash.h>
+#include <WalletCore/PrivateKey.h>
+#include <ipfs_pubsub/gossip_pubsub.hpp>
+
 #include "base/hexutil.hpp"
-#include "local_secure_storage/ISecureStorage.hpp"
+#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
+#include "local_secure_storage/SecureStorage.hpp"
 #include "outcome/outcome.hpp"
-#include "singleton/CComponentFactory.hpp"
-#include "WalletCore/PrivateKey.h"
-#include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "account/AccountMessenger.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
-#include "local_secure_storage/SecureStorage.hpp"
 #include "primitives/cid/cid.hpp"
 
 namespace
@@ -62,6 +60,53 @@ namespace
 
         return std::make_pair( std::move( storage ),
                                std::make_pair( KeyGenerator::ElGamal( std::move( key_seed ) ), eth_key ) );
+    }
+
+    outcome::result<std::shared_ptr<ISecureStorage>> LoadSecureStorage( const boost::filesystem::path &base_path,
+                                                                        const std::vector<uint8_t>    &public_key )
+    {
+        constexpr std::string_view PREFIX = "SGNS";
+
+        auto secure_storage_         = std::make_shared<SecureStorageImpl>( std::string( PREFIX ) +
+                                                                    libp2p::multi::detail::encodeBase58( public_key ) );
+        auto current_secure_storage_ = secure_storage_->LoadJSON();
+        if ( current_secure_storage_.has_value() &&
+             ( ( current_secure_storage_.value().IsArray() && !current_secure_storage_.value().Empty() ) ||
+               ( current_secure_storage_.value().IsObject() && !current_secure_storage_.value().ObjectEmpty() ) ) )
+        {
+            genius_account_logger()->debug( "Secure storage already migrated, returning it" );
+            return secure_storage_;
+        }
+
+        auto json_storage_ = std::make_shared<JSONSecureStorage>( base_path.generic_string() );
+        auto old_json      = json_storage_->LoadJSON();
+
+        if ( old_json.has_error() )
+        {
+            if ( old_json.error() == std::errc::no_such_file_or_directory )
+            {
+                genius_account_logger()->debug( "There were no legacy JSON storage file to migrate from" );
+                return secure_storage_;
+            }
+            genius_account_logger()->error( "Could not load legacy JSON storage at {}: {}",
+                                            base_path.c_str(),
+                                            old_json.error().message() );
+            return secure_storage_;
+        }
+
+        auto maybe_field = old_json.value().FindMember( "GeniusAccount" );
+        if ( maybe_field == old_json.value().MemberEnd() || !maybe_field->value.IsObject() )
+        {
+            genius_account_logger()->error( "Failed to find GeniusAccount member in old JSON storage" );
+            return secure_storage_;
+        }
+
+        rj::Document new_doc;
+        new_doc.CopyFrom( maybe_field->value, new_doc.GetAllocator() );
+        OUTCOME_TRY( secure_storage_->SaveJSON( std::move( new_doc ) ) );
+        genius_account_logger()->debug( "Sucessfully migrated JSON secure storage" );
+
+        return secure_storage_;
     }
 }
 
@@ -170,8 +215,6 @@ namespace sgns
     outcome::result<GeniusAccount::StorageWithAddress> GeniusAccount::LoadGeniusAccount(
         const boost::filesystem::path &base_path )
     {
-        constexpr std::string_view PREFIX = "SGNS";
-
         auto file_path = SetupStoragePath( base_path );
         genius_account_logger()->info( "Secure storage ID path: {}", file_path.string() );
 
@@ -189,9 +232,7 @@ namespace sgns
                                        public_key.length() );
 
         OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( public_key ) );
-
-        auto storage = std::make_shared<SecureStorageImpl>( std::string( PREFIX ) +
-                                                            libp2p::multi::detail::encodeBase58( vec ) );
+        OUTCOME_TRY( auto storage, LoadSecureStorage( base_path, vec ) );
 
         auto load_res = storage->Load( "sgns_key" );
         if ( !load_res )
@@ -989,7 +1030,8 @@ namespace sgns
             }
             catch ( const std::exception & )
             {
-                genius_account_logger()->error( "Failed to parse nonce for {}: ", address.substr( 0, 8 ),
+                genius_account_logger()->error( "Failed to parse nonce for {}: ",
+                                                address.substr( 0, 8 ),
                                                 val_buf.toString() );
             }
         }

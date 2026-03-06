@@ -9,11 +9,10 @@
 #include <cstdio>
 #include <array>
 
+#include <boost/filesystem.hpp>
 #include <rapidjson/writer.h>
 #include <rapidjson/filereadstream.h>
 #include <rapidjson/filewritestream.h>
-#include "singleton/CComponentFactory.hpp"
-#include <boost/filesystem.hpp>
 
 namespace sgns
 {
@@ -21,7 +20,7 @@ namespace sgns
     {
         auto fullpath = directory_ + "secure_storage.json";
         auto file     = std::fopen( fullpath.data(), "r" );
-        if ( !file )
+        if ( file == nullptr )
         {
             return outcome::failure( std::errc::no_such_file_or_directory );
         }
@@ -75,7 +74,7 @@ namespace sgns
         }
 
         auto file = std::fopen( fullpath.c_str(), "w" );
-        if ( !file )
+        if ( file == nullptr )
         {
             // Return a meaningful error code for file opening failure
             return outcome::failure( boost::system::error_code( errno, boost::system::generic_category() ) );

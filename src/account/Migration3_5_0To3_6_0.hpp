@@ -7,10 +7,10 @@
 
 namespace sgns
 {
-    class Migration3_5_1To3_6_0 : public IMigrationStep, public std::enable_shared_from_this<Migration3_5_1To3_6_0>
+    class Migration3_5_0To3_6_0 : public IMigrationStep, public std::enable_shared_from_this<Migration3_5_0To3_6_0>
     {
     public:
-        Migration3_5_1To3_6_0( std::shared_ptr<boost::asio::io_context>                        ioContext,
+        Migration3_5_0To3_6_0( std::shared_ptr<boost::asio::io_context>                        ioContext,
                                std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
                                std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
                                std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
