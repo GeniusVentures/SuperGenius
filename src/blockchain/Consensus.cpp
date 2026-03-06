@@ -157,9 +157,9 @@ namespace sgns
                     {
                         interval = DEFAULT_ROUND_DURATION / 2;
                     }
-                    self->timer_cv_.wait( lock, [self]() {
-                        return self->stop_timer_.load() || self->certificates_pending_.load();
-                    } );
+                    self->timer_cv_.wait( lock,
+                                          [self]()
+                                          { return self->stop_timer_.load() || self->certificates_pending_.load(); } );
                     if ( self->stop_timer_.load() )
                     {
                         return;
@@ -170,9 +170,10 @@ namespace sgns
                     lock.lock();
                     if ( self->certificates_pending_.load() && !self->stop_timer_.load() )
                     {
-                        self->timer_cv_.wait_for( lock, interval, [self]() {
-                            return self->stop_timer_.load() || !self->certificates_pending_.load();
-                        } );
+                        self->timer_cv_.wait_for(
+                            lock,
+                            interval,
+                            [self]() { return self->stop_timer_.load() || !self->certificates_pending_.load(); } );
                     }
                     if ( self->stop_timer_.load() )
                     {
@@ -379,12 +380,24 @@ namespace sgns
 
     void ConsensusManager::ContinueProposalAfterSubject( const Proposal &proposal )
     {
+        ConsensusManagerLogger()->debug( "{}: Continuing proposal_id={}",
+                                         __func__,
+                                         proposal.proposal_id().substr( 0, 8 ) );
         const auto slot_key    = GetSlotKey( proposal );
         bool       should_vote = false;
+
+        ConsensusManagerLogger()->debug( "{}: proposal_id={}, slot key {}",
+                                         __func__,
+                                         proposal.proposal_id().substr( 0, 8 ),
+                                         slot_key );
         {
             std::lock_guard lock( proposals_mutex_ );
             if ( proposals_.find( proposal.proposal_id() ) == proposals_.end() )
             {
+                ConsensusManagerLogger()->debug( "{}: Creating proposal state proposal_id={}, slot key {}",
+                                                 __func__,
+                                                 proposal.proposal_id().substr( 0, 8 ),
+                                                 slot_key );
                 ProposalState state;
                 state.proposal = proposal;
                 state.slot_key = slot_key;
@@ -394,6 +407,10 @@ namespace sgns
             auto &slot_state = slot_states_[slot_key];
             if ( slot_state.best_proposal_id.empty() )
             {
+                ConsensusManagerLogger()->debug( "{}: Configuring best proposal_id={}, slot key {}",
+                                                 __func__,
+                                                 proposal.proposal_id().substr( 0, 8 ),
+                                                 slot_key );
                 slot_state.best_proposal_id = proposal.proposal_id();
                 if ( proposal.subject().has_nonce() )
                 {
@@ -403,8 +420,16 @@ namespace sgns
             else
             {
                 const auto &current = proposals_.at( slot_state.best_proposal_id ).proposal;
+                ConsensusManagerLogger()->debug(
+                    "{}: Already have a best proposal_id={}, slot key {}. Seeing if {} is better ",
+                    __func__,
+                    current.proposal_id().substr( 0, 8 ),
+                    proposal.proposal_id().substr( 0, 8 ) );
                 if ( IsBetterProposal( proposal, current ) )
                 {
+                    ConsensusManagerLogger()->debug( "{}: Better proposal_id={}å ",
+                                                     __func__,
+                                                     proposal.proposal_id().substr( 0, 8 ) );
                     slot_state.best_proposal_id = proposal.proposal_id();
                     if ( proposal.subject().has_nonce() )
                     {
@@ -415,6 +440,9 @@ namespace sgns
 
             if ( slot_state.best_proposal_id == proposal.proposal_id() && !slot_state.voted )
             {
+                ConsensusManagerLogger()->debug( "{}: My proposal_id={}, is better so let's vote on it. ",
+                                                 __func__,
+                                                 proposal.proposal_id().substr( 0, 8 ));
                 slot_state.voted = true;
                 should_vote      = true;
             }
@@ -903,7 +931,7 @@ namespace sgns
             return outcome::failure( tx_result.error() );
         }
 
-        auto tx = tx_result.value();
+        auto tx       = tx_result.value();
         auto cert_put = tx->Put( cert_key, cert_value );
         if ( cert_put.has_error() )
         {

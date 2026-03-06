@@ -482,7 +482,7 @@ namespace sgns
         auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
         auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
         auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::err );
-        auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::trace );
+        auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
         auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::debug );
         auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::trace );
         auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::trace );

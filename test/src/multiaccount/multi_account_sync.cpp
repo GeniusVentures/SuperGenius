@@ -213,6 +213,10 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
         [&] { return ( balance_original_start + 60000 + 2000 + 100 + 30 ) == node_duplicated->GetBalance(); },
         std::chrono::milliseconds( 30000 ),
         "node_duplicated balance not synced" );
+    test::assertWaitForCondition(
+        [&] { return ( balance_original_start + 60000 + 2000 + 100 + 30 ) == node_original->GetBalance(); },
+        std::chrono::milliseconds( 30000 ),
+        "node_duplicated balance not synced" );
 
     ASSERT_EQ( node_duplicated->GetBalance(), node_original->GetBalance() );
 }
@@ -338,7 +342,6 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
 
     ASSERT_TRUE( transfer2_res.has_value() ) << "Transfer 2 failed on node_same_addr_2";
 
-    auto best_tx = ConsensusManager::BestHash( transfer1_res.value(), transfer2_res.value() );
     // Add peers to each node
     node_same_addr_2->GetPubSub()->AddPeers( { node_same_addr_1->GetPubSub()->GetInterfaceAddress() } );
 
@@ -346,18 +349,39 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
         transfer1_res.value(),
         std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
 
-    uint64_t correct_tokens_transferred = 10000000000;
-    if ( best_tx == transfer2_res.value() )
-    {
-        correct_tokens_transferred = 13000000000;
-    }
+    fmt::println( "Waiting for the conflict resolution" );
+
+    uint64_t correct_tokens_transferred = 0;
+    test::assertWaitForCondition(
+        [&]()
+        {
+            auto status1 = node_same_addr_1->GetTransactionStatus( transfer1_res.value() );
+            if ( status1 == TransactionManager::TransactionStatus::CONFIRMED )
+            {
+                correct_tokens_transferred = 10000000000;
+                return true;
+            }
+
+            auto status2 = node_same_addr_2->GetTransactionStatus( transfer2_res.value() );
+            if ( status2 == TransactionManager::TransactionStatus::CONFIRMED )
+            {
+                correct_tokens_transferred = 13000000000;
+                return true;
+            }
+
+            return false;
+        },
+        std::chrono::milliseconds( 50000 ),
+        "Neither transfer was confirmed" );
+
     test::assertWaitForCondition(
         [&]() { return node_same_addr_1->GetBalance() == ( balance_node1_after_mint - correct_tokens_transferred ); },
         std::chrono::milliseconds( 50000 ),
-        "node_same_addr_2 balance not synced" );
+        "node_same_addr_1 balance not synced" );
     test::assertWaitForCondition( [&]() { return node_same_addr_2->GetBalance() == node_same_addr_1->GetBalance(); },
                                   std::chrono::milliseconds( 50000 ),
                                   "node_same_addr_2 balance not synced" );
+
 
     fmt::println( "Balances after bootstrap - Node1: {}, Node2: {}",
                   node_same_addr_2->GetBalance(),

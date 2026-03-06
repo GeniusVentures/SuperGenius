@@ -1060,11 +1060,6 @@ namespace sgns
             auto             tracked = tx_processed_m.find( tx_key );
             if ( tracked != tx_processed_m.end() )
             {
-                if ( tracked->second.tx )
-                {
-                    std::lock_guard missing_lock( missing_tx_mutex_ );
-                    missing_tx_hashes_.erase( tracked->second.tx->GetHash() );
-                }
                 TransactionManagerLogger()->trace( "[{} - full: {}] Transaction already processed: {}",
                                                    account_m->GetAddress().substr( 0, 8 ),
                                                    full_node_m,
@@ -1128,11 +1123,6 @@ namespace sgns
             next_tx_state = TransactionStatus::CONFIRMED;
         }
         OUTCOME_TRY( ChangeTransactionState( transaction, next_tx_state ) );
-
-        {
-            std::lock_guard missing_lock( missing_tx_mutex_ );
-            missing_tx_hashes_.erase( transaction->GetHash() );
-        }
 
         return outcome::success();
     }
@@ -3510,6 +3500,10 @@ namespace sgns
                                                    tx->GetHash() );
                 OUTCOME_TRY( ParseTransaction( tx ) );
                 account_m->SetPeerConfirmedNonce( tx->GetNonce(), tx->GetSrcAddress() );
+                {
+                    std::lock_guard missing_lock( missing_tx_mutex_ );
+                    missing_tx_hashes_.erase( tx->GetHash() );
+                }
             }
 
             break;
@@ -3550,6 +3544,10 @@ namespace sgns
                                                    full_node_m,
                                                    __func__,
                                                    tx->GetHash() );
+                {
+                    std::lock_guard missing_lock( missing_tx_mutex_ );
+                    missing_tx_hashes_.erase( tx->GetHash() );
+                }
             }
 
             break;
