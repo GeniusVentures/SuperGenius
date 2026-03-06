@@ -715,20 +715,10 @@ namespace sgns
         {
             crdt_transaction = globaldb_m->BeginTransaction();
         }
-        auto     nonce_result        = account_m->GetConfirmedNonce( NONCE_REQUEST_TIMEOUT_MS );
+        auto     nonce_result        = account_m->FetchNetworkNonce( NONCE_REQUEST_TIMEOUT_MS );
         uint64_t expected_next_nonce = 0;
-        int64_t  confirmed_nonce     = -1;
 
-        if ( nonce_result.has_value() )
-        {
-            confirmed_nonce = static_cast<int64_t>( nonce_result.value() );
-            TransactionManagerLogger()->debug( "[{} - full: {}] Set nonce to {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               confirmed_nonce );
-            expected_next_nonce = static_cast<uint64_t>( confirmed_nonce ) + 1;
-        }
-        else if ( nonce_result.has_error() && nonce_result.error() == AccountMessenger::Error::NO_RESPONSE_RECEIVED )
+        if ( nonce_result.has_error() )
         {
             if ( !full_node_m )
             {
@@ -738,20 +728,25 @@ namespace sgns
                                                    full_node_m );
                 return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
             }
-
             TransactionManagerLogger()->warn( "[{} - full: {}] Could not fetch nonce, but proceeding since full node",
                                               account_m->GetAddress().substr( 0, 8 ),
                                               full_node_m );
             if ( auto local_confirmed = account_m->GetLocalConfirmedNonce(); local_confirmed.has_value() )
             {
-                confirmed_nonce = static_cast<int64_t>( local_confirmed.value() );
-
                 TransactionManagerLogger()->debug( "[{} - full: {}] Using local confirmed nonce {}",
                                                    account_m->GetAddress().substr( 0, 8 ),
                                                    full_node_m,
                                                    local_confirmed.value() );
-                expected_next_nonce = static_cast<uint64_t>( confirmed_nonce ) + 1;
+                expected_next_nonce = local_confirmed.value() + 1;
             }
+        }
+        else if ( nonce_result.value().has_value() )
+        {
+            TransactionManagerLogger()->debug( "[{} - full: {}] Set nonce to {}",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               nonce_result.value().value() );
+            expected_next_nonce = nonce_result.value().value() + 1;
         }
         std::unordered_set<std::string>                topicSet;
         std::set<std::shared_ptr<IGeniusTransactions>> transactions_sent;
