@@ -284,6 +284,17 @@ namespace sgns
         round_skew_ = skew;
     }
 
+    void ConsensusManager::ConfigureCertificateDelay( std::chrono::milliseconds delay )
+    {
+        if ( delay.count() < 0 )
+        {
+            ConsensusManagerLogger()->warn( "{}: using zero delay", __func__ );
+            certificate_delay_ = std::chrono::milliseconds( 0 );
+            return;
+        }
+        certificate_delay_ = delay;
+    }
+
     bool ConsensusManager::IsTimestampSane( uint64_t timestamp_ms ) const
     {
         if ( timestamp_ms == 0 )
@@ -1288,6 +1299,19 @@ namespace sgns
                                              __func__,
                                              GetPrintableSubjectHash( state.proposal.subject() ),
                                              state.proposal.proposal_id().substr( 0, 8 ) );
+            const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                    std::chrono::system_clock::now().time_since_epoch() )
+                                    .count();
+            if ( state.quorum_reached_ts_ms != 0 && certificate_delay_.count() > 0 )
+            {
+                const auto elapsed_ms = static_cast<int64_t>( now_ms ) -
+                                        static_cast<int64_t>( state.quorum_reached_ts_ms );
+                if ( elapsed_ms < static_cast<int64_t>( certificate_delay_.count() ) )
+                {
+                    continue;
+                }
+            }
+
             const auto round = GetCurrentRound( state.proposal.timestamp() );
             if ( state.last_attempt_round != NO_ROUND && round == state.last_attempt_round )
             {
@@ -1618,13 +1642,8 @@ namespace sgns
             }
 
             const auto *validator = registry_->FindValidator( registry, vote.voter_id() );
-            if ( !validator || validator->status() != ValidatorRegistry::Status::ACTIVE )
-            {
-                ConsensusManagerLogger()->error( "{}: rejected: validator not active voter_id={}",
-                                                 __func__,
-                                                 vote.voter_id() );
-                return;
-            }
+            const bool  is_active_validator =
+                validator && validator->status() == ValidatorRegistry::Status::ACTIVE;
 
             if ( it->second.total_weight == 0 )
             {
@@ -1633,15 +1652,31 @@ namespace sgns
 
             it->second.votes.push_back( vote );
             it->second.seen_voters.insert( vote.voter_id() );
-            it->second.approved_weight += validator->weight();
-            has_quorum                  = registry_->IsQuorum( it->second.approved_weight, it->second.total_weight );
-            if ( has_quorum )
+            if ( is_active_validator )
             {
-                it->second.quorum_reached = true;
-                ConsensusManagerLogger()->debug(
-                    "{}: quorum reached; certificate will be created by timer proposal_id={}",
-                    __func__,
-                    vote.proposal_id() );
+                it->second.approved_weight += validator->weight();
+                has_quorum = registry_->IsQuorum( it->second.approved_weight, it->second.total_weight );
+                if ( has_quorum )
+                {
+                    if ( !it->second.quorum_reached )
+                    {
+                        it->second.quorum_reached = true;
+                        it->second.quorum_reached_ts_ms =
+                            std::chrono::duration_cast<std::chrono::milliseconds>(
+                                std::chrono::system_clock::now().time_since_epoch() )
+                                .count();
+                    }
+                    ConsensusManagerLogger()->debug(
+                        "{}: quorum reached; certificate will be created by timer proposal_id={}",
+                        __func__,
+                        vote.proposal_id() );
+                }
+            }
+            else
+            {
+                ConsensusManagerLogger()->debug( "{}: accepted vote from non-validator voter_id={}",
+                                                 __func__,
+                                                 vote.voter_id() );
             }
             state = it->second;
         }

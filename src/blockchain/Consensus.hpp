@@ -119,6 +119,7 @@ namespace sgns
         outcome::result<void>                        SubmitCertificate( const Certificate &certificate );
         outcome::result<void>                        ResumeProposalHandling( const std::string &subject_hash );
         void                                         ProcessCertificates();
+        void                                         ConfigureCertificateDelay( std::chrono::milliseconds delay );
 
         outcome::result<Certificate> GetCertificateBySubjectHash( const std::string &subject_hash ) const;
         bool                         CheckCertificateForSubject( const std::string &subject_hash ) const;
@@ -153,6 +154,7 @@ namespace sgns
             uint64_t                        approved_weight = 0;
             std::unordered_set<std::string> seen_voters;
             bool                            quorum_reached     = false;
+            uint64_t                        quorum_reached_ts_ms = 0;
             uint64_t                        last_attempt_round = NO_ROUND;
         };
 
@@ -214,6 +216,7 @@ namespace sgns
         std::string                                                         consensus_datastore_topic_;
         std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>> consensus_subs_future_;
         std::chrono::milliseconds timestamp_window_{ DEFAULT_TIMESTAMP_WINDOW };
+        std::chrono::milliseconds certificate_delay_{ std::chrono::milliseconds( 0 ) };
         std::chrono::milliseconds round_duration_{ DEFAULT_ROUND_DURATION };
         std::chrono::milliseconds round_skew_{ DEFAULT_ROUND_SKEW };
         std::atomic<bool>         stop_timer_{ false };
