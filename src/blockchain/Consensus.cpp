@@ -205,9 +205,12 @@ namespace sgns
     {
         if ( !handler )
         {
-            ConsensusManagerLogger()->warn( "{}: ignored empty handler type={}", __func__, static_cast<int>( type ) );
+            ConsensusManagerLogger()->error( "{}: ignored empty handler type={}", __func__, static_cast<int>( type ) );
             return false;
         }
+        ConsensusManagerLogger()->debug( "{}: Registering subject handler type={}",
+                                         __func__,
+                                         static_cast<int>( type ) );
         std::unique_lock lock( subject_handlers_mutex_ );
         subject_handlers_[static_cast<int>( type )] = std::move( handler );
         return true;
@@ -226,11 +229,14 @@ namespace sgns
     {
         if ( !handler )
         {
-            ConsensusManagerLogger()->warn( "{}: ignored empty certificate handler type={}",
-                                            __func__,
-                                            static_cast<int>( type ) );
+            ConsensusManagerLogger()->error( "{}: ignored empty certificate handler type={}",
+                                             __func__,
+                                             static_cast<int>( type ) );
             return false;
         }
+        ConsensusManagerLogger()->debug( "{}: Registering certificate handler type={}",
+                                         __func__,
+                                         static_cast<int>( type ) );
         std::unique_lock lock( certificate_handlers_mutex_ );
         certificate_subject_handlers_[static_cast<int>( type )] = std::move( handler );
         return true;
@@ -312,7 +318,9 @@ namespace sgns
             return 0;
         }
         const auto round_ms = static_cast<int64_t>( round_duration_.count() );
-        return static_cast<uint64_t>( ( elapsed - skew_ms ) / round_ms );
+        auto       round    = static_cast<uint64_t>( ( elapsed - skew_ms ) / round_ms );
+        ConsensusManagerLogger()->debug( "{}: Returning round={}", __func__, round );
+        return round;
     }
 
     std::vector<std::string> ConsensusManager::GetOrderedActiveValidators(
@@ -328,12 +336,14 @@ namespace sgns
             }
         }
         std::sort( validators.begin(), validators.end() );
+        ConsensusManagerLogger()->trace( "{}: Returning validators with size ={}", __func__, validators.size() );
         return validators;
     }
 
     bool ConsensusManager::IsCurrentAggregator( const Proposal                    &proposal,
                                                 const ValidatorRegistry::Registry &registry ) const
     {
+        ConsensusManagerLogger()->trace( "{}: Checking if is current aggregator for proposal", __func__ );
         auto ordered = GetOrderedActiveValidators( registry );
         if ( ordered.empty() )
         {
@@ -357,7 +367,7 @@ namespace sgns
         return ordered[index] == account_address_;
     }
 
-    outcome::result<std::string> ConsensusManager::GetSubjectHash( const Subject &subject ) const
+    outcome::result<std::string> ConsensusManager::GetSubjectHash( const Subject &subject )
     {
         if ( subject.type() == SubjectType::SUBJECT_NONCE )
         {
@@ -380,24 +390,28 @@ namespace sgns
 
     void ConsensusManager::ContinueProposalAfterSubject( const Proposal &proposal )
     {
-        ConsensusManagerLogger()->debug( "{}: Continuing proposal_id={}",
+        ConsensusManagerLogger()->debug( "{}: Continuing proposal: hash {}, id {}",
                                          __func__,
+                                         GetPrintableSubjectHash( proposal.subject() ),
                                          proposal.proposal_id().substr( 0, 8 ) );
         const auto slot_key    = GetSlotKey( proposal );
         bool       should_vote = false;
 
-        ConsensusManagerLogger()->debug( "{}: proposal_id={}, slot key {}",
+        ConsensusManagerLogger()->debug( "{}: Slot key acquired: hash {}, id {}, slot key {}",
                                          __func__,
+                                         GetPrintableSubjectHash( proposal.subject() ),
                                          proposal.proposal_id().substr( 0, 8 ),
                                          slot_key );
         {
             std::lock_guard lock( proposals_mutex_ );
             if ( proposals_.find( proposal.proposal_id() ) == proposals_.end() )
             {
-                ConsensusManagerLogger()->debug( "{}: Creating proposal state proposal_id={}, slot key {}",
-                                                 __func__,
-                                                 proposal.proposal_id().substr( 0, 8 ),
-                                                 slot_key );
+                ConsensusManagerLogger()->debug(
+                    "{}: No proposal state found. Creating... : hash {}, id {}, slot key {}",
+                    __func__,
+                    GetPrintableSubjectHash( proposal.subject() ),
+                    proposal.proposal_id().substr( 0, 8 ),
+                    slot_key );
                 ProposalState state;
                 state.proposal = proposal;
                 state.slot_key = slot_key;
@@ -407,8 +421,9 @@ namespace sgns
             auto &slot_state = slot_states_[slot_key];
             if ( slot_state.best_proposal_id.empty() )
             {
-                ConsensusManagerLogger()->debug( "{}: Configuring best proposal_id={}, slot key {}",
+                ConsensusManagerLogger()->debug( "{}: Configuring best proposal for hash {}, id={}, slot key {}",
                                                  __func__,
+                                                 GetPrintableSubjectHash( proposal.subject() ),
                                                  proposal.proposal_id().substr( 0, 8 ),
                                                  slot_key );
                 slot_state.best_proposal_id = proposal.proposal_id();
@@ -421,15 +436,19 @@ namespace sgns
             {
                 const auto &current = proposals_.at( slot_state.best_proposal_id ).proposal;
                 ConsensusManagerLogger()->debug(
-                    "{}: Already have a best proposal_id={}, slot key {}. Seeing if {} is better ",
+                    "{}: Already have a best proposal for hash {}, id={}, slot key {}. Seeing if {} is better ",
                     __func__,
+                    GetPrintableSubjectHash( current.subject() ),
                     current.proposal_id().substr( 0, 8 ),
+                    slot_key,
                     proposal.proposal_id().substr( 0, 8 ) );
                 if ( IsBetterProposal( proposal, current ) )
                 {
-                    ConsensusManagerLogger()->debug( "{}: Better proposal_id={}å ",
+                    ConsensusManagerLogger()->debug( "{}: Better proposal for hash {}, id={}, slot key {}. ",
                                                      __func__,
-                                                     proposal.proposal_id().substr( 0, 8 ) );
+                                                     GetPrintableSubjectHash( proposal.subject() ),
+                                                     proposal.proposal_id().substr( 0, 8 ),
+                                                     slot_key );
                     slot_state.best_proposal_id = proposal.proposal_id();
                     if ( proposal.subject().has_nonce() )
                     {
@@ -440,9 +459,12 @@ namespace sgns
 
             if ( slot_state.best_proposal_id == proposal.proposal_id() && !slot_state.voted )
             {
-                ConsensusManagerLogger()->debug( "{}: My proposal_id={}, is better so let's vote on it. ",
-                                                 __func__,
-                                                 proposal.proposal_id().substr( 0, 8 ));
+                ConsensusManagerLogger()->debug(
+                    "{}: My proposal for hash {}, id={}, slot key {} is better so let's vote on it. ",
+                    __func__,
+                    GetPrintableSubjectHash( proposal.subject() ),
+                    proposal.proposal_id().substr( 0, 8 ),
+                    slot_key );
                 slot_state.voted = true;
                 should_vote      = true;
             }
@@ -454,15 +476,19 @@ namespace sgns
             if ( vote_result.has_value() )
             {
                 (void)SubmitVote( vote_result.value() );
-                ConsensusManagerLogger()->debug( "{}: self-vote submitted proposal_id={}",
+                ConsensusManagerLogger()->debug( "{}: self-vote submitted for hash {}, id={}, slot key {}",
                                                  __func__,
-                                                 proposal.proposal_id() );
+                                                 GetPrintableSubjectHash( proposal.subject() ),
+                                                 proposal.proposal_id().substr( 0, 8 ),
+                                                 slot_key );
             }
             else
             {
-                ConsensusManagerLogger()->error( "{}: self-vote failed proposal_id={} error={}",
+                ConsensusManagerLogger()->error( "{}: self-vote failed for hash {}, id={}, slot key {} error={}",
                                                  __func__,
-                                                 proposal.proposal_id(),
+                                                 GetPrintableSubjectHash( proposal.subject() ),
+                                                 proposal.proposal_id().substr( 0, 8 ),
+                                                 slot_key,
                                                  vote_result.error().message() );
             }
         }
@@ -473,8 +499,17 @@ namespace sgns
         std::lock_guard lock( proposals_mutex_ );
         if ( pending_proposals_.find( proposal.proposal_id() ) != pending_proposals_.end() )
         {
+            ConsensusManagerLogger()->error(
+                "{}: Failed adding pending proposal for {}: already have a proposal with id {}",
+                __func__,
+                subject_hash.substr( 0, 8 ),
+                proposal.proposal_id().substr( 0, 8 ) );
             return;
         }
+        ConsensusManagerLogger()->debug( "{}: Adding pending proposal for {}: proposal with id {}",
+                                         __func__,
+                                         subject_hash.substr( 0, 8 ),
+                                         proposal.proposal_id().substr( 0, 8 ) );
         pending_proposals_.emplace( proposal.proposal_id(), proposal );
         pending_by_subject_hash_[subject_hash].push_back( proposal.proposal_id() );
     }
@@ -486,6 +521,7 @@ namespace sgns
         auto                  it = pending_by_subject_hash_.find( subject_hash );
         if ( it == pending_by_subject_hash_.end() )
         {
+            ConsensusManagerLogger()->trace( "{}: No pending proposals for {}", __func__, subject_hash.substr( 0, 8 ) );
             return result;
         }
         for ( const auto &proposal_id : it->second )
@@ -497,6 +533,7 @@ namespace sgns
                 pending_proposals_.erase( prop_it );
             }
         }
+        ConsensusManagerLogger()->debug( "{}: Taking pending proposals for {}", __func__, subject_hash.substr( 0, 8 ) );
         pending_by_subject_hash_.erase( it );
         return result;
     }
@@ -515,16 +552,23 @@ namespace sgns
                                                                                   uint64_t           registry_epoch,
                                                                                   Signer             sign )
     {
-        ConsensusManagerLogger()->trace( "{}: called for proposer_id={}", __func__, proposer_id );
+        ConsensusManagerLogger()->trace( "{}: called by {} with hash {}",
+                                         __func__,
+                                         proposer_id.substr( 0, 8 ),
+                                         GetPrintableSubjectHash( subject ) );
         if ( !sign )
         {
-            ConsensusManagerLogger()->error( "{}: failed: signer is empty", __func__ );
+            ConsensusManagerLogger()->error( "{}: failed for hash {}: signer is empty",
+                                             __func__,
+                                             GetPrintableSubjectHash( subject ) );
             return outcome::failure( std::errc::invalid_argument );
         }
 
         if ( !ValidateSubject( subject ) )
         {
-            ConsensusManagerLogger()->error( "{}: failed: subject validation failed", __func__ );
+            ConsensusManagerLogger()->error( "{}: failed for hash {}: subject validation failed",
+                                             __func__,
+                                             GetPrintableSubjectHash( subject ) );
             return outcome::failure( std::errc::invalid_argument );
         }
 
@@ -542,8 +586,9 @@ namespace sgns
             auto subject_id_result = ComputeSubjectId( proposal.subject() );
             if ( subject_id_result.has_error() )
             {
-                ConsensusManagerLogger()->error( "{}: failed: subject id computation error={}",
+                ConsensusManagerLogger()->error( "{}: failed for hash {}: subject id computation error={}",
                                                  __func__,
+                                                 GetPrintableSubjectHash( subject ),
                                                  subject_id_result.error().message() );
                 return outcome::failure( subject_id_result.error() );
             }
@@ -559,10 +604,17 @@ namespace sgns
                                              signing_bytes.error().message() );
             return outcome::failure( signing_bytes.error() );
         }
+        ConsensusManagerLogger()->debug( "{}: Creating proposal ID {} for hash {}",
+                                         __func__,
+                                         proposal.proposal_id().substr( 0, 8 ),
+                                         GetPrintableSubjectHash( subject ) );
         OUTCOME_TRY( auto &&signature, sign( signing_bytes.value() ) );
         proposal.set_signature( signature.data(), signature.size() );
 
-        ConsensusManagerLogger()->debug( "{}: success proposal_id={}", __func__, proposal.proposal_id() );
+        ConsensusManagerLogger()->debug( "{}: success for hash {} proposal_id={}",
+                                         __func__,
+                                         GetPrintableSubjectHash( subject ),
+                                         proposal.proposal_id().substr( 0, 8 ) );
         return proposal;
     }
 
@@ -571,10 +623,10 @@ namespace sgns
                                                                           bool               approve,
                                                                           Signer             sign )
     {
-        ConsensusManagerLogger()->trace( "{}: called proposal_id={} voter_id={} approve={}",
+        ConsensusManagerLogger()->trace( "{}: called by {}: proposal_id={} approve={}",
                                          __func__,
-                                         proposal_id,
-                                         voter_id,
+                                         voter_id.substr( 0, 8 ),
+                                         proposal_id.substr( 0, 8 ),
                                          approve );
         if ( !sign )
         {
@@ -602,7 +654,10 @@ namespace sgns
         OUTCOME_TRY( auto &&signature, sign( signing_bytes.value() ) );
         vote.set_signature( signature.data(), signature.size() );
 
-        ConsensusManagerLogger()->debug( "{}: success proposal_id={} voter_id={}", __func__, proposal_id, voter_id );
+        ConsensusManagerLogger()->debug( "{}: {} voted for proposal_id={}",
+                                         __func__,
+                                         voter_id.substr( 0, 8 ),
+                                         proposal_id.substr( 0, 8 ) );
         return vote;
     }
 
@@ -611,10 +666,10 @@ namespace sgns
                                                                                       const std::vector<Vote> &votes,
                                                                                       Signer                   sign )
     {
-        ConsensusManagerLogger()->trace( "{}: called proposal_id={} aggregator_id={} votes={}",
+        ConsensusManagerLogger()->trace( "{}: called by {}: proposal_id={} votes={}",
                                          __func__,
-                                         proposal_id,
-                                         aggregator_id,
+                                         aggregator_id.substr( 0, 8 ),
+                                         proposal_id.substr( 0, 8 ),
                                          votes.size() );
         if ( !sign )
         {
@@ -645,16 +700,22 @@ namespace sgns
         OUTCOME_TRY( auto &&signature, sign( signing_bytes.value() ) );
         bundle.set_signature( signature.data(), signature.size() );
 
-        ConsensusManagerLogger()->debug( "{}: success proposal_id={} votes={}", __func__, proposal_id, votes.size() );
+        ConsensusManagerLogger()->debug(
+            "{}: Vote bundle created successfully by {}: proposal_id={} number of votes={}",
+            __func__,
+            aggregator_id.substr( 0, 8 ),
+            proposal_id.substr( 0, 8 ),
+            votes.size() );
         return bundle;
     }
 
     outcome::result<ConsensusManager::Certificate> ConsensusManager::CreateCertificate( const Proposal &proposal,
                                                                                         const std::vector<Vote> &votes )
     {
-        ConsensusManagerLogger()->trace( "{}: called proposal_id={} votes={}",
+        ConsensusManagerLogger()->trace( "{}: Creating certificate for hash {}: proposal_id={} votes={}",
                                          __func__,
-                                         proposal.proposal_id(),
+                                         GetPrintableSubjectHash( proposal.subject() ),
+                                         proposal.proposal_id().substr( 0, 8 ),
                                          votes.size() );
         auto tally_result = TallyVotes( proposal, votes );
         if ( tally_result.has_error() )
@@ -691,7 +752,10 @@ namespace sgns
         }
         *cert.mutable_proposal() = proposal;
 
-        ConsensusManagerLogger()->debug( "{}: success proposal_id={}", __func__, proposal.proposal_id() );
+        ConsensusManagerLogger()->debug( "{}: Success creating certificate for hash {} proposal_id={}",
+                                         __func__,
+                                         GetPrintableSubjectHash( proposal.subject() ),
+                                         proposal.proposal_id().substr( 0, 8 ) );
         return cert;
     }
 
@@ -703,18 +767,22 @@ namespace sgns
     {
         if ( !proposal.registry_cid().empty() && !registry_cid.empty() && proposal.registry_cid() != registry_cid )
         {
-            ConsensusManagerLogger()->error( "{}: failed: registry cid mismatch proposal={} registry={}",
-                                             __func__,
-                                             proposal.registry_cid(),
-                                             registry_cid );
+            ConsensusManagerLogger()->error(
+                "{}: failed: registry cid mismatch hash {}, proposal CID ={} registry CID={}",
+                __func__,
+                GetPrintableSubjectHash( proposal.subject() ),
+                proposal.registry_cid(),
+                registry_cid );
             return outcome::failure( std::errc::invalid_argument );
         }
         if ( proposal.registry_epoch() != registry.epoch() )
         {
-            ConsensusManagerLogger()->error( "{}: failed: registry epoch mismatch proposal={} registry={}",
-                                             __func__,
-                                             proposal.registry_epoch(),
-                                             registry.epoch() );
+            ConsensusManagerLogger()->error(
+                "{}: failed: registry epoch mismatch hash {}, proposal Epoch={} registry Epoch={}",
+                __func__,
+                GetPrintableSubjectHash( proposal.subject() ),
+                proposal.registry_epoch(),
+                registry.epoch() );
             return outcome::failure( std::errc::invalid_argument );
         }
 
@@ -724,9 +792,10 @@ namespace sgns
 
         for ( const auto &vote : votes )
         {
-            ConsensusManagerLogger()->trace( "{}: processing vote voter_id={} approve={}",
+            ConsensusManagerLogger()->trace( "{}: processing vote for hash {}: voter_id={} approve={}",
                                              __func__,
-                                             vote.voter_id(),
+                                             GetPrintableSubjectHash( proposal.subject() ),
+                                             vote.voter_id().substr( 0, 8 ),
                                              vote.approve() );
             if ( vote.proposal_id() != proposal.proposal_id() )
             {
@@ -740,6 +809,11 @@ namespace sgns
             const auto *validator = ValidatorRegistry::FindValidator( registry, vote.voter_id() );
             if ( !validator || validator->status() != ValidatorRegistry::Status::ACTIVE )
             {
+                ConsensusManagerLogger()->error( "{}: processing vote for hash {}: voter_id={} approve={}",
+                                                 __func__,
+                                                 GetPrintableSubjectHash( proposal.subject() ),
+                                                 vote.voter_id().substr( 0, 8 ),
+                                                 vote.approve() );
                 continue;
             }
 
@@ -754,8 +828,18 @@ namespace sgns
                 continue;
             }
 
+            ConsensusManagerLogger()->debug( "{}: Valid voter signature for hash {}: voter_id={} approve={}",
+                                             __func__,
+                                             GetPrintableSubjectHash( proposal.subject() ),
+                                             vote.voter_id().substr( 0, 8 ),
+                                             vote.approve() );
             if ( vote.approve() )
             {
+                ConsensusManagerLogger()->debug( "{}: Adding weight for hash {}: voter_id={} weight={}",
+                                                 __func__,
+                                                 GetPrintableSubjectHash( proposal.subject() ),
+                                                 vote.voter_id().substr( 0, 8 ),
+                                                 validator->weight() );
                 approved_weight += validator->weight();
             }
         }
@@ -764,22 +848,26 @@ namespace sgns
         tally.total_weight    = total_weight;
         tally.approved_weight = approved_weight;
         tally.has_quorum      = registry_->IsQuorum( approved_weight, total_weight );
-        ConsensusManagerLogger()->debug( "{}: success proposal_id={} approved_weight={} total_weight={} quorum={}",
-                                         __func__,
-                                         proposal.proposal_id(),
-                                         approved_weight,
-                                         total_weight,
-                                         tally.has_quorum );
+        ConsensusManagerLogger()->debug(
+            "{}: Votes tallied for hash {} proposal_id={} approved_weight={} total_weight={} quorum={}",
+            __func__,
+            GetPrintableSubjectHash( proposal.subject() ),
+            proposal.proposal_id().substr( 0, 8 ),
+            approved_weight,
+            total_weight,
+            tally.has_quorum );
         return tally;
     }
 
     outcome::result<ConsensusManager::QuorumTally> ConsensusManager::TallyVotes( const Proposal          &proposal,
                                                                                  const std::vector<Vote> &votes ) const
     {
-        ConsensusManagerLogger()->trace( "{}: Tallying with current registry, proposal_id={} votes={}",
-                                         __func__,
-                                         proposal.proposal_id(),
-                                         votes.size() );
+        ConsensusManagerLogger()->trace(
+            "{}: Tallying with current registry for hash {}, proposal_id={} number of votes={}",
+            __func__,
+            GetPrintableSubjectHash( proposal.subject() ),
+            proposal.proposal_id().substr( 0, 8 ),
+            votes.size() );
 
         auto registry_result = registry_->LoadRegistry();
         if ( registry_result.has_error() )
@@ -794,15 +882,18 @@ namespace sgns
 
     outcome::result<std::vector<uint8_t>> ConsensusManager::ProposalSigningBytes( const Proposal &proposal )
     {
-        ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, proposal.proposal_id() );
+        ConsensusManagerLogger()->trace( "{}: called for hash {} proposal_id={}",
+                                         __func__,
+                                         GetPrintableSubjectHash( proposal.subject() ),
+                                         proposal.proposal_id().substr( 0, 8 ) );
         return sgns::ProposalSigningBytes( proposal );
     }
 
     outcome::result<std::vector<uint8_t>> ConsensusManager::VoteSigningBytes( const Vote &vote )
     {
-        ConsensusManagerLogger()->trace( "{}: called voter_id={} proposal_id={}",
+        ConsensusManagerLogger()->trace( "{}: called with voter address {} proposal_id={}",
                                          __func__,
-                                         vote.voter_id(),
+                                         vote.voter_id().substr( 0, 8 ),
                                          vote.proposal_id() );
         return sgns::VoteSigningBytes( vote );
     }
@@ -811,16 +902,17 @@ namespace sgns
     {
         ConsensusManagerLogger()->trace( "{}: called proposal_id={} votes={}",
                                          __func__,
-                                         bundle.proposal_id(),
+                                         bundle.proposal_id().substr( 0, 8 ),
                                          bundle.votes_size() );
         return sgns::VoteBundleSigningBytes( bundle );
     }
 
     outcome::result<void> ConsensusManager::SubmitProposal( const Proposal &proposal, bool self_vote )
     {
-        ConsensusManagerLogger()->trace( "{}: called proposal_id={} self_vote={}",
+        ConsensusManagerLogger()->trace( "{}: called for hash {} proposal_id={} self_vote={}",
                                          __func__,
-                                         proposal.proposal_id(),
+                                         GetPrintableSubjectHash( proposal.subject() ),
+                                         proposal.proposal_id().substr( 0, 8 ),
                                          self_vote );
         const auto slot_key = GetSlotKey( proposal );
         {
@@ -828,6 +920,10 @@ namespace sgns
             auto            it = proposals_.find( proposal.proposal_id() );
             if ( it == proposals_.end() )
             {
+                ConsensusManagerLogger()->debug( "{}: Creating proposal state for hash {} proposal_id={}",
+                                                 __func__,
+                                                 GetPrintableSubjectHash( proposal.subject() ),
+                                                 proposal.proposal_id().substr( 0, 8 ) );
                 ProposalState state;
                 state.proposal = proposal;
                 state.slot_key = slot_key;
@@ -845,7 +941,10 @@ namespace sgns
                                              publish_result.error().message() );
             return publish_result;
         }
-        ConsensusManagerLogger()->debug( "{}: success proposal_id={}", __func__, proposal.proposal_id() );
+        ConsensusManagerLogger()->debug( "{}: success for hash {} proposal_id={}",
+                                         __func__,
+                                         GetPrintableSubjectHash( proposal.subject() ),
+                                         proposal.proposal_id().substr( 0, 8 ) );
 
         if ( self_vote )
         {
@@ -857,10 +956,10 @@ namespace sgns
 
     outcome::result<void> ConsensusManager::SubmitVote( const Vote &vote, bool self_handle )
     {
-        ConsensusManagerLogger()->trace( "{}: called proposal_id={} voter_id={}",
+        ConsensusManagerLogger()->trace( "{}: called by {} proposal_id={}",
                                          __func__,
-                                         vote.proposal_id(),
-                                         vote.voter_id() );
+                                         vote.voter_id().substr( 0, 8 ),
+                                         vote.proposal_id().substr( 0, 8 ) );
         ConsensusMessage message;
         *message.mutable_vote() = vote;
         auto result             = Publish( message );
@@ -869,10 +968,10 @@ namespace sgns
             ConsensusManagerLogger()->error( "{}: failed: publish error={}", __func__, result.error().message() );
             return result;
         }
-        ConsensusManagerLogger()->debug( "{}: success proposal_id={} voter_id={}",
+        ConsensusManagerLogger()->debug( "{}: success voter_id={} proposal_id={} ",
                                          __func__,
-                                         vote.proposal_id(),
-                                         vote.voter_id() );
+                                         vote.voter_id().substr( 0, 8 ),
+                                         vote.proposal_id().substr( 0, 8 ) );
         if ( self_handle )
         {
             HandleVote( vote );
@@ -882,7 +981,10 @@ namespace sgns
 
     outcome::result<void> ConsensusManager::SubmitCertificate( const Certificate &certificate )
     {
-        ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, certificate.proposal_id() );
+        ConsensusManagerLogger()->trace( "{}: called for hash {} and proposal_id={}",
+                                         __func__,
+                                         GetPrintableSubjectHash( certificate.proposal().subject() ),
+                                         certificate.proposal_id().substr( 0, 8 ) );
         ConsensusMessage message;
         *message.mutable_certificate() = certificate;
         auto result                    = Publish( message );
@@ -895,9 +997,10 @@ namespace sgns
         auto subject_hash_result = GetSubjectHash( certificate.proposal().subject() );
         if ( subject_hash_result.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: failed: subject hash error proposal_id={}",
+            ConsensusManagerLogger()->error( "{}: failed: subject hash {} error proposal_id={}",
                                              __func__,
-                                             certificate.proposal_id() );
+                                             GetPrintableSubjectHash( certificate.proposal().subject() ),
+                                             certificate.proposal_id().substr( 0, 8 ) );
             return outcome::failure( subject_hash_result.error() );
         }
 
@@ -916,8 +1019,9 @@ namespace sgns
         auto update_result = registry_->CreateUpdateFromCertificate( certificate );
         if ( update_result.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: failed: registry update creation error={}",
+            ConsensusManagerLogger()->error( "{}: failed: registry update for hash {} error={}",
                                              __func__,
+                                             GetPrintableSubjectHash( certificate.proposal().subject() ),
                                              update_result.error().message() );
             return outcome::failure( update_result.error() );
         }
@@ -925,18 +1029,23 @@ namespace sgns
         auto tx_result = registry_->BeginRegistryUpdateTransaction( update_result.value() );
         if ( tx_result.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: failed: begin registry update transaction error={}",
+            ConsensusManagerLogger()->error( "{}: failed: begin registry update transaction for hash {} error={}",
                                              __func__,
+                                             GetPrintableSubjectHash( certificate.proposal().subject() ),
                                              tx_result.error().message() );
             return outcome::failure( tx_result.error() );
         }
 
+        ConsensusManagerLogger()->debug( "{}: Creating CRDT transaction for registry update for hash {}",
+                                         __func__,
+                                         GetPrintableSubjectHash( certificate.proposal().subject() ) );
         auto tx       = tx_result.value();
         auto cert_put = tx->Put( cert_key, cert_value );
         if ( cert_put.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: failed: stage certificate put error={}",
+            ConsensusManagerLogger()->error( "{}: failed: stage certificate put for hash {} error={}",
                                              __func__,
+                                             GetPrintableSubjectHash( certificate.proposal().subject() ),
                                              cert_put.error().message() );
             return outcome::failure( cert_put.error() );
         }
@@ -951,41 +1060,51 @@ namespace sgns
             return outcome::failure( commit_result.error() );
         }
 
-        ConsensusManagerLogger()->debug( "{}: success proposal_id={}", __func__, certificate.proposal_id() );
+        ConsensusManagerLogger()->debug( "{}: success submitting certificate for {} and proposal_id={}",
+                                         __func__,
+                                         GetPrintableSubjectHash( certificate.proposal().subject() ),
+                                         certificate.proposal_id().substr( 0, 8 ) );
         return result;
     }
 
     void ConsensusManager::HandleProposal( const Proposal &proposal )
     {
-        ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, proposal.proposal_id() );
+        ConsensusManagerLogger()->trace( "{}: called for hash {} proposal_id={}",
+                                         __func__,
+                                         GetPrintableSubjectHash( proposal.subject() ),
+                                         proposal.proposal_id().substr( 0, 8 ) );
 
         if ( !CheckProposal( proposal ) )
         {
-            ConsensusManagerLogger()->error( "{}: rejected: Invalid proposal proposal_id={}",
+            ConsensusManagerLogger()->error( "{}: rejected: Invalid proposal for hash {} proposal_id={}",
                                              __func__,
-                                             proposal.proposal_id() );
+                                             GetPrintableSubjectHash( proposal.subject() ),
+                                             proposal.proposal_id().substr( 0, 8 ) );
             return;
         }
 
         if ( !IsTimestampSane( proposal.timestamp() ) )
         {
-            ConsensusManagerLogger()->error( "{}: rejected: timestamp out of bounds proposal_id={}",
+            ConsensusManagerLogger()->error( "{}: rejected: timestamp out of bounds for hash {} proposal_id={}",
                                              __func__,
-                                             proposal.proposal_id() );
+                                             GetPrintableSubjectHash( proposal.subject() ),
+                                             proposal.proposal_id().substr( 0, 8 ) );
             return;
         }
 
         const auto registry_cid = registry_->GetRegistryCid();
         if ( registry_cid.empty() )
         {
-            ConsensusManagerLogger()->error( "{}: rejected: Local registry doesn't have a CID. proposal_id={}",
-                                             __func__,
-                                             proposal.proposal_id() );
+            ConsensusManagerLogger()->error(
+                "{}: rejected: Local registry doesn't have a CID for hash {}. proposal_id={}",
+                __func__,
+                GetPrintableSubjectHash( proposal.subject() ),
+                proposal.proposal_id().substr( 0, 8 ) );
             return;
         }
         if ( proposal.registry_cid() != registry_cid )
         {
-            ConsensusManagerLogger()->error( "{}: rejected: registry cid mismatch proposal={} registry={}",
+            ConsensusManagerLogger()->error( "{}: rejected: registry CID mismatch proposal={} registry={}",
                                              __func__,
                                              proposal.registry_cid(),
                                              registry_cid );
@@ -1002,9 +1121,10 @@ namespace sgns
 
         if ( !CheckSubject( proposal.subject() ) )
         {
-            ConsensusManagerLogger()->error( "{}: rejected: subject check failed proposal_id={}",
+            ConsensusManagerLogger()->error( "{}: rejected: subject check failed for hash {} proposal_id={}",
                                              __func__,
-                                             proposal.proposal_id() );
+                                             GetPrintableSubjectHash( proposal.subject() ),
+                                             proposal.proposal_id().substr( 0, 8 ) );
             return;
         }
 
@@ -1025,17 +1145,19 @@ namespace sgns
         auto subject_result = subject_handler( proposal.subject() );
         if ( subject_result.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: rejected: subject handler error proposal_id={}",
+            ConsensusManagerLogger()->error( "{}: rejected: subject handler error for hash {} proposal_id={}",
                                              __func__,
-                                             proposal.proposal_id() );
+                                             GetPrintableSubjectHash( proposal.subject() ),
+                                             proposal.proposal_id().substr( 0, 8 ) );
             return;
         }
 
         if ( subject_result.value() == SubjectCheck::Reject )
         {
-            ConsensusManagerLogger()->error( "{}: rejected: subject check failed proposal_id={}",
+            ConsensusManagerLogger()->error( "{}: rejected: subject check failed for hash {} proposal_id={}",
                                              __func__,
-                                             proposal.proposal_id() );
+                                             GetPrintableSubjectHash( proposal.subject() ),
+                                             proposal.proposal_id().substr( 0, 8 ) );
             return;
         }
 
@@ -1046,9 +1168,13 @@ namespace sgns
             {
                 ConsensusManagerLogger()->error( "{}: rejected: subject hash missing proposal_id={}",
                                                  __func__,
-                                                 proposal.proposal_id() );
+                                                 proposal.proposal_id().substr( 0, 8 ) );
                 return;
             }
+            ConsensusManagerLogger()->debug( "{}: Adding pending proposal for hash {} proposal_id={}",
+                                             __func__,
+                                             GetPrintableSubjectHash( proposal.subject() ),
+                                             proposal.proposal_id().substr( 0, 8 ) );
             AddPendingProposal( proposal, subject_hash.value() );
             return;
         }
@@ -1062,7 +1188,9 @@ namespace sgns
         {
             return outcome::failure( std::errc::invalid_argument );
         }
-        ConsensusManagerLogger()->trace( "{}: called subject_hash={}", __func__, subject_hash );
+        ConsensusManagerLogger()->trace( "{}: Attempting to resume proposals for hash={}",
+                                         __func__,
+                                         subject_hash.substr( 0, 8 ) );
 
         auto to_process = TakePendingProposals( subject_hash );
 
@@ -1085,17 +1213,19 @@ namespace sgns
             auto subject_result = subject_handler( proposal.subject() );
             if ( subject_result.has_error() )
             {
-                ConsensusManagerLogger()->error( "{}: rejected: subject handler error proposal_id={}",
+                ConsensusManagerLogger()->error( "{}: rejected: subject handler error for hash {} proposal_id={}",
                                                  __func__,
-                                                 proposal.proposal_id() );
+                                                 subject_hash.substr( 0, 8 ),
+                                                 proposal.proposal_id().substr( 0, 8 ) );
                 continue;
             }
 
             if ( subject_result.value() == SubjectCheck::Reject )
             {
-                ConsensusManagerLogger()->error( "{}: rejected: subject check failed proposal_id={}",
+                ConsensusManagerLogger()->error( "{}: rejected: subject check failed for hash {} proposal_id={}",
                                                  __func__,
-                                                 proposal.proposal_id() );
+                                                 subject_hash.substr( 0, 8 ),
+                                                 proposal.proposal_id().substr( 0, 8 ) );
                 continue;
             }
 
@@ -1109,6 +1239,10 @@ namespace sgns
                                                      proposal.proposal_id() );
                     continue;
                 }
+                ConsensusManagerLogger()->debug( "{}: Adding pending proposal for hash {} proposal_id={}",
+                                                 __func__,
+                                                 subject_hash.substr( 0, 8 ),
+                                                 proposal.proposal_id().substr( 0, 8 ) );
                 AddPendingProposal( proposal, subject_hash_result.value() );
                 continue;
             }
@@ -1136,9 +1270,11 @@ namespace sgns
                 auto &state = kv.second;
                 if ( !state.quorum_reached )
                 {
-                    ConsensusManagerLogger()->debug( "{}: Found proposal without quorum reached proposal_id={}",
-                                                     __func__,
-                                                     state.proposal.proposal_id() );
+                    ConsensusManagerLogger()->debug(
+                        "{}: Found proposal without quorum reached for hash {} proposal_id={}",
+                        __func__,
+                        GetPrintableSubjectHash( state.proposal.subject() ),
+                        state.proposal.proposal_id().substr( 0, 8 ) );
 
                     continue;
                 }
@@ -1148,23 +1284,27 @@ namespace sgns
 
         for ( auto &state : to_process )
         {
-            ConsensusManagerLogger()->debug( "{}: Processing proposal with quorum reached proposal_id={}",
+            ConsensusManagerLogger()->debug( "{}: Processing proposal with quorum reached for hash {} proposal_id={}",
                                              __func__,
-                                             state.proposal.proposal_id() );
+                                             GetPrintableSubjectHash( state.proposal.subject() ),
+                                             state.proposal.proposal_id().substr( 0, 8 ) );
             const auto round = GetCurrentRound( state.proposal.timestamp() );
             if ( state.last_attempt_round != NO_ROUND && round == state.last_attempt_round )
             {
-                ConsensusManagerLogger()->debug( "{}: proposal already attempted in round proposal_id={} round={}",
-                                                 __func__,
-                                                 state.proposal.proposal_id(),
-                                                 round );
+                ConsensusManagerLogger()->debug(
+                    "{}: proposal already attempted in round for hash {} proposal_id={} round={}",
+                    __func__,
+                    GetPrintableSubjectHash( state.proposal.subject() ),
+                    state.proposal.proposal_id().substr( 0, 8 ),
+                    round );
                 continue;
             }
             if ( !IsCurrentAggregator( state.proposal, registry ) )
             {
-                ConsensusManagerLogger()->debug( "{}: not aggregator for proposal proposal_id={}",
+                ConsensusManagerLogger()->debug( "{}: not aggregator for proposal for hash {} proposal_id={}",
                                                  __func__,
-                                                 state.proposal.proposal_id() );
+                                                 GetPrintableSubjectHash( state.proposal.subject() ),
+                                                 state.proposal.proposal_id().substr( 0, 8 ) );
                 continue;
             }
 
@@ -1176,24 +1316,29 @@ namespace sgns
                     it->second.last_attempt_round = round;
                 }
             }
-            ConsensusManagerLogger()->debug( "{}: Attempting to create certificate proposal_id={} round={}",
+            ConsensusManagerLogger()->debug( "{}: Attempting to create certificate for hash {} proposal_id={} round={}",
                                              __func__,
-                                             state.proposal.proposal_id(),
+                                             GetPrintableSubjectHash( state.proposal.subject() ),
+                                             state.proposal.proposal_id().substr( 0, 8 ),
                                              round );
             auto certificate_result = CreateCertificate( state.proposal, state.votes );
             if ( certificate_result.has_error() )
             {
-                ConsensusManagerLogger()->error( "{}: failed: certificate creation error={}",
-                                                 __func__,
-                                                 certificate_result.error().message() );
+                ConsensusManagerLogger()->error(
+                    "{}: failed: certificate creation error for hash {} proposal_id {}: {}",
+                    __func__,
+                    GetPrintableSubjectHash( state.proposal.subject() ),
+                    state.proposal.proposal_id().substr( 0, 8 ),
+                    certificate_result.error().message() );
                 continue;
             }
 
             (void)SubmitCertificate( certificate_result.value() );
             ClearProposalState( state.proposal );
-            ConsensusManagerLogger()->debug( "{}: certificate submitted proposal_id={}",
+            ConsensusManagerLogger()->debug( "{}: certificate submitted for hash {} proposal_id={}",
                                              __func__,
-                                             state.proposal.proposal_id() );
+                                             GetPrintableSubjectHash( state.proposal.subject() ),
+                                             state.proposal.proposal_id().substr( 0, 8 ) );
         }
     }
 
@@ -2027,6 +2172,13 @@ namespace sgns
         }
         //TODO - Check if we need to call ValidateCertificate here. I don't think so because it was validated before.
         return true;
+    }
+
+    std::string ConsensusManager::GetPrintableSubjectHash( const Subject &subject )
+    {
+        auto              subject_hash = GetSubjectHash( subject );
+        const std::string short_hash   = subject_hash.has_value() ? subject_hash.value().substr( 0, 8 ) : "Invalid";
+        return short_hash;
     }
 
 }

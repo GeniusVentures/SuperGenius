@@ -113,7 +113,7 @@ namespace sgns
                                                                               const std::string &escrow_path,
                                                                               const std::string &task_result_hash,
                                                                               uint64_t           result_epoch );
-        static const std::string &                   BestHash( const std::string &a, const std::string &b );
+        static const std::string                    &BestHash( const std::string &a, const std::string &b );
         outcome::result<void>                        SubmitProposal( const Proposal &proposal, bool self_vote = true );
         outcome::result<void>                        SubmitVote( const Vote &vote, bool self_handle = true );
         outcome::result<void>                        SubmitCertificate( const Certificate &certificate );
@@ -121,8 +121,7 @@ namespace sgns
         void                                         ProcessCertificates();
 
         outcome::result<Certificate> GetCertificateBySubjectHash( const std::string &subject_hash ) const;
-        bool CheckCertificateForSubject( const std::string &subject_hash ) const;
-
+        bool                         CheckCertificateForSubject( const std::string &subject_hash ) const;
 
     protected:
         void ConfigureTimestampWindow( std::chrono::milliseconds window );
@@ -143,7 +142,7 @@ namespace sgns
         static constexpr std::chrono::milliseconds DEFAULT_TIMESTAMP_WINDOW  = std::chrono::minutes( 5 );
         static constexpr std::chrono::milliseconds DEFAULT_ROUND_DURATION    = std::chrono::milliseconds( 500 );
         static constexpr std::chrono::milliseconds DEFAULT_ROUND_SKEW        = std::chrono::milliseconds( 250 );
-        static constexpr uint64_t                 NO_ROUND                   = std::numeric_limits<uint64_t>::max();
+        static constexpr uint64_t                  NO_ROUND                  = std::numeric_limits<uint64_t>::max();
 
         struct ProposalState
         {
@@ -177,24 +176,25 @@ namespace sgns
         outcome::result<ProposalState> FetchProposalState( const Certificate &certificate );
         ProposalState                  CreateProposalState( const Certificate &certificate );
         bool ValidateCertificateBestProposal( const ProposalState &state, const Certificate &certificate ) const;
-        std::vector<Vote>            CollectCertificateVotes( const Certificate &certificate ) const;
-        void                         ClearProposalState( const Proposal &proposal );
-        outcome::result<std::string> GetSubjectHash( const Subject &subject ) const;
-        void                         ContinueProposalAfterSubject( const Proposal &proposal );
-        void                         AddPendingProposal( const Proposal &proposal, const std::string &subject_hash );
-        std::vector<Proposal>        TakePendingProposals( const std::string &subject_hash );
-        bool                         RegisterCertificateFilter();
+        std::vector<Vote>                   CollectCertificateVotes( const Certificate &certificate ) const;
+        void                                ClearProposalState( const Proposal &proposal );
+        static outcome::result<std::string> GetSubjectHash( const Subject &subject );
+        void                                ContinueProposalAfterSubject( const Proposal &proposal );
+        void                  AddPendingProposal( const Proposal &proposal, const std::string &subject_hash );
+        std::vector<Proposal> TakePendingProposals( const std::string &subject_hash );
+        bool                  RegisterCertificateFilter();
         std::optional<std::vector<crdt::pb::Element>> FilterCertificate( const crdt::pb::Element &element );
         void CertificateReceived( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
         bool ValidateCertificate( const Certificate &certificate ) const;
         static std::string CreateProposalId( const Proposal &proposal );
         static bool        ValidateSubject( const Subject &subject );
 
-        void        OnConsensusMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message );
-        void        UpdateCertificatesPending();
-        static bool CheckSubject( const Subject &subject );
-        static bool CheckProposal( const Proposal &proposal );
-        static bool CheckVote( const Vote &vote );
+        void               OnConsensusMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message );
+        void               UpdateCertificatesPending();
+        static bool        CheckSubject( const Subject &subject );
+        static bool        CheckProposal( const Proposal &proposal );
+        static bool        CheckVote( const Vote &vote );
+        static std::string GetPrintableSubjectHash( const Subject &subject );
         std::shared_ptr<ValidatorRegistry>                        registry_;
         std::shared_ptr<crdt::GlobalDB>                           db_;
         std::unordered_map<int, SubjectHandler>                   subject_handlers_;
