@@ -44,69 +44,54 @@ namespace
         return boost::filesystem::canonical( boost::filesystem::absolute( base_path ) ) / FILE_NAME;
     }
 
-    // Helper to create storage and key generators from key_seed
-    outcome::result<
-        std::pair<std::shared_ptr<ISecureStorage>, std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
-    CreateStorageAndKeys( nil::crypto3::multiprecision::uint256_t key_seed )
+    outcome::result<std::shared_ptr<ISecureStorage>> LoadOrMigrateSecureStorage(
+        const boost::filesystem::path &base_path,
+        const std::vector<uint8_t>    &public_key )
     {
         constexpr std::string_view PREFIX = "SGNS";
 
-        ethereum::EthereumKeyGenerator eth_key( key_seed );
-        auto                           pub_key = eth_key.GetEntirePubValue();
-        OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( pub_key ) );
-
-        auto storage = std::make_shared<SecureStorageImpl>( std::string( PREFIX ) +
-                                                            libp2p::multi::detail::encodeBase58( vec ) );
-
-        return std::make_pair( std::move( storage ),
-                               std::make_pair( KeyGenerator::ElGamal( std::move( key_seed ) ), eth_key ) );
-    }
-
-    outcome::result<std::shared_ptr<ISecureStorage>> LoadSecureStorage( const boost::filesystem::path &base_path,
-                                                                        const std::vector<uint8_t>    &public_key )
-    {
-        constexpr std::string_view PREFIX = "SGNS";
-
-        auto secure_storage_         = std::make_shared<SecureStorageImpl>( std::string( PREFIX ) +
-                                                                    libp2p::multi::detail::encodeBase58( public_key ) );
-        auto current_secure_storage_ = secure_storage_->LoadJSON();
-        if ( current_secure_storage_.has_value() &&
-             ( ( current_secure_storage_.value().IsArray() && !current_secure_storage_.value().Empty() ) ||
-               ( current_secure_storage_.value().IsObject() && !current_secure_storage_.value().ObjectEmpty() ) ) )
+        auto secure_storage         = std::make_shared<SecureStorageImpl>( std::string( PREFIX ) +
+                                                                   libp2p::multi::detail::encodeBase58( public_key ) );
+        auto current_secure_storage = secure_storage->LoadJSON();
+        if ( current_secure_storage.has_value() &&
+             ( ( current_secure_storage.value().IsArray() && !current_secure_storage.value().Empty() ) ||
+               ( current_secure_storage.value().IsObject() && !current_secure_storage.value().ObjectEmpty() ) ) )
         {
             genius_account_logger()->debug( "Secure storage already migrated, returning it" );
-            return secure_storage_;
+            return secure_storage;
         }
 
-        auto json_storage_ = std::make_shared<JSONSecureStorage>( base_path.generic_string() );
-        auto old_json      = json_storage_->LoadJSON();
+        JSONSecureStorage json_storage( base_path.generic_string() );
+        auto              old_json = json_storage.LoadJSON();
 
         if ( old_json.has_error() )
         {
             if ( old_json.error() == std::errc::no_such_file_or_directory )
             {
                 genius_account_logger()->debug( "There were no legacy JSON storage file to migrate from" );
-                return secure_storage_;
             }
-            genius_account_logger()->error( "Could not load legacy JSON storage at {}: {}",
-                                            base_path.c_str(),
-                                            old_json.error().message() );
-            return secure_storage_;
+            else
+            {
+                genius_account_logger()->error( "Could not load legacy JSON storage at {}: {}",
+                                                base_path.c_str(),
+                                                old_json.error().message() );
+            }
+            return secure_storage;
         }
 
         auto maybe_field = old_json.value().FindMember( "GeniusAccount" );
         if ( maybe_field == old_json.value().MemberEnd() || !maybe_field->value.IsObject() )
         {
             genius_account_logger()->error( "Failed to find GeniusAccount member in old JSON storage" );
-            return secure_storage_;
+            return secure_storage;
         }
 
         rj::Document new_doc;
         new_doc.CopyFrom( maybe_field->value, new_doc.GetAllocator() );
-        OUTCOME_TRY( secure_storage_->SaveJSON( std::move( new_doc ) ) );
+        OUTCOME_TRY( secure_storage->SaveJSON( std::move( new_doc ) ) );
         genius_account_logger()->debug( "Sucessfully migrated JSON secure storage" );
 
-        return secure_storage_;
+        return secure_storage;
     }
 }
 
@@ -232,7 +217,7 @@ namespace sgns
                                        public_key.length() );
 
         OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( public_key ) );
-        OUTCOME_TRY( auto storage, LoadSecureStorage( base_path, vec ) );
+        OUTCOME_TRY( auto storage, LoadOrMigrateSecureStorage( base_path, vec ) );
 
         auto load_res = storage->Load( "sgns_key" );
         if ( !load_res )
@@ -252,7 +237,11 @@ namespace sgns
         }
 
         genius_account_logger()->info( "Validation successful: key_seed matches stored public key" );
-        return CreateStorageAndKeys( key_seed );
+
+        ethereum::EthereumKeyGenerator eth_key( key_seed );
+
+        return std::make_pair( std::move( storage ),
+                               std::make_pair( KeyGenerator::ElGamal( std::move( key_seed ) ), std::move( eth_key ) ) );
     }
 
     outcome::result<GeniusAccount::StorageWithAddress> GeniusAccount::GenerateGeniusAddress(
@@ -284,10 +273,11 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        OUTCOME_TRY( auto as_vec, base::unhex( eth_private_key ) );
-        auto signed_secret = TW::PrivateKey( as_vec ).sign(
-            TW::Data( ELGAMAL_PUBKEY_PREDEFINED.cbegin(), ELGAMAL_PUBKEY_PREDEFINED.cend() ),
-            TWCurveSECP256k1 );
+        OUTCOME_TRY( auto pri_key_vec, base::unhex( eth_private_key ) );
+        auto signed_secret = TW::PrivateKey( pri_key_vec )
+                                 .sign(
+                                     TW::Data( ELGAMAL_PUBKEY_PREDEFINED.cbegin(), ELGAMAL_PUBKEY_PREDEFINED.cend() ),
+                                     TWCurveSECP256k1 );
 
         if ( signed_secret.empty() )
         {
@@ -298,7 +288,11 @@ namespace sgns
         auto key_seed = nil::crypto3::multiprecision::uint256_t( TW::Hash::sha256( signed_secret ) );
 
         // Create storage and keys
-        OUTCOME_TRY( auto result, CreateStorageAndKeys( key_seed ) );
+        ethereum::EthereumKeyGenerator eth_key( key_seed );
+        auto                           pub_key = eth_key.GetEntirePubValue();
+        OUTCOME_TRY( std::vector<uint8_t> pub_key_vec, base::unhex( pub_key ) );
+
+        OUTCOME_TRY( auto storage, LoadOrMigrateSecureStorage( base_path, pub_key_vec ) );
 
         // Save public key to file
         auto file_path = SetupStoragePath( base_path );
@@ -310,11 +304,10 @@ namespace sgns
             return outcome::failure( std::errc::bad_file_descriptor );
         }
 
-        auto &[storage, addresses] = result;
-        auto &[elgamal, eth_key]   = addresses;
+        auto elgamal = KeyGenerator::ElGamal( std::move( key_seed ) );
         out_file << eth_key.GetEntirePubValue() << std::endl;
 
-        return result;
+        return std::make_pair( std::move( storage ), std::make_pair( std::move( elgamal ), std::move( eth_key ) ) );
     }
 
     bool GeniusAccount::InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub )
