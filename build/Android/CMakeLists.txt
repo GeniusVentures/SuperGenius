@@ -49,8 +49,11 @@ set(PROTOC_EXECUTABLE "${_THIRDPARTY_BUILD_DIR}/protobuf_host/bin/protoc${CMAKE_
 
 set(TESTING OFF)
 
-find_library(log-lib log)
-find_library(android-lib android)
+add_library(android::log INTERFACE IMPORTED GLOBAL)
+set_target_properties(android::log PROPERTIES IMPORTED_LIBNAME "log")
+
+add_library(android::android INTERFACE IMPORTED GLOBAL)
+set_target_properties(android::android PROPERTIES IMPORTED_LIBNAME "android")
 
 # Include common build parameters
 include(../CommonBuildParameters.cmake)

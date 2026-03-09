@@ -17,9 +17,9 @@ if(ANDROID)
     target_sources(secure_storage PRIVATE impl/Android.cpp)
     target_link_libraries(secure_storage
         PUBLIC
-        ${android-lib}
+        android::android
         PRIVATE
-        ${log-lib}
+        android::log
     )
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_sources(secure_storage PRIVATE impl/Linux.cpp)
