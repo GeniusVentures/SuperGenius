@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <boost/filesystem.hpp>
+#include <boost/dll.hpp>
 
 #include "account/GeniusAccount.hpp"
 
@@ -8,8 +9,9 @@ namespace fs = boost::filesystem;
 
 TEST( SecureStorage, JsonMigration )
 {
-    const fs::path json_storage_path( "json_storage" );
-    const fs::path test_path( "json_storage_test" );
+    auto binary_parent = boost::dll::program_location().parent_path();
+    const fs::path json_storage_path = binary_parent / "json_storage";
+    const fs::path test_path = binary_parent / "json_storage_test";
 
     fs::remove_all(test_path);
     fs::copy( json_storage_path, test_path, fs::copy_options::recursive);
