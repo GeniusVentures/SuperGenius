@@ -4,7 +4,7 @@
  * @date       2024-06-06
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
+#include "JSONSecureStorage.hpp"
 
 #include <cstdio>
 #include <array>
@@ -16,10 +16,12 @@
 
 namespace sgns
 {
+    constexpr std::string_view FILE_NAME = "secure_storage.json";
+
     outcome::result<rj::Document> JSONSecureStorage::LoadJSON() const
     {
-        auto fullpath = directory_ + "secure_storage.json";
-        auto file     = std::fopen( fullpath.data(), "r" );
+        auto fullpath = directory_ / FILE_NAME;
+        auto file     = std::fopen( fullpath.generic_string().c_str(), "r" );
         if ( file == nullptr )
         {
             return outcome::failure( std::errc::no_such_file_or_directory );
@@ -63,7 +65,7 @@ namespace sgns
 
     outcome::result<void> JSONSecureStorage::Save( const std::string &key, const SecureBufferType &buffer )
     {
-        auto fullpath = directory_ + "/secure_storage.json";
+        auto fullpath = directory_ / FILE_NAME;
 
         // Ensure the directory exists (create it if necessary)
         boost::system::error_code ec;
@@ -73,7 +75,7 @@ namespace sgns
             return outcome::failure( ec );
         }
 
-        auto file = std::fopen( fullpath.c_str(), "w" );
+        auto file = std::fopen( fullpath.generic_string().c_str(), "w" );
         if ( file == nullptr )
         {
             // Return a meaningful error code for file opening failure

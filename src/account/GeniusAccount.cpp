@@ -1,5 +1,6 @@
 #include "GeniusAccount.hpp"
 
+#include <fstream>
 #include <nil/crypto3/algebra/marshalling.hpp>
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
 #include <nil/crypto3/pubkey/algorithm/verify.hpp>
@@ -16,6 +17,8 @@
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
 #include "primitives/cid/cid.hpp"
+
+constexpr std::string_view SECURE_STORAGE_PREFIX = "SGNS";
 
 namespace
 {
@@ -44,23 +47,8 @@ namespace
         return boost::filesystem::canonical( boost::filesystem::absolute( base_path ) ) / FILE_NAME;
     }
 
-    outcome::result<std::shared_ptr<ISecureStorage>> LoadOrMigrateSecureStorage(
-        const boost::filesystem::path &base_path,
-        const std::vector<uint8_t>    &public_key )
+    outcome::result<std::shared_ptr<ISecureStorage>> MigrateSecureStorage( const boost::filesystem::path &base_path )
     {
-        constexpr std::string_view PREFIX = "SGNS";
-
-        auto secure_storage         = std::make_shared<SecureStorageImpl>( std::string( PREFIX ) +
-                                                                   libp2p::multi::detail::encodeBase58( public_key ) );
-        auto current_secure_storage = secure_storage->LoadJSON();
-        if ( current_secure_storage.has_value() &&
-             ( ( current_secure_storage.value().IsArray() && !current_secure_storage.value().Empty() ) ||
-               ( current_secure_storage.value().IsObject() && !current_secure_storage.value().ObjectEmpty() ) ) )
-        {
-            genius_account_logger()->debug( "Secure storage already migrated, returning it" );
-            return secure_storage;
-        }
-
         JSONSecureStorage json_storage( base_path.generic_string() );
         auto              old_json = json_storage.LoadJSON();
 
@@ -69,27 +57,46 @@ namespace
             if ( old_json.error() == std::errc::no_such_file_or_directory )
             {
                 genius_account_logger()->debug( "There were no legacy JSON storage file to migrate from" );
+                return std::errc::no_such_file_or_directory;
             }
-            else
-            {
-                genius_account_logger()->error( "Could not load legacy JSON storage at {}: {}",
-                                                base_path.c_str(),
-                                                old_json.error().message() );
-            }
-            return secure_storage;
+            genius_account_logger()->error( "Could not load legacy JSON storage at {}: {}",
+                                            base_path.generic_string(),
+                                            old_json.error().message() );
+            return std::errc::bad_file_descriptor;
         }
 
         auto maybe_field = old_json.value().FindMember( "GeniusAccount" );
         if ( maybe_field == old_json.value().MemberEnd() || !maybe_field->value.IsObject() )
         {
             genius_account_logger()->error( "Failed to find GeniusAccount member in old JSON storage" );
-            return secure_storage;
+            return std::errc::bad_message;
         }
+
+        auto maybe_key = maybe_field->value.FindMember( "sgns_key" );
+        if ( maybe_key == maybe_field->value.MemberEnd() || !maybe_key->value.IsString() )
+        {
+            genius_account_logger()->error( "Failed to find GeniusAccount public key in old JSON storage" );
+            return std::errc::bad_message;
+        }
+
+        // Create storage and keys
+        nil::crypto3::multiprecision::uint256_t key_seed( maybe_key->value.GetString() );
+        ethereum::EthereumKeyGenerator          eth_key( key_seed );
+        auto                                    pub_key = eth_key.GetEntirePubValue();
+        OUTCOME_TRY( std::vector<uint8_t> pub_key_vec, base::unhex( pub_key ) );
+
+        auto secure_storage = std::make_shared<SecureStorageImpl>( std::string( SECURE_STORAGE_PREFIX ) +
+                                                                   libp2p::multi::detail::encodeBase58( pub_key_vec ) );
+
+        auto          path = SetupStoragePath( base_path );
+        std::ofstream file( path.c_str() );
+        file << pub_key << std::endl;
+        file.close();
 
         rj::Document new_doc;
         new_doc.CopyFrom( maybe_field->value, new_doc.GetAllocator() );
         OUTCOME_TRY( secure_storage->SaveJSON( std::move( new_doc ) ) );
-        genius_account_logger()->debug( "Sucessfully migrated JSON secure storage" );
+        genius_account_logger()->debug( "Successfully migrated JSON secure storage" );
 
         return secure_storage;
     }
@@ -203,21 +210,31 @@ namespace sgns
         auto file_path = SetupStoragePath( base_path );
         genius_account_logger()->info( "Secure storage ID path: {}", file_path.string() );
 
-        std::ifstream file( file_path.string() );
-        if ( !file.is_open() )
+        std::shared_ptr<ISecureStorage> storage;
+        std::ifstream                   file( file_path.string() );
+        std::string                     public_key;
+        bool                            loaded_from_storage = false;
+
+        if ( file.is_open() )
         {
-            genius_account_logger()->debug( "Secure storage ID file does not exist" );
-            return std::errc::no_such_file_or_directory;
+            file >> public_key;
+            genius_account_logger()->info( "Loaded public key from file: {} (length: {})",
+                                           public_key.substr( 0, 16 ) + "...",
+                                           public_key.length() );
+
+            OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( public_key ) );
+
+            storage = std::make_shared<SecureStorageImpl>( std::string( SECURE_STORAGE_PREFIX ) +
+                                                           libp2p::multi::detail::encodeBase58( vec ) );
+
+            file.close();
+            loaded_from_storage = true;
         }
-
-        std::string public_key;
-        file >> public_key;
-        genius_account_logger()->info( "Loaded public key from file: {} (length: {})",
-                                       public_key.substr( 0, 16 ) + "...",
-                                       public_key.length() );
-
-        OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( public_key ) );
-        OUTCOME_TRY( auto storage, LoadOrMigrateSecureStorage( base_path, vec ) );
+        else
+        {
+            genius_account_logger()->debug( "Secure storage ID file does not exist, will try migration" );
+            OUTCOME_TRY( storage, MigrateSecureStorage( base_path ) );
+        }
 
         auto load_res = storage->Load( "sgns_key" );
         if ( !load_res )
@@ -229,14 +246,16 @@ namespace sgns
         auto key_seed = nil::crypto3::multiprecision::uint256_t( load_res.value() );
         genius_account_logger()->info( "Successfully loaded key_seed from storage" );
 
-        // Validate loaded key_seed matches stored public key
-        if ( ethereum::EthereumKeyGenerator( key_seed ).GetEntirePubValue() != public_key )
+        if ( loaded_from_storage )
         {
-            genius_account_logger()->error( "Validation failed: key_seed does not match stored public key" );
-            return std::errc::bad_message;
+            // Validate loaded key_seed matches stored public key
+            if ( ethereum::EthereumKeyGenerator( key_seed ).GetEntirePubValue() != public_key )
+            {
+                genius_account_logger()->error( "Validation failed: key_seed does not match stored public key" );
+                return std::errc::bad_message;
+            }
+            genius_account_logger()->info( "Validation successful: key_seed matches stored public key" );
         }
-
-        genius_account_logger()->info( "Validation successful: key_seed matches stored public key" );
 
         ethereum::EthereumKeyGenerator eth_key( key_seed );
 
@@ -292,7 +311,8 @@ namespace sgns
         auto                           pub_key = eth_key.GetEntirePubValue();
         OUTCOME_TRY( std::vector<uint8_t> pub_key_vec, base::unhex( pub_key ) );
 
-        OUTCOME_TRY( auto storage, LoadOrMigrateSecureStorage( base_path, pub_key_vec ) );
+        auto storage = std::make_shared<SecureStorageImpl>( std::string( SECURE_STORAGE_PREFIX ) +
+                                                            libp2p::multi::detail::encodeBase58( pub_key_vec ) );
 
         // Save public key to file
         auto file_path = SetupStoragePath( base_path );
