@@ -17,6 +17,8 @@
 #include "crdt/graphsync_dagsyncer.hpp"
 #include "primitives/cid/cid.hpp"
 
+constexpr std::string_view SECURE_STORAGE_PREFIX = "SGNS";
+
 namespace
 {
     using namespace sgns;
@@ -37,58 +39,63 @@ namespace
         return base::createLogger( "GeniusAccount" );
     }
 
-    outcome::result<std::shared_ptr<ISecureStorage>>
-
-    LoadSecureStorage( const boost::filesystem::path &base_path, const std::vector<uint8_t> &public_key )
+    boost::filesystem::path SetupStoragePath( const boost::filesystem::path &base_path )
     {
-        constexpr std::string_view PREFIX = "SGNS";
+        constexpr std::string_view FILE_NAME = "secure_storage_id";
+        boost::filesystem::create_directories( base_path );
+        return boost::filesystem::canonical( boost::filesystem::absolute( base_path ) ) / FILE_NAME;
+    }
 
-        auto secure_storage          = std::make_shared<SecureStorageImpl>( std::string( PREFIX ) +
-                                                                   libp2p::multi::detail::encodeBase58( public_key ) );
-        auto current_secure_storage_ = secure_storage->LoadJSON();
-        if ( current_secure_storage_.has_value() &&
-             ( ( current_secure_storage_.value().IsArray() && !current_secure_storage_.value().Empty() ) ||
-               ( current_secure_storage_.value().IsObject() && !current_secure_storage_.value().ObjectEmpty() ) ) )
-        {
-            genius_account_logger()->debug( "Secure storage already migrated, returning it" );
-            return secure_storage;
-        }
-
-        auto json_storage_ = std::make_shared<JSONSecureStorage>( base_path.generic_string() );
-        auto old_json      = json_storage_->LoadJSON();
+    outcome::result<std::shared_ptr<ISecureStorage>> MigrateSecureStorage( const boost::filesystem::path &base_path )
+    {
+        JSONSecureStorage json_storage( base_path.generic_string() );
+        auto              old_json = json_storage.LoadJSON();
 
         if ( old_json.has_error() )
         {
             if ( old_json.error() == std::errc::no_such_file_or_directory )
             {
                 genius_account_logger()->debug( "There were no legacy JSON storage file to migrate from" );
+                return std::errc::no_such_file_or_directory;
             }
-            else
-            {
-                genius_account_logger()->error( "Could not load legacy JSON storage at {}: {}",
-                                                base_path.string(),
-                                                old_json.error().message() );
-            }
-            return secure_storage;
+            genius_account_logger()->error( "Could not load legacy JSON storage at {}: {}",
+                                            base_path.generic_string(),
+                                            old_json.error().message() );
+            return std::errc::bad_file_descriptor;
         }
 
         auto maybe_field = old_json.value().FindMember( "GeniusAccount" );
         if ( maybe_field == old_json.value().MemberEnd() || !maybe_field->value.IsObject() )
         {
             genius_account_logger()->error( "Failed to find GeniusAccount member in old JSON storage" );
-            return secure_storage;
+            return std::errc::bad_message;
         }
+
+        auto maybe_key = maybe_field->value.FindMember( "sgns_key" );
+        if ( maybe_key == maybe_field->value.MemberEnd() || !maybe_key->value.IsString() )
+        {
+            genius_account_logger()->error( "Failed to find GeniusAccount public key in old JSON storage" );
+            return std::errc::bad_message;
+        }
+
+        // Create storage and keys
+        nil::crypto3::multiprecision::uint256_t key_seed( maybe_key->value.GetString() );
+        ethereum::EthereumKeyGenerator          eth_key( key_seed );
+        auto                                    pub_key = eth_key.GetEntirePubValue();
+        OUTCOME_TRY( std::vector<uint8_t> pub_key_vec, base::unhex( pub_key ) );
+
+        auto secure_storage = std::make_shared<SecureStorageImpl>( std::string( SECURE_STORAGE_PREFIX ) +
+                                                                   libp2p::multi::detail::encodeBase58( pub_key_vec ) );
+
+        auto          path = SetupStoragePath( base_path );
+        std::ofstream file( path.c_str() );
+        file << pub_key << std::endl;
+        file.close();
 
         rj::Document new_doc;
         new_doc.CopyFrom( maybe_field->value, new_doc.GetAllocator() );
-
-        if ( auto res = secure_storage->SaveJSON( std::move( new_doc ) ); res.has_error() )
-        {
-            genius_account_logger()->error( "Failed to migrate JSON secure storage" );
-            return res.error();
-        }
-
-        genius_account_logger()->debug( "Sucessfully migrated JSON secure storage" );
+        OUTCOME_TRY( secure_storage->SaveJSON( std::move( new_doc ) ) );
+        genius_account_logger()->debug( "Successfully migrated JSON secure storage" );
 
         return secure_storage;
     }
@@ -366,7 +373,7 @@ namespace sgns
         boost::filesystem::create_directories( base_directory );
 
         // Use canonical() after directory exists to get fully normalized path
-        base_directory = boost::filesystem::canonical( base_directory );
+        base_directory       = boost::filesystem::canonical( base_directory );
         auto storage_id_path = base_directory / FILE_NAME;
 
         genius_account_logger()->info( "Secure storage ID path: {}", storage_id_path.string() );
@@ -389,8 +396,8 @@ namespace sgns
             genius_account_logger()->info( "Unhexed public key vector size: {}", vec.size() );
 
             // Create storage using the public key from the file
-            OUTCOME_TRY( auto loaded_storage, LoadSecureStorage( base_directory, vec ) );
-            storage = std::move( loaded_storage );
+            auto storage = std::make_shared<SecureStorageImpl>( std::string( SECURE_STORAGE_PREFIX ) +
+                                                                libp2p::multi::detail::encodeBase58( vec ) );
 
             if ( auto load_res = storage->Load( "sgns_key" ) )
             {
@@ -421,40 +428,25 @@ namespace sgns
         }
         else
         {
-            genius_account_logger()->debug( "Secure storage ID file does not exist, trying legacy secure_storage.json" );
+            genius_account_logger()->debug(
+                "Secure storage ID file does not exist, trying migration on secure_storage.json" );
 
-            auto legacy_storage = std::make_shared<JSONSecureStorage>( base_directory.generic_string() + "/" );
-            if ( auto legacy_seed_res = legacy_storage->Load( "sgns_key" ) )
+            if ( auto maybe_storage = MigrateSecureStorage( base_path ); maybe_storage.has_value() )
             {
-                key_seed = nil::crypto3::multiprecision::uint256_t( legacy_seed_res.value() );
-
-                ethereum::EthereumKeyGenerator temp_eth_key( key_seed );
-                auto                           pub_key = temp_eth_key.GetEntirePubValue();
-
-                OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( pub_key ) );
-                OUTCOME_TRY( auto loaded_storage, LoadSecureStorage( base_directory, vec ) );
-                storage = std::move( loaded_storage );
-
-                if ( auto load_res = storage->Load( "sgns_key" ) )
+                storage = maybe_storage.value();
+                if ( auto legacy_seed_res = storage->Load( "sgns_key" ) )
                 {
-                    key_seed        = nil::crypto3::multiprecision::uint256_t( load_res.value() );
+                    key_seed        = nil::crypto3::multiprecision::uint256_t( legacy_seed_res.value() );
                     key_seed_loaded = true;
-                    genius_account_logger()->info( "Loaded key seed from legacy secure storage migration" );
-
-                    std::ofstream out_file( storage_id_path.string() );
-                    if ( out_file.is_open() )
-                    {
-                        out_file << pub_key << std::endl;
-                    }
-                    else
-                    {
-                        genius_account_logger()->warn( "Could not write secure_storage_id after legacy migration" );
-                    }
                 }
                 else
                 {
-                    genius_account_logger()->warn( "Legacy seed found but could not be loaded from secure storage" );
+                    genius_account_logger()->warn( "Migrated secure storage, but unable to load sgns_key from it" );
                 }
+            }
+            else
+            {
+                genius_account_logger()->warn( "Unable to find legacy secure storage to migrate" );
             }
         }
 

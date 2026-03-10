@@ -22,6 +22,7 @@ target_link_libraries(sgns_genius_account
     crdt_globaldb
     ipfs-pubsub
     PRIVATE
+    hasher
     secure_storage
     json_secure_storage
     component_factory
