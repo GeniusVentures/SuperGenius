@@ -3000,16 +3000,6 @@ namespace sgns
             return false;
         }
 
-        if ( !full_node_m && address != account_m->GetAddress() )
-        {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Non-full node cannot verify address {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               address );
-            return false;
-        }
-
         if ( !utxo_manager_.VerifyParameters( params, address ) )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: VerifyParameters failed for address {}",
