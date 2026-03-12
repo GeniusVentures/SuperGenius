@@ -99,6 +99,7 @@ function(add_proto_library NAME)
         ${SOURCES}
     )
     target_link_libraries(${NAME}
+        PUBLIC
         protobuf::libprotobuf
     )
     target_include_directories(${NAME} PUBLIC
