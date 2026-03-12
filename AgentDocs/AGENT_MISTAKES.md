@@ -150,7 +150,6 @@ Live network testing cannot distinguish between "our crypto is wrong" and "the p
    ```cpp
    static auto log = rlp::base::createLogger("subsystem.component");
    ```
-2. Use `SPDLOG_LOGGER_DEBUG(log, "msg {}", val)`, `SPDLOG_LOGGER_INFO(...)`, `SPDLOG_LOGGER_WARN(...)`, `SPDLOG_LOGGER_ERROR(...)`.
+2. Use `log->debug("msg {}", val)`, `log->info(...)`, `log->warn(...)`, `log->error(...)`.
 3. The global spdlog level is already controlled by the `--log-level` CLI flag in `eth_watch` (and similar entry points). Setting `--log-level debug` will show all `DEBUG` output with zero code changes.
 4. `std::cout` is only acceptable for **user-facing program output** (e.g., final results printed to the terminal by design). It is never acceptable for diagnostic or debug output.
-
