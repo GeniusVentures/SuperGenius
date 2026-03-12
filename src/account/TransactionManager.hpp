@@ -223,7 +223,10 @@ namespace sgns
         using TransactionParserFn =
             outcome::result<void> ( TransactionManager::* )( const std::shared_ptr<IGeniusTransactions> & );
 
-        SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" ) const;
+        SGTransaction::DAGStruct FillDAGStruct( std::optional<std::string> other_chain_hash = std::nullopt );
+        std::string              GetOutgoingPreviousHash( uint64_t nonce ) const;
+        void                     RecordOutgoingTxHash( uint64_t nonce, const std::string &hash );
+        void                     RemoveOutgoingTxHash( uint64_t nonce );
         outcome::result<void>    SendTransactionItem( TransactionItem &item );
         outcome::result<void>    RollbackTransactions( TransactionItem &item_to_rollback );
 
@@ -300,6 +303,8 @@ namespace sgns
         std::chrono::milliseconds                                   timestamp_tolerance_m;
         std::chrono::milliseconds                                   mutability_window_m;
         uint64_t                                                    nonce_window_m = DEFAULT_NONCE_WINDOW;
+        mutable std::mutex                                          outgoing_tx_hash_mutex_;
+        std::unordered_map<uint64_t, std::string>                   outgoing_tx_hash_by_nonce_;
 
         static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE  = std::chrono::seconds( 10 );
         static constexpr std::chrono::milliseconds MUTABILITY_WINDOW    = std::chrono::minutes( 15 );
@@ -366,7 +371,7 @@ namespace sgns
         void ChangeState( State new_state );
 
     public:
-        outcome::result<std::string> GetTransactionCID( const std::string &tx_hash ) const;
+        outcome::result<std::string>                    GetTransactionCID( const std::string &tx_hash ) const;
         outcome::result<ConsensusManager::SubjectCheck> HandleNonceConsensusSubject(
             const ConsensusManager::Subject &subject );
         bool ValidateTransactionForConsensus( const std::shared_ptr<IGeniusTransactions> &tx ) const;

@@ -497,6 +497,7 @@ namespace sgns
             TransferTransaction::New( inputs, outputs, FillDAGStruct() ) );
 
         transfer_transaction->MakeSignature( *account_m );
+        RecordOutgoingTxHash( transfer_transaction->GetNonce(), transfer_transaction->GetHash() );
 
         utxo_manager_.ReserveUTXOs( inputs );
 
@@ -521,6 +522,7 @@ namespace sgns
                                   FillDAGStruct( std::move( transaction_hash ) ) ) );
 
         mint_transaction->MakeSignature( *account_m );
+        RecordOutgoingTxHash( mint_transaction->GetNonce(), mint_transaction->GetHash() );
 
         // Store the transaction ID before moving the transaction
         auto txId = mint_transaction->GetHash();
@@ -552,6 +554,7 @@ namespace sgns
             EscrowTransaction::New( params, amount, dev_addr, peers_cut, FillDAGStruct() ) );
 
         escrow_transaction->MakeSignature( *account_m );
+        RecordOutgoingTxHash( escrow_transaction->GetNonce(), escrow_transaction->GetHash() );
 
         // Get the transaction ID for tracking
         auto txId = escrow_transaction->GetHash();
@@ -636,6 +639,9 @@ namespace sgns
         auto transfer_transaction = std::make_shared<TransferTransaction>(
             TransferTransaction::New( std::vector{ escrow_utxo_input }, payout_peers, FillDAGStruct() ) );
 
+        transfer_transaction->MakeSignature( *account_m );
+        RecordOutgoingTxHash( transfer_transaction->GetNonce(), transfer_transaction->GetHash() );
+
         auto escrow_release_tx = std::make_shared<EscrowReleaseTransaction>(
             EscrowReleaseTransaction::New( escrow_tx->GetUTXOParameters(),
                                            escrow_tx->GetAmount(),
@@ -644,10 +650,10 @@ namespace sgns
                                            escrow_tx->GetHash(),
                                            FillDAGStruct() ) );
 
-        TransactionBatch tx_batch;
-
-        transfer_transaction->MakeSignature( *account_m );
         escrow_release_tx->MakeSignature( *account_m );
+        RecordOutgoingTxHash( escrow_release_tx->GetNonce(), escrow_release_tx->GetHash() );
+
+        TransactionBatch tx_batch;
 
         tx_batch.push_back( std::make_pair( transfer_transaction, std::nullopt ) );
         tx_batch.push_back( std::make_pair( escrow_release_tx, std::nullopt ) );
@@ -684,20 +690,71 @@ namespace sgns
     }
 
     //TODO - Fill hash stuff on DAGStruct
-    SGTransaction::DAGStruct TransactionManager::FillDAGStruct( std::string transaction_hash ) const
+    SGTransaction::DAGStruct TransactionManager::FillDAGStruct( std::optional<std::string> other_chain_hash )
     {
         SGTransaction::DAGStruct dag;
-        auto                     timestamp = std::chrono::system_clock::now();
+        std::string              chain_hash;
+        const auto               nonce         = account_m->ReserveNextNonce();
+        auto                     previous_hash = GetOutgoingPreviousHash( nonce );
+        auto                     timestamp     = std::chrono::system_clock::now();
 
-        dag.set_previous_hash( transaction_hash );
-        dag.set_nonce( account_m->ReserveNextNonce() );
+        if ( other_chain_hash.has_value() )
+        {
+            chain_hash = std::move( other_chain_hash.value() );
+        }
+
+        dag.set_previous_hash( previous_hash );
+        dag.set_nonce( nonce );
         dag.set_source_addr( account_m->GetAddress() );
         dag.set_timestamp(
             std::chrono::duration_cast<std::chrono::milliseconds>( timestamp.time_since_epoch() ).count() );
-        dag.set_uncle_hash( "" );
-        dag.set_data_hash( "" ); //filled by transaction class
+        dag.set_uncle_hash( chain_hash );
 
         return dag;
+    }
+
+    std::string TransactionManager::GetOutgoingPreviousHash( uint64_t nonce ) const
+    {
+        if ( nonce == 0 )
+        {
+            return "";
+        }
+        std::lock_guard lock( outgoing_tx_hash_mutex_ );
+        auto            it = outgoing_tx_hash_by_nonce_.find( nonce - 1 );
+        if ( it == outgoing_tx_hash_by_nonce_.end() )
+        {
+            return "";
+        }
+        return it->second;
+    }
+
+    void TransactionManager::RecordOutgoingTxHash( uint64_t nonce, const std::string &hash )
+    {
+        std::lock_guard lock( outgoing_tx_hash_mutex_ );
+        outgoing_tx_hash_by_nonce_[nonce] = hash;
+
+        if ( nonce_window_m == 0 )
+        {
+            return;
+        }
+        const uint64_t min_nonce = ( nonce > ( nonce_window_m + 1 ) ) ? ( nonce - ( nonce_window_m + 1 ) ) : 0;
+        for ( auto it = outgoing_tx_hash_by_nonce_.begin(); it != outgoing_tx_hash_by_nonce_.end(); )
+        {
+            if ( it->first < min_nonce )
+            {
+                it = outgoing_tx_hash_by_nonce_.erase( it );
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
+    void TransactionManager::RemoveOutgoingTxHash( uint64_t nonce )
+    {
+        std::lock_guard lock( outgoing_tx_hash_mutex_ );
+        outgoing_tx_hash_by_nonce_.erase( nonce );
     }
 
     outcome::result<void> TransactionManager::SendTransactionItem( TransactionItem &item )
@@ -3538,6 +3595,10 @@ namespace sgns
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::FAILED, tx->GetNonce() };
                 account_m->ReleaseNonce( tx->GetNonce() );
+                if ( tx->GetSrcAddress() == account_m->GetAddress() )
+                {
+                    RemoveOutgoingTxHash( tx->GetNonce() );
+                }
 
                 TransactionManagerLogger()->debug( "[{} - full: {}] {}: Set status of FAILED to transaction {}",
                                                    account_m->GetAddress().substr( 0, 8 ),
