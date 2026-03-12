@@ -224,8 +224,8 @@ namespace sgns
             } );
 
         instance->account_->SetGetValidatorWeightMethod(
-            [weak_ptr( std::weak_ptr<Blockchain>(
-                instance ) )]( const std::string &address ) -> outcome::result<std::optional<uint64_t>>
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
+                const std::string &address ) -> outcome::result<std::optional<uint64_t>>
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
@@ -1555,11 +1555,18 @@ namespace sgns
         consensus_manager_->UnregisterCertificateHandler( type );
     }
 
+    outcome::result<ConsensusManager::Subject> Blockchain::CreateConsensusNonceSubject( const std::string &account_id,
+                                                                                        uint64_t           nonce,
+                                                                                        const std::string &tx_hash )
+    {
+        return consensus_manager_->CreateNonceSubject( account_id, nonce, tx_hash );
+    }
+
     outcome::result<ConsensusManager::Proposal> Blockchain::CreateConsensusProposal( const std::string &account_id,
                                                                                      uint64_t           nonce,
                                                                                      const std::string &tx_hash )
     {
-        OUTCOME_TRY( auto &&nonce_subject, consensus_manager_->CreateNonceSubject( account_id, nonce, tx_hash ) );
+        OUTCOME_TRY( auto &&nonce_subject, CreateConsensusNonceSubject( account_id, nonce, tx_hash ) );
         OUTCOME_TRY( auto &&nonce_proposal,
                      consensus_manager_->CreateProposal( nonce_subject,
                                                          account_id,
@@ -1582,6 +1589,11 @@ namespace sgns
     bool Blockchain::CheckCertificate( const std::string &subject_hash ) const
     {
         return consensus_manager_->CheckCertificateForSubject( subject_hash );
+    }
+
+    bool Blockchain::CheckCertificateStrict( const ConsensusManager::Subject &subject ) const
+    {
+        return consensus_manager_->CheckCertificateForSubject( subject );
     }
 
     const std::string &Blockchain::BestHash( const std::string &a, const std::string &b ) const

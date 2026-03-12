@@ -123,6 +123,7 @@ namespace sgns
 
         outcome::result<Certificate> GetCertificateBySubjectHash( const std::string &subject_hash ) const;
         bool                         CheckCertificateForSubject( const std::string &subject_hash ) const;
+        bool                         CheckCertificateForSubject( const Subject &subject ) const;
 
     protected:
         void ConfigureTimestampWindow( std::chrono::milliseconds window );
@@ -153,9 +154,9 @@ namespace sgns
             uint64_t                        total_weight    = 0;
             uint64_t                        approved_weight = 0;
             std::unordered_set<std::string> seen_voters;
-            bool                            quorum_reached     = false;
+            bool                            quorum_reached       = false;
             uint64_t                        quorum_reached_ts_ms = 0;
-            uint64_t                        last_attempt_round = NO_ROUND;
+            uint64_t                        last_attempt_round   = NO_ROUND;
         };
 
         struct SlotState
@@ -184,6 +185,8 @@ namespace sgns
         void                                ContinueProposalAfterSubject( const Proposal &proposal );
         void                  AddPendingProposal( const Proposal &proposal, const std::string &subject_hash );
         std::vector<Proposal> TakePendingProposals( const std::string &subject_hash );
+        void                  AddPendingVote( const Vote &vote );
+        std::vector<Vote>     TakePendingVotes( const std::string &proposal_id );
         bool                  RegisterCertificateFilter();
         std::optional<std::vector<crdt::pb::Element>> FilterCertificate( const crdt::pb::Element &element );
         void CertificateReceived( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
@@ -209,6 +212,7 @@ namespace sgns
         std::unordered_map<std::string, SlotState>                slot_states_;
         std::unordered_map<std::string, Proposal>                 pending_proposals_;
         std::unordered_map<std::string, std::vector<std::string>> pending_by_subject_hash_;
+        std::unordered_map<std::string, std::vector<Vote>>        pending_votes_;
         mutable std::mutex                                        proposals_mutex_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                pubsub_;
 

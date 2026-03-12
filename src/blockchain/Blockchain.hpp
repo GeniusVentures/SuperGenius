@@ -111,6 +111,9 @@ namespace sgns
         bool RegisterCertificateHandler( SubjectType type, ConsensusManager::CertificateSubjectHandler handler );
         void UnregisterCertificateHandler( SubjectType type );
 
+        outcome::result<ConsensusManager::Subject> CreateConsensusNonceSubject( const std::string &account_id,
+                                                                                uint64_t           nonce,
+                                                                                const std::string &tx_hash );
 
         outcome::result<ConsensusManager::Proposal> CreateConsensusProposal( const std::string &account_id,
                                                                              uint64_t           nonce,
@@ -119,9 +122,9 @@ namespace sgns
         outcome::result<void> SubmitProposal( const ConsensusManager::Proposal &proposal );
 
         outcome::result<void> TryResumeProposal( const std::string &hash );
-
-        bool CheckCertificate( const std::string &subject_hash ) const;
-        const std::string &BestHash( const std::string &a, const std::string &b ) const;
+        bool                  CheckCertificate( const std::string &subject_hash ) const;
+        bool                  CheckCertificateStrict( const ConsensusManager::Subject &subject ) const;
+        const std::string    &BestHash( const std::string &a, const std::string &b ) const;
 
     protected:
         friend class Migration3_5_1To3_6_0;
@@ -158,7 +161,8 @@ namespace sgns
                                            const AccountCreationBlock &candidate ) const;
 
         void GenesisReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair &new_data, const std::string &cid );
-        void AccountCreationReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair& new_data, const std::string &cid );
+        void AccountCreationReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair &new_data,
+                                              const std::string                            &cid );
         outcome::result<void> InformBlockchainResult( outcome::result<void> result ) const;
         void                  InformGenesisResult( outcome::result<std::string> result );
         void                  InformAccountCreationResponse( outcome::result<std::string> creation_result );
@@ -180,9 +184,9 @@ namespace sgns
         std::shared_ptr<crdt::GlobalDB> db_;      ///< CRDT database instance
         std::shared_ptr<GeniusAccount>  account_; ///< GeniusAccount instance
 
-        BlockchainCallback blockchain_processed_callback_;  ///< Callback when the processing of the blockchain is done
-        GenesisBlock genesis_block_;                  ///< Cached genesis block for easy access
-        AccountCreationBlock account_creation_block_; ///< Cached account creation block
+        BlockchainCallback   blockchain_processed_callback_; ///< Callback when the processing of the blockchain is done
+        GenesisBlock         genesis_block_;                 ///< Cached genesis block for easy access
+        AccountCreationBlock account_creation_block_;        ///< Cached account creation block
 
         struct BlockchainCIDs
         {
