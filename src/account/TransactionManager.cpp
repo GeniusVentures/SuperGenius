@@ -3226,19 +3226,30 @@ namespace sgns
         {
             if ( tx.GetNonce() == 0 )
             {
-                TransactionManagerLogger()->debug( "[{} - full: {}] {}: No peer nonce required for tx with nonce=0",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   __func__ );
+                TransactionManagerLogger()->debug(
+                    "[{} - full: {}] {}: Transaction Nonce 0 for {}. No need to check previous transactions",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    __func__,
+                    tx.GetSrcAddress() );
+                //TODO - Possibly check account creation
                 return true;
             }
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing peer nonce for address {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx.GetSrcAddress() );
+            TransactionManagerLogger()->debug(
+                "[{} - full: {}] {}: No confirmed nonce for address {}. Checking certificate and nonce from previous hash",
+                account_m->GetAddress().substr( 0, 8 ),
+                full_node_m,
+                __func__,
+                tx.GetSrcAddress() );
+            auto previous_hash_subject_result = blockchain_->CreateConsensusNonceSubject( tx.GetSrcAddress(),
+                                                                                          tx.GetNonce() - 1,
+                                                                                          tx.GetPreviousHash() );
+            if ( previous_hash_subject_result.has_error() )
+            {
+                return false;
+            }
 
-            return false;
+            return blockchain_->CheckCertificateStrict( previous_hash_subject_result.value() );
         }
 
         const auto confirmed_nonce = nonce_result.value();
