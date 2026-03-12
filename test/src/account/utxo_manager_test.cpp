@@ -170,6 +170,49 @@ TEST_F( UTXOManagerTest, Storage )
     EXPECT_EQ( utxos.size(), 2 );
 }
 
+TEST_F( UTXOManagerTest, MerkleRootDeterministicAcrossInsertionOrder )
+{
+    const auto hash_a = HASHER.sha2_256( { 0xA1 } );
+    const auto hash_b = HASHER.sha2_256( { 0xB2 } );
+
+    std::vector<GeniusUTXO> ordered_a{
+        GeniusUTXO( hash_a, 0, 100, TOKEN_1 ),
+        GeniusUTXO( hash_b, 1, 200, sgns::TokenID::FromBytes( { 0x02 } ) ),
+    };
+
+    std::vector<GeniusUTXO> ordered_b{
+        GeniusUTXO( hash_b, 1, 200, sgns::TokenID::FromBytes( { 0x02 } ) ),
+        GeniusUTXO( hash_a, 0, 100, TOKEN_1 ),
+    };
+
+    ASSERT_TRUE( utxo_manager->SetUTXOs( ordered_a ).has_value() );
+    auto root_a = utxo_manager->ComputeUTXOMerkleRoot();
+
+    ASSERT_TRUE( utxo_manager->SetUTXOs( ordered_b ).has_value() );
+    auto root_b = utxo_manager->ComputeUTXOMerkleRoot();
+
+    EXPECT_EQ( root_a, root_b );
+}
+
+TEST_F( UTXOManagerTest, MerkleRootChangesWhenUTXOSetChanges )
+{
+    const auto hash_a = HASHER.sha2_256( { 0xC3 } );
+    const auto hash_b = HASHER.sha2_256( { 0xD4 } );
+
+    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( hash_a, 0, 55, TOKEN_1 ) ) );
+    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( hash_b, 1, 77, sgns::TokenID::FromBytes( { 0x03 } ) ) ) );
+
+    const auto root_before = utxo_manager->ComputeUTXOMerkleRoot();
+
+    InputUTXOInfo spent;
+    spent.txid_hash_  = hash_a;
+    spent.output_idx_ = 0;
+    utxo_manager->ConsumeUTXOs( { spent } );
+
+    const auto root_after = utxo_manager->ComputeUTXOMerkleRoot();
+    EXPECT_NE( root_before, root_after );
+}
+
 TEST( GeniusUTXO, PropertyAccessors )
 {
     uint32_t   idx = 5;

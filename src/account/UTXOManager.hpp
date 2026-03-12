@@ -132,6 +132,16 @@ namespace sgns
 
         bool VerifyParameters( const UTXOTxParameters &params, const std::string &address ) const;
 
+        /**
+         * @brief Compute a deterministic Merkle root for unspent UTXOs owned by this node address
+         */
+        [[nodiscard]] base::Hash256 ComputeUTXOMerkleRoot() const;
+
+        /**
+         * @brief Compute a deterministic Merkle root for unspent UTXOs from a specific address
+         */
+        [[nodiscard]] base::Hash256 ComputeUTXOMerkleRoot( const std::string &address ) const;
+
         outcome::result<bool> LoadUTXOs( std::shared_ptr<storage::rocksdb> db );
 
         /**
