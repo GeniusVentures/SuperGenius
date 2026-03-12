@@ -441,12 +441,11 @@ namespace sgns
 
     outcome::result<ValidatorRegistry::Registry> ValidatorRegistry::LoadRegistry() const
     {
-        logger_->trace( "{}: entry", __func__ );
+
         {
             std::shared_lock<std::shared_mutex> lock( cache_mutex_ );
             if ( cached_registry_ )
             {
-                logger_->trace( "{}: returning cached registry", __func__ );
                 return cached_registry_.value();
             }
         }
@@ -1071,10 +1070,50 @@ namespace sgns
         const std::unordered_map<std::string, bool> &registered_votes,
         const std::unordered_map<std::string, bool> &unregistered_votes ) const
     {
+        logger_->debug( "{}: building registry update proposal_id={} epoch={} current_validators={} registered_votes={} unregistered_votes={}",
+                        __func__,
+                        certificate.proposal_id().substr( 0, 8 ),
+                        current_registry.epoch(),
+                        current_registry.validators_size(),
+                        registered_votes.size(),
+                        unregistered_votes.size() );
+        if ( !unregistered_votes.empty() )
+        {
+            std::vector<std::string> unregistered_ids;
+            unregistered_ids.reserve( unregistered_votes.size() );
+            for ( const auto &pair : unregistered_votes )
+            {
+                unregistered_ids.push_back( pair.first.substr( 0, 8 ) );
+            }
+            std::sort( unregistered_ids.begin(), unregistered_ids.end() );
+            logger_->debug( "{}: unregistered voter ids (prefixes)={}",
+                            __func__,
+                            fmt::join( unregistered_ids, "," ) );
+        }
+
         Registry next = current_registry;
         next.set_epoch( current_registry.epoch() + 1 );
 
+        const int before_count = next.validators_size();
         InsertNewValidators( next, unregistered_votes );
+        const int after_insert = next.validators_size();
+        if ( after_insert > before_count )
+        {
+            std::vector<std::string> new_ids;
+            new_ids.reserve( static_cast<size_t>( after_insert - before_count ) );
+            for ( const auto &entry : next.validators() )
+            {
+                if ( !FindValidator( current_registry, entry.validator_id() ) )
+                {
+                    new_ids.push_back( entry.validator_id().substr( 0, 8 ) );
+                }
+            }
+            std::sort( new_ids.begin(), new_ids.end() );
+            logger_->debug( "{}: inserted {} new validators (prefixes)={}",
+                            __func__,
+                            new_ids.size(),
+                            fmt::join( new_ids, "," ) );
+        }
 
         std::vector<ValidatorEntry> entries;
         entries.reserve( static_cast<size_t>( next.validators_size() ) );
@@ -1108,10 +1147,11 @@ namespace sgns
             *next.add_validators() = entry;
         }
 
-        logger_->debug( "{}: built registry from certificate proposal_id={} epoch={}",
+        logger_->debug( "{}: built registry from certificate proposal_id={} epoch={} validators={}",
                         __func__,
-                        certificate.proposal_id(),
-                        next.epoch() );
+                        certificate.proposal_id().substr( 0, 8 ),
+                        next.epoch(),
+                        next.validators_size() );
         return next;
     }
 

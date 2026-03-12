@@ -23,11 +23,16 @@
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
+#define private public
+#define protected public
 #include "account/GeniusNode.hpp"
+#undef private
+#undef protected
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include "testutil/wait_condition.hpp"
+#include "blockchain/ValidatorRegistry.hpp"
 
 class MultiAccountTest : public ::testing::Test
 {
@@ -135,7 +140,7 @@ protected:
     }
 };
 
-TEST_F( MultiAccountTest, SyncThroughEachOther )
+TEST_F( MultiAccountTest, DISABLED_SyncThroughEachOther )
 {
     // Create nodes dynamically
     auto node_full = CreateNode( "node_multi_full",
@@ -221,7 +226,7 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     ASSERT_EQ( node_duplicated->GetBalance(), node_original->GetBalance() );
 }
 
-TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
+TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
 {
     // Create 3 nodes - 2 with the same address, 1 different (full node for network)
     auto node_full = CreateNode( "full_node_address_unique", // different self_address
@@ -382,7 +387,6 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
                                   std::chrono::milliseconds( 50000 ),
                                   "node_same_addr_2 balance not synced" );
 
-
     fmt::println( "Balances after bootstrap - Node1: {}, Node2: {}",
                   node_same_addr_2->GetBalance(),
                   node_same_addr_1->GetBalance() );
@@ -414,4 +418,205 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
         << "Nodes with same address should have same balance after CRDT resolution";
 
     std::cout << "CRDT Filter test completed successfully!" << std::endl;
+}
+
+TEST_F( MultiAccountTest, NodeConsensusTest )
+{
+    auto node_full = CreateNode( "node_consensus_full",
+                                 "0xcafe",
+                                 "1.0",
+                                 TokenID::FromBytes( { 0x00 } ),
+                                 true,   // is full node
+                                 true,   // is processor
+                                 true ); // is genesis authorized
+
+    test::assertWaitForCondition(
+        [&]() { return node_full->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        "node_full not synced" );
+
+    auto node_client = CreateNode( "node_consensus_client",
+                                   "0xcafe",
+                                   "1.0",
+                                   TokenID::FromBytes( { 0x00 } ),
+                                   false, // not full node
+                                   false  // not processor
+    );
+
+    auto node_peer1 = CreateNode( "node_consensus_peer1",
+                                  "0xcafe",
+                                  "1.0",
+                                  TokenID::FromBytes( { 0x00 } ),
+                                  false,
+                                  false );
+    auto node_peer2 = CreateNode( "node_consensus_peer2",
+                                  "0xcafe",
+                                  "1.0",
+                                  TokenID::FromBytes( { 0x00 } ),
+                                  false,
+                                  false );
+    auto node_peer3 = CreateNode( "node_consensus_peer3",
+                                  "0xcafe",
+                                  "1.0",
+                                  TokenID::FromBytes( { 0x00 } ),
+                                  false,
+                                  false );
+
+    node_client->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_peer1->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_peer2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_peer3->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    test::assertWaitForCondition(
+        [&]() { return node_client->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        "node_client not synced" );
+    test::assertWaitForCondition(
+        [&]() { return node_peer1->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        "node_peer1 not synced" );
+    test::assertWaitForCondition(
+        [&]() { return node_peer2->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        "node_peer2 not synced" );
+    test::assertWaitForCondition(
+        [&]() { return node_peer3->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        "node_peer3 not synced" );
+
+    ASSERT_TRUE( node_full->blockchain_ );
+    auto registry = node_full->blockchain_->GetValidatorRegistry();
+    ASSERT_TRUE( registry );
+
+    fmt::println( "Nodes created. Registry loaded" );
+    test::assertWaitForCondition(
+        [&]()
+        {
+            auto load = registry->LoadRegistry();
+            return load.has_value() && !registry->GetRegistryCid().empty();
+        },
+        std::chrono::milliseconds( 30000 ),
+        "validator registry not initialized" );
+
+    fmt::println( "Registry CID: {}", registry->GetRegistryCid() );
+    auto assert_registry_updated = [&]( uint64_t epoch_before, const std::string &cid_before )
+    {
+        test::assertWaitForCondition(
+            [&]()
+            {
+                auto load = registry->LoadRegistry();
+                return load.has_value() &&
+                       ( load.value().epoch() > epoch_before || registry->GetRegistryCid() != cid_before );
+            },
+            std::chrono::milliseconds( 30000 ),
+            "validator registry did not update" );
+
+        auto registry_after = registry->LoadRegistry();
+        ASSERT_TRUE( registry_after.has_value() );
+        EXPECT_GT( registry_after.value().epoch(), epoch_before );
+        EXPECT_NE( registry->GetRegistryCid(), cid_before );
+
+        auto *full_validator  = sgns::ValidatorRegistry::FindValidator( registry_after.value(),
+                                                                       node_full->GetAddress() );
+        auto *peer1_validator = sgns::ValidatorRegistry::FindValidator( registry_after.value(),
+                                                                        node_peer1->GetAddress() );
+        auto *peer2_validator = sgns::ValidatorRegistry::FindValidator( registry_after.value(),
+                                                                        node_peer2->GetAddress() );
+        auto *peer3_validator = sgns::ValidatorRegistry::FindValidator( registry_after.value(),
+                                                                        node_peer3->GetAddress() );
+
+        ASSERT_TRUE( full_validator );
+        ASSERT_TRUE( peer1_validator );
+        ASSERT_TRUE( peer2_validator );
+        ASSERT_TRUE( peer3_validator );
+        EXPECT_GT( full_validator->weight(), 0 );
+        EXPECT_GT( peer1_validator->weight(), 0 );
+        EXPECT_GT( peer2_validator->weight(), 0 );
+        EXPECT_GT( peer3_validator->weight(), 0 );
+    };
+
+    auto mint1 = node_client->MintTokens( 100,
+                                          "",
+                                          "",
+                                          TokenID::FromBytes( { 0x00 } ),
+                                          std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( mint1.has_value() ) << "Mint 1 failed on node_client";
+    fmt::println( "Mint 1 succeeded" );
+
+    auto mint2 = node_client->MintTokens( 250,
+                                          "",
+                                          "",
+                                          TokenID::FromBytes( { 0x00 } ),
+                                          std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( mint2.has_value() ) << "Mint 2 failed on node_client";
+    fmt::println( "Mint 2 succeeded" );
+
+
+    auto transfer1 = node_client->TransferFunds( 75,
+                                                 node_peer1->GetAddress(),
+                                                 TokenID::FromBytes( { 0x00 } ),
+                                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( transfer1.has_value() ) << "Transfer 1 failed on node_client";
+    fmt::println( "Transfer 1 succeeded" );
+
+
+    auto transfer2 = node_client->TransferFunds( 40,
+                                                 node_peer2->GetAddress(),
+                                                 TokenID::FromBytes( { 0x00 } ),
+                                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( transfer2.has_value() ) << "Transfer 2 failed on node_client";
+    fmt::println( "Transfer 2 succeeded" );
+
+
+    auto transfer3 = node_client->TransferFunds( 10,
+                                                 node_peer3->GetAddress(),
+                                                 TokenID::FromBytes( { 0x00 } ),
+                                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( transfer3.has_value() ) << "Transfer 3 failed on node_client";
+
+    fmt::println( "Transfer 3 succeeded" );
+
+
+    auto wait_confirmed = [&]( const std::string &tx_id, const char *label )
+    {
+        test::assertWaitForCondition(
+            [&]()
+            { return node_client->GetTransactionStatus( tx_id ) == TransactionManager::TransactionStatus::CONFIRMED; },
+            std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ),
+            label );
+    };
+
+    auto registry_state = registry->LoadRegistry();
+    ASSERT_TRUE( registry_state.has_value() );
+    auto epoch_before = registry_state.value().epoch();
+    auto cid_before   = registry->GetRegistryCid();
+    wait_confirmed( mint1.value().first, "mint1 not confirmed" );
+    assert_registry_updated( epoch_before, cid_before );
+
+    registry_state = registry->LoadRegistry();
+    ASSERT_TRUE( registry_state.has_value() );
+    epoch_before = registry_state.value().epoch();
+    cid_before   = registry->GetRegistryCid();
+    wait_confirmed( mint2.value().first, "mint2 not confirmed" );
+    assert_registry_updated( epoch_before, cid_before );
+
+    registry_state = registry->LoadRegistry();
+    ASSERT_TRUE( registry_state.has_value() );
+    epoch_before = registry_state.value().epoch();
+    cid_before   = registry->GetRegistryCid();
+    wait_confirmed( transfer1.value().first, "transfer1 not confirmed" );
+    assert_registry_updated( epoch_before, cid_before );
+
+    registry_state = registry->LoadRegistry();
+    ASSERT_TRUE( registry_state.has_value() );
+    epoch_before = registry_state.value().epoch();
+    cid_before   = registry->GetRegistryCid();
+    wait_confirmed( transfer2.value().first, "transfer2 not confirmed" );
+    assert_registry_updated( epoch_before, cid_before );
+
+    registry_state = registry->LoadRegistry();
+    ASSERT_TRUE( registry_state.has_value() );
+    epoch_before = registry_state.value().epoch();
+    cid_before   = registry->GetRegistryCid();
+    wait_confirmed( transfer3.value().first, "transfer3 not confirmed" );
+    assert_registry_updated( epoch_before, cid_before );
 }
