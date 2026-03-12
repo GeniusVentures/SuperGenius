@@ -10,6 +10,7 @@
 #include <thread>
 #include <memory>
 #include <exception>
+#include <random>
 
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
