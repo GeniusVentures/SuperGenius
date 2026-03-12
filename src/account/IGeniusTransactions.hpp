@@ -85,6 +85,8 @@ namespace sgns
         }
 
         [[nodiscard]] std::string GetHash() const;
+        [[nodiscard]] std::string GetPreviousHash() const;
+        [[nodiscard]] std::string GetUncleHash() const;
 
         uint64_t GetTimestamp() const
         {

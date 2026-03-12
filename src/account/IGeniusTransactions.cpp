@@ -99,6 +99,16 @@ namespace sgns
         return dag_st.data_hash();
     }
 
+    std::string IGeniusTransactions::GetPreviousHash() const
+    {
+        return dag_st.previous_hash();
+    }
+
+    std::string IGeniusTransactions::GetUncleHash() const
+    {
+        return dag_st.uncle_hash();
+    }
+
     std::unordered_set<std::string> IGeniusTransactions::GetTopics() const
     {
         return { GetSrcAddress() };
