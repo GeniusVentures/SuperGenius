@@ -7,21 +7,44 @@
 #include "crdt/globaldb/globaldb.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
 
+#include <optional>
 #include <shared_mutex>
+#include <unordered_set>
 
 namespace sgns
 {
+    struct OutPointHash
+    {
+        size_t operator()( const OutPoint &outpoint ) const
+        {
+            size_t seed = 0;
+            boost::hash_combine( seed, outpoint.txid_hash_ );
+            boost::hash_combine( seed, outpoint.output_idx_ );
+            return seed;
+        }
+    };
+
     class UTXOManager
     {
     public:
         enum class UTXOState : uint8_t
         {
             UTXO_READY,
-            UTXO_RESERVED,
             UTXO_CONSUMED
         };
 
         using UTXOData            = std::pair<UTXOState, GeniusUTXO>;
+        struct UTXOEntry
+        {
+            UTXOState                     state{ UTXOState::UTXO_READY };
+            GeniusUTXO                    utxo;
+            uint64_t                      created_epoch{ 0 };
+            std::optional<uint64_t>       spent_epoch;
+            std::optional<base::Hash256>  spent_by_txid;
+        };
+
+        using UTXOOutPointMap     = std::unordered_map<OutPoint, UTXOEntry, OutPointHash>;
+        using AddressOutPointList = std::unordered_map<std::string, std::vector<OutPoint>>;
         using SignFunc            = std::function<std::vector<uint8_t>( const std::vector<uint8_t> &data )>;
         using VerifySignatureFunc = std::function<bool( const std::string          &address,
                                                         const std::vector<uint8_t> &signature,
@@ -71,9 +94,10 @@ namespace sgns
         /**
          * @brief       Delete a UTXO from the account
          * @param[in]   utxo_id The ID of the UTXO to be deleted
+         * @param[in]   output_idx The output index of the UTXO
          * @param       address Address to remove the UTXO from
          */
-        void DeleteUTXO( const base::Hash256 &utxo_id, const std::string &address );
+        void DeleteUTXO( const base::Hash256 &utxo_id, uint32_t output_idx, const std::string &address );
 
         /**
          * @brief       Consume UTXOs from the account
@@ -165,8 +189,10 @@ namespace sgns
         VerifySignatureFunc               verify_signature_;
         std::shared_ptr<storage::rocksdb> db_;
 
-        mutable std::shared_mutex                              utxos_mutex_; ///< Mutex for the UTXOs map
-        std::unordered_map<std::string, std::vector<UTXOData>> utxos_;       ///< Map of UTXOs by address
+        mutable std::shared_mutex                  utxos_mutex_; ///< Mutex for UTXO state structures
+        UTXOOutPointMap                                        utxo_outpoints_;
+        AddressOutPointList                                    address_outpoints_;
+        std::unordered_set<OutPoint, OutPointHash>             reserved_outpoints_;
     };
 
 }

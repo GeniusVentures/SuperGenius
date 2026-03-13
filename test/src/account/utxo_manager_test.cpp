@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <array>
+
 #include "base/blob.hpp" // for sgns::base::Hash256
 #include "account/UTXOManager.hpp"
 #include "account/GeniusUTXO.hpp"
@@ -172,8 +174,10 @@ TEST_F( UTXOManagerTest, Storage )
 
 TEST_F( UTXOManagerTest, MerkleRootDeterministicAcrossInsertionOrder )
 {
-    const auto hash_a = HASHER.sha2_256( { 0xA1 } );
-    const auto hash_b = HASHER.sha2_256( { 0xB2 } );
+    const std::array<uint8_t, 1> seed_a{ 0xA1 };
+    const std::array<uint8_t, 1> seed_b{ 0xB2 };
+    const auto                   hash_a = HASHER.sha2_256( gsl::span<const uint8_t>( seed_a ) );
+    const auto                   hash_b = HASHER.sha2_256( gsl::span<const uint8_t>( seed_b ) );
 
     std::vector<GeniusUTXO> ordered_a{
         GeniusUTXO( hash_a, 0, 100, TOKEN_1 ),
@@ -196,8 +200,10 @@ TEST_F( UTXOManagerTest, MerkleRootDeterministicAcrossInsertionOrder )
 
 TEST_F( UTXOManagerTest, MerkleRootChangesWhenUTXOSetChanges )
 {
-    const auto hash_a = HASHER.sha2_256( { 0xC3 } );
-    const auto hash_b = HASHER.sha2_256( { 0xD4 } );
+    const std::array<uint8_t, 1> seed_a{ 0xC3 };
+    const std::array<uint8_t, 1> seed_b{ 0xD4 };
+    const auto                   hash_a = HASHER.sha2_256( gsl::span<const uint8_t>( seed_a ) );
+    const auto                   hash_b = HASHER.sha2_256( gsl::span<const uint8_t>( seed_b ) );
 
     EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( hash_a, 0, 55, TOKEN_1 ) ) );
     EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( hash_b, 1, 77, sgns::TokenID::FromBytes( { 0x03 } ) ) ) );
@@ -223,7 +229,7 @@ TEST( GeniusUTXO, PropertyAccessors )
     EXPECT_EQ( utxo.GetOutputIdx(), idx );
     EXPECT_EQ( utxo.GetAmount(), amt );
     EXPECT_EQ( utxo.GetTokenID(), tok );
-    EXPECT_FALSE( utxo.GetLock() );
+    EXPECT_TRUE( utxo.GetOwnerAddress().empty() );
 }
 
 TEST( InputUTXOInfo, FieldAssignment )

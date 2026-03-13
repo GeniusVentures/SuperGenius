@@ -43,6 +43,25 @@ message UTXO
     bytes hash = 3;
     bytes token = 4;
 }
+
+enum UTXOEntryState
+{
+    UTXO_ENTRY_READY = 0;
+    UTXO_ENTRY_CONSUMED = 1;
+}
+
+message UTXOEntryRecord
+{
+    UTXO utxo = 1;
+    string owner_address = 2;
+    UTXOEntryState state = 3;
+    uint64 created_epoch = 4;
+    bool has_spent_epoch = 5;
+    uint64 spent_epoch = 6;
+    bool has_spent_by_txid = 7;
+    bytes spent_by_txid = 8;
+}
+
 message UTXOList
 {
     repeated UTXO utxos = 1;
@@ -87,5 +106,4 @@ message EscrowReleaseTx
   string escrow_source = 5; 
   string original_escrow_hash = 6; 
 }
-
 

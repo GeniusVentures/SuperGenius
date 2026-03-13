@@ -1285,10 +1285,11 @@ namespace sgns
         auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
         auto dest_infos  = transfer_tx->GetDstInfos();
 
-        for ( const auto &dest_info : dest_infos )
+        for ( std::uint32_t i = 0; i < dest_infos.size(); ++i )
         {
+            const auto &dest_info = dest_infos[i];
             auto hash = ( base::Hash256::fromReadableString( transfer_tx->GetHash() ) ).value();
-            utxo_manager_.DeleteUTXO( hash, dest_info.dest_address );
+            utxo_manager_.DeleteUTXO( hash, i, dest_info.dest_address );
 
             TransactionManagerLogger()->debug( "[{} - full: {}] Notify {} of deletion of {} to it",
                                                account_m->GetAddress().substr( 0, 8 ),
@@ -1331,7 +1332,7 @@ namespace sgns
         auto mint_tx = std::dynamic_pointer_cast<MintTransaction>( tx );
 
         auto hash = ( base::Hash256::fromReadableString( mint_tx->GetHash() ) ).value();
-        utxo_manager_.DeleteUTXO( hash, mint_tx->GetSrcAddress() );
+        utxo_manager_.DeleteUTXO( hash, 0, mint_tx->GetSrcAddress() );
         TransactionManagerLogger()->info( "[{} - full: {}] Deleted {} tokens, from tx {}, final balance {}",
                                           account_m->GetAddress().substr( 0, 8 ),
                                           full_node_m,
@@ -1354,7 +1355,7 @@ namespace sgns
                 auto hash = ( base::Hash256::fromReadableString( escrow_tx->GetHash() ) ).value();
                 if ( outputs.size() > 1 )
                 {
-                    utxo_manager_.DeleteUTXO( hash, outputs[1].dest_address );
+                    utxo_manager_.DeleteUTXO( hash, 1, outputs[1].dest_address );
                 }
                 for ( auto &input : inputs )
                 {

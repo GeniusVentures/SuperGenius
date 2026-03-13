@@ -10,43 +10,76 @@
 #include "base/blob.hpp"
 #include "account/TokenID.hpp"
 
+#include <string>
+#include <utility>
+
 namespace sgns
 {
+    struct OutPoint
+    {
+        base::Hash256 txid_hash_;
+        uint32_t      output_idx_{ 0 };
+
+        bool operator==( const OutPoint &other ) const
+        {
+            return txid_hash_ == other.txid_hash_ && output_idx_ == other.output_idx_;
+        }
+    };
+
     class GeniusUTXO
     {
     public:
-        GeniusUTXO( const base::Hash256 &hash, uint32_t previous_index, uint64_t amount, TokenID token_id ) :
-            txid_hash_( hash ),            //
-            output_idx_( previous_index ), //
-            amount_( amount ),             //
-            locked_( false ),              //
-            token_id_( token_id )          //
+        GeniusUTXO() : outpoint_{}, amount_( 0 ), token_id_(), owner_address_()
         {
         }
 
-        void SetLocked( const bool locked )
+        GeniusUTXO( const base::Hash256 &hash, uint32_t previous_index, uint64_t amount, TokenID token_id ) :
+            outpoint_{ hash, previous_index }, //
+            amount_( amount ),                 //
+            token_id_( token_id )              //
         {
-            locked_ = locked;
+        }
+
+        GeniusUTXO( const base::Hash256 &hash,
+                    uint32_t             previous_index,
+                    uint64_t             amount,
+                    TokenID              token_id,
+                    std::string          owner_address ) :
+            outpoint_{ hash, previous_index }, //
+            amount_( amount ),                 //
+            token_id_( token_id ),             //
+            owner_address_( std::move( owner_address ) )
+        {
+        }
+
+        void SetOwnerAddress( std::string owner_address )
+        {
+            owner_address_ = std::move( owner_address );
+        }
+
+        const std::string &GetOwnerAddress() const
+        {
+            return owner_address_;
+        }
+
+        OutPoint GetOutPoint() const
+        {
+            return outpoint_;
         }
 
         base::Hash256 GetTxID() const
         {
-            return txid_hash_;
+            return outpoint_.txid_hash_;
         }
 
         uint32_t GetOutputIdx() const
         {
-            return output_idx_;
+            return outpoint_.output_idx_;
         }
 
         uint64_t GetAmount() const
         {
             return amount_;
-        }
-
-        bool GetLock() const
-        {
-            return locked_;
         }
 
         TokenID GetTokenID() const
@@ -55,11 +88,10 @@ namespace sgns
         }
 
     private:
-        base::Hash256 txid_hash_;
-        uint32_t      output_idx_;
+        OutPoint      outpoint_;
         uint64_t      amount_;
-        bool          locked_;
         TokenID       token_id_;
+        std::string   owner_address_;
     };
 }
 
