@@ -26,11 +26,6 @@ set(BUILD_EXAMPLES OFF)
 
 set(PROTOC_EXECUTABLE "${_THIRDPARTY_BUILD_DIR}/protobuf_host/bin/protoc${CMAKE_EXECUTABLE_SUFFIX}")
 
-# Set custom protobuf path for iOS
-set(iOS_Protobuf_DIR "${THIRDPARTY_BUILD_DIR}/protobuf/lib/cmake/protobuf")
-set(iOS_Protobuf_INCLUDE_DIR "${THIRDPARTY_BUILD_DIR}/protobuf/include/google/protobuf")
-set(iOS_Protobuf_LIBRARIES "${THIRDPARTY_BUILD_DIR}/protobuf/lib")
-
 set(ABI_SUBFOLDER_NAME "/aarch64")
 
 set(TESTING OFF)
