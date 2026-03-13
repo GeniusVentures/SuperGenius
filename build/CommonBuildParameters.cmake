@@ -234,20 +234,9 @@ find_package(ipfs-bitswap-cpp CONFIG REQUIRED)
 set(ed25519_DIR "${_THIRDPARTY_BUILD_DIR}/ed25519/lib/cmake/ed25519")
 find_package(ed25519 CONFIG REQUIRED)
 
-# sr25519-donna
-set(sr25519-donna_DIR "${_THIRDPARTY_BUILD_DIR}/sr25519-donna/lib/cmake/sr25519-donna")
-find_package(sr25519-donna CONFIG REQUIRED)
-
 # RapidJSON
 set(RapidJSON_DIR "${_THIRDPARTY_BUILD_DIR}/rapidjson/lib/cmake/RapidJSON")
 find_package(RapidJSON CONFIG REQUIRED)
-
-# binaryen
-# set(binaryen_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/binaryen/include")
-# set(binaryen_LIBRARIES "${_THIRDPARTY_BUILD_DIR}/binaryen/lib")
-# set(binaryen_DIR "${_THIRDPARTY_BUILD_DIR}/binaryen/lib/cmake/binaryen")
-# find_package(binaryen CONFIG REQUIRED)
-# include_directories(${binaryen_INCLUDE_DIR} ${binaryen_INCLUDE_DIR}/binaryen)
 
 # secp256k1
 set(libsecp256k1_DIR "${_THIRDPARTY_BUILD_DIR}/libsecp256k1/lib/cmake/libsecp256k1")
