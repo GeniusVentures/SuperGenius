@@ -9,4 +9,5 @@ target_link_libraries(watcher_service
     PUBLIC
     rapidjson
     Boost::thread
+    Boost::chrono
 )
