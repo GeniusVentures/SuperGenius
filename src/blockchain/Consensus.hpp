@@ -31,33 +31,63 @@
 
 namespace sgns
 {
+    /**
+     * @brief      Implements Consensus with weighted voting.
+     *             
+     *      This class implements a consensus algorithm using pubsub messages.
+     * A subject needs to be created and with it a proposal as well. The proposal gets sent to the network
+     * and gets voted by peers who receive it. This class has hooks to be filled by the caller to register methods
+     * to handle subject and proposal. The idea is to leave out the validation of specific data (transaction, job result and etc)
+     * for whomever creates the subject. It relies on @ref ValidatorRegistry class to get the voters and their weights.
+     * Once consensus is reached a round scheme determines who amongst the validators will create the certificate which is
+     * the finality of the subject. The certificate also enabled registry updates to register new validators according to peer who voted
+     * correctly or penalize people who votes incorrectly.
+     */
     class ConsensusManager : public std::enable_shared_from_this<ConsensusManager>
     {
     public:
+        /**
+         * @brief      Destroys the Consensus Manager object
+         */
         ~ConsensusManager();
+        /**
+         * @brief      Close and cleanup members of the Consensus Manager
+         */
         void Close();
-        using Proposal    = ConsensusProposal;
-        using Vote        = ConsensusVote;
-        using VoteBundle  = ConsensusVoteBundle;
-        using Certificate = ConsensusCertificate;
-        using Subject     = ConsensusSubject;
 
+        using Proposal    = ConsensusProposal;    ///< Alias for Consensus Proposal protobuf type
+        using Vote        = ConsensusVote;        ///< Alias for Consensus Vote protobuf type
+        using VoteBundle  = ConsensusVoteBundle;  ///< Alias for Consensus Vote Bundle protobuf type
+        using Certificate = ConsensusCertificate; ///< Alias for Consensus Certificate protobuf type
+        using Subject     = ConsensusSubject;     ///< Alias for Consensus Subject protobuf type
+
+        /// @brief      Alias for a signer method type
         using Signer = std::function<outcome::result<std::vector<uint8_t>>( std::vector<uint8_t> payload )>;
+
+        /**
+         * @brief      Subject checking values
+         */
         enum class SubjectCheck
         {
-            Approve,
-            Reject,
-            Pending
+            Approve, ///< Subject is approved
+            Reject,  ///< Subject is rejected
+            Pending  ///< Subject evaluation is pending
         };
+
+        /// @brief      Alias for a subject handler method type
         using SubjectHandler = std::function<outcome::result<SubjectCheck>( const Subject &subject )>;
+        /// @brief      Alias for a certificate handler method type
         using CertificateSubjectHandler =
             std::function<void( const std::string &subject_hash, const Certificate &certificate )>;
 
+        /**
+         * @brief      Quorum tally structure
+         */
         struct QuorumTally
         {
-            uint64_t total_weight    = 0;
-            uint64_t approved_weight = 0;
-            bool     has_quorum      = false;
+            uint64_t total_weight    = 0;     ///< The total maximum weight of the quorum
+            uint64_t approved_weight = 0;     ///< The weight which was already approved
+            bool     has_quorum      = false; ///< Flag indicating if quorum was reached
         };
 
         static std::shared_ptr<ConsensusManager> New( std::shared_ptr<ValidatorRegistry>         registry,
@@ -220,7 +250,7 @@ namespace sgns
         std::string                                                         consensus_datastore_topic_;
         std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>> consensus_subs_future_;
         std::chrono::milliseconds timestamp_window_{ DEFAULT_TIMESTAMP_WINDOW };
-        std::chrono::milliseconds certificate_delay_{ std::chrono::milliseconds( 0 ) };
+        std::chrono::milliseconds certificate_delay_{ std::chrono::milliseconds( 2000 ) };
         std::chrono::milliseconds round_duration_{ DEFAULT_ROUND_DURATION };
         std::chrono::milliseconds round_skew_{ DEFAULT_ROUND_SKEW };
         std::atomic<bool>         stop_timer_{ false };
