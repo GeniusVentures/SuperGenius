@@ -45,7 +45,9 @@ namespace sgns::crdt
          * @param peerInfo   Optional peer info to avoid repeated GetPeerInfo calls.
          * @return outcome::success on successful publish, or outcome::failure on error.
          */
-        outcome::result<void> Broadcast( const base::Buffer &buff, std::string topic, boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none ) override;
+        outcome::result<void> Broadcast( const base::Buffer                     &buff,
+                                         std::string                             topic,
+                                         boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none ) override;
 
         /**
          * @brief Retrieves the next incoming broadcast payload.
@@ -84,7 +86,10 @@ namespace sgns::crdt
          * @brief Get the underlying GraphsyncDAGSyncer instance.
          * @return Shared pointer to the GraphsyncDAGSyncer (as void pointer).
          */
-        std::shared_ptr<void> GetDagSyncer() const override { return dagSyncer_; }
+        std::shared_ptr<void> GetDagSyncer() const override
+        {
+            return dagSyncer_;
+        }
 
         void Stop();
 

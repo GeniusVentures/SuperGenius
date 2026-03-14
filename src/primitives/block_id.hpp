@@ -7,12 +7,13 @@
 #include "base/blob.hpp"
 #include "primitives/common.hpp"
 
-namespace sgns::primitives {
-  using BlockHash = base::Hash256;
+namespace sgns::primitives
+{
+    using BlockHash = base::Hash256;
 
-  /// Block id is the variant over BlockHash and BlockNumber
-  using BlockId = boost::variant<BlockHash, BlockNumber>;
+    /// Block id is the variant over BlockHash and BlockNumber
+    using BlockId = boost::variant<BlockHash, BlockNumber>;
 
-}  // namespace sgns::primitives
+} // namespace sgns::primitives
 
-#endif  // SUPERGENIUS_SRC_PRIMITIVES_BLOCK_ID_HPP
+#endif // SUPERGENIUS_SRC_PRIMITIVES_BLOCK_ID_HPP

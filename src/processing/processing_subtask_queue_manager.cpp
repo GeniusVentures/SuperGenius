@@ -408,7 +408,7 @@ namespace sgns::processing
         m_dltQueueResponseTimeout.expires_at( boost::posix_time::pos_infin );
 
         bool queueInitialized = m_queue != nullptr;
-        bool queueChanged      = UpdateQueue( queue );
+        bool queueChanged     = UpdateQueue( queue );
 
         if ( queueChanged )
         {

@@ -53,7 +53,7 @@ namespace sgns
 
         CREDENTIALA cred        = {};
         cred.Type               = CRED_TYPE_GENERIC;
-        cred.TargetName         = const_cast<char*>(identifier_.c_str());
+        cred.TargetName         = const_cast<char *>( identifier_.c_str() );
         cred.CredentialBlobSize = password.GetLength();
         cred.CredentialBlob     = reinterpret_cast<LPBYTE>( const_cast<char *>( password.GetString() ) );
         cred.Persist            = CRED_PERSIST_LOCAL_MACHINE;

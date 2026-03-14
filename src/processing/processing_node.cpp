@@ -198,7 +198,8 @@ namespace sgns::processing
 
     float ProcessingNode::GetProgress() const
     {
-        if (m_processingEngine) {
+        if ( m_processingEngine )
+        {
             return m_processingEngine->GetProgress();
         }
         return 0.0f;

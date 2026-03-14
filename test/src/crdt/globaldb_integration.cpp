@@ -130,7 +130,7 @@ public:
             {
                 return;
             }
-            auto db = std::move(globaldb_ret.value());
+            auto db = std::move( globaldb_ret.value() );
 
             ++currentPubsubPort;
 
@@ -146,8 +146,7 @@ public:
             {
                 for ( size_t j = i + 1; j < nodes_.size(); ++j )
                 {
-                    nodes_[i].pubsub->AddPeers(
-                        { nodes_[j].pubsub->GetInterfaceAddress() } );
+                    nodes_[i].pubsub->AddPeers( { nodes_[j].pubsub->GetInterfaceAddress() } );
                 }
             }
             std::this_thread::sleep_for( delay );

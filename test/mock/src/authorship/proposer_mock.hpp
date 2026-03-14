@@ -7,17 +7,18 @@
 
 #include <gmock/gmock.h>
 
-namespace sgns::authorship {
-  class ProposerMock : public Proposer {
-   public:
-    MOCK_METHOD3(
-        propose,
-        outcome::result<primitives::Block>(const primitives::BlockId &,
-                                           const primitives::InherentData &,
-                                           const primitives::Digest &));
-    
-    MOCK_METHOD0(GetName, std::string());
-  };
-}  // namespace sgns::authorship
+namespace sgns::authorship
+{
+    class ProposerMock : public Proposer
+    {
+    public:
+        MOCK_METHOD3( propose,
+                      outcome::result<primitives::Block>( const primitives::BlockId &,
+                                                          const primitives::InherentData &,
+                                                          const primitives::Digest & ) );
 
-#endif  // SUPERGENIUS_PROPOSER_MOCK_HPP
+        MOCK_METHOD0( GetName, std::string() );
+    };
+} // namespace sgns::authorship
+
+#endif // SUPERGENIUS_PROPOSER_MOCK_HPP

@@ -18,7 +18,8 @@
 #include "account/TokenID.hpp"
 
 // Forward declaration
-namespace sgns::sgprocessing {
+namespace sgns::sgprocessing
+{
     class ProcessingManager;
 }
 
@@ -30,32 +31,31 @@ namespace sgns::processing
     class ProcessingCoreImpl : public ProcessingCore
     {
     public:
-
-        enum class Error {
+        enum class Error
+        {
             MAX_NUMBER_SUBTASKS = 1,
             GLOBALDB_READ_ERROR,
             NO_BUFFER_FROM_JOB_DATA,
         };
-        ProcessingCoreImpl(
-            std::shared_ptr<sgns::crdt::GlobalDB> db,
-            size_t maximalProcessingSubTaskCount,
-            TokenID tokenId)
-            : m_db(std::move(db))
-            , m_tokenId(std::move(tokenId))
-            , m_maximalProcessingSubTaskCount(maximalProcessingSubTaskCount)
-            , m_processingSubTaskCount(0)
+
+        ProcessingCoreImpl( std::shared_ptr<sgns::crdt::GlobalDB> db,
+                            size_t                                maximalProcessingSubTaskCount,
+                            TokenID                               tokenId ) :
+            m_db( std::move( db ) ),
+            m_tokenId( std::move( tokenId ) ),
+            m_maximalProcessingSubTaskCount( maximalProcessingSubTaskCount ),
+            m_processingSubTaskCount( 0 )
         {
         }
 
-        ~ProcessingCoreImpl()
-        {
-        }
+        ~ProcessingCoreImpl() {}
+
         /** Process a single subtask.
         * @param subTask - Subtask that needs to be processed.
         * @param initialHashCode - Initial hash code used to calculate result hash.
         */
-        outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
-        const SGProcessing::SubTask& subTask, uint32_t initialHashCode) override;
+        outcome::result<SGProcessing::SubTaskResult> ProcessSubTask( const SGProcessing::SubTask &subTask,
+                                                                     uint32_t initialHashCode ) override;
 
         // Register an available processor.
         //void RegisterProcessorFactory(const std::string& name, std::function<std::unique_ptr<ProcessingProcessor>()> factoryFunction) {
@@ -63,28 +63,28 @@ namespace sgns::processing
         //}
 
         // Set the current processor by name.
-       // bool SetProcessorByName(const std::string& name) {
-       //     auto factoryFunction = m_processorFactories.find(name);
-       //     if (factoryFunction != m_processorFactories.end()) {
-       //         m_processor = factoryFunction->second();
-       //         return true;
-       //     }
-       //     std::cerr << "Unknown processor name: " << name << std::endl;
-       //     return false;
-       // }
+        // bool SetProcessorByName(const std::string& name) {
+        //     auto factoryFunction = m_processorFactories.find(name);
+        //     if (factoryFunction != m_processorFactories.end()) {
+        //         m_processor = factoryFunction->second();
+        //         return true;
+        //     }
+        //     std::cerr << "Unknown processor name: " << name << std::endl;
+        //     return false;
+        // }
 
-       //bool CheckRegisteredProcessor(const std::string& name)
-       // {
-       //     auto factoryFunction = m_processorFactories.find(name);
-       //     if (factoryFunction == m_processorFactories.end())
-       //     {
-       //         return false;
-       //     }
-       //     else
-       //     {
-       //         return true;
-       //     }
-       // }
+        //bool CheckRegisteredProcessor(const std::string& name)
+        // {
+        //     auto factoryFunction = m_processorFactories.find(name);
+        //     if (factoryFunction == m_processorFactories.end())
+        //     {
+        //         return false;
+        //     }
+        //     else
+        //     {
+        //         return true;
+        //     }
+        // }
 
         // Get processing type from json data to set processor.
         // bool SetProcessingTypeFromJson(std::string jsondata) override;
@@ -94,30 +94,28 @@ namespace sgns::processing
         */
         float GetProgress() const override;
 
-
         std::vector<size_t> m_chunkResulHashes;
         std::vector<size_t> m_validationChunkHashes;
 
     private:
         std::shared_ptr<sgns::crdt::GlobalDB> m_db;
-        TokenID                              m_tokenId;
+        TokenID                               m_tokenId;
         //std::unique_ptr<ProcessingProcessor> m_processor;
         //std::unordered_map<std::string, std::function<std::unique_ptr<ProcessingProcessor>()>> m_processorFactories;
         //size_t m_subTaskProcessingTime;
         size_t m_maximalProcessingSubTaskCount;
 
         std::mutex m_subTaskCountMutex;
-        size_t m_processingSubTaskCount;
+        size_t     m_processingSubTaskCount;
 
         mutable std::shared_ptr<sgprocessing::ProcessingManager> m_currentProcessingManager;
 
-        std::map<std::string, std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>> cidData_;
-        
+        std::map<std::string,
+                 std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>>
+            cidData_;
     };
 }
 
-OUTCOME_HPP_DECLARE_ERROR_2(sgns::processing, ProcessingCoreImpl::Error);
-
-
+OUTCOME_HPP_DECLARE_ERROR_2( sgns::processing, ProcessingCoreImpl::Error );
 
 #endif

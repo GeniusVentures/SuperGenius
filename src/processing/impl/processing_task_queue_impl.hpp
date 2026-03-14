@@ -91,7 +91,7 @@ namespace sgns::processing
         outcome::result<void> SendEscrow( std::string path, sgns::base::Buffer value );
         void                  ResetAtomicTransaction();
 
-        void MarkTaskBad( const std::string& taskKey ) override;
+        void MarkTaskBad( const std::string &taskKey ) override;
 
     private:
         std::shared_ptr<sgns::crdt::GlobalDB>          m_db;

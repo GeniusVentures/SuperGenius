@@ -11,45 +11,50 @@
  * as a Blockchain storage
  */
 
-namespace sgns::blockchain {
+namespace sgns::blockchain
+{
 
-  /**
+    /**
    * Storage has only one key space, prefixes are used to divide it
    */
-  namespace prefix {
-    enum Prefix : uint8_t {
-      // mapping of block id to a storage lookup key
-      ID_TO_LOOKUP_KEY = 3,
+    namespace prefix
+    {
+        enum Prefix : uint8_t
+        {
+            // mapping of block id to a storage lookup key
+            ID_TO_LOOKUP_KEY = 3,
 
-      // block headers
-      HEADER = 4,
+            // block headers
+            HEADER = 4,
 
-      // body of the block (extrinsics)
-      BLOCK_DATA = 5,
+            // body of the block (extrinsics)
+            BLOCK_DATA = 5,
 
-      // justification of the finalized block
-      JUSTIFICATION = 6,
+            // justification of the finalized block
+            JUSTIFICATION = 6,
 
-      // node of a trie db
-      TRIE_NODE = 7
-    };
-  }
+            // node of a trie db
+            TRIE_NODE = 7
+        };
+    }
 
-  /**
+    /**
    * Errors that might occur during work with storage
    */
-  enum class KeyValueRepositoryError { INVALID_KEY = 1 };
+    enum class KeyValueRepositoryError
+    {
+        INVALID_KEY = 1
+    };
 
-  /**
+    /**
    * Concatenate prefix with key.
    * @param key key buffer
    * @param key_column prefix keyspace
    * @return key_column|key
    */
-  base::Buffer prependPrefix(const base::Buffer &key,
-                               prefix::Prefix key_column);
+    base::Buffer prependPrefix( const base::Buffer &key, prefix::Prefix key_column );
 
-  /**
+    /**
    * Put an entry to key space prefix and corresponding lookup keys to
    * ID_TO_LOOKUP_KEY space.
    * @param db database to put the entry to
@@ -59,54 +64,51 @@ namespace sgns::blockchain {
    * @param value data to be put to the storage
    * @return storage error if any
    */
-  outcome::result<void> putWithPrefix(crdt::GlobalDB &db,
-                                      prefix::Prefix prefix,
-                                      primitives::BlockNumber num,
-                                      base::Hash256 block_hash,
-                                      const base::Buffer &value);
+    outcome::result<void> putWithPrefix( crdt::GlobalDB         &db,
+                                         prefix::Prefix          prefix,
+                                         primitives::BlockNumber num,
+                                         base::Hash256           block_hash,
+                                         const base::Buffer     &value );
 
-  /**
+    /**
    * Get an entry from the database.
    * @param db database to get the entry from
    * @param prefix prefix with which the entry was put into
    * @param block_id id of the block to get entry for
    * @return encoded entry or error
    */
-  outcome::result<base::Buffer> getWithPrefix(
-      crdt::GlobalDB &db,
-      prefix::Prefix prefix,
-      const primitives::BlockId &block_id);
+    outcome::result<base::Buffer> getWithPrefix( crdt::GlobalDB            &db,
+                                                 prefix::Prefix             prefix,
+                                                 const primitives::BlockId &block_id );
 
-  /**
+    /**
    * Convert block number into short lookup key (LE representation) for
    * blocks that are in the canonical chain.
    *
    * In the current database schema, this kind of key is only used for
    * lookups into an index, NOT for storing header data or others.
    */
-  base::Buffer NumberToBuffer(primitives::BlockNumber n);
+    base::Buffer NumberToBuffer( primitives::BlockNumber n );
 
-  /**
+    /**
    * Convert number and hash into long lookup key for blocks that are
    * not in the canonical chain.
    */
-  base::Buffer numberAndHashToLookupKey(primitives::BlockNumber number,
-                                          const base::Hash256 &hash);
+    base::Buffer numberAndHashToLookupKey( primitives::BlockNumber number, const base::Hash256 &hash );
 
-  /**
+    /**
    * Converts buffer data to a block number
    */
-  outcome::result<primitives::BlockNumber> BufferToNumber(
-      const base::Buffer &key);
+    outcome::result<primitives::BlockNumber> BufferToNumber( const base::Buffer &key );
 
-  /**
+    /**
    * For a persistant map based storage checks
    * whether result should be considered as `NOT FOUND` error
    */
-  bool isNotFoundError(outcome::result<void> result);
+    bool isNotFoundError( outcome::result<void> result );
 
-}  // namespace sgns::blockchain
+} // namespace sgns::blockchain
 
-OUTCOME_HPP_DECLARE_ERROR_2(sgns::blockchain, KeyValueRepositoryError);
+OUTCOME_HPP_DECLARE_ERROR_2( sgns::blockchain, KeyValueRepositoryError );
 
-#endif  // SUPERGENIUS_CORE_BLOCKCHAIN_IMPL_PERSISTENT_MAP_UTIL_HPP
+#endif // SUPERGENIUS_CORE_BLOCKCHAIN_IMPL_PERSISTENT_MAP_UTIL_HPP

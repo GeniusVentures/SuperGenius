@@ -14,10 +14,11 @@ class IComponentFactory
 public:
     virtual ~IComponentFactory() = default;
 
-    virtual void Register( std::shared_ptr<IComponent>               component,
-                           const std::string                        &type,
+    virtual void Register( std::shared_ptr<IComponent>         component,
+                           const std::string                  &type,
                            const boost::optional<std::string> &variant ) = 0;
 
     virtual outcome::result<std::shared_ptr<IComponent>> GetComponent(
-        const std::string &type, const boost::optional<std::string> &variant ) = 0;
+        const std::string                  &type,
+        const boost::optional<std::string> &variant ) = 0;
 };

@@ -15,34 +15,34 @@
 
 namespace sgns::processing
 {
-/** Subtask queue channel interface which is used for in-memory queue synchronization
+    /** Subtask queue channel interface which is used for in-memory queue synchronization
 */
-class ProcessingSubTaskQueueChannel
-{
-public:
-    virtual ~ProcessingSubTaskQueueChannel() = default;
+    class ProcessingSubTaskQueueChannel
+    {
+    public:
+        virtual ~ProcessingSubTaskQueueChannel() = default;
 
-    /** Sends a request for queue ownership
+        /** Sends a request for queue ownership
     * nodeId - requestor node id
     */
-    virtual void RequestQueueOwnership(const std::string& nodeId) = 0;
+        virtual void RequestQueueOwnership( const std::string &nodeId ) = 0;
 
-    /** Publishes queue to all queue consumers
+        /** Publishes queue to all queue consumers
     * queue = subtask queue
     */
-    virtual void PublishQueue(std::shared_ptr<SGProcessing::SubTaskQueue> queue) = 0;
+        virtual void PublishQueue( std::shared_ptr<SGProcessing::SubTaskQueue> queue ) = 0;
 
-    /**
+        /**
      * Returns the number of active nodes in the channel
      * @return number of nodes in the channel
      */
-    virtual size_t GetActiveNodesCount() const = 0;
+        virtual size_t GetActiveNodesCount() const = 0;
 
-    /**
+        /**
      * Get the number of active nodes in the channel
      * @return vector of nodes in the channel
      */
-    virtual std::vector<libp2p::peer::PeerId> GetActiveNodes() const = 0;
-};
+        virtual std::vector<libp2p::peer::PeerId> GetActiveNodes() const = 0;
+    };
 }
 #endif // SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_CHANNEL_HPP

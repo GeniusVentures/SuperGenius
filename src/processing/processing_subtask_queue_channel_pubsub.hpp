@@ -25,7 +25,7 @@ namespace sgns::processing
     {
     public:
         using QueueRequestSink = std::function<bool( const SGProcessing::SubTaskQueueRequest & )>;
-        using QueueUpdateSink  = std::function<bool( SGProcessing::SubTaskQueue * )>;
+        using QueueUpdateSink  = std::function<bool( SGProcessing::SubTaskQueue  *)>;
 
         /** Constructs subtask queue channel object
     * @param gossipPubSub - ipfs pubsub
@@ -55,8 +55,9 @@ namespace sgns::processing
          * @return If msSubscriptionWaitingDuration > 0: outcome with success/failure and actual wait time
          *         If msSubscriptionWaitingDuration = 0: outcome with future that completes when subscription is established
          */
-        outcome::result<std::variant<std::chrono::milliseconds, std::shared_future<std::shared_ptr<GossipPubSubTopic::Subscription>>>> Listen(
-            std::chrono::milliseconds msSubscriptionWaitingDuration = std::chrono::milliseconds(2000));
+        outcome::result<std::variant<std::chrono::milliseconds,
+                                     std::shared_future<std::shared_ptr<GossipPubSubTopic::Subscription>>>>
+        Listen( std::chrono::milliseconds msSubscriptionWaitingDuration = std::chrono::milliseconds( 2000 ) );
 
         /** Retrieves the count of active nodes in the subtask queue channel.
          * @return The number of active nodes currently participating in the channel.
@@ -68,7 +69,6 @@ namespace sgns::processing
          * @return A vector of strings containing the IDs of active nodes in the channel.
          */
         std::vector<libp2p::peer::PeerId> GetActiveNodes() const override;
-
 
     private:
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_processingQueueChannel;
@@ -85,8 +85,6 @@ namespace sgns::processing
         std::function<bool( SGProcessing::SubTaskQueue * )>              m_queueUpdateSink;
 
         base::Logger m_logger = base::createLogger( "ProcessingSubTaskQueueChannelPubSub" );
-
-
     };
 }
 #endif // SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_CHANNEL_PUBSUB_HPP

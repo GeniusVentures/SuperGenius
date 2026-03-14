@@ -482,8 +482,7 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
     SendPair( *node_proc1, tx, proof_vect );
 
     test::assertWaitForCondition(
-        [&]
-        {
+        [&] {
             return node_proc1->GetTransactionStatus( invalid_tx_id ) ==
                    TransactionManager::TransactionStatus::VERIFYING;
         },

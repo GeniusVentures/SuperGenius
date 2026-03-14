@@ -70,7 +70,6 @@ namespace sgns
         std::pair<boost::json::array, boost::json::array> GenerateJsonParameters() override;
 
     private:
-
         /**
          * @brief       Deserializes public parameters from the provided proof data.
          * @param[in]   full_proof_data The byte vector representing the full proof data.
@@ -90,7 +89,8 @@ namespace sgns
          */
         static inline bool Register()
         {
-            RegisterDeserializer( std::string( RECURSIVE_TRANSFER_TYPE_NAME ), &RecursiveTransferProof::DeSerializePublicParams );
+            RegisterDeserializer( std::string( RECURSIVE_TRANSFER_TYPE_NAME ),
+                                  &RecursiveTransferProof::DeSerializePublicParams );
 #ifdef RELEASE_BYTECODE_CIRCUITS
             RegisterBytecode( std::string( RECURSIVE_TRANSFER_TYPE_NAME ), std::string( RecursiveTransactionCircuit ) );
 #else

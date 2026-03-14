@@ -18,16 +18,12 @@ namespace sgns
     protected:
         static inline std::string binary_path = "";
 
-        static void SetUpTestSuite()
-        {
-        }
+        static void SetUpTestSuite() {}
 
-        static void TearDownTestSuite()
-        {
-        }
+        static void TearDownTestSuite() {}
     };
 
-TEST_F( ProcessingSchemaTest, GeneratedCodeTest )
+    TEST_F( ProcessingSchemaTest, GeneratedCodeTest )
     {
         std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
         std::string data_path = bin_path + "./processing_schema/";
@@ -207,7 +203,8 @@ TEST_F( ProcessingSchemaTest, GeneratedCodeTest )
         }
     }
 
-    TEST_F( ProcessingSchemaTest, PosenetJobTest ) {
+    TEST_F( ProcessingSchemaTest, PosenetJobTest )
+    {
         std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
         std::string data_path = bin_path + "./processing_schema/";
 
@@ -226,7 +223,7 @@ TEST_F( ProcessingSchemaTest, GeneratedCodeTest )
         sgns::from_json( data, processing );
         ASSERT_EQ( processing.get_name(), "posenet-inference" );
         auto inputs = processing.get_inputs();
-        for (auto& input : inputs)
+        for ( auto &input : inputs )
         {
             std::cout << input.get_name() << std::endl;
             std::cout << static_cast<int>( input.get_format().value() ) << std::endl;

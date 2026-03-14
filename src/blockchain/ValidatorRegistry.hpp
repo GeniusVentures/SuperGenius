@@ -67,13 +67,13 @@ namespace sgns::blockchain
         uint64_t QuorumThreshold( uint64_t total_weight ) const;
         bool     IsQuorum( uint64_t accumulated_weight, uint64_t total_weight ) const;
 
-        Registry                        CreateGenesisRegistry( const std::string &genesis_validator_id ) const;
-        outcome::result<void>           StoreGenesisRegistry( const std::string &genesis_validator_id,
-                                                              std::function<std::vector<uint8_t>( std::vector<uint8_t> )> sign );
-        outcome::result<Registry>       LoadRegistry() const;
-        outcome::result<RegistryUpdate> LoadRegistryUpdate() const;
+        Registry                                 CreateGenesisRegistry( const std::string &genesis_validator_id ) const;
+        outcome::result<void>                    StoreGenesisRegistry( const std::string &genesis_validator_id,
+                                                                       std::function<std::vector<uint8_t>( std::vector<uint8_t> )> sign );
+        outcome::result<Registry>                LoadRegistry() const;
+        outcome::result<RegistryUpdate>          LoadRegistryUpdate() const;
         outcome::result<std::optional<uint64_t>> GetValidatorWeight( const std::string &validator_id ) const;
-        bool                            RegisterFilter();
+        bool                                     RegisterFilter();
 
         outcome::result<std::vector<uint8_t>> SerializeRegistry( const Registry &registry ) const;
         outcome::result<Registry>             DeserializeRegistry( const std::vector<uint8_t> &buffer ) const;

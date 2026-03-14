@@ -37,99 +37,116 @@ using wasm::ModuleInstance;
 using wasm::SExpressionParser;
 using wasm::SExpressionWasmBuilder;
 
-  std::ostream &operator<<(std::ostream &s,
-                           const sgns::runtime::WasmResult &data) {
+std::ostream &operator<<( std::ostream &s, const sgns::runtime::WasmResult &data )
+{
     return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<sgns::base::Buffer> &data) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<void> &data) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const boost::optional<unsigned int> &data) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const boost::optional<std::shared_ptr<sgns::storage::trie::PersistentTrieBatch>> &data) {
-    return s;
-  }
-/// extend Runtime external interface by adding wasm assertion functions
-class TestableExternalInterface : public RuntimeExternalInterface {
- public:
-  using RuntimeExternalInterface::RuntimeExternalInterface;
+}
 
-  wasm::Literal callImport(wasm::Function *import,
-                           wasm::LiteralList &arguments) override {
-    if (import->module == "env" && import->base == "assert") {
-      EXPECT_TRUE(arguments.at(0).geti32());
-      return wasm::Literal();
+std::ostream &operator<<( std::ostream &s, const outcome::result<sgns::base::Buffer> &data )
+{
+    return s;
+}
+
+std::ostream &operator<<( std::ostream &s, const outcome::result<void> &data )
+{
+    return s;
+}
+
+std::ostream &operator<<( std::ostream &s, const boost::optional<unsigned int> &data )
+{
+    return s;
+}
+
+std::ostream &operator<<( std::ostream                                                                     &s,
+                          const boost::optional<std::shared_ptr<sgns::storage::trie::PersistentTrieBatch>> &data )
+{
+    return s;
+}
+
+/// extend Runtime external interface by adding wasm assertion functions
+class TestableExternalInterface : public RuntimeExternalInterface
+{
+public:
+    using RuntimeExternalInterface::RuntimeExternalInterface;
+
+    wasm::Literal callImport( wasm::Function *import, wasm::LiteralList &arguments ) override
+    {
+        if ( import->module == "env" && import->base == "assert" )
+        {
+            EXPECT_TRUE( arguments.at( 0 ).geti32() );
+            return wasm::Literal();
+        }
+        if ( import->module == "env" && import->base == "assert_eq_i32" )
+        {
+            EXPECT_EQ( arguments.at( 0 ).geti32(), arguments.at( 1 ).geti32() );
+            return wasm::Literal();
+        }
+        if ( import->module == "env" && import->base == "assert_eq_i64" )
+        {
+            EXPECT_EQ( arguments.at( 0 ).geti64(), arguments.at( 1 ).geti64() );
+            return wasm::Literal();
+        }
+        return RuntimeExternalInterface::callImport( import, arguments );
     }
-    if (import->module == "env" && import->base == "assert_eq_i32") {
-      EXPECT_EQ(arguments.at(0).geti32(), arguments.at(1).geti32());
-      return wasm::Literal();
-    }
-    if (import->module == "env" && import->base == "assert_eq_i64") {
-      EXPECT_EQ(arguments.at(0).geti64(), arguments.at(1).geti64());
-      return wasm::Literal();
-    }
-    return RuntimeExternalInterface::callImport(import, arguments);
-  }
 };
 
-class REITest : public ::testing::Test {
- public:
-  void SetUp() override {
-    memory_ = std::make_shared<MockMemory>();
-    extension_ = std::make_unique<ExtensionMock>();
-    extension_factory_ = std::make_shared<ExtensionFactoryMock>();
-    storage_provider_ = std::make_shared<TrieStorageProviderMock>();
-    EXPECT_CALL(*extension_factory_, createExtension(_, _))
-        .WillRepeatedly(Invoke([this](auto&, auto&) -> std::unique_ptr<Extension> {
-          if (extension_) {
-            auto ext = std::move(extension_);
-            extension_ = std::make_unique<ExtensionMock>();
-            return std::unique_ptr<Extension>(std::move(ext));
-          } else {
-            extension_ = std::make_unique<ExtensionMock>();
-            return std::unique_ptr<Extension>(
-                std::make_unique<ExtensionMock>());
-          }
-        }));
-  }
+class REITest : public ::testing::Test
+{
+public:
+    void SetUp() override
+    {
+        memory_            = std::make_shared<MockMemory>();
+        extension_         = std::make_unique<ExtensionMock>();
+        extension_factory_ = std::make_shared<ExtensionFactoryMock>();
+        storage_provider_  = std::make_shared<TrieStorageProviderMock>();
+        EXPECT_CALL( *extension_factory_, createExtension( _, _ ) )
+            .WillRepeatedly( Invoke(
+                [this]( auto &, auto & ) -> std::unique_ptr<Extension>
+                {
+                    if ( extension_ )
+                    {
+                        auto ext   = std::move( extension_ );
+                        extension_ = std::make_unique<ExtensionMock>();
+                        return std::unique_ptr<Extension>( std::move( ext ) );
+                    }
+                    else
+                    {
+                        extension_ = std::make_unique<ExtensionMock>();
+                        return std::unique_ptr<Extension>( std::make_unique<ExtensionMock>() );
+                    }
+                } ) );
+    }
 
-  void executeWasm(std::string call_code) {
-    std::string code = (boost::format(wasm_template_) % call_code).str();
+    void executeWasm( std::string call_code )
+    {
+        std::string code = ( boost::format( wasm_template_ ) % call_code ).str();
 
-    // parse wast
-    Module wasm{};
+        // parse wast
+        Module wasm{};
 
-    // clang-8 doesn't know char * std::string::data(),
-    // it returns only const char *
-    char *data = const_cast<char *>(code.data());
-    SExpressionParser parser(data);
-    Element &root = *parser.root;
-    ASSERT_GT(root.size(), 0);
-    ASSERT_NE(root[0], nullptr);
-    SExpressionWasmBuilder builder(wasm, *root[0]);
-    EXPECT_CALL(*extension_, memory()).WillRepeatedly(Return(memory_));
+        // clang-8 doesn't know char * std::string::data(),
+        // it returns only const char *
+        char             *data = const_cast<char *>( code.data() );
+        SExpressionParser parser( data );
+        Element          &root = *parser.root;
+        ASSERT_GT( root.size(), 0 );
+        ASSERT_NE( root[0], nullptr );
+        SExpressionWasmBuilder builder( wasm, *root[0] );
+        EXPECT_CALL( *extension_, memory() ).WillRepeatedly( Return( memory_ ) );
 
-    TestableExternalInterface rei(extension_factory_, storage_provider_);
+        TestableExternalInterface rei( extension_factory_, storage_provider_ );
 
-    // interpret module
-    ModuleInstance instance(wasm, &rei);
-  }
+        // interpret module
+        ModuleInstance instance( wasm, &rei );
+    }
 
- protected:
-  std::shared_ptr<MockMemory> memory_;
-  std::unique_ptr<ExtensionMock> extension_;
-  std::shared_ptr<ExtensionFactoryMock> extension_factory_;
-  std::shared_ptr<TrieStorageProviderMock> storage_provider_;
+protected:
+    std::shared_ptr<MockMemory>              memory_;
+    std::unique_ptr<ExtensionMock>           extension_;
+    std::shared_ptr<ExtensionFactoryMock>    extension_factory_;
+    std::shared_ptr<TrieStorageProviderMock> storage_provider_;
 
-  // clang-format off
+    // clang-format off
   const std::string wasm_template_ =
       "(module\n"
       "  (type (;0;) (func (param i32 i32)))\n"
@@ -244,7 +261,7 @@ class REITest : public ::testing::Test {
       "%s" // to plug actual call
       "  )\n"
       ")";
-  // clang-format on
+    // clang-format on
 };
 
 /**
@@ -254,1029 +271,1009 @@ class REITest : public ::testing::Test {
  * @then corresponding host function is invoked with provided arguments
  */
 
-TEST_F(REITest, ext_malloc_Test) {
-  WasmSize size = 42;
-  WasmPointer ptr = 123;
-  EXPECT_CALL(*extension_, ext_malloc(size)).WillOnce(Return(ptr));
-  auto execute_code = (boost::format("    (call $assert_eq_i32\n"
-                                     "      (call $ext_malloc\n"
-                                     "        (i32.const %d)\n"
-                                     "      )\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n")
-                       % size % ptr)
-                          .str();
-  SCOPED_TRACE("ext_malloc_Test");
-  executeWasm(execute_code);
+TEST_F( REITest, ext_malloc_Test )
+{
+    WasmSize    size = 42;
+    WasmPointer ptr  = 123;
+    EXPECT_CALL( *extension_, ext_malloc( size ) ).WillOnce( Return( ptr ) );
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_malloc\n"
+                                         "        (i32.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          size % ptr )
+                            .str();
+    SCOPED_TRACE( "ext_malloc_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_free_Test) {
-  WasmPointer ptr = 123;
-  EXPECT_CALL(*extension_, ext_free(ptr)).Times(1);
-  auto execute_code = (boost::format("    (call $ext_free\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n")
-                       % ptr)
-                          .str();
-  executeWasm(execute_code);
+TEST_F( REITest, ext_free_Test )
+{
+    WasmPointer ptr = 123;
+    EXPECT_CALL( *extension_, ext_free( ptr ) ).Times( 1 );
+    auto execute_code = ( boost::format( "    (call $ext_free\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          ptr )
+                            .str();
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_clear_prefix_Test) {
-  WasmPointer prefix_ptr = 123;
-  WasmSize prefix_size = 1233;
+TEST_F( REITest, ext_clear_prefix_Test )
+{
+    WasmPointer prefix_ptr  = 123;
+    WasmSize    prefix_size = 1233;
 
-  EXPECT_CALL(*extension_, ext_clear_prefix(prefix_ptr, prefix_size)).Times(1);
-  auto execute_code = (boost::format("    (call $ext_clear_prefix\n"
-                                     "      (i32.const %d)\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n")
-                       % prefix_ptr % prefix_size)
-                          .str();
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_clear_prefix( prefix_ptr, prefix_size ) ).Times( 1 );
+    auto execute_code = ( boost::format( "    (call $ext_clear_prefix\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          prefix_ptr % prefix_size )
+                            .str();
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_clear_storage_Test) {
-  WasmPointer key_ptr = 123;
-  WasmSize key_size = 1233;
+TEST_F( REITest, ext_clear_storage_Test )
+{
+    WasmPointer key_ptr  = 123;
+    WasmSize    key_size = 1233;
 
-  EXPECT_CALL(*extension_, ext_clear_storage(key_ptr, key_size)).Times(1);
-  auto execute_code = (boost::format("    (call $ext_clear_storage\n"
-                                     "      (i32.const %d)\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n")
-                       % key_ptr % key_size)
-                          .str();
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_clear_storage( key_ptr, key_size ) ).Times( 1 );
+    auto execute_code = ( boost::format( "    (call $ext_clear_storage\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          key_ptr % key_size )
+                            .str();
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_exists_storage_Test) {
-  WasmPointer key_ptr = 123;
-  WasmSize key_size = 1233;
+TEST_F( REITest, ext_exists_storage_Test )
+{
+    WasmPointer key_ptr  = 123;
+    WasmSize    key_size = 1233;
 
-  WasmSize expected_res = 1;
+    WasmSize expected_res = 1;
 
-  EXPECT_CALL(*extension_, ext_exists_storage(key_ptr, key_size))
-      .WillOnce(Return(expected_res));
-  auto execute_code = (boost::format("    (call $assert_eq_i32\n"
-                                     "      (call $ext_exists_storage\n"
-                                     "        (i32.const %d)\n"
-                                     "        (i32.const %d)\n"
-                                     "      )\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n")
-                       % key_ptr % key_size % expected_res)
-                          .str();
-  SCOPED_TRACE("ext_exists_storage_Test");
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_exists_storage( key_ptr, key_size ) ).WillOnce( Return( expected_res ) );
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_exists_storage\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i32.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          key_ptr % key_size % expected_res )
+                            .str();
+    SCOPED_TRACE( "ext_exists_storage_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_get_allocated_storage_Test) {
-  WasmPointer key_ptr = 123;
-  WasmSize key_size = 1233;
-  WasmPointer len_ptr = 42;
+TEST_F( REITest, ext_get_allocated_storage_Test )
+{
+    WasmPointer key_ptr  = 123;
+    WasmSize    key_size = 1233;
+    WasmPointer len_ptr  = 42;
 
-  WasmPointer res_ptr = 1;
+    WasmPointer res_ptr = 1;
 
-  EXPECT_CALL(*extension_,
-              ext_get_allocated_storage(key_ptr, key_size, len_ptr))
-      .WillOnce(Return(res_ptr));
+    EXPECT_CALL( *extension_, ext_get_allocated_storage( key_ptr, key_size, len_ptr ) ).WillOnce( Return( res_ptr ) );
 
-  auto execute_code = (boost::format("    (call $assert_eq_i32\n"
-                                     "      (call $ext_get_allocated_storage\n"
-                                     "        (i32.const %d)\n"
-                                     "        (i32.const %d)\n"
-                                     "        (i32.const %d)\n"
-                                     "      )\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n")
-                       % key_ptr % key_size % len_ptr % res_ptr)
-                          .str();
-  SCOPED_TRACE("ext_get_allocated_storage_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_get_allocated_storage\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i32.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          key_ptr % key_size % len_ptr % res_ptr )
+                            .str();
+    SCOPED_TRACE( "ext_get_allocated_storage_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_get_storage_into_Test) {
-  WasmPointer key_ptr = 123;
-  WasmSize key_size = 1233;
-  WasmPointer value_ptr = 42;
-  WasmSize value_length = 321;
-  WasmSize value_offset = 453;
+TEST_F( REITest, ext_get_storage_into_Test )
+{
+    WasmPointer key_ptr      = 123;
+    WasmSize    key_size     = 1233;
+    WasmPointer value_ptr    = 42;
+    WasmSize    value_length = 321;
+    WasmSize    value_offset = 453;
 
-  WasmSize res = 1;
+    WasmSize res = 1;
 
-  EXPECT_CALL(*extension_,
-              ext_get_storage_into(
-                  key_ptr, key_size, value_ptr, value_length, value_offset))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_get_storage_into( key_ptr, key_size, value_ptr, value_length, value_offset ) )
+        .WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i32\n"
-                     "      (call $ext_get_storage_into\n"
-                     "        (i32.const %d)\n"
-                     "        (i32.const %d)\n"
-                     "        (i32.const %d)\n"
-                     "        (i32.const %d)\n"
-                     "        (i32.const %d)\n"
-                     "      )\n"
-                     "      (i32.const %d)\n"
-                     "    )\n")
-       % key_ptr % key_size % value_ptr % value_length % value_offset % res)
-          .str();
-  SCOPED_TRACE("ext_get_allocated_storage_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_get_storage_into\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i32.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          key_ptr % key_size % value_ptr % value_length % value_offset % res )
+                            .str();
+    SCOPED_TRACE( "ext_get_allocated_storage_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_set_storage_Test) {
-  WasmPointer key_ptr = 123;
-  WasmSize key_size = 1233;
+TEST_F( REITest, ext_set_storage_Test )
+{
+    WasmPointer key_ptr  = 123;
+    WasmSize    key_size = 1233;
 
-  WasmPointer value_ptr = 42;
-  WasmSize value_size = 12;
+    WasmPointer value_ptr  = 42;
+    WasmSize    value_size = 12;
 
-  EXPECT_CALL(*extension_,
-              ext_set_storage(key_ptr, key_size, value_ptr, value_size))
-      .Times(1);
-  auto execute_code = (boost::format("    (call $ext_set_storage\n"
-                                     "      (i32.const %d)\n"
-                                     "      (i32.const %d)\n"
-                                     "      (i32.const %d)\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n")
-                       % key_ptr % key_size % value_ptr % value_size)
-                          .str();
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_set_storage( key_ptr, key_size, value_ptr, value_size ) ).Times( 1 );
+    auto execute_code = ( boost::format( "    (call $ext_set_storage\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          key_ptr % key_size % value_ptr % value_size )
+                            .str();
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_blake2_256_enumerated_trie_root_Test) {
-  WasmPointer values_data = 12;
-  WasmPointer lens_data = 42;
-  WasmSize lens_length = 123;
-  WasmPointer result = 321;
+TEST_F( REITest, ext_blake2_256_enumerated_trie_root_Test )
+{
+    WasmPointer values_data = 12;
+    WasmPointer lens_data   = 42;
+    WasmSize    lens_length = 123;
+    WasmPointer result      = 321;
 
-  EXPECT_CALL(*extension_,
-              ext_blake2_256_enumerated_trie_root(
-                  values_data, lens_data, lens_length, result))
-      .Times(1);
-  auto execute_code =
-      (boost::format("    (call $ext_blake2_256_enumerated_trie_root\n"
-                     "      (i32.const %d)\n"
-                     "      (i32.const %d)\n"
-                     "      (i32.const %d)\n"
-                     "      (i32.const %d)\n"
-                     "    )\n")
-       % values_data % lens_data % lens_length % result)
-          .str();
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_blake2_256_enumerated_trie_root( values_data, lens_data, lens_length, result ) )
+        .Times( 1 );
+    auto execute_code = ( boost::format( "    (call $ext_blake2_256_enumerated_trie_root\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          values_data % lens_data % lens_length % result )
+                            .str();
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_storage_changes_root_Test) {
-  WasmPointer parent_hash_data = 123;
-  WasmSize parent_hash_len = 42;
-  WasmPointer result = 321;
+TEST_F( REITest, ext_storage_changes_root_Test )
+{
+    WasmPointer parent_hash_data = 123;
+    WasmSize    parent_hash_len  = 42;
+    WasmPointer result           = 321;
 
-  WasmSize res = 1;
+    WasmSize res = 1;
 
-  EXPECT_CALL(*extension_, ext_storage_changes_root(parent_hash_data, result))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_storage_changes_root( parent_hash_data, result ) ).WillOnce( Return( res ) );
 
-  auto execute_code = (boost::format("    (call $assert_eq_i32\n"
-                                     "      (call $ext_storage_changes_root\n"
-                                     "        (i32.const %d)\n"
-                                     "        (i32.const %d)\n"
-                                     "        (i32.const %d)\n"
-                                     "      )\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n")
-                       % parent_hash_data % parent_hash_len % result % res)
-                          .str();
-  SCOPED_TRACE("ext_storage_changes_root_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_storage_changes_root\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i32.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          parent_hash_data % parent_hash_len % result % res )
+                            .str();
+    SCOPED_TRACE( "ext_storage_changes_root_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_storage_root_Test) {
-  WasmPointer storage_root = 12;
+TEST_F( REITest, ext_storage_root_Test )
+{
+    WasmPointer storage_root = 12;
 
-  EXPECT_CALL(*extension_, ext_storage_root(storage_root)).Times(1);
-  auto execute_code = (boost::format("    (call $ext_storage_root\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n")
-                       % storage_root)
-                          .str();
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_storage_root( storage_root ) ).Times( 1 );
+    auto execute_code = ( boost::format( "    (call $ext_storage_root\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          storage_root )
+                            .str();
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_print_hex_Test) {
-  WasmPointer data_ptr = 12;
-  WasmSize data_size = 12;
+TEST_F( REITest, ext_print_hex_Test )
+{
+    WasmPointer data_ptr  = 12;
+    WasmSize    data_size = 12;
 
-  EXPECT_CALL(*extension_, ext_print_hex(data_ptr, data_size)).Times(1);
-  auto execute_code = (boost::format("    (call $ext_print_hex\n"
-                                     "      (i32.const %d)\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n")
-                       % data_ptr % data_size)
-                          .str();
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_print_hex( data_ptr, data_size ) ).Times( 1 );
+    auto execute_code = ( boost::format( "    (call $ext_print_hex\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          data_ptr % data_size )
+                            .str();
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_logging_log_version_1_Test) {
-  WasmResult position(12, 12);
-  const auto pos_packed = position.combine();
-  WasmEnum ll = static_cast<WasmEnum>(WasmLogLevel::WasmLL_Error);
+TEST_F( REITest, ext_logging_log_version_1_Test )
+{
+    WasmResult position( 12, 12 );
+    const auto pos_packed = position.combine();
+    WasmEnum   ll         = static_cast<WasmEnum>( WasmLogLevel::WasmLL_Error );
 
-  EXPECT_CALL(*extension_,
-              ext_logging_log_version_1(ll, pos_packed, pos_packed))
-      .Times(1);
-  auto execute_code = (boost::format("    (call $ext_logging_log_version_1\n"
-                                     "      (i32.const %d)\n"
-                                     "      (i64.const %d)\n"
-                                     "      (i64.const %d)\n"
-                                     "    )\n")
-                       % ll % position.combine() % position.combine())
-                          .str();
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_logging_log_version_1( ll, pos_packed, pos_packed ) ).Times( 1 );
+    auto execute_code = ( boost::format( "    (call $ext_logging_log_version_1\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i64.const %d)\n"
+                                         "      (i64.const %d)\n"
+                                         "    )\n" ) %
+                          ll % position.combine() % position.combine() )
+                            .str();
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_print_num_Test) {
-  uint64_t num = 12;
+TEST_F( REITest, ext_print_num_Test )
+{
+    uint64_t num = 12;
 
-  EXPECT_CALL(*extension_, ext_print_num(num)).Times(1);
-  auto execute_code = (boost::format("    (call $ext_print_num\n"
-                                     "      (i64.const %d)\n"
-                                     "    )\n")
-                       % num)
-                          .str();
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_print_num( num ) ).Times( 1 );
+    auto execute_code = ( boost::format( "    (call $ext_print_num\n"
+                                         "      (i64.const %d)\n"
+                                         "    )\n" ) %
+                          num )
+                            .str();
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_print_utf8_Test) {
-  WasmPointer data_ptr = 12;
-  WasmSize data_size = 12;
+TEST_F( REITest, ext_print_utf8_Test )
+{
+    WasmPointer data_ptr  = 12;
+    WasmSize    data_size = 12;
 
-  EXPECT_CALL(*extension_, ext_print_utf8(data_ptr, data_size)).Times(1);
-  auto execute_code = (boost::format("    (call $ext_print_utf8\n"
-                                     "      (i32.const %d)\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n")
-                       % data_ptr % data_size)
-                          .str();
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_print_utf8( data_ptr, data_size ) ).Times( 1 );
+    auto execute_code = ( boost::format( "    (call $ext_print_utf8\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          data_ptr % data_size )
+                            .str();
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_blake2_128_Test) {
-  WasmPointer data_ptr = 12;
-  WasmSize data_size = 12;
-  WasmPointer out_ptr = 43;
+TEST_F( REITest, ext_blake2_128_Test )
+{
+    WasmPointer data_ptr  = 12;
+    WasmSize    data_size = 12;
+    WasmPointer out_ptr   = 43;
 
-  EXPECT_CALL(*extension_, ext_blake2_128(data_ptr, data_size, out_ptr))
-      .Times(1);
-  auto execute_code = (boost::format("    (call $ext_blake2_128\n"
-                                     "      (i32.const %d)\n"
-                                     "      (i32.const %d)\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n")
-                       % data_ptr % data_size % out_ptr)
-                          .str();
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_blake2_128( data_ptr, data_size, out_ptr ) ).Times( 1 );
+    auto execute_code = ( boost::format( "    (call $ext_blake2_128\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          data_ptr % data_size % out_ptr )
+                            .str();
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_blake_256_Test) {
-  WasmPointer data_ptr = 12;
-  WasmSize data_size = 12;
-  WasmPointer out_ptr = 43;
+TEST_F( REITest, ext_blake_256_Test )
+{
+    WasmPointer data_ptr  = 12;
+    WasmSize    data_size = 12;
+    WasmPointer out_ptr   = 43;
 
-  EXPECT_CALL(*extension_, ext_blake2_256(data_ptr, data_size, out_ptr))
-      .Times(1);
-  auto execute_code = (boost::format("    (call $ext_blake2_256\n"
-                                     "      (i32.const %d)\n"
-                                     "      (i32.const %d)\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n")
-                       % data_ptr % data_size % out_ptr)
-                          .str();
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_blake2_256( data_ptr, data_size, out_ptr ) ).Times( 1 );
+    auto execute_code = ( boost::format( "    (call $ext_blake2_256\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          data_ptr % data_size % out_ptr )
+                            .str();
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_keccak_256_Test) {
-  WasmPointer data_ptr = 12;
-  WasmSize data_size = 12;
-  WasmPointer out_ptr = 43;
+TEST_F( REITest, ext_keccak_256_Test )
+{
+    WasmPointer data_ptr  = 12;
+    WasmSize    data_size = 12;
+    WasmPointer out_ptr   = 43;
 
-  EXPECT_CALL(*extension_, ext_keccak_256(data_ptr, data_size, out_ptr))
-      .Times(1);
-  auto execute_code = (boost::format("    (call $ext_keccak_256\n"
-                                     "      (i32.const %d)\n"
-                                     "      (i32.const %d)\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n")
-                       % data_ptr % data_size % out_ptr)
-                          .str();
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_keccak_256( data_ptr, data_size, out_ptr ) ).Times( 1 );
+    auto execute_code = ( boost::format( "    (call $ext_keccak_256\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          data_ptr % data_size % out_ptr )
+                            .str();
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_ed25519_verify_Test) {
-  WasmPointer msg_data = 123;
-  WasmSize msg_len = 1233;
-  WasmPointer sig_data = 42;
-  WasmPointer pubkey_data = 321;
+TEST_F( REITest, ext_ed25519_verify_Test )
+{
+    WasmPointer msg_data    = 123;
+    WasmSize    msg_len     = 1233;
+    WasmPointer sig_data    = 42;
+    WasmPointer pubkey_data = 321;
 
-  WasmSize res = 1;
+    WasmSize res = 1;
 
-  EXPECT_CALL(*extension_,
-              ext_ed25519_verify(msg_data, msg_len, sig_data, pubkey_data))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_ed25519_verify( msg_data, msg_len, sig_data, pubkey_data ) )
+        .WillOnce( Return( res ) );
 
-  auto execute_code = (boost::format("    (call $assert_eq_i32\n"
-                                     "      (call $ext_ed25519_verify\n"
-                                     "        (i32.const %d)\n"
-                                     "        (i32.const %d)\n"
-                                     "        (i32.const %d)\n"
-                                     "        (i32.const %d)\n"
-                                     "      )\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n")
-                       % msg_data % msg_len % sig_data % pubkey_data % res)
-                          .str();
-  SCOPED_TRACE("ext_ed25519_verify_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_ed25519_verify\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i32.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          msg_data % msg_len % sig_data % pubkey_data % res )
+                            .str();
+    SCOPED_TRACE( "ext_ed25519_verify_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_sr25519_verify_Test) {
-  WasmPointer msg_data = 123;
-  WasmSize msg_len = 1233;
-  WasmPointer sig_data = 42;
-  WasmPointer pubkey_data = 321;
+TEST_F( REITest, ext_sr25519_verify_Test )
+{
+    WasmPointer msg_data    = 123;
+    WasmSize    msg_len     = 1233;
+    WasmPointer sig_data    = 42;
+    WasmPointer pubkey_data = 321;
 
-  WasmSize res = 0;
+    WasmSize res = 0;
 
-  EXPECT_CALL(*extension_,
-              ext_sr25519_verify(msg_data, msg_len, sig_data, pubkey_data))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_sr25519_verify( msg_data, msg_len, sig_data, pubkey_data ) )
+        .WillOnce( Return( res ) );
 
-  auto execute_code = (boost::format("    (call $assert_eq_i32\n"
-                                     "      (call $ext_sr25519_verify\n"
-                                     "        (i32.const %d)\n"
-                                     "        (i32.const %d)\n"
-                                     "        (i32.const %d)\n"
-                                     "        (i32.const %d)\n"
-                                     "      )\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n")
-                       % msg_data % msg_len % sig_data % pubkey_data % res)
-                          .str();
-  SCOPED_TRACE("ext_sr25519_verify_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_sr25519_verify\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i32.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          msg_data % msg_len % sig_data % pubkey_data % res )
+                            .str();
+    SCOPED_TRACE( "ext_sr25519_verify_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_ed25519_public_keys_v1_Test) {
-  WasmSize key_type = kProd;
-  WasmSpan res = WasmResult(1, 2).combine();
+TEST_F( REITest, ext_ed25519_public_keys_v1_Test )
+{
+    WasmSize key_type = kProd;
+    WasmSpan res      = WasmResult( 1, 2 ).combine();
 
-  EXPECT_CALL(*extension_, ext_ed25519_public_keys_v1(key_type))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_ed25519_public_keys_v1( key_type ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i64\n"
-                     "      (call $ext_crypto_ed25519_public_keys_version_1\n"
-                     "        (i32.const %d)\n"
-                     "      )\n"
-                     "      (i64.const %d)\n"
-                     "    )\n")
-       % key_type % res)
-          .str();
-  SCOPED_TRACE("ext_ed25519_public_keys_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i64\n"
+                                         "      (call $ext_crypto_ed25519_public_keys_version_1\n"
+                                         "        (i32.const %d)\n"
+                                         "      )\n"
+                                         "      (i64.const %d)\n"
+                                         "    )\n" ) %
+                          key_type % res )
+                            .str();
+    SCOPED_TRACE( "ext_ed25519_public_keys_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_ed25519_generate_v1_Test) {
-  WasmSize key_type = kProd;
-  WasmSpan seed = WasmResult(1, 2).combine();
+TEST_F( REITest, ext_ed25519_generate_v1_Test )
+{
+    WasmSize key_type = kProd;
+    WasmSpan seed     = WasmResult( 1, 2 ).combine();
 
-  WasmPointer res = 4;
+    WasmPointer res = 4;
 
-  EXPECT_CALL(*extension_, ext_ed25519_generate_v1(key_type, seed))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_ed25519_generate_v1( key_type, seed ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i32\n"
-                     "      (call $ext_crypto_ed25519_generate_version_1\n"
-                     "        (i32.const %d)\n"
-                     "        (i64.const %d)\n"
-                     "      )\n"
-                     "      (i32.const %d)\n"
-                     "    )\n")
-       % key_type % seed % res)
-          .str();
-  SCOPED_TRACE("ext_ed25519_generate_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_crypto_ed25519_generate_version_1\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i64.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          key_type % seed % res )
+                            .str();
+    SCOPED_TRACE( "ext_ed25519_generate_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_ed25519_sign_v1_Test) {
-  WasmSize key_type = kProd;
-  WasmPointer key = 1;
-  WasmSpan msg = WasmResult(33, 2).combine();
-  WasmSpan res = WasmResult(35, 25).combine();
+TEST_F( REITest, ext_ed25519_sign_v1_Test )
+{
+    WasmSize    key_type = kProd;
+    WasmPointer key      = 1;
+    WasmSpan    msg      = WasmResult( 33, 2 ).combine();
+    WasmSpan    res      = WasmResult( 35, 25 ).combine();
 
-  EXPECT_CALL(*extension_, ext_ed25519_sign_v1(key_type, key, msg))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_ed25519_sign_v1( key_type, key, msg ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i64\n"
-                     "      (call $ext_crypto_ed25519_sign_version_1\n"
-                     "        (i32.const %d)\n"
-                     "        (i32.const %d)\n"
-                     "        (i64.const %d)\n"
-                     "      )\n"
-                     "      (i64.const %d)\n"
-                     "    )\n")
-       % key_type % key % msg % res)
-          .str();
-  SCOPED_TRACE("ext_ed25519_generate_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i64\n"
+                                         "      (call $ext_crypto_ed25519_sign_version_1\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i64.const %d)\n"
+                                         "      )\n"
+                                         "      (i64.const %d)\n"
+                                         "    )\n" ) %
+                          key_type % key % msg % res )
+                            .str();
+    SCOPED_TRACE( "ext_ed25519_generate_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_ed25519_verify_v1_Test) {
-  WasmPointer msg_data = 123;
-  WasmSize msg_len = 1233;
-  WasmSpan msg = WasmResult(msg_data, msg_len).combine();
-  WasmPointer sig_data = 42;
-  WasmPointer pubkey_data = 321;
+TEST_F( REITest, ext_ed25519_verify_v1_Test )
+{
+    WasmPointer msg_data    = 123;
+    WasmSize    msg_len     = 1233;
+    WasmSpan    msg         = WasmResult( msg_data, msg_len ).combine();
+    WasmPointer sig_data    = 42;
+    WasmPointer pubkey_data = 321;
 
-  WasmSize res = 1;
+    WasmSize res = 1;
 
-  EXPECT_CALL(*extension_, ext_ed25519_verify_v1(sig_data, msg, pubkey_data))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_ed25519_verify_v1( sig_data, msg, pubkey_data ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i32\n"
-                     "      (call $ext_crypto_ed25519_verify_version_1\n"
-                     "        (i32.const %d)\n"
-                     "        (i64.const %d)\n"
-                     "        (i32.const %d)\n"
-                     "      )\n"
-                     "      (i32.const %d)\n"
-                     "    )\n")
-       % sig_data % msg % pubkey_data % res)
-          .str();
-  SCOPED_TRACE("ext_ed25519_verify_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_crypto_ed25519_verify_version_1\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i64.const %d)\n"
+                                         "        (i32.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          sig_data % msg % pubkey_data % res )
+                            .str();
+    SCOPED_TRACE( "ext_ed25519_verify_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_sr25519_public_keys_v1_Test) {
-  WasmSize key_type = kProd;
+TEST_F( REITest, ext_sr25519_public_keys_v1_Test )
+{
+    WasmSize key_type = kProd;
 
-  WasmSpan res = WasmResult(1, 2).combine();
+    WasmSpan res = WasmResult( 1, 2 ).combine();
 
-  EXPECT_CALL(*extension_, ext_sr25519_public_keys_v1(key_type))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_sr25519_public_keys_v1( key_type ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i64\n"
-                     "      (call $ext_crypto_sr25519_public_keys_version_1\n"
-                     "        (i32.const %d)\n"
-                     "      )\n"
-                     "      (i64.const %d)\n"
-                     "    )\n")
-       % key_type % res)
-          .str();
-  SCOPED_TRACE("ext_sr25519_public_keys_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i64\n"
+                                         "      (call $ext_crypto_sr25519_public_keys_version_1\n"
+                                         "        (i32.const %d)\n"
+                                         "      )\n"
+                                         "      (i64.const %d)\n"
+                                         "    )\n" ) %
+                          key_type % res )
+                            .str();
+    SCOPED_TRACE( "ext_sr25519_public_keys_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_sr25519_generate_v1_Test) {
-  WasmSize key_type = kProd;
-  WasmSpan seed = WasmResult(1, 2).combine();
+TEST_F( REITest, ext_sr25519_generate_v1_Test )
+{
+    WasmSize key_type = kProd;
+    WasmSpan seed     = WasmResult( 1, 2 ).combine();
 
-  WasmPointer res = 4;
+    WasmPointer res = 4;
 
-  EXPECT_CALL(*extension_, ext_sr25519_generate_v1(key_type, seed))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_sr25519_generate_v1( key_type, seed ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i32\n"
-                     "      (call $ext_crypto_sr25519_generate_version_1\n"
-                     "        (i32.const %d)\n"
-                     "        (i64.const %d)\n"
-                     "      )\n"
-                     "      (i32.const %d)\n"
-                     "    )\n")
-       % key_type % seed % res)
-          .str();
-  SCOPED_TRACE("ext_sr25519_generate_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_crypto_sr25519_generate_version_1\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i64.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          key_type % seed % res )
+                            .str();
+    SCOPED_TRACE( "ext_sr25519_generate_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_sr25519_sign_v1_Test) {
-  WasmSize key_type = kProd;
-  WasmPointer key = 1;
-  WasmSpan msg = WasmResult(33, 2).combine();
-  WasmSpan res = WasmResult(35, 25).combine();
+TEST_F( REITest, ext_sr25519_sign_v1_Test )
+{
+    WasmSize    key_type = kProd;
+    WasmPointer key      = 1;
+    WasmSpan    msg      = WasmResult( 33, 2 ).combine();
+    WasmSpan    res      = WasmResult( 35, 25 ).combine();
 
-  EXPECT_CALL(*extension_, ext_sr25519_sign_v1(key_type, key, msg))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_sr25519_sign_v1( key_type, key, msg ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i64\n"
-                     "      (call $ext_crypto_sr25519_sign_version_1\n"
-                     "        (i32.const %d)\n"
-                     "        (i32.const %d)\n"
-                     "        (i64.const %d)\n"
-                     "      )\n"
-                     "      (i64.const %d)\n"
-                     "    )\n")
-       % key_type % key % msg % res)
-          .str();
-  SCOPED_TRACE("ext_sr25519_sign_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i64\n"
+                                         "      (call $ext_crypto_sr25519_sign_version_1\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i64.const %d)\n"
+                                         "      )\n"
+                                         "      (i64.const %d)\n"
+                                         "    )\n" ) %
+                          key_type % key % msg % res )
+                            .str();
+    SCOPED_TRACE( "ext_sr25519_sign_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_sr25519_verify_v2_Test) {
-  WasmPointer msg_data = 123;
-  WasmSize msg_len = 1233;
-  WasmSpan msg = WasmResult(msg_data, msg_len).combine();
-  WasmPointer sig_data = 42;
-  WasmPointer pubkey_data = 321;
+TEST_F( REITest, ext_sr25519_verify_v2_Test )
+{
+    WasmPointer msg_data    = 123;
+    WasmSize    msg_len     = 1233;
+    WasmSpan    msg         = WasmResult( msg_data, msg_len ).combine();
+    WasmPointer sig_data    = 42;
+    WasmPointer pubkey_data = 321;
 
-  WasmSize res = 1;
+    WasmSize res = 1;
 
-  EXPECT_CALL(*extension_, ext_sr25519_verify_v1(sig_data, msg, pubkey_data))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_sr25519_verify_v1( sig_data, msg, pubkey_data ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i32\n"
-                     "      (call $ext_crypto_sr25519_verify_version_2\n"
-                     "        (i32.const %d)\n"
-                     "        (i64.const %d)\n"
-                     "        (i32.const %d)\n"
-                     "      )\n"
-                     "      (i32.const %d)\n"
-                     "    )\n")
-       % sig_data % msg % pubkey_data % res)
-          .str();
-  SCOPED_TRACE("ext_sr25519_verify_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_crypto_sr25519_verify_version_2\n"
+                                         "        (i32.const %d)\n"
+                                         "        (i64.const %d)\n"
+                                         "        (i32.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          sig_data % msg % pubkey_data % res )
+                            .str();
+    SCOPED_TRACE( "ext_sr25519_verify_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_twox_128_Test) {
-  WasmPointer data_ptr = 12;
-  WasmSize data_size = 12;
-  WasmPointer out_ptr = 43;
+TEST_F( REITest, ext_twox_128_Test )
+{
+    WasmPointer data_ptr  = 12;
+    WasmSize    data_size = 12;
+    WasmPointer out_ptr   = 43;
 
-  EXPECT_CALL(*extension_, ext_twox_128(data_ptr, data_size, out_ptr)).Times(1);
-  auto execute_code = (boost::format("    (call $ext_twox_128\n"
-                                     "      (i32.const %d)\n"
-                                     "      (i32.const %d)\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n")
-                       % data_ptr % data_size % out_ptr)
-                          .str();
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_twox_128( data_ptr, data_size, out_ptr ) ).Times( 1 );
+    auto execute_code = ( boost::format( "    (call $ext_twox_128\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          data_ptr % data_size % out_ptr )
+                            .str();
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_twox_256_Test) {
-  WasmPointer data_ptr = 12;
-  WasmSize data_size = 12;
-  WasmPointer out_ptr = 43;
+TEST_F( REITest, ext_twox_256_Test )
+{
+    WasmPointer data_ptr  = 12;
+    WasmSize    data_size = 12;
+    WasmPointer out_ptr   = 43;
 
-  EXPECT_CALL(*extension_, ext_twox_256(data_ptr, data_size, out_ptr)).Times(1);
-  auto execute_code = (boost::format("    (call $ext_twox_256\n"
-                                     "      (i32.const %d)\n"
-                                     "      (i32.const %d)\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n")
-                       % data_ptr % data_size % out_ptr)
-                          .str();
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_twox_256( data_ptr, data_size, out_ptr ) ).Times( 1 );
+    auto execute_code = ( boost::format( "    (call $ext_twox_256\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          data_ptr % data_size % out_ptr )
+                            .str();
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_chain_id_Test) {
-  uint64_t res = 123141;
+TEST_F( REITest, ext_chain_id_Test )
+{
+    uint64_t res = 123141;
 
-  EXPECT_CALL(*extension_, ext_chain_id()).WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_chain_id() ).WillOnce( Return( res ) );
 
-  auto execute_code = (boost::format("    (call $assert_eq_i64\n"
-                                     "      (call $ext_chain_id)\n"
-                                     "      (i64.const %d)\n"
-                                     "    )\n")
-                       % res)
-                          .str();
-  SCOPED_TRACE("ext_chain_id_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i64\n"
+                                         "      (call $ext_chain_id)\n"
+                                         "      (i64.const %d)\n"
+                                         "    )\n" ) %
+                          res )
+                            .str();
+    SCOPED_TRACE( "ext_chain_id_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_crypto_secp256k1_ecdsa_recover_version_1_Test) {
-  WasmPointer sig_ptr = 12;
-  WasmPointer msg_ptr = 77;
-  WasmSpan out_span = WasmResult{109, 41}.combine();
+TEST_F( REITest, ext_crypto_secp256k1_ecdsa_recover_version_1_Test )
+{
+    WasmPointer sig_ptr  = 12;
+    WasmPointer msg_ptr  = 77;
+    WasmSpan    out_span = WasmResult{ 109, 41 }.combine();
 
-  EXPECT_CALL(*extension_,
-              ext_crypto_secp256k1_ecdsa_recover_v1(sig_ptr, msg_ptr))
-      .WillOnce(Return(out_span));
-  auto execute_code =
-      (boost::format("(call $assert_eq_i64\n"
-                     "    (call $ext_crypto_secp256k1_ecdsa_recover_version_1\n"
-                     "      (i32.const %d)\n"
-                     "      (i32.const %d)\n"
-                     "    )\n"
-                     "    (i64.const %d)\n"
-                     ")")
-       % sig_ptr % msg_ptr % out_span)
-          .str();
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_crypto_secp256k1_ecdsa_recover_v1( sig_ptr, msg_ptr ) )
+        .WillOnce( Return( out_span ) );
+    auto execute_code = ( boost::format( "(call $assert_eq_i64\n"
+                                         "    (call $ext_crypto_secp256k1_ecdsa_recover_version_1\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n"
+                                         "    (i64.const %d)\n"
+                                         ")" ) %
+                          sig_ptr % msg_ptr % out_span )
+                            .str();
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_crypto_secp256k1_ecdsa_recover_compressed_version_1_Test) {
-  WasmPointer sig_ptr = 12;
-  WasmPointer msg_ptr = 77;
-  WasmSpan out_span = WasmResult{109, 41}.combine();
+TEST_F( REITest, ext_crypto_secp256k1_ecdsa_recover_compressed_version_1_Test )
+{
+    WasmPointer sig_ptr  = 12;
+    WasmPointer msg_ptr  = 77;
+    WasmSpan    out_span = WasmResult{ 109, 41 }.combine();
 
-  EXPECT_CALL(
-      *extension_,
-      ext_crypto_secp256k1_ecdsa_recover_compressed_v1(sig_ptr, msg_ptr))
-      .WillOnce(Return(out_span));
-  auto execute_code =
-      (boost::format(
-           "(call $assert_eq_i64\n"
-           "    (call "
-           "$ext_crypto_secp256k1_ecdsa_recover_compressed_version_1\n"
-           "      (i32.const %d)\n"
-           "      (i32.const %d)\n"
-           "    )\n"
-           "    (i64.const %d)\n"
-           ")")
-       % sig_ptr % msg_ptr % out_span)
-          .str();
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_crypto_secp256k1_ecdsa_recover_compressed_v1( sig_ptr, msg_ptr ) )
+        .WillOnce( Return( out_span ) );
+    auto execute_code = ( boost::format( "(call $assert_eq_i64\n"
+                                         "    (call "
+                                         "$ext_crypto_secp256k1_ecdsa_recover_compressed_version_1\n"
+                                         "      (i32.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n"
+                                         "    (i64.const %d)\n"
+                                         ")" ) %
+                          sig_ptr % msg_ptr % out_span )
+                            .str();
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_hashing_keccak_256_version_1_Test) {
-  WasmPointer res = 3;
-  WasmSpan param = WasmResult(1, 2).combine();
+TEST_F( REITest, ext_hashing_keccak_256_version_1_Test )
+{
+    WasmPointer res   = 3;
+    WasmSpan    param = WasmResult( 1, 2 ).combine();
 
-  EXPECT_CALL(*extension_, ext_hashing_keccak_256_version_1(param))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_hashing_keccak_256_version_1( param ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i32\n"
-                     "      (call $ext_hashing_keccak_256_version_1\n"
-                     "        (i64.const %d)\n"
-                     "      )\n"
-                     "      (i32.const %d)\n"
-                     "    )\n")
-       % param % res)
-          .str();
-  SCOPED_TRACE("ext_hashing_keccak_256_version_1_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_hashing_keccak_256_version_1\n"
+                                         "        (i64.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          param % res )
+                            .str();
+    SCOPED_TRACE( "ext_hashing_keccak_256_version_1_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_hashing_sha2_256_version_1_Test) {
-  WasmPointer res = 3;
-  WasmSpan param = WasmResult(1, 2).combine();
+TEST_F( REITest, ext_hashing_sha2_256_version_1_Test )
+{
+    WasmPointer res   = 3;
+    WasmSpan    param = WasmResult( 1, 2 ).combine();
 
-  EXPECT_CALL(*extension_, ext_hashing_sha2_256_version_1(param))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_hashing_sha2_256_version_1( param ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i32\n"
-                     "      (call $ext_hashing_sha2_256_version_1\n"
-                     "        (i64.const %d)\n"
-                     "      )\n"
-                     "      (i32.const %d)\n"
-                     "    )\n")
-       % param % res)
-          .str();
-  SCOPED_TRACE("ext_hashing_sha2_256_version_1_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_hashing_sha2_256_version_1\n"
+                                         "        (i64.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          param % res )
+                            .str();
+    SCOPED_TRACE( "ext_hashing_sha2_256_version_1_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_hashing_blake2_128_version_1_Test) {
-  WasmPointer res = 3;
-  WasmSpan param = WasmResult(1, 2).combine();
+TEST_F( REITest, ext_hashing_blake2_128_version_1_Test )
+{
+    WasmPointer res   = 3;
+    WasmSpan    param = WasmResult( 1, 2 ).combine();
 
-  EXPECT_CALL(*extension_, ext_hashing_blake2_128_version_1(param))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_hashing_blake2_128_version_1( param ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i32\n"
-                     "      (call $ext_hashing_blake2_128_version_1\n"
-                     "        (i64.const %d)\n"
-                     "      )\n"
-                     "      (i32.const %d)\n"
-                     "    )\n")
-       % param % res)
-          .str();
-  SCOPED_TRACE("ext_hashing_blake2_128_version_1_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_hashing_blake2_128_version_1\n"
+                                         "        (i64.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          param % res )
+                            .str();
+    SCOPED_TRACE( "ext_hashing_blake2_128_version_1_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_hashing_blake2_256_version_1_Test) {
-  WasmPointer res = 3;
-  WasmSpan param = WasmResult(1, 2).combine();
+TEST_F( REITest, ext_hashing_blake2_256_version_1_Test )
+{
+    WasmPointer res   = 3;
+    WasmSpan    param = WasmResult( 1, 2 ).combine();
 
-  EXPECT_CALL(*extension_, ext_hashing_blake2_256_version_1(param))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_hashing_blake2_256_version_1( param ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i32\n"
-                     "      (call $ext_hashing_blake2_256_version_1\n"
-                     "        (i64.const %d)\n"
-                     "      )\n"
-                     "      (i32.const %d)\n"
-                     "    )\n")
-       % param % res)
-          .str();
-  SCOPED_TRACE("ext_hashing_blake2_256_version_1_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_hashing_blake2_256_version_1\n"
+                                         "        (i64.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          param % res )
+                            .str();
+    SCOPED_TRACE( "ext_hashing_blake2_256_version_1_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_hashing_twox_256_version_1_Test) {
-  WasmPointer res = 3;
-  WasmSpan param = WasmResult(1, 2).combine();
+TEST_F( REITest, ext_hashing_twox_256_version_1_Test )
+{
+    WasmPointer res   = 3;
+    WasmSpan    param = WasmResult( 1, 2 ).combine();
 
-  EXPECT_CALL(*extension_, ext_hashing_twox_256_version_1(param))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_hashing_twox_256_version_1( param ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i32\n"
-                     "      (call $ext_hashing_twox_256_version_1\n"
-                     "        (i64.const %d)\n"
-                     "      )\n"
-                     "      (i32.const %d)\n"
-                     "    )\n")
-       % param % res)
-          .str();
-  SCOPED_TRACE("ext_hashing_twox_256_version_1_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_hashing_twox_256_version_1\n"
+                                         "        (i64.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          param % res )
+                            .str();
+    SCOPED_TRACE( "ext_hashing_twox_256_version_1_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_hashing_twox_128_version_1_Test) {
-  WasmPointer res = 3;
-  WasmSpan param = WasmResult(1, 2).combine();
+TEST_F( REITest, ext_hashing_twox_128_version_1_Test )
+{
+    WasmPointer res   = 3;
+    WasmSpan    param = WasmResult( 1, 2 ).combine();
 
-  EXPECT_CALL(*extension_, ext_hashing_twox_128_version_1(param))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_hashing_twox_128_version_1( param ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i32\n"
-                     "      (call $ext_hashing_twox_128_version_1\n"
-                     "        (i64.const %d)\n"
-                     "      )\n"
-                     "      (i32.const %d)\n"
-                     "    )\n")
-       % param % res)
-          .str();
-  SCOPED_TRACE("ext_hashing_twox_128_version_1_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_hashing_twox_128_version_1\n"
+                                         "        (i64.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          param % res )
+                            .str();
+    SCOPED_TRACE( "ext_hashing_twox_128_version_1_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_hashing_twox_64_version_1_Test) {
-  WasmPointer res = 3;
-  WasmSpan param = WasmResult(1, 2).combine();
+TEST_F( REITest, ext_hashing_twox_64_version_1_Test )
+{
+    WasmPointer res   = 3;
+    WasmSpan    param = WasmResult( 1, 2 ).combine();
 
-  EXPECT_CALL(*extension_, ext_hashing_twox_64_version_1(param))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_hashing_twox_64_version_1( param ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i32\n"
-                     "      (call $ext_hashing_twox_64_version_1\n"
-                     "        (i64.const %d)\n"
-                     "      )\n"
-                     "      (i32.const %d)\n"
-                     "    )\n")
-       % param % res)
-          .str();
-  SCOPED_TRACE("ext_hashing_twox_64_version_1_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_hashing_twox_64_version_1\n"
+                                         "        (i64.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          param % res )
+                            .str();
+    SCOPED_TRACE( "ext_hashing_twox_64_version_1_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_allocator_malloc_version_1_Test) {
-  WasmSize size = 42;
-  WasmPointer ptr = 123;
-  EXPECT_CALL(*extension_, ext_allocator_malloc_version_1(size))
-      .WillOnce(Return(ptr));
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i32\n"
-                     "      (call $ext_allocator_malloc_version_1\n"
-                     "        (i32.const %d)\n"
-                     "      )\n"
-                     "      (i32.const %d)\n"
-                     "    )\n")
-       % size % ptr)
-          .str();
-  SCOPED_TRACE("ext_allocator_malloc_version_1_Test");
-  executeWasm(execute_code);
+TEST_F( REITest, ext_allocator_malloc_version_1_Test )
+{
+    WasmSize    size = 42;
+    WasmPointer ptr  = 123;
+    EXPECT_CALL( *extension_, ext_allocator_malloc_version_1( size ) ).WillOnce( Return( ptr ) );
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_allocator_malloc_version_1\n"
+                                         "        (i32.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          size % ptr )
+                            .str();
+    SCOPED_TRACE( "ext_allocator_malloc_version_1_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_allocator_free_version_1_Test) {
-  WasmPointer ptr = 123;
-  EXPECT_CALL(*extension_, ext_allocator_free_version_1(ptr)).Times(1);
-  auto execute_code = (boost::format("    (call $ext_allocator_free_version_1\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n")
-                       % ptr)
-                          .str();
-  SCOPED_TRACE("ext_allocator_free_version_1_Test");
-  executeWasm(execute_code);
+TEST_F( REITest, ext_allocator_free_version_1_Test )
+{
+    WasmPointer ptr = 123;
+    EXPECT_CALL( *extension_, ext_allocator_free_version_1( ptr ) ).Times( 1 );
+    auto execute_code = ( boost::format( "    (call $ext_allocator_free_version_1\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          ptr )
+                            .str();
+    SCOPED_TRACE( "ext_allocator_free_version_1_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_storage_set_version_1_Test) {
-  WasmSpan param1 = WasmResult(1, 2).combine();
-  WasmSpan param2 = WasmResult(3, 4).combine();
-  EXPECT_CALL(*extension_, ext_storage_set_version_1(param1, param2))
-      .WillOnce(Return());
+TEST_F( REITest, ext_storage_set_version_1_Test )
+{
+    WasmSpan param1 = WasmResult( 1, 2 ).combine();
+    WasmSpan param2 = WasmResult( 3, 4 ).combine();
+    EXPECT_CALL( *extension_, ext_storage_set_version_1( param1, param2 ) ).WillOnce( Return() );
 
-  auto execute_code = (boost::format("      (call $ext_storage_set_version_1\n"
-                                     "        (i64.const %d)\n"
-                                     "        (i64.const %d)\n"
-                                     "      )\n")
-                       % param1 % param2)
-                          .str();
-  SCOPED_TRACE("ext_storage_set_version_1_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "      (call $ext_storage_set_version_1\n"
+                                         "        (i64.const %d)\n"
+                                         "        (i64.const %d)\n"
+                                         "      )\n" ) %
+                          param1 % param2 )
+                            .str();
+    SCOPED_TRACE( "ext_storage_set_version_1_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_storage_get_version_1_Test) {
-  WasmSize key_type = kProd;
-  WasmSpan res = WasmResult(1, 2).combine();
+TEST_F( REITest, ext_storage_get_version_1_Test )
+{
+    WasmSize key_type = kProd;
+    WasmSpan res      = WasmResult( 1, 2 ).combine();
 
-  EXPECT_CALL(*extension_, ext_storage_get_version_1(key_type))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_storage_get_version_1( key_type ) ).WillOnce( Return( res ) );
 
-  auto execute_code = (boost::format("    (call $assert_eq_i64\n"
-                                     "      (call $ext_storage_get_version_1\n"
-                                     "        (i64.const %d)\n"
-                                     "      )\n"
-                                     "      (i64.const %d)\n"
-                                     "    )\n")
-                       % key_type % res)
-                          .str();
-  SCOPED_TRACE("ext_storage_get_version_1_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i64\n"
+                                         "      (call $ext_storage_get_version_1\n"
+                                         "        (i64.const %d)\n"
+                                         "      )\n"
+                                         "      (i64.const %d)\n"
+                                         "    )\n" ) %
+                          key_type % res )
+                            .str();
+    SCOPED_TRACE( "ext_storage_get_version_1_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_storage_clear_version_1_Test) {
-  uint64_t num = 12;
+TEST_F( REITest, ext_storage_clear_version_1_Test )
+{
+    uint64_t num = 12;
 
-  EXPECT_CALL(*extension_, ext_storage_clear_version_1(num)).Times(1);
-  auto execute_code = (boost::format("    (call $ext_storage_clear_version_1\n"
-                                     "      (i64.const %d)\n"
-                                     "    )\n")
-                       % num)
-                          .str();
-  SCOPED_TRACE("ext_storage_clear_version_1_Test");
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_storage_clear_version_1( num ) ).Times( 1 );
+    auto execute_code = ( boost::format( "    (call $ext_storage_clear_version_1\n"
+                                         "      (i64.const %d)\n"
+                                         "    )\n" ) %
+                          num )
+                            .str();
+    SCOPED_TRACE( "ext_storage_clear_version_1_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_storage_exists_version_1_Test) {
-  WasmPointer res = 3;
-  WasmSpan param = WasmResult(1, 2).combine();
+TEST_F( REITest, ext_storage_exists_version_1_Test )
+{
+    WasmPointer res   = 3;
+    WasmSpan    param = WasmResult( 1, 2 ).combine();
 
-  EXPECT_CALL(*extension_, ext_storage_exists_version_1(param))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_storage_exists_version_1( param ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i32\n"
-                     "      (call $ext_storage_exists_version_1\n"
-                     "        (i64.const %d)\n"
-                     "      )\n"
-                     "      (i32.const %d)\n"
-                     "    )\n")
-       % param % res)
-          .str();
-  SCOPED_TRACE("ext_storage_exists_version_1_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_storage_exists_version_1\n"
+                                         "        (i64.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          param % res )
+                            .str();
+    SCOPED_TRACE( "ext_storage_exists_version_1_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_storage_read_version_1_Test) {
-  WasmResult key(123, 1233);
-  WasmResult value(42, 12);
-  WasmOffset offset(1);
-  WasmSpan res = WasmResult(1, 2).combine();
+TEST_F( REITest, ext_storage_read_version_1_Test )
+{
+    WasmResult key( 123, 1233 );
+    WasmResult value( 42, 12 );
+    WasmOffset offset( 1 );
+    WasmSpan   res = WasmResult( 1, 2 ).combine();
 
-  EXPECT_CALL(
-      *extension_,
-      ext_storage_read_version_1(key.combine(), value.combine(), offset))
-      .WillOnce(Return(res));
-  auto execute_code = (boost::format("    (call $assert_eq_i64\n"
-                                     "    (call $ext_storage_read_version_1\n"
-                                     "      (i64.const %d)\n"
-                                     "      (i64.const %d)\n"
-                                     "      (i32.const %d)\n"
-                                     "    )\n"
-                                     "      (i64.const %d)\n"
-                                     "    )\n")
-                       % key.combine() % value.combine() % offset % res)
-                          .str();
-  SCOPED_TRACE("ext_storage_read_version_1_Test");
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_storage_read_version_1( key.combine(), value.combine(), offset ) )
+        .WillOnce( Return( res ) );
+    auto execute_code = ( boost::format( "    (call $assert_eq_i64\n"
+                                         "    (call $ext_storage_read_version_1\n"
+                                         "      (i64.const %d)\n"
+                                         "      (i64.const %d)\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n"
+                                         "      (i64.const %d)\n"
+                                         "    )\n" ) %
+                          key.combine() % value.combine() % offset % res )
+                            .str();
+    SCOPED_TRACE( "ext_storage_read_version_1_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_storage_clear_prefix_version_1_Test) {
-  uint64_t num = 12;
+TEST_F( REITest, ext_storage_clear_prefix_version_1_Test )
+{
+    uint64_t num = 12;
 
-  EXPECT_CALL(*extension_, ext_storage_clear_prefix_version_1(num)).Times(1);
-  auto execute_code =
-      (boost::format("    (call $ext_storage_clear_prefix_version_1\n"
-                     "      (i64.const %d)\n"
-                     "    )\n")
-       % num)
-          .str();
-  SCOPED_TRACE("ext_storage_clear_prefix_version_1_Test");
-  executeWasm(execute_code);
+    EXPECT_CALL( *extension_, ext_storage_clear_prefix_version_1( num ) ).Times( 1 );
+    auto execute_code = ( boost::format( "    (call $ext_storage_clear_prefix_version_1\n"
+                                         "      (i64.const %d)\n"
+                                         "    )\n" ) %
+                          num )
+                            .str();
+    SCOPED_TRACE( "ext_storage_clear_prefix_version_1_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_storage_changes_root_version_1_Test) {
-  WasmSize key_type = kProd;
-  WasmPointer res = 2;
+TEST_F( REITest, ext_storage_changes_root_version_1_Test )
+{
+    WasmSize    key_type = kProd;
+    WasmPointer res      = 2;
 
-  EXPECT_CALL(*extension_, ext_storage_changes_root_version_1(key_type))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_storage_changes_root_version_1( key_type ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i32\n"
-                     "      (call $ext_storage_changes_root_version_1\n"
-                     "        (i64.const %d)\n"
-                     "      )\n"
-                     "      (i32.const %d)\n"
-                     "    )\n")
-       % key_type % res)
-          .str();
-  SCOPED_TRACE("ext_storage_changes_root_version_1_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_storage_changes_root_version_1\n"
+                                         "        (i64.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          key_type % res )
+                            .str();
+    SCOPED_TRACE( "ext_storage_changes_root_version_1_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_storage_root_version_1_Test) {
-  uint32_t res = 123141;
+TEST_F( REITest, ext_storage_root_version_1_Test )
+{
+    uint32_t res = 123141;
 
-  EXPECT_CALL(*extension_, ext_storage_root_version_1()).WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_storage_root_version_1() ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i32\n"
-                     "      (call $ext_storage_root_version_1)\n"
-                     "      (i32.const %d)\n"
-                     "    )\n")
-       % res)
-          .str();
-  SCOPED_TRACE("ext_storage_root_version_1_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_storage_root_version_1)\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          res )
+                            .str();
+    SCOPED_TRACE( "ext_storage_root_version_1_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_storage_next_key_version_1_Test) {
-  WasmSpan param = 5678;
-  WasmSpan res = 123141;
+TEST_F( REITest, ext_storage_next_key_version_1_Test )
+{
+    WasmSpan param = 5678;
+    WasmSpan res   = 123141;
 
-  EXPECT_CALL(*extension_, ext_storage_next_key_version_1(param))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_storage_next_key_version_1( param ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i64\n"
-                     "      (call $ext_storage_next_key_version_1"
-                     "        (i64.const %d)\n"
-                     "      )\n"
-                     "      (i64.const %d)\n"
-                     "    )\n")
-       % param % res)
-          .str();
-  SCOPED_TRACE("ext_storage_next_key_version_1_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i64\n"
+                                         "      (call $ext_storage_next_key_version_1"
+                                         "        (i64.const %d)\n"
+                                         "      )\n"
+                                         "      (i64.const %d)\n"
+                                         "    )\n" ) %
+                          param % res )
+                            .str();
+    SCOPED_TRACE( "ext_storage_next_key_version_1_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_trie_blake2_256_root_version_1_Test) {
-  WasmPointer res = 3;
-  WasmSpan param = WasmResult(1, 2).combine();
+TEST_F( REITest, ext_trie_blake2_256_root_version_1_Test )
+{
+    WasmPointer res   = 3;
+    WasmSpan    param = WasmResult( 1, 2 ).combine();
 
-  EXPECT_CALL(*extension_, ext_trie_blake2_256_root_version_1(param))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_trie_blake2_256_root_version_1( param ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i32\n"
-                     "      (call $ext_trie_blake2_256_root_version_1\n"
-                     "        (i64.const %d)\n"
-                     "      )\n"
-                     "      (i32.const %d)\n"
-                     "    )\n")
-       % param % res)
-          .str();
-  SCOPED_TRACE("ext_trie_blake2_256_root_version_1_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_trie_blake2_256_root_version_1\n"
+                                         "        (i64.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          param % res )
+                            .str();
+    SCOPED_TRACE( "ext_trie_blake2_256_root_version_1_Test" );
+    executeWasm( execute_code );
 }
 
-TEST_F(REITest, ext_trie_blake2_256_ordered_root_version_1_Test) {
-  WasmPointer res = 3;
-  WasmSpan param = WasmResult(1, 2).combine();
+TEST_F( REITest, ext_trie_blake2_256_ordered_root_version_1_Test )
+{
+    WasmPointer res   = 3;
+    WasmSpan    param = WasmResult( 1, 2 ).combine();
 
-  EXPECT_CALL(*extension_, ext_trie_blake2_256_ordered_root_version_1(param))
-      .WillOnce(Return(res));
+    EXPECT_CALL( *extension_, ext_trie_blake2_256_ordered_root_version_1( param ) ).WillOnce( Return( res ) );
 
-  auto execute_code =
-      (boost::format("    (call $assert_eq_i32\n"
-                     "      (call $ext_trie_blake2_256_ordered_root_version_1\n"
-                     "        (i64.const %d)\n"
-                     "      )\n"
-                     "      (i32.const %d)\n"
-                     "    )\n")
-       % param % res)
-          .str();
-  SCOPED_TRACE("ext_trie_blake2_256_ordered_root_version_1_Test");
-  executeWasm(execute_code);
+    auto execute_code = ( boost::format( "    (call $assert_eq_i32\n"
+                                         "      (call $ext_trie_blake2_256_ordered_root_version_1\n"
+                                         "        (i64.const %d)\n"
+                                         "      )\n"
+                                         "      (i32.const %d)\n"
+                                         "    )\n" ) %
+                          param % res )
+                            .str();
+    SCOPED_TRACE( "ext_trie_blake2_256_ordered_root_version_1_Test" );
+    executeWasm( execute_code );
 }

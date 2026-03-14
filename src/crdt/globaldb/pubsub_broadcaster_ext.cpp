@@ -200,7 +200,9 @@ namespace sgns::crdt
         } while ( 0 );
     }
 
-    outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff, std::string topic, boost::optional<libp2p::peer::PeerInfo> peerInfo )
+    outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer                     &buff,
+                                                           std::string                             topic,
+                                                           boost::optional<libp2p::peer::PeerInfo> peerInfo )
     {
         std::set<std::string> broadcastTopicsCopy;
         {
@@ -224,7 +226,7 @@ namespace sgns::crdt
 
         // Get peer_id - determine which branch to use first, then initialize
         boost::optional<libp2p::peer::PeerId> peer_id_opt;
-        
+
         if ( peerInfo )
         {
             peer_id_opt = peerInfo->id;
@@ -241,7 +243,7 @@ namespace sgns::crdt
             peer_id_opt = peer_id_res.value();
         }
 
-        auto& peer_id = peer_id_opt.value();
+        auto &peer_id = peer_id_opt.value();
         bpi->set_id( std::string( peer_id.toVector().begin(), peer_id.toVector().end() ) );
 
         // Add addresses from PeerInfo (which already includes observed, interface, and relay addresses)
@@ -275,9 +277,9 @@ namespace sgns::crdt
             if ( m_logger->level() <= spdlog::level::trace )
             {
                 m_logger->trace( "CIDs broadcasted by {} to topic {}, at this {}",
-                                peer_id.toBase58(),
-                                topic,
-                                reinterpret_cast<size_t>( this ) );
+                                 peer_id.toBase58(),
+                                 topic,
+                                 reinterpret_cast<size_t>( this ) );
             }
         }
 

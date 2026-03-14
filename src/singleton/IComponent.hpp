@@ -13,7 +13,6 @@ class IComponent
 public:
     virtual ~IComponent()         = default;
     virtual std::string GetName() = 0;
-
 };
 
 #endif

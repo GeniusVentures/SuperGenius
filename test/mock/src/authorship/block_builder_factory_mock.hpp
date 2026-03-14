@@ -7,13 +7,18 @@
 
 #include <gmock/gmock.h>
 
-namespace sgns::authorship {
+namespace sgns::authorship
+{
 
-  class BlockBuilderFactoryMock : public BlockBuilderFactory {
-   public:
-     MOCK_METHOD(outcome::result<std::unique_ptr<BlockBuilder>>, create, (const primitives::BlockId& parent_id, primitives::Digest inherent_digest), (const)); 
-  };
+    class BlockBuilderFactoryMock : public BlockBuilderFactory
+    {
+    public:
+        MOCK_METHOD( outcome::result<std::unique_ptr<BlockBuilder>>,
+                     create,
+                     ( const primitives::BlockId &parent_id, primitives::Digest inherent_digest ),
+                     ( const ) );
+    };
 
-}  // namespace sgns::authorship
+} // namespace sgns::authorship
 
-#endif  // SUPERGENIUS_TEST_MOCK_SRC_AUTHORSHIP_BLOCK_BUILDER_FACTORY_MOCK_HPP
+#endif // SUPERGENIUS_TEST_MOCK_SRC_AUTHORSHIP_BLOCK_BUILDER_FACTORY_MOCK_HPP

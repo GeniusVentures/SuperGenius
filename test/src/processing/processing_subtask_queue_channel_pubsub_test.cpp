@@ -106,18 +106,20 @@ TEST_F( ProcessingSubTaskChannelPubSubTest, RequestTransmittingOnSinglePubSubHos
     std::string nodeId1 = "NODE1_ID";
     queueChannel1->RequestQueueOwnership( nodeId1 );
     std::chrono::milliseconds waitTime1;
-    ASSERT_WAIT_FOR_CONDITION( ([&requestCount1, &requestCount2]() { return requestCount1 >= 1 && requestCount2 >= 1; }),
-                               std::chrono::milliseconds( 2000 ),
-                               "First request not received by both channels",
-                               &waitTime1 );
+    ASSERT_WAIT_FOR_CONDITION(
+        ( [&requestCount1, &requestCount2]() { return requestCount1 >= 1 && requestCount2 >= 1; } ),
+        std::chrono::milliseconds( 2000 ),
+        "First request not received by both channels",
+        &waitTime1 );
 
     std::string nodeId2 = "NODE2_ID";
     queueChannel2->RequestQueueOwnership( nodeId2 );
     std::chrono::milliseconds waitTime2;
-    ASSERT_WAIT_FOR_CONDITION( ([&requestCount1, &requestCount2]() { return requestCount1 >= 2 && requestCount2 >= 2; }),
-                               std::chrono::milliseconds( 2000 ),
-                               "Second request not received by both channels",
-                               &waitTime2 );
+    ASSERT_WAIT_FOR_CONDITION(
+        ( [&requestCount1, &requestCount2]() { return requestCount1 >= 2 && requestCount2 >= 2; } ),
+        std::chrono::milliseconds( 2000 ),
+        "Second request not received by both channels",
+        &waitTime2 );
 
     ASSERT_EQ( 2, requestedNodeIds1.size() );
     EXPECT_EQ( nodeId1, requestedNodeIds1[0] );
@@ -187,19 +189,21 @@ TEST_F( ProcessingSubTaskChannelPubSubTest, RequestTransmittingOnDifferentPubSub
     std::string nodeId1 = "NODE1_ID";
     queueChannel1->RequestQueueOwnership( nodeId1 );
     std::chrono::milliseconds waitTime1;
-    ASSERT_WAIT_FOR_CONDITION( ([&requestCount1, &requestCount2]() { return requestCount1 >= 1 && requestCount2 >= 1; }),
-                               std::chrono::milliseconds( 2000 ),
-                               "First request not received by both channels",
-                               &waitTime1 );
+    ASSERT_WAIT_FOR_CONDITION(
+        ( [&requestCount1, &requestCount2]() { return requestCount1 >= 1 && requestCount2 >= 1; } ),
+        std::chrono::milliseconds( 2000 ),
+        "First request not received by both channels",
+        &waitTime1 );
 
     std::string nodeId2 = "NODE2_ID";
     queueChannel2->RequestQueueOwnership( nodeId2 );
 
     std::chrono::milliseconds waitTime2;
-    ASSERT_WAIT_FOR_CONDITION( ([&requestCount1, &requestCount2]() { return requestCount1 >= 2 && requestCount2 >= 2; }),
-                               std::chrono::milliseconds( 2000 ),
-                               "Second request not received by both channels",
-                               &waitTime2 );
+    ASSERT_WAIT_FOR_CONDITION(
+        ( [&requestCount1, &requestCount2]() { return requestCount1 >= 2 && requestCount2 >= 2; } ),
+        std::chrono::milliseconds( 2000 ),
+        "Second request not received by both channels",
+        &waitTime2 );
 
     // Requests are received by both channel endpoints.
     ASSERT_EQ( 2, requestedNodeIds1.size() );
@@ -226,7 +230,7 @@ TEST_F( ProcessingSubTaskChannelPubSubTest, QueueTransmittingOnSinglePubSubHost 
         [&queueSnapshotSet1, &queueCount1, &mutex1]( SGProcessing::SubTaskQueue *queue )
         {
             std::lock_guard lock( mutex1 );
-            auto                        queueCopy = std::make_shared<SGProcessing::SubTaskQueue>();
+            auto            queueCopy = std::make_shared<SGProcessing::SubTaskQueue>();
             queueCopy->CopyFrom( *queue );
             queueSnapshotSet1.push_back( queueCopy );
             queueCount1++;
@@ -240,7 +244,7 @@ TEST_F( ProcessingSubTaskChannelPubSubTest, QueueTransmittingOnSinglePubSubHost 
         [&queueSnapshotSet2, &queueCount2, &mutex2]( SGProcessing::SubTaskQueue *queue )
         {
             std::lock_guard lock( mutex2 );
-            auto                        queueCopy = std::make_shared<SGProcessing::SubTaskQueue>();
+            auto            queueCopy = std::make_shared<SGProcessing::SubTaskQueue>();
             queueCopy->CopyFrom( *queue );
             queueSnapshotSet2.push_back( queueCopy );
             queueCount2++;
@@ -281,7 +285,7 @@ TEST_F( ProcessingSubTaskChannelPubSubTest, QueueTransmittingOnSinglePubSubHost 
 
     queueChannel1->PublishQueue( queue );
     std::chrono::milliseconds waitTime1;
-    ASSERT_WAIT_FOR_CONDITION( ([&queueCount1, &queueCount2]() { return queueCount1 >= 1 && queueCount2 >= 1; }),
+    ASSERT_WAIT_FOR_CONDITION( ( [&queueCount1, &queueCount2]() { return queueCount1 >= 1 && queueCount2 >= 1; } ),
                                std::chrono::milliseconds( 2000 ),
                                "First queue not received by both channels",
                                &waitTime1 );
@@ -290,7 +294,7 @@ TEST_F( ProcessingSubTaskChannelPubSubTest, QueueTransmittingOnSinglePubSubHost 
     queue->mutable_processing_queue()->set_owner_node_id( nodeId2 );
     queueChannel2->PublishQueue( queue );
     std::chrono::milliseconds waitTime2;
-    ASSERT_WAIT_FOR_CONDITION( ([&queueCount1, &queueCount2]() { return queueCount1 >= 2 && queueCount2 >= 2; }),
+    ASSERT_WAIT_FOR_CONDITION( ( [&queueCount1, &queueCount2]() { return queueCount1 >= 2 && queueCount2 >= 2; } ),
                                std::chrono::milliseconds( 2000 ),
                                "Second queue not received by both channels",
                                &waitTime2 );

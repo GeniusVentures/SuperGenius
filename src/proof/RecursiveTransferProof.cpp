@@ -13,7 +13,9 @@ using namespace nil::crypto3::algebra::curves;
 namespace sgns
 {
 
-    RecursiveTransferProof::RecursiveTransferProof( uint64_t balance, uint64_t amount, GeniusProver::ProofSnarkType snark  ) :
+    RecursiveTransferProof::RecursiveTransferProof( uint64_t                     balance,
+                                                    uint64_t                     amount,
+                                                    GeniusProver::ProofSnarkType snark ) :
 #ifdef RELEASE_BYTECODE_CIRCUITS
         TransferProof( std::move( balance ), std::move( amount ), std::string( RecursiveTransactionCircuit ) ) //
 #else

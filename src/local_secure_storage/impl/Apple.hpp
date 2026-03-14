@@ -7,7 +7,7 @@ namespace sgns
     class AppleSecureStorage : public JSONBackend
     {
     public:
-        explicit AppleSecureStorage(std::string identifier);
+        explicit AppleSecureStorage( std::string identifier );
 
         std::string GetName() override
         {

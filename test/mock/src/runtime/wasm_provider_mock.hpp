@@ -6,13 +6,15 @@
 
 #include <gmock/gmock.h>
 
-namespace sgns::runtime {
+namespace sgns::runtime
+{
 
-  class WasmProviderMock: public WasmProvider {
-   public:
-    MOCK_CONST_METHOD0(getStateCode, const base::Buffer &());
-  };
+    class WasmProviderMock : public WasmProvider
+    {
+    public:
+        MOCK_CONST_METHOD0( getStateCode, const base::Buffer &() );
+    };
 
 }
 
-#endif  // SUPERGENIUS_TEST_MOCK_SRC_RUNTIME_WASM_PROVIDER_MOCK
+#endif // SUPERGENIUS_TEST_MOCK_SRC_RUNTIME_WASM_PROVIDER_MOCK

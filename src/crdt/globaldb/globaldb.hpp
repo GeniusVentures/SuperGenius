@@ -67,7 +67,7 @@ namespace sgns::crdt
          * @enum        Error
          * @brief       Enumeration of error codes used in the proof classes.
          */
-        enum class Error: uint8_t
+        enum class Error : uint8_t
         {
             ROCKSDB_IO = 0,                 ///< RocksDB wasn't opened
             IPFS_DB_NOT_CREATED,            ///< IPFS datastore not created

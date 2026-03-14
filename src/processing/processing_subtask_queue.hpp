@@ -11,94 +11,92 @@
 
 namespace sgns::processing
 {
-/**
+    /**
  * @brief Distributed subtask queue implementation.
  */
-class ProcessingSubTaskQueue
-{
-public:
+    class ProcessingSubTaskQueue
+    {
+    public:
+        using TimestampProvider = std::function<uint64_t()>;
 
-    using TimestampProvider = std::function<uint64_t()>;
-
-    /** Construct an empty queue
+        /** Construct an empty queue
     * @param localNodeId local processing node ID
     * @param timestampProvider get the current timestamp from the manager function
     */
-    ProcessingSubTaskQueue(std::string localNodeId, TimestampProvider timestampProvider = nullptr);
+        ProcessingSubTaskQueue( std::string localNodeId, TimestampProvider timestampProvider = nullptr );
 
-    /** Initialize a subtask queue snapshot.
+        /** Initialize a subtask queue snapshot.
     * @param queue - Queue snapshot to initialize.
     * @param enabledItemIndices - Indexes of enabled items; disabled items are treated as deleted.
     */
-    void CreateQueue(SGProcessing::ProcessingQueue* queue, const std::vector<int>& enabledItemIndices);
+        void CreateQueue( SGProcessing::ProcessingQueue *queue, const std::vector<int> &enabledItemIndices );
 
-    /** Attempts to grab a subtask from the queue.
+        /** Attempts to grab a subtask from the queue.
     * @param grabbedItemIndex - Index of the grabbed item if successful.
     * @param timestamp - Current timestamp for the queue.
     * @return true if an item was grabbed, false otherwise.
     */
-    bool GrabItem(size_t& grabbedItemIndex, uint64_t timestamp);
+        bool GrabItem( size_t &grabbedItemIndex, uint64_t timestamp );
 
-    /** Transfer the queue ownership to another processing node
+        /** Transfer the queue ownership to another processing node
     * @param nodeId - processing node ID that the ownership should be transferred
     */
-    bool MoveOwnershipTo(const std::string& nodeId);
+        bool MoveOwnershipTo( const std::string &nodeId );
 
-    /** Rollbacks the queue ownership to the previous state
+        /** Rollbacks the queue ownership to the previous state
     * @return true if the ownership is successfully rolled back
     */
-    bool RollbackOwnership();
+        bool RollbackOwnership();
 
-    /** Checks id the local processing node owns the queue
+        /** Checks id the local processing node owns the queue
     * @return true is the lolca node owns the queue
     */
-    bool HasOwnership() const;
+        bool HasOwnership() const;
 
-    /** Updates the local queue with a snapshot that have the most recent timestamp
+        /** Updates the local queue with a snapshot that have the most recent timestamp
     * @param queue - the queue snapshot
     * @param enabledItemIndices - indexes of enabled items. Disabled items are considered as deleted.
     */
-    bool UpdateQueue(SGProcessing::ProcessingQueue* queue, const std::vector<int>& enabledItemIndices);
+        bool UpdateQueue( SGProcessing::ProcessingQueue *queue, const std::vector<int> &enabledItemIndices );
 
-    /** Unlocks expired queue items
+        /** Unlocks expired queue items
     * @param currentTime - the current queue time
     * @return true if at least one item was unlocked
     */
-    bool UnlockExpiredItems(uint64_t currentTime);
+        bool UnlockExpiredItems( uint64_t currentTime );
 
-    /** Returns the most recent item lock timestamp
+        /** Returns the most recent item lock timestamp
     */
-    [[nodiscard]] uint64_t GetLastLockTimestamp() const;
+        [[nodiscard]] uint64_t GetLastLockTimestamp() const;
 
-    /** Adds a new ownership request to the queue
+        /** Adds a new ownership request to the queue
     * @param nodeId - ID of the node requesting ownership
     * @param timestamp - timestamp when the request was created
     * @return true if the request was successfully added, false if it already exists
     */
-    bool AddOwnershipRequest(const std::string& nodeId, uint64_t timestamp);
+        bool AddOwnershipRequest( const std::string &nodeId, uint64_t timestamp );
 
-    /** Processes the next ownership request in the queue
+        /** Processes the next ownership request in the queue
     * @return true if an ownership request was processed, false if the queue is empty or the node doesn't have ownership
     */
-    bool ProcessNextOwnershipRequest();
+        bool ProcessNextOwnershipRequest();
 
-private:
+    private:
+        void ChangeOwnershipTo( const std::string &nodeId );
 
-    void ChangeOwnershipTo(const std::string& nodeId);
+        bool LockItem( size_t &lockedItemIndex, uint64_t timestamp );
 
-    bool LockItem(size_t& lockedItemIndex, uint64_t timestamp);
+        void LogQueue() const;
 
-    void LogQueue() const;
+        std::string                    m_localNodeId;
+        SGProcessing::ProcessingQueue *m_queue;
 
-    std::string m_localNodeId;
-    SGProcessing::ProcessingQueue* m_queue;
+        std::vector<int> m_enabledItemIndices;
 
-    std::vector<int> m_enabledItemIndices;
+        base::Logger m_logger = base::createLogger( "ProcessingSubTaskQueue" );
 
-    base::Logger m_logger = base::createLogger("ProcessingSubTaskQueue");
-
-    TimestampProvider m_timestampProvider;
-};
+        TimestampProvider m_timestampProvider;
+    };
 }
 
 #endif // SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_HPP

@@ -7,10 +7,12 @@
 
 #include <gmock/gmock.h>
 
-namespace sgns::verification {
-  struct ProductionGossiperMock : public ProductionGossiper {
-    MOCK_METHOD1(blockAnnounce, void(const network::BlockAnnounce &));
-  };
-}  // namespace sgns::verification
+namespace sgns::verification
+{
+    struct ProductionGossiperMock : public ProductionGossiper
+    {
+        MOCK_METHOD1( blockAnnounce, void( const network::BlockAnnounce & ) );
+    };
+} // namespace sgns::verification
 
-#endif  // SUPERGENIUS_PRODUCTION_GOSSIPER_MOCK_HPP
+#endif // SUPERGENIUS_PRODUCTION_GOSSIPER_MOCK_HPP

@@ -99,8 +99,9 @@ TEST( GeniusProofsTest, InvalidTransferProof )
 
     std::vector<sgns::GeniusProver::ParameterType> parameters;
 
-    verification_result =
-        TxProof2.VerifyFullProof( wrong_parameters, base_proof.value().proof_data(), TransactionBytecode );
+    verification_result = TxProof2.VerifyFullProof( wrong_parameters,
+                                                    base_proof.value().proof_data(),
+                                                    TransactionBytecode );
     if ( verification_result.has_error() )
     {
         // Print the error information
@@ -111,8 +112,9 @@ TEST( GeniusProofsTest, InvalidTransferProof )
     // Assert that the function was successful (i.e., no error occurred)
     ASSERT_FALSE( verification_result.has_error() ) << "Verification Expected success but got an error!";
     EXPECT_FALSE( verification_result.value() );
-    verification_result =
-        TxProof2.VerifyFullProof( right_parameters, base_proof.value().proof_data(), TransactionBytecode );
+    verification_result = TxProof2.VerifyFullProof( right_parameters,
+                                                    base_proof.value().proof_data(),
+                                                    TransactionBytecode );
     if ( verification_result.has_error() )
     {
         // Print the error information

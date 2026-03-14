@@ -209,13 +209,14 @@ void ProcessingServiceTest::Initialize( uint64_t numNodes, size_t processingTime
         // Add some diagnostic logging for port binding
         int port = 40001 + i;
         Color::PrintInfo( "Attempting to start PubSub node ", i, " on port ", port );
-        for (auto node : bootstrap_nodes) {
-            Color::PrintInfo("  with bootstrap node: ", node);
+        for ( auto node : bootstrap_nodes )
+        {
+            Color::PrintInfo( "  with bootstrap node: ", node );
         }
-        
+
         // Start the node and wait for it to complete before getting its address
         m_pubsub_futures.emplace_back( m_pubsub_nodes[i]->Start( port, bootstrap_nodes ) );
-        
+
         // Wait for this node to start before using it as a bootstrap for the next
         std::chrono::milliseconds nodeStartTime;
         ASSERT_WAIT_FOR_CONDITION(
@@ -245,7 +246,7 @@ void ProcessingServiceTest::Initialize( uint64_t numNodes, size_t processingTime
             std::chrono::milliseconds( 5000 ),
             "PubSub node startup failed",
             &nodeStartTime );
-        
+
         // Now it's safe to get the interface address and use it as bootstrap
         if ( i == 0 )
         {
@@ -307,7 +308,7 @@ TEST_F( ProcessingServiceTest, DISABLED_ProcessingSlotsAreAvailable )
                                                                       1,
                                                                       enqueuer,
                                                                       std::make_shared<SubTaskResultStorageMock>(),
-        processingCore);
+                                                                      processingCore );
 
     m_processing_services.push_back( processingService );
 
@@ -350,7 +351,7 @@ TEST_F( ProcessingServiceTest, NoProcessingSlotsAvailable )
                                                                       1,
                                                                       enqueuer,
                                                                       std::make_shared<SubTaskResultStorageMock>(),
-        processingCore);
+                                                                      processingCore );
 
     // Track the ProcessingServiceImpl for proper cleanup
     m_processing_services.push_back( processingService );

@@ -3,17 +3,19 @@
 
 #include "crypto/pbkdf2/pbkdf2_provider.hpp"
 
-namespace sgns::crypto {
+namespace sgns::crypto
+{
 
-  class Pbkdf2ProviderImpl : public Pbkdf2Provider {
-   public:
-    ~Pbkdf2ProviderImpl() override = default;
+    class Pbkdf2ProviderImpl : public Pbkdf2Provider
+    {
+    public:
+        ~Pbkdf2ProviderImpl() override = default;
 
-    outcome::result<base::Buffer> deriveKey(gsl::span<const uint8_t> data,
-                                              gsl::span<const uint8_t> salt,
-                                              size_t iterations,
-                                              size_t key_length) const override;
-  };
+        outcome::result<base::Buffer> deriveKey( gsl::span<const uint8_t> data,
+                                                 gsl::span<const uint8_t> salt,
+                                                 size_t                   iterations,
+                                                 size_t                   key_length ) const override;
+    };
 
 }
 

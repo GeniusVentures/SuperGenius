@@ -23,11 +23,11 @@ namespace sgns::processing
         m_taskQueue->GetSubTasks( taskKey, subTasks );
 
         m_logger->debug( "ENQUEUE_SUBTASKS: {} subtasks found", subTasks.size() );
-        for ( const auto& subtask : subTasks )
+        for ( const auto &subtask : subTasks )
         {
             m_logger->debug( "SUBTASK: id={}, ipfsblock={}", subtask.subtaskid(), subtask.ipfsblock() );
         }
-        
+
         return task;
     }
 

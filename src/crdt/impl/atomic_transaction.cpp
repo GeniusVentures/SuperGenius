@@ -25,7 +25,7 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
         modified_keys_.insert( key.GetKey() ); // Track the key
-        operations_.push_back( { Operation::PUT,  std::move(key), std::move( value ) } );
+        operations_.push_back( { Operation::PUT, std::move( key ), std::move( value ) } );
         return outcome::success();
     }
 

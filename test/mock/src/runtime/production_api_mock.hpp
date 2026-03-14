@@ -7,15 +7,17 @@
 
 #include <gmock/gmock.h>
 
-namespace sgns::runtime {
+namespace sgns::runtime
+{
 
-  class ProductionApiMock : public ProductionApi {
-   public:
-    // TODO: Disabled testing, failed to compile 
-//    MOCK_METHOD0(configuration,
-//                 outcome::result<primitives::ProductionConfiguration>());
-  };
+    class ProductionApiMock : public ProductionApi
+    {
+    public:
+        // TODO: Disabled testing, failed to compile
+        //    MOCK_METHOD0(configuration,
+        //                 outcome::result<primitives::ProductionConfiguration>());
+    };
 
-}  // namespace sgns::runtime
+} // namespace sgns::runtime
 
-#endif  // SUPERGENIUS_TEST_MOCK_SRC_RUNTIME_PRODUCTION_API_MOCK_HPP
+#endif // SUPERGENIUS_TEST_MOCK_SRC_RUNTIME_PRODUCTION_API_MOCK_HPP

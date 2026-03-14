@@ -6,14 +6,17 @@
  * warnings.
  */
 
-#if defined(__GNUC__)
+#if defined( __GNUC__ )
 #define UNREACHABLE __builtin_unreachable();
-#elif defined(_MSC_VER)
-#define UNREACHABLE __assume(false);
+#elif defined( _MSC_VER )
+#define UNREACHABLE __assume( false );
 #else
 template <unsigned int LINE>
-class Unreachable_At_Line {};
-#define UNREACHABLE throw Unreachable_At_Line<__LINE__>();  // NOLINT
+class Unreachable_At_Line
+{
+};
+
+#define UNREACHABLE throw Unreachable_At_Line<__LINE__>(); // NOLINT
 #endif
 
 #undef GCC_VERSION

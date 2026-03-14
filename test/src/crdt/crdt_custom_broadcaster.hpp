@@ -21,22 +21,23 @@ namespace sgns::crdt
          * @param peerInfo optional peer info (unused in test implementation)
          * @return outcome::success on success or outcome::failure on error
          */
-        outcome::result<void> Broadcast(const base::Buffer& buff, std::string topic, boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none) override;
+        outcome::result<void> Broadcast( const base::Buffer                     &buff,
+                                         std::string                             topic,
+                                         boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none ) override;
 
         /**
          * Obtain the next {@return} payload received from the network.
          * @return buffer value or outcome::failure on error
          */
         outcome::result<base::Buffer> Next() override;
-        
-        bool HasTopic(const std::string &topic) override;
 
+        bool HasTopic( const std::string &topic ) override;
 
         /** Queue of broadcast messages */
         std::queue<std::string> listOfBroadcasts_;
-    private:
-        std::mutex               mutex_;
 
+    private:
+        std::mutex mutex_;
     };
 
 } // namespace sgns::crdt

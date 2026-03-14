@@ -94,4 +94,3 @@ namespace sgns::storage
         return E::UNKNOWN;
     }
 }
-

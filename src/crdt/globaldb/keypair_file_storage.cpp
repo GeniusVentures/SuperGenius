@@ -41,13 +41,13 @@ namespace sgns::crdt
 
         m_logger->info( "Path to keypairs " + m_keyPath.string() );
 
-        auto cryptoProvider =
-            std::make_shared<CryptoProvider>( std::make_shared<libp2p::crypto::random::BoostRandomGenerator>(),
-                                              std::make_shared<libp2p::crypto::ed25519::Ed25519ProviderImpl>(),
-                                              std::make_shared<libp2p::crypto::rsa::RsaProviderImpl>(),
-                                              std::make_shared<libp2p::crypto::ecdsa::EcdsaProviderImpl>(),
-                                              std::make_shared<libp2p::crypto::secp256k1::Secp256k1ProviderImpl>(),
-                                              std::make_shared<libp2p::crypto::hmac::HmacProviderImpl>() );
+        auto cryptoProvider = std::make_shared<CryptoProvider>(
+            std::make_shared<libp2p::crypto::random::BoostRandomGenerator>(),
+            std::make_shared<libp2p::crypto::ed25519::Ed25519ProviderImpl>(),
+            std::make_shared<libp2p::crypto::rsa::RsaProviderImpl>(),
+            std::make_shared<libp2p::crypto::ecdsa::EcdsaProviderImpl>(),
+            std::make_shared<libp2p::crypto::secp256k1::Secp256k1ProviderImpl>(),
+            std::make_shared<libp2p::crypto::hmac::HmacProviderImpl>() );
 
         auto          keyValidator = std::make_shared<KeyValidator>( cryptoProvider );
         KeyMarshaller keyMarshaller( keyValidator );

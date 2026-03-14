@@ -4,70 +4,94 @@
 
 #include "primitives/authority.hpp"
 
-namespace sgns::primitives {
-  struct DelayInChain {
-    uint32_t subchain_lenght = 0;
+namespace sgns::primitives
+{
+    struct DelayInChain
+    {
+        uint32_t subchain_lenght = 0;
 
-    DelayInChain() = default;
-    explicit DelayInChain(uint32_t delay) : subchain_lenght(delay) {}
-    virtual ~DelayInChain() = default;
-  };
+        DelayInChain() = default;
 
-  struct AuthorityListChange {
-    AuthorityList authorities{};
-    uint32_t subchain_lenght = 0;
+        explicit DelayInChain( uint32_t delay ) : subchain_lenght( delay ) {}
 
-    AuthorityListChange() = default;
-    AuthorityListChange(AuthorityList authorities, uint32_t delay)
-        : authorities(std::move(authorities)), subchain_lenght(delay) {}
-    virtual ~AuthorityListChange() = default;
-  };
+        virtual ~DelayInChain() = default;
+    };
 
-  struct ScheduledChange final : public AuthorityListChange {
-    using AuthorityListChange::AuthorityListChange;
-  };
-  struct ForcedChange final : public AuthorityListChange {
-    using AuthorityListChange::AuthorityListChange;
-  };
-  struct OnDisabled {
-    uint64_t authority_index = 0;
-  };
-  struct Pause final : public DelayInChain {
-    using DelayInChain::DelayInChain;
-  };
-  struct Resume final : public DelayInChain {
-    using DelayInChain::DelayInChain;
-  };
+    struct AuthorityListChange
+    {
+        AuthorityList authorities{};
+        uint32_t      subchain_lenght = 0;
 
-  template <class Stream>
-  Stream &operator<<(Stream &s, const DelayInChain &delay) {
-    return s << delay.subchain_lenght;
-  }
+        AuthorityListChange() = default;
 
-  template <class Stream>
-  Stream &operator>>(Stream &s, DelayInChain &delay) {
-    return s >> delay.subchain_lenght;
-  }
+        AuthorityListChange( AuthorityList authorities, uint32_t delay ) :
+            authorities( std::move( authorities ) ), subchain_lenght( delay )
+        {
+        }
 
-  template <class Stream>
-  Stream &operator<<(Stream &s, const OnDisabled &target) {
-    return s << target.authority_index;
-  }
+        virtual ~AuthorityListChange() = default;
+    };
 
-  template <class Stream>
-  Stream &operator>>(Stream &s, OnDisabled &target) {
-    return s >> target.authority_index;
-  }
+    struct ScheduledChange final : public AuthorityListChange
+    {
+        using AuthorityListChange::AuthorityListChange;
+    };
 
-  template <class Stream>
-  Stream &operator<<(Stream &s, const AuthorityListChange &alc) {
-    return s << alc.authorities << alc.subchain_lenght;
-  }
+    struct ForcedChange final : public AuthorityListChange
+    {
+        using AuthorityListChange::AuthorityListChange;
+    };
 
-  template <class Stream>
-  Stream &operator>>(Stream &s, AuthorityListChange &alc) {
-    return s >> alc.authorities >> alc.subchain_lenght;
-  }
-}  // namespace sgns::primitives
+    struct OnDisabled
+    {
+        uint64_t authority_index = 0;
+    };
 
-#endif  // SUPERGENIUS_SRC_PRIMITIVES_SCHEDULED_CHANGE
+    struct Pause final : public DelayInChain
+    {
+        using DelayInChain::DelayInChain;
+    };
+
+    struct Resume final : public DelayInChain
+    {
+        using DelayInChain::DelayInChain;
+    };
+
+    template <class Stream>
+    Stream &operator<<( Stream &s, const DelayInChain &delay )
+    {
+        return s << delay.subchain_lenght;
+    }
+
+    template <class Stream>
+    Stream &operator>>( Stream &s, DelayInChain &delay )
+    {
+        return s >> delay.subchain_lenght;
+    }
+
+    template <class Stream>
+    Stream &operator<<( Stream &s, const OnDisabled &target )
+    {
+        return s << target.authority_index;
+    }
+
+    template <class Stream>
+    Stream &operator>>( Stream &s, OnDisabled &target )
+    {
+        return s >> target.authority_index;
+    }
+
+    template <class Stream>
+    Stream &operator<<( Stream &s, const AuthorityListChange &alc )
+    {
+        return s << alc.authorities << alc.subchain_lenght;
+    }
+
+    template <class Stream>
+    Stream &operator>>( Stream &s, AuthorityListChange &alc )
+    {
+        return s >> alc.authorities >> alc.subchain_lenght;
+    }
+} // namespace sgns::primitives
+
+#endif // SUPERGENIUS_SRC_PRIMITIVES_SCHEDULED_CHANGE

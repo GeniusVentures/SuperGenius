@@ -6,7 +6,7 @@
 
 namespace sgns::crdt
 {
-  /** @brief A Key represents the unique identifier of an object,
+    /** @brief A Key represents the unique identifier of an object,
   * inspired by file systems and Google App Engine key model.
   *  Keys are meant to be unique across a system. Keys are hierarchical,
   * incorporating more and more specific namespaces. Thus keys can be deemed
@@ -20,59 +20,63 @@ namespace sgns::crdt
   *     Key("/Comedy/MontyPython/Sketch:CheeseShop")
   *    Key("/Comedy/MontyPython/Sketch:CheeseShop/Character:Mousebender")
   */
-  class HierarchicalKey
-  {
-  public:
+    class HierarchicalKey
+    {
+    public:
+        HierarchicalKey() = default;
 
-    HierarchicalKey() = default;
-
-    /** Constructs a key from a string.
+        /** Constructs a key from a string.
      * @param key Key string
     */
-    HierarchicalKey( std::string key );
+        HierarchicalKey( std::string key );
 
-    /** Copy constructor
+        /** Copy constructor
     */
-    HierarchicalKey( const HierarchicalKey & ) = default;
+        HierarchicalKey( const HierarchicalKey & ) = default;
 
-    virtual ~HierarchicalKey() = default;
+        virtual ~HierarchicalKey() = default;
 
-    HierarchicalKey& operator=(const HierarchicalKey&) = default;
+        HierarchicalKey &operator=( const HierarchicalKey & ) = default;
 
-    void SetKey(const std::string& aKey ) { key_ = aKey; };
+        void SetKey( const std::string &aKey )
+        {
+            key_ = aKey;
+        }
 
-    std::string GetKey() const { return key_; };
+        std::string GetKey() const
+        {
+            return key_;
+        }
 
-    /** @brief Appends `s` to the key.
+        /** @brief Appends `s` to the key.
      * @param s String to be appended
      * 
      * NewKey("/Comedy/MontyPython").ChildString("Actor:JohnCleese")
      * NewKey("/Comedy/MontyPython/Actor:JohnCleese")
     */
-    HierarchicalKey ChildString( std::string_view s ) const;
+        HierarchicalKey ChildString( std::string_view s ) const;
 
-    /** List returns the `list` representation of this Key.
+        /** List returns the `list` representation of this Key.
     *   NewKey("/Comedy/MontyPython/Actor:JohnCleese").List()
     *   ["Comedy", "MontyPythong", "Actor:JohnCleese"]
     */
-    std::vector<std::string> GetList() const;
+        std::vector<std::string> GetList() const;
 
-    bool IsTopLevel() const;
+        bool IsTopLevel() const;
 
-    bool operator==( const HierarchicalKey &rhs ) const
-    {
-      return key_ == rhs.key_;
-    }
+        bool operator==( const HierarchicalKey &rhs ) const
+        {
+            return key_ == rhs.key_;
+        }
 
-    bool operator!=( const HierarchicalKey &rhs ) const
-    {
-      return !operator==(rhs);
-    }
+        bool operator!=( const HierarchicalKey &rhs ) const
+        {
+            return !operator==( rhs );
+        }
 
-  private:
-
-    std::string key_;
-  };
+    private:
+        std::string key_;
+    };
 } // namespace sgns::crdt
 
 #endif //SUPERGENIUS_HIERARCHICAL_KEY_HPP

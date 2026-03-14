@@ -12,8 +12,9 @@ namespace sgns::blockchain
     class KeyValueBlockHeaderRepository : public BlockHeaderRepository
     {
     public:
-        KeyValueBlockHeaderRepository( std::shared_ptr<crdt::GlobalDB> db, std::shared_ptr<crypto::Hasher> hasher,
-                                       const std::string &net_id );
+        KeyValueBlockHeaderRepository( std::shared_ptr<crdt::GlobalDB> db,
+                                       std::shared_ptr<crypto::Hasher> hasher,
+                                       const std::string              &net_id );
 
         ~KeyValueBlockHeaderRepository() override = default;
 

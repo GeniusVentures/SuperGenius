@@ -8,28 +8,32 @@
 using sgns::scale::decode;
 using sgns::scale::encode;
 
-struct TestStruct {
-  std::string a;
-  int b;
+struct TestStruct
+{
+    std::string a;
+    int         b;
 
-  inline bool operator==(const TestStruct &rhs) const {
-    return a == rhs.a && b == rhs.b;
-  }
-  friend std::ostream &operator<<(std::ostream &out, const TestStruct &test_struct)
-  {
-    return out << test_struct.a << test_struct.b; 
-  }
+    inline bool operator==( const TestStruct &rhs ) const
+    {
+        return a == rhs.a && b == rhs.b;
+    }
+
+    friend std::ostream &operator<<( std::ostream &out, const TestStruct &test_struct )
+    {
+        return out << test_struct.a << test_struct.b;
+    }
 };
 
 template <class Stream, typename = std::enable_if_t<Stream::is_encoder_stream>>
-  Stream &operator<<(Stream &s, const TestStruct &test_struct) {
-  return s << test_struct.a << test_struct.b;
+Stream &operator<<( Stream &s, const TestStruct &test_struct )
+{
+    return s << test_struct.a << test_struct.b;
 }
 
-template <class Stream,
-            typename = std::enable_if_t<Stream::is_decoder_stream>>
-  Stream &operator>>(Stream &s, TestStruct &test_struct) {
-  return s >> test_struct.a >> test_struct.b;
+template <class Stream, typename = std::enable_if_t<Stream::is_decoder_stream>>
+Stream &operator>>( Stream &s, TestStruct &test_struct )
+{
+    return s >> test_struct.a >> test_struct.b;
 }
 
 /**
@@ -37,13 +41,14 @@ template <class Stream,
  * @when it is decoded back
  * @then we get original TestStruct
  */
-TEST(ScaleConvenienceFuncsTest, EncodeSingleValidArgTest) {
-  TestStruct s1{"some_string", 42};
+TEST( ScaleConvenienceFuncsTest, EncodeSingleValidArgTest )
+{
+    TestStruct s1{ "some_string", 42 };
 
-  EXPECT_OUTCOME_TRUE(encoded, encode(s1));
-  EXPECT_OUTCOME_TRUE(decoded, decode<TestStruct>(encoded));
+    EXPECT_OUTCOME_TRUE( encoded, encode( s1 ) );
+    EXPECT_OUTCOME_TRUE( decoded, decode<TestStruct>( encoded ) );
 
-  ASSERT_EQ(decoded, s1);
+    ASSERT_EQ( decoded, s1 );
 }
 
 /**
@@ -51,13 +56,14 @@ TEST(ScaleConvenienceFuncsTest, EncodeSingleValidArgTest) {
  * @when we decode encoded vector back and put those fields to TestStruct
  * @then we get original string and int
  */
-TEST(ScaleConvenienceFuncsTest, EncodeSeveralValidArgTest) {
-  std::string expected_string = "some_string";
-  int expected_int = 42;
+TEST( ScaleConvenienceFuncsTest, EncodeSeveralValidArgTest )
+{
+    std::string expected_string = "some_string";
+    int         expected_int    = 42;
 
-  EXPECT_OUTCOME_TRUE(encoded, encode(expected_string, expected_int));
-  EXPECT_OUTCOME_TRUE(decoded, decode<TestStruct>(encoded));
+    EXPECT_OUTCOME_TRUE( encoded, encode( expected_string, expected_int ) );
+    EXPECT_OUTCOME_TRUE( decoded, decode<TestStruct>( encoded ) );
 
-  ASSERT_EQ(decoded.a, expected_string);
-  ASSERT_EQ(decoded.b, expected_int);
+    ASSERT_EQ( decoded.a, expected_string );
+    ASSERT_EQ( decoded.b, expected_int );
 }

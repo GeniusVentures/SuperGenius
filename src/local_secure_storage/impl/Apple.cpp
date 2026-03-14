@@ -12,7 +12,10 @@ namespace rj = rapidjson;
 
 namespace sgns
 {
-    AppleSecureStorage::AppleSecureStorage( std::string identifier ) : identifier_( std::string("SuperGenius_") + identifier ) {}
+    AppleSecureStorage::AppleSecureStorage( std::string identifier ) :
+        identifier_( std::string( "SuperGenius_" ) + identifier )
+    {
+    }
 
     outcome::result<rapidjson::Document> AppleSecureStorage::LoadJSON() const
     {

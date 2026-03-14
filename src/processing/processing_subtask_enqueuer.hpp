@@ -8,17 +8,16 @@
 
 namespace sgns::processing
 {
-// Encapsulates subtask queue construction algorithm
-class SubTaskEnqueuer
-{
-public:
-    virtual ~SubTaskEnqueuer() = default;
+    // Encapsulates subtask queue construction algorithm
+    class SubTaskEnqueuer
+    {
+    public:
+        virtual ~SubTaskEnqueuer() = default;
 
-    virtual outcome::result<SGProcessing::Task> EnqueueSubTasks(
-        std::string& subTaskQueueId, 
-        std::list<SGProcessing::SubTask>& subTasks) = 0;
-    virtual void                                MarkTaskBad( const std::string &taskKey )                     = 0;
-};    
+        virtual outcome::result<SGProcessing::Task> EnqueueSubTasks( std::string                      &subTaskQueueId,
+                                                                     std::list<SGProcessing::SubTask> &subTasks ) = 0;
+        virtual void                                MarkTaskBad( const std::string &taskKey )                     = 0;
+    };
 }
 
 #endif // SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_SELECTOR_HPP

@@ -17,7 +17,6 @@
 #include <boost/multiprecision/cpp_dec_float.hpp>
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 
-
 using namespace sgns::test;
 using boost::multiprecision::cpp_dec_float_50;
 
@@ -333,9 +332,7 @@ inline std::ostream &operator<<( std::ostream &os, MintChildCase_s const &c )
 class GeniusNodeMintChildTest : public ::testing::TestWithParam<MintChildCase_s>
 {
 protected:
-    static void SetUpTestSuite()
-    {
-    }
+    static void SetUpTestSuite() {}
 };
 
 TEST_P( GeniusNodeMintChildTest, MintChildBalance )
@@ -511,7 +508,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
                                               std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mintResMain.has_value() ) << "Mint failed on node_main";
 
-    std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
+    std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
     std::string json_data = R"(
 {
   "name": "posenet-inference",

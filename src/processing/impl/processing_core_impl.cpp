@@ -62,8 +62,8 @@ namespace sgns::processing
         OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( task.json_data() ) );
         m_currentProcessingManager = procmgr; // Store for progress tracking
         //Parse subtask json
-        auto                              subtaskjson = nlohmann::json::parse( subTask.json_data() );
-        sgns::ModelNode                 model;
+        auto            subtaskjson = nlohmann::json::parse( subTask.json_data() );
+        sgns::ModelNode model;
         sgns::from_json( subtaskjson, model );
         std::vector<std::vector<uint8_t>> chunkhashes;
         auto                              tempResult = procmgr->Process( ioc, chunkhashes, model );
@@ -93,10 +93,11 @@ namespace sgns::processing
 
     float ProcessingCoreImpl::GetProgress() const
     {
-        if (m_currentProcessingManager) {
+        if ( m_currentProcessingManager )
+        {
             return m_currentProcessingManager->GetProgress();
         }
         return 0.0f;
     }
-    
+
 }

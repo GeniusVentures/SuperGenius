@@ -28,7 +28,8 @@ void CComponentFactory::Register( std::shared_ptr<IComponent>         component,
 }
 
 outcome::result<std::shared_ptr<IComponent>> CComponentFactory::GetComponent(
-    const std::string &type, const boost::optional<std::string> &variant )
+    const std::string                  &type,
+    const boost::optional<std::string> &variant )
 {
     std::string key = type;
 

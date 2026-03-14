@@ -47,7 +47,6 @@ namespace sgns::processing
         const std::map<std::string, SGProcessing::SubTaskResult> &results,
         std::set<std::string>                                    &invalidSubTaskIds )
     {
-
         std::optional<std::error_code> error;
 
         // Compare result hashes for each chunk
@@ -69,7 +68,7 @@ namespace sgns::processing
                     invalidSubTaskIds.insert( subTask.subtaskid() );
                     if ( !error )
                     {
-                        error = make_error_code(Error::WRONG_RESULT_HASHES_LENGTH);
+                        error = make_error_code( Error::WRONG_RESULT_HASHES_LENGTH );
                     }
                 }
                 else
@@ -92,7 +91,7 @@ namespace sgns::processing
                 invalidSubTaskIds.insert( subTask.subtaskid() );
                 if ( !error )
                 {
-                    error = make_error_code(Error::NO_RESULTS_FOR_SUBTASK);
+                    error = make_error_code( Error::NO_RESULTS_FOR_SUBTASK );
                 }
             }
         }
@@ -198,4 +197,3 @@ namespace sgns::processing
     }
 
 }
-

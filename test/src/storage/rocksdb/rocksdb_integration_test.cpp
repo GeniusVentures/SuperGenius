@@ -13,9 +13,7 @@ using namespace sgns::storage;
 
 struct RocksDBIntegrationFixture : public test::RocksDBFixture
 {
-    RocksDBIntegrationFixture() : test::RocksDBFixture( "supergenius_rocksdb_integration_test" )
-    {
-    }
+    RocksDBIntegrationFixture() : test::RocksDBFixture( "supergenius_rocksdb_integration_test" ) {}
 
     Buffer key_{ 1, 3, 3, 7 };
     Buffer value_{ 1, 2, 3 };

@@ -3,34 +3,37 @@
 
 namespace sgns::crdt
 {
-    outcome::result<void> CustomBroadcaster::Broadcast(const base::Buffer& buff, std::string topic, boost::optional<libp2p::peer::PeerInfo> peerInfo)
+    outcome::result<void> CustomBroadcaster::Broadcast( const base::Buffer                     &buff,
+                                                        std::string                             topic,
+                                                        boost::optional<libp2p::peer::PeerInfo> peerInfo )
     {
-        if (!buff.empty())
+        if ( !buff.empty() )
         {
             std::lock_guard<std::mutex> lock( mutex_ );
-            const std::string bCastData(buff.toString());
-            listOfBroadcasts_.push(bCastData);
+            const std::string           bCastData( buff.toString() );
+            listOfBroadcasts_.push( bCastData );
         }
         return outcome::success();
     }
-    
+
     outcome::result<base::Buffer> CustomBroadcaster::Next()
     {
         std::lock_guard<std::mutex> lock( mutex_ );
-        if (listOfBroadcasts_.empty())
+        if ( listOfBroadcasts_.empty() )
         {
             //Broadcaster::ErrorCode::ErrNoMoreBroadcast
-            return outcome::failure(boost::system::error_code{});
+            return outcome::failure( boost::system::error_code{} );
         }
 
         std::string strBuffer = listOfBroadcasts_.front();
         listOfBroadcasts_.pop();
 
         base::Buffer buffer;
-        buffer.put(strBuffer);
+        buffer.put( strBuffer );
         return buffer;
     }
-    bool CustomBroadcaster::HasTopic(const std::string &topic)
+
+    bool CustomBroadcaster::HasTopic( const std::string &topic )
     {
         return true;
     }

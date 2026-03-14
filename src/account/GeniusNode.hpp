@@ -76,7 +76,7 @@ namespace sgns
 
         ~GeniusNode() override;
 
-        enum class NodeState: uint8_t
+        enum class NodeState : uint8_t
         {
             CREATING = 0,
             MIGRATING_DATABASE,
@@ -91,7 +91,7 @@ namespace sgns
         /**
          * @brief      GeniusNode Error class
          */
-        enum class Error: uint8_t
+        enum class Error : uint8_t
         {
             INSUFFICIENT_FUNDS       = 1,  ///< Insufficient funds for a transaction
             DATABASE_WRITE_ERROR     = 2,  ///< Error writing data into the database

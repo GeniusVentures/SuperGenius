@@ -533,7 +533,7 @@ namespace sgns::crdt
         };
 
         std::deque<WorkItem> work_queue;
-        
+
         // Start with the root node
         const CID &root_cid = node.getCID();
 
@@ -560,7 +560,8 @@ namespace sgns::crdt
 
         // Add the root node to the work queue
         // Create a shared_ptr from the reference - note this assumes the node is already managed
-        work_queue.push_back( WorkItem{ std::shared_ptr<ipfs_lite::ipld::IPLDNode>( &node, []( ipfs_lite::ipld::IPLDNode * ) {} ) } );
+        work_queue.push_back(
+            WorkItem{ std::shared_ptr<ipfs_lite::ipld::IPLDNode>( &node, []( ipfs_lite::ipld::IPLDNode * ) {} ) } );
 
         // Process the queue iteratively
         while ( !work_queue.empty() )
@@ -568,8 +569,8 @@ namespace sgns::crdt
             WorkItem current_item = std::move( work_queue.front() );
             work_queue.pop_front();
 
-            auto &current_node = *current_item.node;
-            const CID &current_cid = current_node.getCID();
+            auto      &current_node = *current_item.node;
+            const CID &current_cid  = current_node.getCID();
 
             logger_->trace( "TraverseCIDsLinks: Processing node {}", current_cid.toString().value() );
 
@@ -628,7 +629,7 @@ namespace sgns::crdt
                 // This ensures children are resolved before their parents, maintaining the original
                 // recursive behavior where we don't mark a CID as complete until all its children are processed
                 work_queue.push_front( WorkItem{ get_child_result.value() } );
-                
+
                 logger_->trace( "TraverseCIDsLinks: Added child {} to work queue (queue size: {})",
                                 child.toString().value(),
                                 work_queue.size() );

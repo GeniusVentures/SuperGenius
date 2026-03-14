@@ -14,18 +14,18 @@
 class ProcessingServiceTest : public ::testing::Test
 {
 public:
-    void SetUp() override;
-    void TearDown() override;
-    virtual void Initialize(uint64_t numNodes, size_t processingTime);
-    virtual void SetUp(std::string name, std::string loggerConfig);
+    void         SetUp() override;
+    void         TearDown() override;
+    virtual void Initialize( uint64_t numNodes, size_t processingTime );
+    virtual void SetUp( std::string name, std::string loggerConfig );
 
     /**
      * public variables to share between test fixtures
      **/
     std::vector<std::shared_ptr<GossipPubSub>> m_pubsub_nodes;
-    std::vector<std::future<std::error_code>> m_pubsub_futures;
+    std::vector<std::future<std::error_code>>  m_pubsub_futures;
 
-    std::vector<std::shared_ptr<test::ProcessingCoreImpl>> m_processing_cores;
+    std::vector<std::shared_ptr<test::ProcessingCoreImpl>>            m_processing_cores;
     std::vector<std::shared_ptr<ProcessingSubTaskQueueChannelPubSub>> m_processing_queues_channel_pub_subs;
 
     std::vector<std::shared_ptr<ProcessingSubTaskQueueManager>> m_processing_queues_managers;
@@ -40,7 +40,6 @@ public:
     std::vector<std::shared_ptr<ProcessingServiceImpl>> m_processing_services;
 
     std::shared_ptr<soralog::Logger> m_Logger;
-
 };
 
 #endif

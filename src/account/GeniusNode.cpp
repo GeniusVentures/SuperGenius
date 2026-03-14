@@ -209,8 +209,7 @@ namespace sgns
             is_full_node,
             account_->GetAddress(),
             [this]( const std::vector<uint8_t> data ) { return this->account_->Sign( data ); },
-            []( const std::string &address, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
-            {
+            []( const std::string &address, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data ) {
                 return GeniusAccount::VerifySignature( address,
                                                        std::string( signature.begin(), signature.end() ),
                                                        data );
@@ -365,7 +364,8 @@ namespace sgns
                                     strong->node_logger_->error( "Error starting blockchain: {}",
                                                                  result.error().message() );
                                     strong->node_logger_->info( "Scheduling blockchain retry after failure" );
-                                    strong->account_->RequestHeads({std::string(blockchain::ValidatorRegistry::ValidatorTopic())});
+                                    strong->account_->RequestHeads(
+                                        { std::string( blockchain::ValidatorRegistry::ValidatorTopic() ) } );
                                     strong->ScheduleBlockchainRetry();
                                     return;
                                 }
@@ -387,21 +387,23 @@ namespace sgns
                                 }
 
                                 // Move transaction initialization off the AccountMessenger worker thread.
-                                boost::asio::post( *strong->io_, [weak_self]()
-                                {
-                                    if ( auto strong = weak_self.lock() )
+                                boost::asio::post(
+                                    *strong->io_,
+                                    [weak_self]()
                                     {
-                                        auto current_state = strong->state_.load();
-                                        if ( current_state != NodeState::INITIALIZING_BLOCKCHAIN )
+                                        if ( auto strong = weak_self.lock() )
                                         {
-                                            strong->node_logger_->debug(
-                                                "Skipping transaction initialization, unexpected state: {}",
-                                                NodeStateToString( current_state ) );
-                                            return;
+                                            auto current_state = strong->state_.load();
+                                            if ( current_state != NodeState::INITIALIZING_BLOCKCHAIN )
+                                            {
+                                                strong->node_logger_->debug(
+                                                    "Skipping transaction initialization, unexpected state: {}",
+                                                    NodeStateToString( current_state ) );
+                                                return;
+                                            }
+                                            strong->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
                                         }
-                                        strong->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
-                                    }
-                                } );
+                                    } );
                             }
                         } );
                 }

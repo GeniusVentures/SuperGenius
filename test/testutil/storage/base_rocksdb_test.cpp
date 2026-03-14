@@ -2,7 +2,8 @@
 
 #include "testutil/storage/base_rocksdb_test.hpp"
 
-namespace test {
+namespace test
+{
 
     void RocksDBFixture::open()
     {
@@ -19,17 +20,15 @@ namespace test {
         ASSERT_TRUE( db_ ) << "BaseRocksDB_Test: db is nullptr";
     }
 
-    RocksDBFixture::RocksDBFixture( fs::path path ) : FSFixture( std::move( path ) )
+    RocksDBFixture::RocksDBFixture( fs::path path ) : FSFixture( std::move( path ) ) {}
+
+    void RocksDBFixture::SetUp()
     {
+        open();
     }
 
-  void RocksDBFixture::SetUp()
-  {
-      open();
-  }
-
-  void RocksDBFixture::TearDown()
-  {
-      // clear();
-  }
-}  // namespace test
+    void RocksDBFixture::TearDown()
+    {
+        // clear();
+    }
+} // namespace test

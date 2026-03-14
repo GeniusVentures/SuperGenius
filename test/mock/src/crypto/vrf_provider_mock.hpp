@@ -7,28 +7,31 @@
 
 #include "crypto/vrf_provider.hpp"
 
-namespace sgns::crypto {
-  //added to fix link error
-  std::ostream &operator<<(std::ostream &out, const boost::optional<VRFOutput> &test_struct)
-  {
-    return out << test_struct.get();
-  }
-  //end
-  struct VRFProviderMock : public VRFProvider {
-    MOCK_CONST_METHOD0(generateKeypair, SR25519Keypair());
+namespace sgns::crypto
+{
+    //added to fix link error
+    std::ostream &operator<<( std::ostream &out, const boost::optional<VRFOutput> &test_struct )
+    {
+        return out << test_struct.get();
+    }
 
-    MOCK_CONST_METHOD3(sign,
-                       boost::optional<VRFOutput>(const base::Buffer &,
-                                                  const SR25519Keypair &,
-                                                  const VRFThreshold &));
-    MOCK_CONST_METHOD4(verify,
-                       VRFVerifyOutput(const base::Buffer &,
-                            const VRFOutput &,
-                            const SR25519PublicKey &,
-                            const VRFThreshold &));
+    //end
+    struct VRFProviderMock : public VRFProvider
+    {
+        MOCK_CONST_METHOD0( generateKeypair, SR25519Keypair() );
 
-    MOCK_METHOD0(GetName, std::string());
-  };
-}  // namespace sgns::crypto
+        MOCK_CONST_METHOD3( sign,
+                            boost::optional<VRFOutput>( const base::Buffer &,
+                                                        const SR25519Keypair &,
+                                                        const VRFThreshold & ) );
+        MOCK_CONST_METHOD4( verify,
+                            VRFVerifyOutput( const base::Buffer &,
+                                             const VRFOutput &,
+                                             const SR25519PublicKey &,
+                                             const VRFThreshold & ) );
 
-#endif  // SUPERGENIUS_VRF_PROVIDER_MOCK_HPP
+        MOCK_METHOD0( GetName, std::string() );
+    };
+} // namespace sgns::crypto
+
+#endif // SUPERGENIUS_VRF_PROVIDER_MOCK_HPP

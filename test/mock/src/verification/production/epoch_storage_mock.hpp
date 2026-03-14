@@ -7,20 +7,18 @@
 
 #include <gmock/gmock.h>
 
-namespace sgns::verification {
+namespace sgns::verification
+{
 
-  class EpochStorageMock : public EpochStorage {
-   public:
-    MOCK_METHOD2(addEpochDescriptor,
-                 outcome::result<void>(EpochIndex,
-                                       const NextEpochDescriptor &));
-    MOCK_CONST_METHOD1(
-        getEpochDescriptor,
-        outcome::result<NextEpochDescriptor>(EpochIndex epoch_number));
-    
-    MOCK_METHOD0(GetName(),std::string());
-  };
+    class EpochStorageMock : public EpochStorage
+    {
+    public:
+        MOCK_METHOD2( addEpochDescriptor, outcome::result<void>( EpochIndex, const NextEpochDescriptor & ) );
+        MOCK_CONST_METHOD1( getEpochDescriptor, outcome::result<NextEpochDescriptor>( EpochIndex epoch_number ) );
 
-}  // namespace sgns::verification
+        MOCK_METHOD0( GetName(), std::string() );
+    };
 
-#endif  // SUPERGENIUS_TEST_MOCK_SRC_VERIFICATION_PRODUCTION_EPOCH_STORAGE_MOCK_HPP
+} // namespace sgns::verification
+
+#endif // SUPERGENIUS_TEST_MOCK_SRC_VERIFICATION_PRODUCTION_EPOCH_STORAGE_MOCK_HPP

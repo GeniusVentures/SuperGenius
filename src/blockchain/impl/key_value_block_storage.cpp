@@ -118,8 +118,9 @@ namespace sgns::blockchain
         // the rest of the fields have default value
 
         OUTCOME_TRY( ( auto &&, genesis_block_hash ), block_storage->putBlock( genesis_block ) );
-        BOOST_OUTCOME_TRYV2( auto &&,
-                             db->Put( { storage::GetGenesisBlockHashLookupKey() }, Buffer{ genesis_block_hash }, { "topic" } ) );
+        BOOST_OUTCOME_TRYV2(
+            auto &&,
+            db->Put( { storage::GetGenesisBlockHashLookupKey() }, Buffer{ genesis_block_hash }, { "topic" } ) );
         BOOST_OUTCOME_TRYV2( auto &&, block_storage->setLastFinalizedBlockHash( genesis_block_hash ) );
 
         on_genesis_created( genesis_block );
@@ -194,9 +195,8 @@ namespace sgns::blockchain
         auto encoded_block_data = GetSerializedBlockData( to_insert );
         OUTCOME_TRY( ( auto &&, id_string ), idToStringKey( *db_, block_number ) );
         //TODO - For now one block data per block header. Revisit this
-        BOOST_OUTCOME_TRYV2(
-            auto &&,
-            db_->Put( { header_repo_->GetHeaderPath() + id_string + "/tx/0" },
+        BOOST_OUTCOME_TRYV2( auto &&,
+                             db_->Put( { header_repo_->GetHeaderPath() + id_string + "/tx/0" },
                                        Buffer{ encoded_block_data },
                                        { "topic" } ) );
 
@@ -268,7 +268,8 @@ namespace sgns::blockchain
         OUTCOME_TRY( ( auto &&, key ), idToBufferKey( *db_, number ) );
 
         //TODO - For now one block data per block header. Revisit this
-        OUTCOME_TRY(db_->Remove( { header_repo_->GetHeaderPath() + std::string( key.toString() ) + "/tx/0" }, { "topic" } ) );
+        OUTCOME_TRY(
+            db_->Remove( { header_repo_->GetHeaderPath() + std::string( key.toString() ) + "/tx/0" }, { "topic" } ) );
         return outcome::success();
     }
 

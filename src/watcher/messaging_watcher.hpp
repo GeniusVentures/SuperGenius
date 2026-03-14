@@ -6,12 +6,13 @@
 #include <boost/thread.hpp>
 #include <rapidjson/document.h>
 
-namespace sgns::watcher {
+namespace sgns::watcher
+{
 
     class MessagingWatcher
     {
     public:
-        using MessageCallback = std::function<void(const std::string &)>;
+        using MessageCallback = std::function<void( const std::string & )>;
 
         virtual ~MessagingWatcher() = default;
 
@@ -21,7 +22,7 @@ namespace sgns::watcher {
         bool isRunning() const;
 
         // Static methods to manage all watchers
-        static void addWatcher(const std::shared_ptr<MessagingWatcher> &newWatcher);
+        static void addWatcher( const std::shared_ptr<MessagingWatcher> &newWatcher );
         static void startAll();
         static void stopAll();
 
@@ -29,11 +30,11 @@ namespace sgns::watcher {
         // Protected callback to be used by derived classes
         MessageCallback messageCallback;
         // Constructor that takes a callback to initialize messageCallback
-        explicit MessagingWatcher(MessageCallback callback);
+        explicit MessagingWatcher( MessageCallback callback );
 
-        bool running;
+        bool               running;
         mutable std::mutex running_mutex;
-        boost::thread watcherThread;
+        boost::thread      watcherThread;
 
         // Protected virtual watch function to be overridden by derived classes
         virtual void watch();
@@ -43,6 +44,6 @@ namespace sgns::watcher {
         static std::vector<std::shared_ptr<MessagingWatcher>> m_watchers;
     };
 
-}  // namespace sgns::watcher
+} // namespace sgns::watcher
 
 #endif // MESSAGING_WATCHER_HPP

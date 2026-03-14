@@ -15,310 +15,336 @@
 #include "scale/detail/fixed_witdh_integer.hpp"
 #include "scale/types.hpp"
 
-namespace sgns::scale {
-  class ScaleDecoderStream {
-   public:
-    // special tag to differentiate decoding streams from others
-    static constexpr auto is_decoder_stream = true;
+namespace sgns::scale
+{
+    class ScaleDecoderStream
+    {
+    public:
+        // special tag to differentiate decoding streams from others
+        static constexpr auto is_decoder_stream = true;
 
-    explicit ScaleDecoderStream(gsl::span<const uint8_t> span);
+        explicit ScaleDecoderStream( gsl::span<const uint8_t> span );
 
-    /**
+        /**
      * @brief scale-decodes pair of values
      * @tparam F first value type
      * @tparam S second value type
      * @param p pair of values to decode
      * @return reference to stream
      */
-    template <class F, class S>
-    ScaleDecoderStream &operator>>(std::pair<F, S> &p) {
-      static_assert(!std::is_reference_v<F> && !std::is_reference_v<S>);
-      return *this >> const_cast<std::remove_const_t<F> &>(p.first)  // NOLINT
-             >> const_cast<std::remove_const_t<S> &>(p.second);      // NOLINT
-    }
+        template <class F, class S>
+        ScaleDecoderStream &operator>>( std::pair<F, S> &p )
+        {
+            static_assert( !std::is_reference_v<F> && !std::is_reference_v<S> );
+            return *this >> const_cast<std::remove_const_t<F> &>( p.first ) // NOLINT
+                   >> const_cast<std::remove_const_t<S> &>( p.second );     // NOLINT
+        }
 
-    /**
+        /**
      * @brief scale-decoding of tuple
      * @tparam T enumeration of tuples types
      * @param v reference to tuple
      * @return reference to stream
      */
-    template <class... T>
-    ScaleDecoderStream &operator>>(std::tuple<T...> &v) {
-      if constexpr (sizeof...(T) > 0) {
-        decodeElementOfTuple<0>(v);
-      }
-      return *this;
-    }
+        template <class... T>
+        ScaleDecoderStream &operator>>( std::tuple<T...> &v )
+        {
+            if constexpr ( sizeof...( T ) > 0 )
+            {
+                decodeElementOfTuple<0>( v );
+            }
+            return *this;
+        }
 
-    /**
+        /**
      * @brief scale-decoding of variant
      * @tparam T enumeration of various types
      * @param v reference to variant
      * @return reference to stream
      */
-    template <class... Ts>
-    ScaleDecoderStream &operator>>(boost::variant<Ts...> &v) {
-      // first byte means type index
-      uint8_t type_index = 0u;
-      *this >> type_index;  // decode type index
+        template <class... Ts>
+        ScaleDecoderStream &operator>>( boost::variant<Ts...> &v )
+        {
+            // first byte means type index
+            uint8_t type_index = 0u;
+            *this >> type_index; // decode type index
 
-      // ensure that index is in [0, types_count)
-      if (type_index >= sizeof...(Ts)) {
-        base::raise(DecodeError::WRONG_TYPE_INDEX);
-      }
+            // ensure that index is in [0, types_count)
+            if ( type_index >= sizeof...( Ts ) )
+            {
+                base::raise( DecodeError::WRONG_TYPE_INDEX );
+            }
 
-      tryDecodeAsOneOfVariant<0>(v, type_index);
-      return *this;
-    }
+            tryDecodeAsOneOfVariant<0>( v, type_index );
+            return *this;
+        }
 
-    /**
+        /**
      * @brief scale-decodes shared_ptr value
      * @tparam T value type
      * @param v value to decode
      * @return reference to stream
      */
-    template <class T>
-    ScaleDecoderStream &operator>>(std::shared_ptr<T> &v) {
-      using mutableT = std::remove_const_t<T>;
+        template <class T>
+        ScaleDecoderStream &operator>>( std::shared_ptr<T> &v )
+        {
+            using mutableT = std::remove_const_t<T>;
 
-      static_assert(std::is_default_constructible_v<mutableT>);
+            static_assert( std::is_default_constructible_v<mutableT> );
 
-      v = std::make_shared<mutableT>();
-      return *this >> const_cast<mutableT &>(*v);  // NOLINT
-    }
+            v = std::make_shared<mutableT>();
+            return *this >> const_cast<mutableT &>( *v ); // NOLINT
+        }
 
-    /**
+        /**
      * @brief scale-decodes unique_ptr value
      * @tparam T value type
      * @param v value to decode
      * @return reference to stream
      */
-    template <class T>
-    ScaleDecoderStream &operator>>(std::unique_ptr<T> &v) {
-      using mutableT = std::remove_const_t<T>;
+        template <class T>
+        ScaleDecoderStream &operator>>( std::unique_ptr<T> &v )
+        {
+            using mutableT = std::remove_const_t<T>;
 
-      static_assert(std::is_default_constructible_v<mutableT>);
+            static_assert( std::is_default_constructible_v<mutableT> );
 
-      v = std::make_unique<mutableT>();
-      return *this >> const_cast<mutableT &>(*v);  // NOLINT
-    }
+            v = std::make_unique<mutableT>();
+            return *this >> const_cast<mutableT &>( *v ); // NOLINT
+        }
 
-    /**
+        /**
      * @brief scale-encodes any integral type including bool
      * @tparam T integral type
      * @param v value of integral type
      * @return reference to stream
      */
-    template <typename T, typename I = std::decay_t<T>, typename = std::enable_if_t<std::is_integral_v<I>>>
-    ScaleDecoderStream &operator>>( T &v )
-    {
-        // check bool
-        if constexpr ( std::is_same<I, bool>::value )
+        template <typename T, typename I = std::decay_t<T>, typename = std::enable_if_t<std::is_integral_v<I>>>
+        ScaleDecoderStream &operator>>( T &v )
         {
-            v = decodeBool();
+            // check bool
+            if constexpr ( std::is_same<I, bool>::value )
+            {
+                v = decodeBool();
+                return *this;
+            }
+            // check byte
+            if constexpr ( sizeof( T ) == 1u )
+            {
+                v = nextByte();
+                return *this;
+            }
+            // decode any other integer
+            v = detail::decodeInteger<I>( *this );
             return *this;
         }
-        // check byte
-        if constexpr ( sizeof( T ) == 1u )
-        {
-            v = nextByte();
-            return *this;
-        }
-        // decode any other integer
-        v = detail::decodeInteger<I>( *this );
-        return *this;
-    }
 
-    /**
+        /**
      * @brief scale-decodes any optional value
      * @tparam T type of optional value
      * @param v optional value reference
      * @return reference to stream
      */
-    template <class T>
-    ScaleDecoderStream &operator>>(boost::optional<T> &v) {
-      using mutableT = std::remove_const_t<T>;
+        template <class T>
+        ScaleDecoderStream &operator>>( boost::optional<T> &v )
+        {
+            using mutableT = std::remove_const_t<T>;
 
-      static_assert(std::is_default_constructible_v<mutableT>);
+            static_assert( std::is_default_constructible_v<mutableT> );
 
-      // optional bool is special case of optional values
-      // it is encoded as one byte instead of two
-      // as described in specification
-      if constexpr (std::is_same<mutableT, bool>::value) {
-        v = decodeOptionalBool();
-        return *this;
-      }
-      // detect if optional has value
-      bool has_value = false;
-      *this >> has_value;
-      if (!has_value) {
-        v.reset();
-        return *this;
-      }
-      // decode value
-      v.emplace();
-      return *this >> const_cast<mutableT &>(*v);  // NOLINT
-    }
+            // optional bool is special case of optional values
+            // it is encoded as one byte instead of two
+            // as described in specification
+            if constexpr ( std::is_same<mutableT, bool>::value )
+            {
+                v = decodeOptionalBool();
+                return *this;
+            }
+            // detect if optional has value
+            bool has_value = false;
+            *this >> has_value;
+            if ( !has_value )
+            {
+                v.reset();
+                return *this;
+            }
+            // decode value
+            v.emplace();
+            return *this >> const_cast<mutableT &>( *v ); // NOLINT
+        }
 
-    /**
+        /**
      * @brief scale-decodes compact integer value
      * @param v compact integer reference
      * @return
      */
-    ScaleDecoderStream &operator>>(CompactInteger &v);
+        ScaleDecoderStream &operator>>( CompactInteger &v );
 
-    /**
+        /**
      * @brief decodes vector of items
      * @tparam T item type
      * @param v reference to vector
      * @return reference to stream
      */
-    template <class T>
-    ScaleDecoderStream &operator>>(std::vector<T> &v) {
-      using mutableT = std::remove_const_t<T>;
-      using size_type = typename std::list<T>::size_type;
+        template <class T>
+        ScaleDecoderStream &operator>>( std::vector<T> &v )
+        {
+            using mutableT  = std::remove_const_t<T>;
+            using size_type = typename std::list<T>::size_type;
 
-      static_assert(std::is_default_constructible_v<mutableT>);
+            static_assert( std::is_default_constructible_v<mutableT> );
 
-      CompactInteger size{0u};
-      *this >> size;
+            CompactInteger size{ 0u };
+            *this >> size;
 
-      if (size > std::numeric_limits<size_type>::max()) {
-        base::raise(DecodeError::TOO_MANY_ITEMS);
-      }
-      auto item_count = size.convert_to<size_type>();
+            if ( size > std::numeric_limits<size_type>::max() )
+            {
+                base::raise( DecodeError::TOO_MANY_ITEMS );
+            }
+            auto item_count = size.convert_to<size_type>();
 
-      std::vector<mutableT> vec;
-      vec.resize(item_count);
+            std::vector<mutableT> vec;
+            vec.resize( item_count );
 
-      for (size_type i = 0u; i < item_count; ++i) {
-        *this >> vec[i];
-      }
+            for ( size_type i = 0u; i < item_count; ++i )
+            {
+                *this >> vec[i];
+            }
 
-      v = std::move(vec);
-      return *this;
-    }
+            v = std::move( vec );
+            return *this;
+        }
 
-    /**
+        /**
      * @brief decodes collection of items
      * @tparam T item type
      * @param v reference to collection
      * @return reference to stream
      */
-    template <class T>
-    ScaleDecoderStream &operator>>(std::list<T> &v) {
-      using mutableT = std::remove_const_t<T>;
-      using size_type = typename std::list<T>::size_type;
+        template <class T>
+        ScaleDecoderStream &operator>>( std::list<T> &v )
+        {
+            using mutableT  = std::remove_const_t<T>;
+            using size_type = typename std::list<T>::size_type;
 
-      static_assert(std::is_default_constructible_v<mutableT>);
+            static_assert( std::is_default_constructible_v<mutableT> );
 
-      CompactInteger size{0u};
-      *this >> size;
+            CompactInteger size{ 0u };
+            *this >> size;
 
-      if (size > std::numeric_limits<size_type>::max()) {
-        base::raise(DecodeError::TOO_MANY_ITEMS);
-      }
-      auto item_count = size.convert_to<size_type>();
+            if ( size > std::numeric_limits<size_type>::max() )
+            {
+                base::raise( DecodeError::TOO_MANY_ITEMS );
+            }
+            auto item_count = size.convert_to<size_type>();
 
-      std::list<T> lst;
-      lst.reserve(item_count);
-      for (size_type i = 0u; i < item_count; ++i) {
-        lst.emplace_back();
-        *this >> lst.back();
-      }
-      v = std::move(lst);
-      return *this;
-    }
+            std::list<T> lst;
+            lst.reserve( item_count );
+            for ( size_type i = 0u; i < item_count; ++i )
+            {
+                lst.emplace_back();
+                *this >> lst.back();
+            }
+            v = std::move( lst );
+            return *this;
+        }
 
-    /**
+        /**
      * @brief decodes array of items
      * @tparam T item type
      * @tparam size of the array
      * @param a reference to the array
      * @return reference to stream
      */
-    template <class T, size_t size>
-    ScaleDecoderStream &operator>>(std::array<T, size> &a) {
-      using mutableT = std::remove_const_t<T>;
-      for (size_t i = 0u; i < size; ++i) {
-        *this >> const_cast<mutableT &>(a[i]);  // NOLINT
-      }
-      return *this;
-    }
+        template <class T, size_t size>
+        ScaleDecoderStream &operator>>( std::array<T, size> &a )
+        {
+            using mutableT = std::remove_const_t<T>;
+            for ( size_t i = 0u; i < size; ++i )
+            {
+                *this >> const_cast<mutableT &>( a[i] ); // NOLINT
+            }
+            return *this;
+        }
 
-    /**
+        /**
      * @brief decodes uint256_t from stream
      * @param i value to decode
      * @return reference to stream
      */
-    ScaleDecoderStream &operator>>(boost::multiprecision::uint256_t &i) {
-      // TODO(akvinikym) PRE-285: maybe move to another file and implement it
-      return *this;
-    }
+        ScaleDecoderStream &operator>>( boost::multiprecision::uint256_t &i )
+        {
+            // TODO(akvinikym) PRE-285: maybe move to another file and implement it
+            return *this;
+        }
 
-    /**
+        /**
      * @brief decodes string from stream
      * @param v value to decode
      * @return reference to stream
      */
-    ScaleDecoderStream &operator>>(std::string &v);
+        ScaleDecoderStream &operator>>( std::string &v );
 
-    /**
+        /**
      * @brief hasMore Checks whether n more bytes are available
      * @param n Number of bytes to check
      * @return True if n more bytes are available and false otherwise
      */
-    bool hasMore(uint64_t n) const;
+        bool hasMore( uint64_t n ) const;
 
-    /**
+        /**
      * @brief takes one byte from stream and
      * advances current byte iterator by one
      * @return current byte
      */
-    uint8_t nextByte();
+        uint8_t nextByte();
 
-   private:
-    bool decodeBool();
-    /**
+    private:
+        bool decodeBool();
+        /**
      * @brief special case of optional values as described in specification
      * @return boost::optional<bool> value
      */
-    boost::optional<bool> decodeOptionalBool();
+        boost::optional<bool> decodeOptionalBool();
 
-    template <size_t I, class... Ts>
-    void decodeElementOfTuple(std::tuple<Ts...> &v) {
-      using T = std::remove_const_t<std::tuple_element_t<I, std::tuple<Ts...>>>;
-      *this >> const_cast<T &>(std::get<I>(v));  // NOLINT
-      if constexpr (sizeof...(Ts) > I + 1) {
-        decodeElementOfTuple<I + 1>(v);
-      }
-    }
+        template <size_t I, class... Ts>
+        void decodeElementOfTuple( std::tuple<Ts...> &v )
+        {
+            using T = std::remove_const_t<std::tuple_element_t<I, std::tuple<Ts...>>>;
+            *this >> const_cast<T &>( std::get<I>( v ) ); // NOLINT
+            if constexpr ( sizeof...( Ts ) > I + 1 )
+            {
+                decodeElementOfTuple<I + 1>( v );
+            }
+        }
 
-    template <size_t I, class... Ts>
-    void tryDecodeAsOneOfVariant(boost::variant<Ts...> &v, size_t i) {
-      using T = std::remove_const_t<std::tuple_element_t<I, std::tuple<Ts...>>>;
-      static_assert(std::is_default_constructible_v<T>);
-      if (I == i) {
-        T val;
-        *this >> val;
-        v = std::forward<T>(val);
-        return;
-      }
-      if constexpr (sizeof...(Ts) > I + 1) {
-        tryDecodeAsOneOfVariant<I + 1>(v, i);
-      }
-    }
+        template <size_t I, class... Ts>
+        void tryDecodeAsOneOfVariant( boost::variant<Ts...> &v, size_t i )
+        {
+            using T = std::remove_const_t<std::tuple_element_t<I, std::tuple<Ts...>>>;
+            static_assert( std::is_default_constructible_v<T> );
+            if ( I == i )
+            {
+                T val;
+                *this >> val;
+                v = std::forward<T>( val );
+                return;
+            }
+            if constexpr ( sizeof...( Ts ) > I + 1 )
+            {
+                tryDecodeAsOneOfVariant<I + 1>( v, i );
+            }
+        }
 
-    using ByteSpan = gsl::span<const uint8_t>;
-    using SpanIterator = ByteSpan::const_iterator;
-    using SizeType = ByteSpan::size_type;
+        using ByteSpan     = gsl::span<const uint8_t>;
+        using SpanIterator = ByteSpan::const_iterator;
+        using SizeType     = ByteSpan::size_type;
 
-    ByteSpan span_;
-    SpanIterator current_iterator_;
-    SizeType current_index_;
-  };
+        ByteSpan     span_;
+        SpanIterator current_iterator_;
+        SizeType     current_index_;
+    };
 
-}  // namespace sgns::scale
+} // namespace sgns::scale
 
-#endif  // SUPERGENIUS_SRC_SCALE_SCALE_DECODER_STREAM_HPP
+#endif // SUPERGENIUS_SRC_SCALE_SCALE_DECODER_STREAM_HPP

@@ -208,8 +208,8 @@ namespace sgns
             } );
 
         instance->account_->SetGetValidatorWeightMethod(
-            [weak_ptr( std::weak_ptr<Blockchain>(
-                instance ) )]( const std::string &address ) -> outcome::result<std::optional<uint64_t>>
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
+                const std::string &address ) -> outcome::result<std::optional<uint64_t>>
             {
                 if ( auto strong = weak_ptr.lock() )
                 {

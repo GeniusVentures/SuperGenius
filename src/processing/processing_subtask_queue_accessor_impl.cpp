@@ -72,8 +72,7 @@ namespace sgns::processing
         }
         else
         {
-            m_logger->error( "Tried creating channel with {} but channel already created",
-                             results_topic );
+            m_logger->error( "Tried creating channel with {} but channel already created", results_topic );
         }
         StartPeriodicStateBroadcast();
         return ret;

@@ -5,10 +5,11 @@
 
 #include "scale/types.hpp"
 
-namespace sgns::primitives {
+namespace sgns::primitives
+{
 
-  using CompactInteger = scale::CompactInteger;
+    using CompactInteger = scale::CompactInteger;
 
 }
 
-#endif  // SUPERGENIUS_SRC_PRIMITIVES_COMPACT_INTEGER_HPP
+#endif // SUPERGENIUS_SRC_PRIMITIVES_COMPACT_INTEGER_HPP

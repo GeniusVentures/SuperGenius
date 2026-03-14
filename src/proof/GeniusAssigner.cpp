@@ -379,9 +379,9 @@ namespace sgns
         std::uint32_t shared_size = static_cast<std::uint32_t>( print_kind );
         TableVectors  table_vectors;
         table_vectors.witness_values.resize( padded_rows_amount * table_proxy.witnesses_amount(), 0 );
-        table_vectors.public_input_values.resize( padded_rows_amount *
-                                                      ( table_proxy.public_inputs_amount() + shared_size ),
-                                                  0 );
+        table_vectors.public_input_values.resize(
+            padded_rows_amount * ( table_proxy.public_inputs_amount() + shared_size ),
+            0 );
         table_vectors.constant_values.resize( padded_rows_amount * table_proxy.constants_amount(), 0 );
         table_vectors.selector_values.resize( padded_rows_amount * table_proxy.selectors_amount(), 0 );
         if ( print_kind == PrintTableKind::SINGLE_PROVER )
@@ -567,17 +567,21 @@ namespace sgns
                     const auto second_var = constraint.second;
                     if ( ( first_var.type == variable_type::column_type::witness ||
                            first_var.type == variable_type::column_type::constant ) &&
-                         first_var.rotation == static_cast<int32_t>(row) )
+                         first_var.rotation == static_cast<int32_t>( row ) )
                     {
-                        constraint.first =
-                            variable_type( first_var.index, local_row, first_var.relative, first_var.type );
+                        constraint.first = variable_type( first_var.index,
+                                                          local_row,
+                                                          first_var.relative,
+                                                          first_var.type );
                     }
                     if ( ( second_var.type == variable_type::column_type::witness ||
                            second_var.type == variable_type::column_type::constant ) &&
-                         second_var.rotation == static_cast<int32_t>(row) )
+                         second_var.rotation == static_cast<int32_t>( row ) )
                     {
-                        constraint.second =
-                            variable_type( second_var.index, local_row, second_var.relative, second_var.type );
+                        constraint.second = variable_type( second_var.index,
+                                                           local_row,
+                                                           second_var.relative,
+                                                           second_var.type );
                     }
                 }
                 local_row++;

@@ -8,17 +8,17 @@
 
 namespace sgns::crdt
 {
-class KeyPairFileStorage
-{
-public:
-    KeyPairFileStorage( boost::filesystem::path keyPath );
+    class KeyPairFileStorage
+    {
+    public:
+        KeyPairFileStorage( boost::filesystem::path keyPath );
 
-    [[nodiscard]] outcome::result<libp2p::crypto::KeyPair> GetKeyPair() const;
+        [[nodiscard]] outcome::result<libp2p::crypto::KeyPair> GetKeyPair() const;
 
-private:
-    boost::filesystem::path m_keyPath;
-    sgns::base::Logger m_logger = sgns::base::createLogger("KeyPairFileStorage");
-};
+    private:
+        boost::filesystem::path m_keyPath;
+        sgns::base::Logger      m_logger = sgns::base::createLogger( "KeyPairFileStorage" );
+    };
 }
 
 #endif // SUPERGENIUS_CRDT_KEYPAIR_FILE_STORAGE_HPP

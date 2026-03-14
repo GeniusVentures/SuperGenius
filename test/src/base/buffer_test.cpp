@@ -13,39 +13,41 @@ using namespace std::string_literals;
  * @when put different stuff in this buffer
  * @then result matches expectation
  */
-TEST(Common, BufferPut) {
-  Buffer b;
-  ASSERT_EQ(b.size(), 0u);
+TEST( Common, BufferPut )
+{
+    Buffer b;
+    ASSERT_EQ( b.size(), 0u );
 
-  auto hex = b.toHex();
-  ASSERT_EQ(hex, ""s);
+    auto hex = b.toHex();
+    ASSERT_EQ( hex, ""s );
 
-  auto s = "hello"s;
-  b.put(s);
-  ASSERT_EQ(b.size(), 5u);
+    auto s = "hello"s;
+    b.put( s );
+    ASSERT_EQ( b.size(), 5u );
 
-  b.putUint8(1);
-  ASSERT_EQ(b.size(), 6u);
+    b.putUint8( 1 );
+    ASSERT_EQ( b.size(), 6u );
 
-  b.putUint32(1);
-  ASSERT_EQ(b.size(), 10u);
+    b.putUint32( 1 );
+    ASSERT_EQ( b.size(), 10u );
 
-  b.putUint64(1);
-  ASSERT_EQ(b.size(), 18u);
+    b.putUint64( 1 );
+    ASSERT_EQ( b.size(), 18u );
 
-  std::vector<uint8_t> e{1, 2, 3, 4, 5};
-  b.put(e);
-  ASSERT_EQ(b.size(), 23u);
+    std::vector<uint8_t> e{ 1, 2, 3, 4, 5 };
+    b.put( e );
+    ASSERT_EQ( b.size(), 23u );
 
-  // test iterators
-  unsigned int i = 0;
-  for (const auto &byte : b) {
-    i++;
-    (void)byte;
-  }
-  ASSERT_EQ(i, b.size());
+    // test iterators
+    unsigned int i = 0;
+    for ( const auto &byte : b )
+    {
+        i++;
+        (void)byte;
+    }
+    ASSERT_EQ( i, b.size() );
 
-  ASSERT_EQ(b.toHex(), "68656c6c6f010000000100000000000000010102030405");
+    ASSERT_EQ( b.toHex(), "68656c6c6f010000000100000000000000010102030405" );
 }
 
 /**
@@ -53,33 +55,35 @@ TEST(Common, BufferPut) {
  * @when putBuffer is applied with another buffer {4,5,6} as parameter
  * @then content of current buffer changes to {1,2,3,4,5,6}
  */
-TEST(Common, putBuffer) {
-  Buffer current_buffer = {1, 2, 3};
-  Buffer another_buffer = {4, 5, 6};
-  auto &buffer = current_buffer.putBuffer(another_buffer);
-  ASSERT_EQ(&buffer, &current_buffer);  // line to the same buffer is returned
-  Buffer result = {1, 2, 3, 4, 5, 6};
-  ASSERT_EQ(buffer, result);
+TEST( Common, putBuffer )
+{
+    Buffer current_buffer = { 1, 2, 3 };
+    Buffer another_buffer = { 4, 5, 6 };
+    auto  &buffer         = current_buffer.putBuffer( another_buffer );
+    ASSERT_EQ( &buffer, &current_buffer ); // line to the same buffer is returned
+    Buffer result = { 1, 2, 3, 4, 5, 6 };
+    ASSERT_EQ( buffer, result );
 }
 
 /**
  * @when create buffer using different constructors
  * @then expected buffer is created
  */
-TEST(Common, BufferInit) {
-  Buffer b{1, 2, 3, 4, 5};
-  ASSERT_EQ(b.size(), 5u);
-  ASSERT_EQ(b.toHex(), "0102030405"s);
+TEST( Common, BufferInit )
+{
+    Buffer b{ 1, 2, 3, 4, 5 };
+    ASSERT_EQ( b.size(), 5u );
+    ASSERT_EQ( b.toHex(), "0102030405"s );
 
-  Buffer a(b);
-  ASSERT_EQ(a, b);
-  ASSERT_EQ(a.size(), b.size());
+    Buffer a( b );
+    ASSERT_EQ( a, b );
+    ASSERT_EQ( a.size(), b.size() );
 
-  ASSERT_NO_THROW({
-    Buffer c{"0102030405"_unhex};
-    ASSERT_EQ(c, a);
+    ASSERT_NO_THROW( {
+        Buffer c{ "0102030405"_unhex };
+        ASSERT_EQ( c, a );
 
-    Buffer d = c;
-    ASSERT_EQ(d, c);
-  });
+        Buffer d = c;
+        ASSERT_EQ( d, c );
+    } );
 }

@@ -98,7 +98,7 @@ namespace sgns
         OUTCOME_TRY( blockchain::ValidatorRegistry::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
         OUTCOME_TRY( Blockchain::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
 
-        auto                  crdt_transaction_ = db_3_6_0_->BeginTransaction();
+        auto                            crdt_transaction_ = db_3_6_0_->BeginTransaction();
         std::unordered_set<std::string> topics_;
 
         topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
@@ -137,7 +137,7 @@ namespace sgns
                     logger_->error( "Can't fetch transaction for key {}", transaction_key );
                     continue;
                 }
-                auto& tx = maybe_transaction.value();
+                auto &tx = maybe_transaction.value();
 
                 logger_->debug( "{}: Fetched transaction on {}", __func__, transaction_key );
                 if ( tx->GetHash().empty() )
@@ -149,7 +149,6 @@ namespace sgns
                 const auto new_tx_key = blockchain_base + "tx/" + tx->GetHash();
 
                 logger_->debug( "{}: New TX key {}", __func__, new_tx_key );
-
 
                 sgns::crdt::GlobalDB::Buffer data_transaction;
                 data_transaction.put( tx->SerializeByteVector() );

@@ -24,7 +24,8 @@ public:
                    const boost::optional<std::string> &variant = boost::none ) override;
 
     outcome::result<std::shared_ptr<IComponent>> GetComponent(
-        const std::string &type, const boost::optional<std::string> &variant = boost::none ) override;
+        const std::string                  &type,
+        const boost::optional<std::string> &variant = boost::none ) override;
 };
 
 #endif

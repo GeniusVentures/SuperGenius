@@ -8,7 +8,8 @@
 
 namespace sgns
 {
-    template <typename... Lambdas> struct lambda_visitor;
+    template <typename... Lambdas>
+    struct lambda_visitor;
 
     template <typename Lambda, typename... Lambdas>
     struct lambda_visitor<Lambda, Lambdas...> : public Lambda, public lambda_visitor<Lambdas...>
@@ -21,13 +22,12 @@ namespace sgns
         }
     };
 
-    template <typename Lambda> struct lambda_visitor<Lambda> : public Lambda
+    template <typename Lambda>
+    struct lambda_visitor<Lambda> : public Lambda
     {
         using Lambda::operator();
 
-        lambda_visitor( Lambda lambda ) : Lambda( lambda )
-        {
-        }
+        lambda_visitor( Lambda lambda ) : Lambda( lambda ) {}
     };
 
     /**
@@ -49,7 +49,8 @@ namespace sgns
      *
      * @return Visitor instance that dispatches to the provided lambdas.
      */
-    template <class... Fs> constexpr auto make_visitor( Fs &&...fs )
+    template <class... Fs>
+    constexpr auto make_visitor( Fs &&...fs )
     {
         using visitor_type = lambda_visitor<std::decay_t<Fs>...>;
         return visitor_type( std::forward<Fs>( fs )... );
@@ -75,14 +76,16 @@ namespace sgns
     }
 
     /// apply Matcher to optional T
-    template <typename T, typename Matcher> constexpr decltype( auto ) match( T &&t, Matcher &&m )
+    template <typename T, typename Matcher>
+    constexpr decltype( auto ) match( T &&t, Matcher &&m )
     {
         return std::forward<T>( t ) ? std::forward<Matcher>( m )( *std::forward<T>( t ) )
                                     : std::forward<Matcher>( m )();
     }
 
     /// construct visitor from Fs and apply it to optional T
-    template <typename T, typename... Fs> constexpr decltype( auto ) match_in_place( T &&t, Fs &&...fs )
+    template <typename T, typename... Fs>
+    constexpr decltype( auto ) match_in_place( T &&t, Fs &&...fs )
     {
         return match( std::forward<T>( t ), make_visitor( std::forward<Fs>( fs )... ) );
     }

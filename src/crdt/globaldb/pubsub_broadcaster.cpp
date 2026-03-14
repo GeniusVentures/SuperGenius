@@ -26,31 +26,33 @@ namespace sgns::crdt
         }
     }
 
-outcome::result<void> PubSubBroadcaster::Broadcast(const base::Buffer &buff, std::string topic, boost::optional<libp2p::peer::PeerInfo> peerInfo)
-{
-    if (this->gossipPubSubTopic_ == nullptr)
+    outcome::result<void> PubSubBroadcaster::Broadcast( const base::Buffer                     &buff,
+                                                        std::string                             topic,
+                                                        boost::optional<libp2p::peer::PeerInfo> peerInfo )
     {
-        return outcome::failure(boost::system::error_code{});
-    }
-    gossipPubSubTopic_->Publish(buff.toVector());
-    return outcome::success();
-}
-
-outcome::result<base::Buffer> PubSubBroadcaster::Next()
-{
-    std::scoped_lock lock(mutex_);
-    if (listOfMessages_.empty())
-    {
-        //Broadcaster::ErrorCode::ErrNoMoreBroadcast
-        return outcome::failure(boost::system::error_code{});
+        if ( this->gossipPubSubTopic_ == nullptr )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+        gossipPubSubTopic_->Publish( buff.toVector() );
+        return outcome::success();
     }
 
-    std::string strBuffer = std::get<1>(listOfMessages_.front());
-    listOfMessages_.pop();
+    outcome::result<base::Buffer> PubSubBroadcaster::Next()
+    {
+        std::scoped_lock lock( mutex_ );
+        if ( listOfMessages_.empty() )
+        {
+            //Broadcaster::ErrorCode::ErrNoMoreBroadcast
+            return outcome::failure( boost::system::error_code{} );
+        }
 
-    base::Buffer buffer;
-    buffer.put(strBuffer);
-    return buffer;
-}
+        std::string strBuffer = std::get<1>( listOfMessages_.front() );
+        listOfMessages_.pop();
+
+        base::Buffer buffer;
+        buffer.put( strBuffer );
+        return buffer;
+    }
 
 }

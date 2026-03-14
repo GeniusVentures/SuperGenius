@@ -41,7 +41,7 @@ namespace sgns
 
     void IBasicProof::RegisterDeserializer( const std::string &proof_type, PublicParamDeserializeFn fn )
     {
-        PublicParamDeSerializers[proof_type] = std::move(fn);
+        PublicParamDeSerializers[proof_type] = std::move( fn );
     }
 
     outcome::result<SGProof::BaseProofProto> IBasicProof::DeSerializeBaseProof( const std::vector<uint8_t> &proof_data )

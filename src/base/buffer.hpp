@@ -9,288 +9,293 @@
 #include <gsl/span>
 #include "outcome/outcome.hpp"
 
-namespace sgns::base {
-
-  /**
-   * @brief Class represents arbitrary (including empty) byte buffer.
-   */
-  class Buffer : public boost::equality_comparable<Buffer>,
-                 public boost::equality_comparable<gsl::span<uint8_t>>,
-                 public boost::equality_comparable<std::vector<uint8_t>> {
-   public:
-    using iterator = std::vector<uint8_t>::iterator;
-    using reverse_iterator = std::vector<uint8_t>::reverse_iterator;
-    using const_reverse_iterator = std::vector<uint8_t>::const_reverse_iterator;
-    using const_iterator = std::vector<uint8_t>::const_iterator;
-    using value_type = uint8_t;
-    // with this gsl::span can be built from Buffer
-    using pointer = typename std::vector<uint8_t>::pointer;
-    using const_pointer = typename std::vector<uint8_t>::const_pointer;
+namespace sgns::base
+{
 
     /**
+   * @brief Class represents arbitrary (including empty) byte buffer.
+   */
+    class Buffer : public boost::equality_comparable<Buffer>,
+                   public boost::equality_comparable<gsl::span<uint8_t>>,
+                   public boost::equality_comparable<std::vector<uint8_t>>
+    {
+    public:
+        using iterator               = std::vector<uint8_t>::iterator;
+        using reverse_iterator       = std::vector<uint8_t>::reverse_iterator;
+        using const_reverse_iterator = std::vector<uint8_t>::const_reverse_iterator;
+        using const_iterator         = std::vector<uint8_t>::const_iterator;
+        using value_type             = uint8_t;
+        // with this gsl::span can be built from Buffer
+        using pointer       = typename std::vector<uint8_t>::pointer;
+        using const_pointer = typename std::vector<uint8_t>::const_pointer;
+
+        /**
      * @brief Allocates a buffer of the given size, filled with a byte value.
      * @param size Buffer size in bytes.
      * @param byte Fill value for all bytes.
      */
-    Buffer(size_t size, uint8_t byte);
+        Buffer( size_t size, uint8_t byte );
 
-    ~Buffer() = default;
+        ~Buffer() = default;
 
-    /**
+        /**
      * @brief lvalue construct buffer from a byte vector
      */
-    explicit Buffer(std::vector<uint8_t> v);
-    explicit Buffer(gsl::span<const uint8_t> s);
+        explicit Buffer( std::vector<uint8_t> v );
+        explicit Buffer( gsl::span<const uint8_t> s );
 
-    Buffer(const uint8_t *begin, const uint8_t *end);
+        Buffer( const uint8_t *begin, const uint8_t *end );
 
-    Buffer() = default;
-    Buffer(const Buffer &b) = default;
-    Buffer(Buffer &&b) noexcept = default;
-    Buffer(std::initializer_list<uint8_t> b);
+        Buffer()                      = default;
+        Buffer( const Buffer &b )     = default;
+        Buffer( Buffer &&b ) noexcept = default;
+        Buffer( std::initializer_list<uint8_t> b );
 
-    Buffer &reserve(size_t size);
-    Buffer &resize(size_t size);
+        Buffer &reserve( size_t size );
+        Buffer &resize( size_t size );
 
-    Buffer &operator=(const Buffer &other) = default;
-    Buffer &operator=(Buffer &&other) noexcept = default;
+        Buffer &operator=( const Buffer &other )     = default;
+        Buffer &operator=( Buffer &&other ) noexcept = default;
 
-    Buffer &operator+=(const Buffer &other) noexcept;
+        Buffer &operator+=( const Buffer &other ) noexcept;
 
-    /**
+        /**
      * @brief Accessor of byte elements given an index in the byte array.
      * @param index Element index.
      */
-    uint8_t operator[](size_t index) const;
+        uint8_t operator[]( size_t index ) const;
 
-    /**
+        /**
      * @brief Accessor of byte elements given an index in the byte array.
      * @param index Element index.
      */
-    uint8_t &operator[](size_t index);
+        uint8_t &operator[]( size_t index );
 
-    /**
+        /**
      * @brief Lexicographical comparison of two buffers
      */
-    bool operator==(const Buffer &b) const noexcept;
+        bool operator==( const Buffer &b ) const noexcept;
 
-    /**
+        /**
      * @brief Lexicographical comparison of buffer and vector of bytes
      */
-    bool operator==(const std::vector<uint8_t> &b) const noexcept;
+        bool operator==( const std::vector<uint8_t> &b ) const noexcept;
 
-    /**
+        /**
      * @brief Lexicographical comparison of buffer and vector of bytes
      */
-    bool operator==(gsl::span<const uint8_t> s) const noexcept;
+        bool operator==( gsl::span<const uint8_t> s ) const noexcept;
 
-    /**
+        /**
      * @brief Lexicographical comparison of two buffers
      */
-    bool operator<(const Buffer &b) const noexcept;
+        bool operator<( const Buffer &b ) const noexcept;
 
-    /**
+        /**
      * @brief Iterator, which points to begin of this buffer.
      */
-    iterator begin();
+        iterator begin();
 
-    /**
+        /**
      * @brief Iterator, which points to the element next to the last in this
      * buffer.
      */
-    iterator end();
-    /**
+        iterator end();
+        /**
      * @brief Iterator, which points to last of this buffer.
      */
-    reverse_iterator rbegin();
+        reverse_iterator rbegin();
 
-    /**
+        /**
      * @brief Iterator, which points to the element previous to first in this
      * buffer.
      */
-    reverse_iterator rend();
-    /**
+        reverse_iterator rend();
+        /**
      * @brief Iterator, which points to last of this buffer.
      */
-    [[nodiscard]] const_reverse_iterator rbegin() const;
+        [[nodiscard]] const_reverse_iterator rbegin() const;
 
-    /**
+        /**
      * @brief Iterator, which points to the element previous to first in this
      * buffer.
      */
-    [[nodiscard]] const_reverse_iterator rend() const;
+        [[nodiscard]] const_reverse_iterator rend() const;
 
-    /**
+        /**
      * @brief Iterator, which points to begin of this buffer.
      */
-    [[nodiscard]] const_iterator begin() const;
+        [[nodiscard]] const_iterator begin() const;
 
-    /**
+        /**
      * @brief Iterator, which points to the element next to the last in this
      * buffer.
      */
-    [[nodiscard]] const_iterator end() const;
+        [[nodiscard]] const_iterator end() const;
 
-    /**
+        /**
      * @brief Getter for size of this buffer.
      */
-    [[nodiscard]] size_t size() const;
+        [[nodiscard]] size_t size() const;
 
-    /**
+        /**
      * @brief Put an 8-bit value into this buffer.
      * @param n Value to append.
      * @return This buffer, suitable for chaining.
      */
-    Buffer &putUint8(uint8_t n);
+        Buffer &putUint8( uint8_t n );
 
-    /**
+        /**
      * @brief Put a 32-bit value into this buffer.
      * @param n Value to append (serialized as big-endian).
      * @return This buffer, suitable for chaining.
      */
-    Buffer &putUint32(uint32_t n);
+        Buffer &putUint32( uint32_t n );
 
-    /**
+        /**
      * @brief Put a 64-bit value into this buffer.
      * @param n Value to append (serialized as big-endian).
      * @return This buffer, suitable for chaining.
      */
-    Buffer &putUint64(uint64_t n);
+        Buffer &putUint64( uint64_t n );
 
-    /**
+        /**
      * @brief Put a string into the byte buffer.
      * @param str Arbitrary string.
      * @return This buffer, suitable for chaining.
      */
-    Buffer &put(std::string_view str);
+        Buffer &put( std::string_view str );
 
-    /**
+        /**
      * @brief Put a vector of bytes into the byte buffer.
      * @param v Arbitrary vector of bytes.
      * @return This buffer, suitable for chaining.
      */
-    Buffer &put(const std::vector<uint8_t> &v);
+        Buffer &put( const std::vector<uint8_t> &v );
 
-    /**
+        /**
      * @brief Put a sequence of bytes into the byte buffer.
      * @param s Arbitrary span of bytes.
      * @return This buffer, suitable for chaining.
      */
-    Buffer &put(gsl::span<const uint8_t> s);
+        Buffer &put( gsl::span<const uint8_t> s );
 
-    /**
+        /**
      * @brief Put an array of bytes bounded by pointers into the byte buffer.
      * @param begin Pointer to the array start.
      * @param end Pointer to the address after the last element.
      * @return This buffer, suitable for chaining.
      */
-    Buffer &putBytes(const uint8_t *begin, const uint8_t *end);
+        Buffer &putBytes( const uint8_t *begin, const uint8_t *end );
 
-    /**
+        /**
      * @brief Put another buffer content at the end of current one
      * @param buf another buffer
      * @return this buffer suitable for chaining.
      */
-    Buffer &putBuffer(const Buffer &buf);
+        Buffer &putBuffer( const Buffer &buf );
 
-    /**
+        /**
      * Clear the contents of the Buffer
      */
-    void clear();
+        void clear();
 
-    /**
+        /**
      * @brief getter for raw array of bytes
      */
-    const uint8_t *data() const;
-    uint8_t *data();
+        const uint8_t *data() const;
+        uint8_t       *data();
 
-    /**
+        /**
      * @brief getter for vector of bytes
      */
-    const std::vector<uint8_t> &toVector() const;
+        const std::vector<uint8_t> &toVector() const;
 
-    std::vector<uint8_t> &toVector();
+        std::vector<uint8_t> &toVector();
 
-    /**
+        /**
      * Returns a copy of a part of the buffer
      * Works alike subspan() of gsl::span
      */
-    Buffer subbuffer(size_t offset = 0, size_t length = -1) const;
+        Buffer subbuffer( size_t offset = 0, size_t length = -1 ) const;
 
-    /**
+        /**
      * @brief encode bytearray as hex
      * @return hex-encoded string
      */
-    std::string toHex() const;
+        std::string toHex() const;
 
-    /**
+        /**
      * Check if this buffer is empty
      * @return true, if buffer is empty, false otherwise
      */
-    bool empty() const;
+        bool empty() const;
 
-    /**
+        /**
      * @brief Construct Buffer from hex string
      * @param hex hex-encoded string
      * @return result containing constructed buffer if input string is
      * hex-encoded string.
      */
-    static outcome::result<Buffer> fromHex(std::string_view hex);
+        static outcome::result<Buffer> fromHex( std::string_view hex );
 
-    /**
+        /**
      * @brief return content of bytearray as string
      * @note Does not ensure correct encoding
      * @return string
      */
-    std::string_view toString() const;
+        std::string_view toString() const;
 
-private:
-    std::vector<uint8_t> data_;
+    private:
+        std::vector<uint8_t> data_;
 
-    template <typename T>
-    Buffer &putRange(const T &begin, const T &end);
-  };
+        template <typename T>
+        Buffer &putRange( const T &begin, const T &end );
+    };
 
-  /**
+    /**
    * @brief override operator<< for all streams except std::ostream
    * @tparam Stream stream type
    * @param s stream reference
    * @param buffer value to encode
    * @return reference to stream
    */
-  template <class Stream,
-            typename = std::enable_if_t<Stream::is_encoder_stream>>
-  Stream &operator<<(Stream &s, const Buffer &buffer) {
-    return s << buffer.toVector();
-  }
+    template <class Stream, typename = std::enable_if_t<Stream::is_encoder_stream>>
+    Stream &operator<<( Stream &s, const Buffer &buffer )
+    {
+        return s << buffer.toVector();
+    }
 
-  /**
+    /**
    * @brief decodes buffer object from stream
    * @tparam Stream input stream type
    * @param s stream reference
    * @param buffer value to decode
    * @return reference to stream
    */
-  template <class Stream,
-            typename = std::enable_if_t<Stream::is_decoder_stream>>
-  Stream &operator>>(Stream &s, Buffer &buffer) {
-    std::vector<uint8_t> data;
-    s >> data;
-    buffer.put(data);
-    return s;
-  }
-
-  std::ostream &operator<<(std::ostream &os, const Buffer &buffer);
-
-}  // namespace sgns::base
-
-namespace std {
-  template <>
-  struct hash<sgns::base::Buffer> {
-    size_t operator()(const sgns::base::Buffer &x) const {
-      return boost::hash_range(x.begin(), x.end());
+    template <class Stream, typename = std::enable_if_t<Stream::is_decoder_stream>>
+    Stream &operator>>( Stream &s, Buffer &buffer )
+    {
+        std::vector<uint8_t> data;
+        s >> data;
+        buffer.put( data );
+        return s;
     }
-  };
-}  // namespace std
 
-#endif  // SUPERGENIUS_BUFFER_HPP
+    std::ostream &operator<<( std::ostream &os, const Buffer &buffer );
+
+} // namespace sgns::base
+
+namespace std
+{
+    template <>
+    struct hash<sgns::base::Buffer>
+    {
+        size_t operator()( const sgns::base::Buffer &x ) const
+        {
+            return boost::hash_range( x.begin(), x.end() );
+        }
+    };
+} // namespace std
+
+#endif // SUPERGENIUS_BUFFER_HPP

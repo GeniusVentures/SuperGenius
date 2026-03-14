@@ -25,7 +25,7 @@ namespace sgns::crdt
         /**
          * @brief      Element filtering callback definition
          */
-        using ElementFilterCallback  = std::function<std::optional<std::vector<pb::Element>>( const pb::Element & )>;
+        using ElementFilterCallback  = std::function<std::optional<std::vector<pb::Element>>( const pb::Element  &)>;
         using FilterCallbackRegistry = std::unordered_map<std::string, ElementFilterCallback>;
 
         /**
@@ -81,11 +81,11 @@ namespace sgns::crdt
         void FilterTombstonesOnDelta( pb::Delta &delta );
 
     private:
-        const bool             accept_by_default_;        ///< The default behavior for values not matching any filter
-        mutable std::shared_mutex      element_registry_mutex_;   ///< Mutex for the element registry
-        std::shared_mutex      tombstone_registry_mutex_; ///< Mutex for the tombstone registry
-        FilterCallbackRegistry element_registry_;         ///< Element filter callback registry
-        FilterCallbackRegistry tombstone_registry_;       ///< Tombstone filter callback registry
+        const bool                accept_by_default_;      ///< The default behavior for values not matching any filter
+        mutable std::shared_mutex element_registry_mutex_; ///< Mutex for the element registry
+        std::shared_mutex         tombstone_registry_mutex_; ///< Mutex for the tombstone registry
+        FilterCallbackRegistry    element_registry_;         ///< Element filter callback registry
+        FilterCallbackRegistry    tombstone_registry_;       ///< Tombstone filter callback registry
     };
 
 }

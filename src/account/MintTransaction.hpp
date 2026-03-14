@@ -22,10 +22,10 @@ namespace sgns
 
         static std::shared_ptr<MintTransaction> DeSerializeByteVector( const std::vector<uint8_t> &data );
 
-        static MintTransaction New( uint64_t                                        new_amount,
-                                    std::string                                     chain_id,
-                                    TokenID                                         token_id,
-                                    SGTransaction::DAGStruct                        dag );
+        static MintTransaction New( uint64_t                 new_amount,
+                                    std::string              chain_id,
+                                    TokenID                  token_id,
+                                    SGTransaction::DAGStruct dag );
 
         std::vector<uint8_t> SerializeByteVector() override;
 

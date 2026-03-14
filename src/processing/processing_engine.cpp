@@ -55,7 +55,8 @@ namespace sgns::processing
 
     float ProcessingEngine::GetProgress() const
     {
-        if (m_processingCore) {
+        if ( m_processingCore )
+        {
             return m_processingCore->GetProgress();
         }
         return 0.0f;
@@ -65,11 +66,14 @@ namespace sgns::processing
     {
         if ( subTask )
         {
-            try {
+            try
+            {
                 std::string subtaskId = subTask->subtaskid(); // Test if subtask is valid
                 m_logger->debug( "[GRABBED] m_nodeId ({}), subtask ({}).", m_nodeId, subtaskId );
                 ProcessSubTask( *subTask );
-            } catch (const std::exception& e) {
+            }
+            catch ( const std::exception &e )
+            {
                 m_logger->error( "[GRABBED ERROR] m_nodeId ({}), error: {}", m_nodeId, e.what() );
             }
         }
@@ -85,14 +89,18 @@ namespace sgns::processing
     {
         // Safely validate subTask before processing
         std::string subtaskId;
-        try {
+        try
+        {
             subtaskId = subTask.subtaskid();
-            if (subtaskId.empty()) {
-                m_logger->error("ProcessSubTask called with empty subtaskid for node: {}", m_nodeId);
+            if ( subtaskId.empty() )
+            {
+                m_logger->error( "ProcessSubTask called with empty subtaskid for node: {}", m_nodeId );
                 return;
             }
-        } catch (const std::exception& e) {
-            m_logger->error("ProcessSubTask called with corrupted subTask for node: {} - {}", m_nodeId, e.what());
+        }
+        catch ( const std::exception &e )
+        {
+            m_logger->error( "ProcessSubTask called with corrupted subTask for node: {} - {}", m_nodeId, e.what() );
             return;
         }
 
@@ -101,36 +109,36 @@ namespace sgns::processing
             [subTask( std::move( subTask ) ), _this( shared_from_this() )]()
             {
                 // Double-check we haven't been destroyed
-                if (!_this) {
+                if ( !_this )
+                {
                     return;
                 }
-                
+
                 // Make a local copy of critical data to avoid corruption
                 std::string subtaskId = subTask.subtaskid();
-                std::string nodeId = _this->m_nodeId;
-                
-                if (subtaskId.empty()) {
-                    _this->m_logger->error("Subtask ID became empty during processing for node: {}", nodeId);
+                std::string nodeId    = _this->m_nodeId;
+
+                if ( subtaskId.empty() )
+                {
+                    _this->m_logger->error( "Subtask ID became empty during processing for node: {}", nodeId );
                     return;
                 }
 
                 // @todo set initial hash code that depends on node id
-                auto maybe_result = _this->m_processingCore->ProcessSubTask(
-                    subTask,
-                    std::hash<std::string>{}( nodeId ) );
+                auto maybe_result = _this->m_processingCore->ProcessSubTask( subTask,
+                                                                             std::hash<std::string>{}( nodeId ) );
                 if ( maybe_result.has_value() )
                 {
                     SGProcessing::SubTaskResult result = maybe_result.value();
-                    
+
                     // Use local copies to avoid corruption
-                    try {
+                    try
+                    {
                         result.set_subtaskid( subtaskId );
                         result.set_node_address( nodeId );
-                        
-                        _this->m_logger->debug( "[PROCESSED]. m_nodeId ({}), subtask ({}).",
-                                                nodeId,
-                                                subtaskId );
-                        
+
+                        _this->m_logger->debug( "[PROCESSED]. m_nodeId ({}), subtask ({}).", nodeId, subtaskId );
+
                         std::lock_guard<std::mutex> queueGuard( _this->m_mutexSubTaskQueue );
                         if ( _this->m_subTaskQueueAccessor )
                         {
@@ -143,12 +151,16 @@ namespace sgns::processing
                                     if ( !_this )
                                     {
                                         return;
-                                }
-                                _this->OnSubTaskGrabbed( subTask );
-                            } );
+                                    }
+                                    _this->OnSubTaskGrabbed( subTask );
+                                } );
                         }
-                    } catch (const std::exception& e) {
-                        _this->m_logger->error("Error setting protobuf fields for subtask {}: {}", subtaskId, e.what());
+                    }
+                    catch ( const std::exception &e )
+                    {
+                        _this->m_logger->error( "Error setting protobuf fields for subtask {}: {}",
+                                                subtaskId,
+                                                e.what() );
                     }
                 }
                 else

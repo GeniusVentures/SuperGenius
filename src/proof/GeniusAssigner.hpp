@@ -126,8 +126,8 @@ namespace sgns
         constexpr static const std::string_view POLICY         = "default";
         constexpr static const std::string_view CHECK_VALIDITY = "";
 
-        nil::blueprint::generation_mode                               gen_mode_;
-        nil::blueprint::assigner<BlueprintFieldType>                  assigner_instance_;
+        nil::blueprint::generation_mode              gen_mode_;
+        nil::blueprint::assigner<BlueprintFieldType> assigner_instance_;
 
         enum class PrintTableKind
         {

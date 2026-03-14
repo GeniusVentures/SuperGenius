@@ -8,7 +8,6 @@
 
 #include "base/logger.hpp"
 
-
 namespace
 {
     const std::string logger_config( R"(
@@ -30,21 +29,19 @@ namespace
     class PubsubCounts : public ::testing::Test
     {
     public:
-        virtual void SetUp() override {
+        virtual void SetUp() override
+        {
+            // prepare log system
+            auto logging_system = std::make_shared<soralog::LoggingSystem>(
+                std::make_shared<soralog::ConfiguratorFromYAML>(
+                    // Original LibP2P logging config
+                    std::make_shared<libp2p::log::Configurator>(),
+                    // Additional logging config for application
+                    logger_config ) );
+            logging_system->configure();
 
-                    // prepare log system
-                    auto logging_system = std::make_shared<soralog::LoggingSystem>(
-                        std::make_shared<soralog::ConfiguratorFromYAML>(
-                            // Original LibP2P logging config
-                            std::make_shared<libp2p::log::Configurator>(),
-                            // Additional logging config for application
-                            logger_config ) );
-                    logging_system->configure();
-                    
-                    libp2p::log::setLoggingSystem( logging_system );
-                    libp2p::log::setLevelOfGroup( "pubsub_count_test", soralog::Level::OFF );
-
-
+            libp2p::log::setLoggingSystem( logging_system );
+            libp2p::log::setLevelOfGroup( "pubsub_count_test", soralog::Level::OFF );
         }
     };
 
@@ -68,9 +65,11 @@ namespace
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
         sgns::ipfs_pubsub::GossipPubSubTopic resultChannel( pubs1, "CountTest" );
-        resultChannel.Subscribe( []( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message ) {}, true );
+        resultChannel.Subscribe( []( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message ) {},
+                                 true );
         sgns::ipfs_pubsub::GossipPubSubTopic resultChannel2( pubs2, "CountTest" );
-        resultChannel2.Subscribe( []( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message ) {},true );
+        resultChannel2.Subscribe( []( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message ) {},
+                                  true );
         //resultChannel2.Publish();
         std::this_thread::sleep_for( std::chrono::milliseconds( 3000 ) );
         //std::string test = "CountTest";

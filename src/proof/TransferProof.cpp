@@ -19,7 +19,7 @@ namespace sgns
 
     TransferProof::TransferProof( uint64_t                   balance,
                                   uint64_t                   amount,
-                                  std::optional<std::string> bytecode) :
+                                  std::optional<std::string> bytecode ) :
 #ifdef RELEASE_BYTECODE_CIRCUITS
         IBasicProof( bytecode.value_or( std::string( TransactionCircuit ) ) ), //
 #else

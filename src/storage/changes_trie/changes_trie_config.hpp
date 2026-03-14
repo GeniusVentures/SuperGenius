@@ -6,17 +6,19 @@
 #include <cstdint>
 #include <type_traits>
 
-namespace sgns::storage::changes_trie {
+namespace sgns::storage::changes_trie
+{
 
-  struct ChangesTrieConfig {
-    /**
+    struct ChangesTrieConfig
+    {
+        /**
      * The interval (in blocks) at which
      * block mappings are created. Block mappings are not created when this is
      * less or equal to 1.
      */
-    uint32_t digest_interval;
-    
-    /**
+        uint32_t digest_interval;
+
+        /**
      * Maximal number of levels in the
      * hierarchy. 0 means that block mappings are not created at
      * all. 1 means only the regular digest_interval block
@@ -24,36 +26,36 @@ namespace sgns::storage::changes_trie {
      * created every (digest_interval in power of digest_levels) block for
      * each level in 1 to digest_levels.
      */
-    uint32_t digest_levels;
-  };
+        uint32_t digest_levels;
+    };
 
-  /**
+    /**
    * @brief scale-encodes config instance to stream
    * @tparam Stream output stream type
    * @param s output stream reference
    * @param config value to encode
    * @return reference to stream
    */
-  template <class Stream,
-            typename = std::enable_if_t<Stream::is_encoder_stream>>
-  Stream &operator<<(Stream &s, const ChangesTrieConfig &config) {
-    s << config.digest_interval << config.digest_levels;
-    return s;
-  }
+    template <class Stream, typename = std::enable_if_t<Stream::is_encoder_stream>>
+    Stream &operator<<( Stream &s, const ChangesTrieConfig &config )
+    {
+        s << config.digest_interval << config.digest_levels;
+        return s;
+    }
 
-  /**
+    /**
    * @brief decodes config instance from stream
    * @tparam Stream output stream type
    * @param s input stream reference
    * @param config value to decode
    * @return reference to stream
    */
-  template <class Stream,
-            typename = std::enable_if_t<Stream::is_decoder_stream>>
-  Stream &operator>>(Stream &s, ChangesTrieConfig &config) {
-    s >> config.digest_interval >> config.digest_levels;
-    return s;
-  }
-}  // namespace sgns::storage::changes_trie
+    template <class Stream, typename = std::enable_if_t<Stream::is_decoder_stream>>
+    Stream &operator>>( Stream &s, ChangesTrieConfig &config )
+    {
+        s >> config.digest_interval >> config.digest_levels;
+        return s;
+    }
+} // namespace sgns::storage::changes_trie
 
-#endif  // SUPERGENIUS_STORAGE_CHANGES_TRIE_CHANGES_TRIE_CONFIG
+#endif // SUPERGENIUS_STORAGE_CHANGES_TRIE_CHANGES_TRIE_CONFIG

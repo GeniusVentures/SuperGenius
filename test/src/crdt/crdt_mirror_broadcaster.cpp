@@ -15,7 +15,9 @@ namespace sgns::crdt
         counterpart_ = dest;
     }
 
-    outcome::result<void> CRDTMirrorBroadcaster::Broadcast( const base::Buffer &buff, std::string topic, boost::optional<libp2p::peer::PeerInfo> peerInfo )
+    outcome::result<void> CRDTMirrorBroadcaster::Broadcast( const base::Buffer                     &buff,
+                                                            std::string                             topic,
+                                                            boost::optional<libp2p::peer::PeerInfo> peerInfo )
     {
         if ( ( !buff.empty() ) && ( counterpart_ ) )
         {

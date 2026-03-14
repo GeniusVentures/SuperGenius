@@ -14,21 +14,22 @@
 #include "storage/face/generic_storage.hpp"
 #include "storage/face/write_batch.hpp"
 
-namespace sgns::storage {
+namespace sgns::storage
+{
 
-  using Buffer = base::Buffer;
+    using Buffer = base::Buffer;
 
-  using BufferMap = face::GenericMap<Buffer, Buffer>;
+    using BufferMap = face::GenericMap<Buffer, Buffer>;
 
-  using BufferBatch = face::WriteBatch<Buffer, Buffer>;
+    using BufferBatch = face::WriteBatch<Buffer, Buffer>;
 
-  using ReadOnlyBufferMap = face::ReadOnlyMap<Buffer, Buffer>;
-  using BatchWriteBufferMap = face::BatchWriteMap<Buffer, Buffer>;
+    using ReadOnlyBufferMap   = face::ReadOnlyMap<Buffer, Buffer>;
+    using BatchWriteBufferMap = face::BatchWriteMap<Buffer, Buffer>;
 
-  using BufferStorage = face::GenericStorage<Buffer, Buffer>;
+    using BufferStorage = face::GenericStorage<Buffer, Buffer>;
 
-  using BufferMapCursor = face::MapCursor<Buffer, Buffer>;
+    using BufferMapCursor = face::MapCursor<Buffer, Buffer>;
 
-}  // namespace sgns::storage
+} // namespace sgns::storage
 
-#endif  // SUPERGENIUS_BUFFER_MAP_TYPES_HPP
+#endif // SUPERGENIUS_BUFFER_MAP_TYPES_HPP

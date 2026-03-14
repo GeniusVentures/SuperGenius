@@ -7,7 +7,8 @@
 
 #include "storage/rocksdb/rocksdb.hpp"
 
-namespace test {
+namespace test
+{
 
     struct RocksDBFixture : public FSFixture
     {
@@ -24,6 +25,6 @@ namespace test {
         std::shared_ptr<rocksdb> db_;
     };
 
-}  // namespace test
+} // namespace test
 
-#endif  // SUPERGENIUS_BASE_ROCKSDB_TEST_HPP
+#endif // SUPERGENIUS_BASE_ROCKSDB_TEST_HPP

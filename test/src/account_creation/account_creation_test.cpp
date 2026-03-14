@@ -41,7 +41,7 @@ TEST_F( AccountCreationTest, CreationWithEthereumKey )
                                         fs::path( "./account2" ) );
     std::string address_main  = account->GetAddress();
     std::string address_main2 = account2->GetAddress();
-    
+
     EXPECT_EQ(
         address_main,
         "c865650410bdc1328cf99dc011c14cb52dc0aeb43b5f49dbf64a478fe2f6eafd2056ed0155770ba0a2832c1adb65c75df043c62e772d167437e4532d1b4e788f" )

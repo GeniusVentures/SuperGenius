@@ -149,8 +149,8 @@ namespace sgns
                 lpc_scheme,
                 permutation_size ) );
 
-        auto proof_snark =
-            crypto3::marshalling::types::make_placeholder_proof<ProverEndianess, ProofSnarkType>( proof.proof );
+        auto proof_snark = crypto3::marshalling::types::make_placeholder_proof<ProverEndianess, ProofSnarkType>(
+            proof.proof );
         return crypto3::zk::snark::placeholder_verifier<BlueprintFieldType, PlaceholderParams>::process(
             public_preprocessed_data,
             proof_snark,
@@ -181,8 +181,8 @@ namespace sgns
                 lpc_scheme,
                 permutation_size ) );
 
-        auto proof_snark =
-            crypto3::marshalling::types::make_placeholder_proof<ProverEndianess, ProofSnarkType>( proof );
+        auto proof_snark = crypto3::marshalling::types::make_placeholder_proof<ProverEndianess, ProofSnarkType>(
+            proof );
         return crypto3::zk::snark::placeholder_verifier<BlueprintFieldType, PlaceholderParams>::process(
             public_preprocessed_data,
             proof_snark,
@@ -244,9 +244,9 @@ namespace sgns
         return crypto3::marshalling::types::make_assignment_table<ProverEndianess, AssignmentTableType>( table );
     }
 
-    GeniusProver::FriParams GeniusProver::MakeFRIParams( std::size_t rows_amount,
+    GeniusProver::FriParams GeniusProver::MakeFRIParams( std::size_t        rows_amount,
                                                          const unsigned int max_step,
-                                                         std::size_t expand_factor )
+                                                         std::size_t        expand_factor )
     {
         std::size_t table_rows_log = std::ceil( std::log2( rows_amount ) );
         std::size_t r              = table_rows_log - 1;

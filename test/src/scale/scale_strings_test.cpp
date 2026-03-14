@@ -14,11 +14,12 @@ using sgns::scale::ScaleEncoderStream;
  * @when specified string is encoded by ScaleEncoderStream
  * @then encoded value meets expectations
  */
-TEST(Scale, RawStringEncodeSuccess) {
-auto * v = "asdadad";
-ScaleEncoderStream s{};
-ASSERT_NO_THROW((s << v));
-ASSERT_EQ(s.data(), (ByteArray{28, 'a', 's', 'd', 'a', 'd', 'a', 'd'}));
+TEST( Scale, RawStringEncodeSuccess )
+{
+    auto              *v = "asdadad";
+    ScaleEncoderStream s{};
+    ASSERT_NO_THROW( s << v );
+    ASSERT_EQ( s.data(), ( ByteArray{ 28, 'a', 's', 'd', 'a', 'd', 'a', 'd' } ) );
 }
 
 /**
@@ -26,11 +27,12 @@ ASSERT_EQ(s.data(), (ByteArray{28, 'a', 's', 'd', 'a', 'd', 'a', 'd'}));
  * @when specified string is encoded by ScaleEncoderStream
  * @then encoded value meets expectations
  */
-TEST(Scale, StdStringEncodeSuccess) {
-std::string v = "asdadad";
-ScaleEncoderStream s;
-ASSERT_NO_THROW((s << v));
-ASSERT_EQ(s.data(), (ByteArray{28, 'a', 's', 'd', 'a', 'd', 'a', 'd'}));
+TEST( Scale, StdStringEncodeSuccess )
+{
+    std::string        v = "asdadad";
+    ScaleEncoderStream s;
+    ASSERT_NO_THROW( s << v );
+    ASSERT_EQ( s.data(), ( ByteArray{ 28, 'a', 's', 'd', 'a', 'd', 'a', 'd' } ) );
 }
 
 /**
@@ -38,10 +40,11 @@ ASSERT_EQ(s.data(), (ByteArray{28, 'a', 's', 'd', 'a', 'd', 'a', 'd'}));
  * @when string is decoded using ScaleDecoderStream
  * @then decoded string matches expectations
  */
-TEST(Scale, StringDecodeSuccess) {
-auto bytes = ByteArray{28, 'a', 's', 'd', 'a', 'd', 'a', 'd'};
-ScaleDecoderStream s(bytes);
-std::string v;
-ASSERT_NO_THROW(s >> v);
-ASSERT_EQ(v, "asdadad");
+TEST( Scale, StringDecodeSuccess )
+{
+    auto               bytes = ByteArray{ 28, 'a', 's', 'd', 'a', 'd', 'a', 'd' };
+    ScaleDecoderStream s( bytes );
+    std::string        v;
+    ASSERT_NO_THROW( s >> v );
+    ASSERT_EQ( v, "asdadad" );
 }
