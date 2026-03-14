@@ -1,4 +1,3 @@
-
 #include "processing_service_test.hpp"
 #include "processing/processing_subtask_queue_channel_pubsub.hpp"
 

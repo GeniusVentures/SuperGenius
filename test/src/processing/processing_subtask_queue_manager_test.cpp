@@ -1,4 +1,3 @@
-
 #include "processing_mock.hpp"
 #include "processing_service_test.hpp"
 

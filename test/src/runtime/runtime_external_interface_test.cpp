@@ -1,4 +1,3 @@
-
 #include "runtime/binaryen/runtime_external_interface.hpp"
 
 #include <binaryen/wasm-s-parser.h>

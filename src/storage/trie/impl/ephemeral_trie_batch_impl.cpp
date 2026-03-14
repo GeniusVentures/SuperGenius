@@ -1,5 +1,3 @@
-
-
 #include "storage/trie/impl/ephemeral_trie_batch_impl.hpp"
 
 #include "storage/trie/supergenius_trie/supergenius_trie_cursor.hpp"

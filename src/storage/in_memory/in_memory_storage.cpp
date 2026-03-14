@@ -1,5 +1,3 @@
-
-
 #include "storage/in_memory/in_memory_storage.hpp"
 
 #include "storage/database_error.hpp"

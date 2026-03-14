@@ -1,5 +1,3 @@
-
-
 #include "primitives/transaction_validity.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::primitives, InvalidTransaction, e )

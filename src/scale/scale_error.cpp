@@ -1,5 +1,3 @@
-
-
 #include "scale/scale_error.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::scale, EncodeError, e )

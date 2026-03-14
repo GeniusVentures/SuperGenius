@@ -1,4 +1,3 @@
-
 #include <gtest/gtest.h>
 
 #include "runtime/binaryen/wasm_memory_impl.hpp"

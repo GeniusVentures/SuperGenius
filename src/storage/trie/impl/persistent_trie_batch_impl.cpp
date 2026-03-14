@@ -1,5 +1,3 @@
-
-
 #include "storage/trie/impl/persistent_trie_batch_impl.hpp"
 
 #include "scale/scale.hpp"

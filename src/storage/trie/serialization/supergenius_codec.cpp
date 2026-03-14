@@ -1,5 +1,3 @@
-
-
 #include "storage/trie/serialization/supergenius_codec.hpp"
 
 #include <crypto/blake2/blake2b.h>

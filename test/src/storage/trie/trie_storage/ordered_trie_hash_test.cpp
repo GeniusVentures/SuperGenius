@@ -1,5 +1,3 @@
-
-
 #include "storage/trie/serialization/ordered_trie_hash.hpp"
 
 #include <gtest/gtest.h>

@@ -1,5 +1,3 @@
-
-
 #include "scale/scale.hpp"
 
 #include <gtest/gtest.h>

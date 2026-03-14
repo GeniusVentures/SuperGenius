@@ -1,5 +1,3 @@
-
-
 #include <gtest/gtest.h>
 
 #include "storage/changes_trie/impl/storage_changes_tracker_impl.hpp"

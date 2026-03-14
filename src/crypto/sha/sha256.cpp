@@ -1,5 +1,3 @@
-
-
 #include "crypto/sha/sha256.hpp"
 
 #include <openssl/evp.h>

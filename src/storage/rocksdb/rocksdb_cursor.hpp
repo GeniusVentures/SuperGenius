@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_rocksdb_CURSOR_HPP
 #define SUPERGENIUS_rocksdb_CURSOR_HPP
 

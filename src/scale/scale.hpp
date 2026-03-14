@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_SCALE_HPP
 #define SUPERGENIUS_SCALE_HPP
 

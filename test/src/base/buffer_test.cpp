@@ -1,5 +1,3 @@
-
-
 #include "base/buffer.hpp"
 
 #include <gtest/gtest.h>

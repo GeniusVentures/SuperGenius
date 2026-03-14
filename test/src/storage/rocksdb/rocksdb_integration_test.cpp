@@ -1,5 +1,3 @@
-
-
 #include "testutil/storage/base_rocksdb_test.hpp"
 
 #include <array>

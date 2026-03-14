@@ -1,5 +1,3 @@
-
-
 #include "scale/scale_encoder_stream.hpp"
 
 #include "base/outcome_throw.hpp"
