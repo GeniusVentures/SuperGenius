@@ -42,9 +42,7 @@ TEST_F( PriceRetrievalTest, GetCurrentPrice )
     sgns::CoinGeckoPriceRetriever retriever; // Genius token ID on CoinGecko
     std::vector<std::string>      tokenIds;
     tokenIds.push_back( "genius-ai" );
-    //tokenIds.push_back("bitcoin");
     auto prices = retriever.getCurrentPrices( tokenIds );
-    //std::string symbol = retriever.getTokenSymbol();
     for ( const auto &[token, price] : prices.value() )
     {
         std::cout << token << ": $" << std::fixed << std::setprecision( 4 ) << price << std::endl;

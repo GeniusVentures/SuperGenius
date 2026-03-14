@@ -475,12 +475,6 @@ namespace sgns::crdt
         auto broadcasterNextResult = broadcaster_->Next();
         if ( broadcasterNextResult.has_failure() )
         {
-            if ( broadcasterNextResult.error().value() !=
-                 static_cast<int>( Broadcaster::ErrorCode::ErrNoMoreBroadcast ) )
-            {
-                // logger_->debug("Failed to get next broadcaster (error code " +
-                //                std::to_string(broadcasterNextResult.error().value()) + ")");
-            }
             return;
         }
 

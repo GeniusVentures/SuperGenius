@@ -57,38 +57,6 @@ namespace sgns::processing
         outcome::result<SGProcessing::SubTaskResult> ProcessSubTask( const SGProcessing::SubTask &subTask,
                                                                      uint32_t initialHashCode ) override;
 
-        // Register an available processor.
-        //void RegisterProcessorFactory(const std::string& name, std::function<std::unique_ptr<ProcessingProcessor>()> factoryFunction) {
-        //    m_processorFactories[name] = std::move( factoryFunction );
-        //}
-
-        // Set the current processor by name.
-        // bool SetProcessorByName(const std::string& name) {
-        //     auto factoryFunction = m_processorFactories.find(name);
-        //     if (factoryFunction != m_processorFactories.end()) {
-        //         m_processor = factoryFunction->second();
-        //         return true;
-        //     }
-        //     std::cerr << "Unknown processor name: " << name << std::endl;
-        //     return false;
-        // }
-
-        //bool CheckRegisteredProcessor(const std::string& name)
-        // {
-        //     auto factoryFunction = m_processorFactories.find(name);
-        //     if (factoryFunction == m_processorFactories.end())
-        //     {
-        //         return false;
-        //     }
-        //     else
-        //     {
-        //         return true;
-        //     }
-        // }
-
-        // Get processing type from json data to set processor.
-        // bool SetProcessingTypeFromJson(std::string jsondata) override;
-
         /** Get current processing progress.
         * @return Progress percentage (0.0 to 100.0).
         */
@@ -100,10 +68,7 @@ namespace sgns::processing
     private:
         std::shared_ptr<sgns::crdt::GlobalDB> m_db;
         TokenID                               m_tokenId;
-        //std::unique_ptr<ProcessingProcessor> m_processor;
-        //std::unordered_map<std::string, std::function<std::unique_ptr<ProcessingProcessor>()>> m_processorFactories;
-        //size_t m_subTaskProcessingTime;
-        size_t m_maximalProcessingSubTaskCount;
+        size_t                                m_maximalProcessingSubTaskCount;
 
         std::mutex m_subTaskCountMutex;
         size_t     m_processingSubTaskCount;

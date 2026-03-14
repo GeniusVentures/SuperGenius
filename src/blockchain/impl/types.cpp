@@ -23,8 +23,6 @@ namespace sgns::blockchain
             id,
             []( const primitives::BlockNumber &n )
             {
-                //auto key = prependPrefix(NumberToBuffer(n),
-                //                         prefix::Prefix::ID_TO_LOOKUP_KEY);
                 return base::Buffer{}.put( std::to_string( n ) );
             },
             [&db]( const base::Hash256 &hash ) { return db.Get( { hash.toReadableString() } ); } );

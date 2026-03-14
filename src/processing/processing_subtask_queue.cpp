@@ -5,7 +5,6 @@
 
 namespace sgns::processing
 {
-    ////////////////////////////////////////////////////////////////////////////////
     ProcessingSubTaskQueue::ProcessingSubTaskQueue( std::string localNodeId, TimestampProvider timestampProvider ) :
         m_localNodeId( std::move( localNodeId ) ), m_queue( nullptr ), m_timestampProvider( timestampProvider )
     {
@@ -256,7 +255,6 @@ namespace sgns::processing
             // Get the first request
             auto request = m_queue->ownership_requests( 0 );
 
-            // Remove it from the queue (by moving all others up)
             for ( int i = 0; i < m_queue->ownership_requests_size() - 1; i++ )
             {
                 m_queue->mutable_ownership_requests( i )->CopyFrom( m_queue->ownership_requests( i + 1 ) );
@@ -272,5 +270,3 @@ namespace sgns::processing
     }
 
 }
-
-////////////////////////////////////////////////////////////////////////////////

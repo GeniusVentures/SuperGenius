@@ -191,17 +191,8 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
                                       false  // not processor
     );
 
-    // auto node_regular_2 = CreateNode( "regular_node_with_auth_2",
-    //                                   "0xcafe",
-    //                                   "1.0",
-    //                                   sgns::TokenID::FromBytes( { 0x00 } ),
-    //                                   false, // not full node
-    //                                   true   // is processor
-    // );
-
     std::cout << "Full node address: " << node_full->GetAddress() << std::endl;
     std::cout << "Regular node 1 address: " << node_regular_1->GetAddress() << std::endl;
-    //std::cout << "Regular node 2 address: " << node_regular_2->GetAddress() << std::endl;
 
     node_regular_1->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
 
@@ -209,8 +200,6 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
 
     // Connect nodes to each other for pubsub communication
     std::cout << "Connecting nodes..." << std::endl;
-
-    //node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
 
     // Allow time for connections to establish and genesis block to be created/propagated
     std::cout << "Waiting for genesis block creation and propagation..." << std::endl;
@@ -229,17 +218,11 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
         std::chrono::milliseconds( 30000 ),
         "node_regular_1 not ready" );
 
-    // test::assertWaitForCondition(
-    //     [&]() { return node_regular_2->GetTransactionManagerState() == TransactionManager::State::READY; },
-    //     std::chrono::milliseconds( 30000 ),
-    //     "node_regular_2 not ready" );
-
     std::cout << "All nodes are ready and synchronized!" << std::endl;
 
     // Verify that all nodes have the same authorized address configured
     ASSERT_EQ( node_full->GetAuthorizedFullNodeAddress(), full_node_pub_address );
     ASSERT_EQ( node_regular_1->GetAuthorizedFullNodeAddress(), full_node_pub_address );
-    //ASSERT_EQ( node_regular_2->GetAuthorizedFullNodeAddress(), authorized_address );
 
     std::cout << "=== With Authorization Can Sync Test Completed Successfully ===" << std::endl;
 }

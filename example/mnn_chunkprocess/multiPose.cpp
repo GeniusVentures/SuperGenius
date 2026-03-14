@@ -49,15 +49,6 @@ void MNNProcess( const std::vector<uint8_t> &imgdata,
 {
     std::vector<uint8_t> ret_vect( imgdata );
 
-    // Get Target Width
-    //const int targetWidth = static_cast<int>((float)origwidth / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
-    //const int targetHeight = static_cast<int>((float)origheight / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
-
-    // Scale
-    //CV::Point scale;
-    //scale.fX = (float)origwidth / (float)targetWidth;
-    //scale.fY = (float)origheight / (float)targetHeight;
-
     // Create net and session
     const void *buffer = static_cast<const void *>( modelFile.data() );
     auto mnnNet = std::shared_ptr<MNN::Interpreter>( MNN::Interpreter::createFromBuffer( buffer, modelFile.size() ) );
@@ -95,7 +86,6 @@ void MNNProcess( const std::vector<uint8_t> &imgdata,
         CV::Matrix trans;
 
         // Dst -> [0, 1]
-        //trans.postScale( 1.0 / targetWidth, 1.0 / targetHeight );
         //[0, 1] -> Src
         trans.postScale( origwidth, origheight );
 

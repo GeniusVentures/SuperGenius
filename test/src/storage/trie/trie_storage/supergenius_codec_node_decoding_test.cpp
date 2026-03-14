@@ -22,11 +22,6 @@ struct NodeDecodingTest : public ::testing::TestWithParam<std::shared_ptr<SuperG
     {
         return out;
     }
-
-    //    friend std::ostream &operator<<(std::ostream &out, const NodeEncodingTest &test_struct)
-    // {
-    //   return out;
-    // }
 };
 
 std::ostream &operator<<( std::ostream &out, const boost::optional<class sgns::base::Buffer> &test_struct )

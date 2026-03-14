@@ -204,7 +204,7 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
                                                  node50->GetAddress(),
                                                  t.tokenId,
                                                  std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
-        ASSERT_TRUE( transferRes.has_value() ); // << "Transfer failed for " << t.tokenId;
+        ASSERT_TRUE( transferRes.has_value() );
         auto [txHash, duration] = transferRes.value();
         std::cout << "Transferred " << t.amount << " of " << t.tokenId << " in " << duration << " ms\n";
 
@@ -447,7 +447,7 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
                                      "",
                                      tm.tokenId,
                                      std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
-        ASSERT_TRUE( res.has_value() ); // << "MintTokens failed for token=" << tm.tokenId << " amount=" << tm.amount;
+        ASSERT_TRUE( res.has_value() );
 
         expectedTotals[tm.tokenId] += tm.amount;
         totalMinted                += tm.amount;
@@ -458,7 +458,7 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
         const auto &id       = entry.first;
         uint64_t    expected = initialBalances[id] + entry.second;
         uint64_t    balance  = node->GetBalance( id );
-        EXPECT_EQ( balance, expected ); // << "Balance mismatch for " << id;
+        EXPECT_EQ( balance, expected );
     }
 
     uint64_t mainBalance = node->GetBalance();

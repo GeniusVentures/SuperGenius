@@ -211,7 +211,6 @@ int main( int argc, char *argv[] )
     }
 
     auto loggerPubSub = sgns::base::createLogger( "GossipPubSub" );
-    //loggerPubSub->set_level(spdlog::level::trace);
 
     auto loggerProcessingEngine = sgns::base::createLogger( "ProcessingEngine" );
     loggerProcessingEngine->set_level( spdlog::level::trace );
@@ -283,9 +282,6 @@ int main( int argc, char *argv[] )
     {
         SGProcessing::Task task;
         task.set_ipfs_block_id( "IPFS_BLOCK_ID_1" );
-        //task.set_block_len(1000);
-        //task.set_block_line_stride(2);
-        //task.set_block_stride(4);
         task.set_random_seed( 0 );
         task.set_results_channel( "RESULT_CHANNEL_ID_1" );
         tasks.push_back( std::move( task ) );

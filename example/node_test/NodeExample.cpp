@@ -678,7 +678,6 @@ int main( int argc, char *argv[] )
     std::string eth_private_key = generate_eth_private_key();
     std::cout << "Generated Ethereum Private Key: " << eth_private_key << std::endl;
 
-    //sgns::Blockchain::SetAuthorizedFullNodeAddress( "a62f83ab9f2de6ac95e2336053aea94f8fab10dfb8d3043efe64c3f4e565cfcc2c5aacd6d6092682b8de8383444f746d150b3f7891ed46c9050502ed4b6898a6" );
     auto node_instance =
         sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, is_processor, 40101, is_full_node, use_upnp );
 
@@ -688,8 +687,6 @@ int main( int argc, char *argv[] )
     {
         input_thread = std::thread( keyboard_input_thread );
     }
-
-    //status_thread = std::thread( status_polling_thread, node_instance );
 
     if ( terminal_mode )
     {

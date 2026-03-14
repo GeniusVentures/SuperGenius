@@ -44,7 +44,6 @@ namespace sgns::processing
         {
             --m_processingSubTaskCount;
             return outcome::failure( Error::GLOBALDB_READ_ERROR );
-            //task.ParseFromArray(element, element.second.size());
         }
         SGProcessing::Task task;
 

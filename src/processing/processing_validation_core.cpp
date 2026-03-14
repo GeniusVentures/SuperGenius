@@ -79,7 +79,6 @@ namespace sgns::processing
                             std::make_pair( subTask.chunkstoprocess( chunkIdx ).SerializeAsString(),
                                             std::vector<uint8_t>() ) );
                         const std::string &chunkHashBytes = itResult->second.chunk_hashes( chunkIdx );
-                        //it.first->second.push_back(itResult->second.chunk_hashes(chunkIdx));
                         it.first->second.insert( it.first->second.end(), chunkHashBytes.begin(), chunkHashBytes.end() );
                     }
                 }

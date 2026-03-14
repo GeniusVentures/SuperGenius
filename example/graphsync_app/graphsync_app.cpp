@@ -88,19 +88,6 @@ public:
         sgns::ipfs_lite::ipfs::graphsync::Extension do_not_send_cids_extension =
             sgns::ipfs_lite::ipfs::graphsync::encodeDontSendCids( cids );
         extensions.push_back( do_not_send_cids_extension );
-        // unused code , request_ is deleted because Subscription have deleted copy-constructor and operator
-        // requests_.push_back(graphsync_->makeRequest(peer,
-        //                                             std::move(address),
-        //                                             root_cid,
-        //                                             {},
-        //                                             extensions,
-        //                                             requestProgressCallback()));
-        // Subscription subscription = graphsync_->makeRequest(peer,
-        //                                             std::move(address),
-        //                                             root_cid,
-        //                                             {},
-        //                                             extensions,
-        //                                             requestProgressCallback());
 
         boost::optional<std::vector<libp2p::multi::Multiaddress>> addresses;
         if ( address )
@@ -115,8 +102,6 @@ public:
                                                     {},
                                                     extensions,
                                                     requestProgressCallback() ) ) ) ) );
-
-        //-------------------------------------------------------------------------------------
 
         ++requests_sent;
     }
@@ -171,7 +156,7 @@ private:
     sgns::ipfs_lite::ipfs::graphsync::Graphsync::BlockCallback block_cb_;
 
     // keeping subscriptions alive, otherwise they cancel themselves
-    // class Subscription have non-copyable constructor and operator, so it can not be used in std::vector
+    // class Subscription have non-copyable constructor and operator, so it can not be used in 
     // std::vector<Subscription> requests_;
 
     std::vector<std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Subscription>> requests_;
@@ -250,7 +235,6 @@ void RunIpfsServer()
     server.listen( listen_to );
 
     std::thread t_server( [&]() { io_server->run(); } );
-    //runEventLoop(io_server, run_time_msec);
 
     t_server.join();
 
@@ -311,7 +295,6 @@ void RunIpfsClient( std::string remote )
         } );
 
     std::thread t_client( [&]() { io_client->run(); } );
-    //runEventLoop(io_client, run_time_msec);
 
     t_client.join();
 

@@ -140,11 +140,7 @@ int main( int argc, char **argv )
 
     std::ostringstream streamDisplayDetails;
     // @todo fix commented output
-    //streamDisplayDetails << "\n\n\nPeer ID: " << peerID.toBase58() << std::endl;
-    //streamDisplayDetails << "Listen address: " << pubsub->GetLocalAddress() << std::endl;
-    //streamDisplayDetails << "DAG syncer address: " << listen_to.getStringAddress() << std::endl;
     streamDisplayDetails << "Broadcast channel: " << broadcastChannel << std::endl;
-    //streamDisplayDetails << "Data folder: " << strDatabasePathAbsolute << std::endl;
     streamDisplayDetails << std::endl;
     streamDisplayDetails << "Ready!" << std::endl;
     streamDisplayDetails << std::endl;

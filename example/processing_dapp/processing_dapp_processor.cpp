@@ -43,7 +43,6 @@ namespace
                 {
                     // Reset the counter to allow processing restart
                     m_processingSubTaskCount = 0;
-                    //throw std::runtime_error("Maximal number of processed subtasks exceeded");
                     return outcome::failure( boost::system::error_code{} );
                 }
             }
@@ -221,7 +220,6 @@ int main( int argc, char *argv[] )
     libp2p::log::setLoggingSystem( logging_system );
 
     auto loggerPubSub = libp2p::log::createLogger( "GossipPubSub" );
-    //loggerPubSub->set_level(spdlog::level::trace);
 
     auto loggerProcessingEngine = sgns::base::createLogger( "ProcessingEngine" );
     loggerProcessingEngine->set_level( spdlog::level::trace );

@@ -46,10 +46,10 @@ namespace
     };
 
     /**
- * @given A node is subscribed to result channel
- * @when A result is published to the channel
- * @then The node receives the result
- */
+    * @given A node is subscribed to result channel
+    * @when A result is published to the channel
+    * @then The node receives the result
+    */
     TEST_F( PubsubCounts, CheckSubscriptionCount )
     {
         auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
@@ -70,9 +70,7 @@ namespace
         sgns::ipfs_pubsub::GossipPubSubTopic resultChannel2( pubs2, "CountTest" );
         resultChannel2.Subscribe( []( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message ) {},
                                   true );
-        //resultChannel2.Publish();
         std::this_thread::sleep_for( std::chrono::milliseconds( 3000 ) );
-        //std::string test = "CountTest";
         std::cout << "Count Of peers: " << resultChannel.getPeerCount() << std::endl;
         std::cout << "Count Of peers: " << resultChannel2.getPeerCount() << std::endl;
         ASSERT_EQ( resultChannel.getPeerCount(), resultChannel2.getPeerCount() );

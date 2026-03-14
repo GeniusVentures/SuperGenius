@@ -258,10 +258,6 @@ namespace sgns
         std::uint32_t shared_size        = static_cast<std::uint32_t>( print_kind );
         std::uint32_t public_input_size  = table_proxy.public_inputs_amount();
         std::uint32_t usable_rows_amount = GetUsableRowsAmount( table_proxy, print_kind );
-        //std::uint32_t total_columns      = table_proxy.witnesses_amount() + shared_size +
-        //                              table_proxy.public_inputs_amount() + table_proxy.selectors_amount() +
-        //                              table_proxy.selectors_amount();
-
         std::uint32_t padded_rows_amount = std::pow( 2, std::ceil( std::log2( usable_rows_amount ) ) );
         if ( padded_rows_amount == usable_rows_amount )
         {

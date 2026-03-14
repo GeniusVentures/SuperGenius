@@ -1438,8 +1438,6 @@ namespace sgns
                     // Only return error if we have no data at all
                     return newPricesResult.error();
                 }
-                // Otherwise, continue with partial data and log the error
-                // log("Failed to fetch prices for some tokens: " + newPricesResult.error().message());
             }
         }
 

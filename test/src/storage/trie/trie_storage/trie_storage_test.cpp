@@ -64,7 +64,5 @@ namespace sgns::storage
         ASSERT_EQ( v2, "def"_buf );
         EXPECT_OUTCOME_TRUE( v3, batch->get( "678"_buf ) );
         ASSERT_EQ( v3, "xyz"_buf );
-
-        //boost::filesystem::remove_all("supergenius_rocksdb_persistency_test");
     }
 }

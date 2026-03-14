@@ -1380,7 +1380,6 @@ namespace sgns
     outcome::result<void> Blockchain::Stop()
     {
         logger_->info( "[{}] Stopping blockchain", account_->GetAddress().substr( 0, 8 ) );
-        //db_->RemoveListenTopic( std::string( BLOCKCHAIN_TOPIC ) );
         return outcome::success();
     }
 

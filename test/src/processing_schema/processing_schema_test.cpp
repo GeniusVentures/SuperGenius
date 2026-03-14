@@ -127,7 +127,6 @@ namespace sgns
         }
 
         // Test metadata
-        //ASSERT_TRUE( processing.get_metadata().has_value() );
         auto metadata = processing.get_metadata().value();
         ASSERT_TRUE( metadata.find( "created_date" ) != metadata.end() );
         ASSERT_TRUE( metadata.find( "framework" ) != metadata.end() );
@@ -150,7 +149,6 @@ namespace sgns
         std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
         std::string data_path = bin_path + "./processing_schema/";
 
-        // Load JSON missing required field (inputs)
         std::string   instance_file = data_path + "missing-inputs-definition.json";
         std::ifstream instance_stream( instance_file );
         ASSERT_TRUE( instance_stream.is_open() ) << "Failed to open missing-inputs file: " << instance_file;

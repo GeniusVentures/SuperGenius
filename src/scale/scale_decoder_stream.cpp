@@ -146,7 +146,6 @@ namespace sgns::scale
 
     uint8_t ScaleDecoderStream::nextByte()
     {
-        // if (! hasMore(1)) {
         if ( !hasMore( 1 ) )
         {
             base::raise( DecodeError::NOT_ENOUGH_DATA );

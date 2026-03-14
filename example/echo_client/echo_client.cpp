@@ -101,7 +101,6 @@ int main( int argc, char *argv[] )
             {
                 std::string strMessage( reinterpret_cast<const char *>( message->data.data() ), message->data.size() );
                 std::cout << strMessage << std::endl;
-                //pubsub->Publish(topicName, std::vector<uint8_t>(message.begin(), message.end()));
             }
         } );
 

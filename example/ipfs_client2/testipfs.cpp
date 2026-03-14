@@ -52,7 +52,9 @@ class Session : public std::enable_shared_from_this<Session>
 {
 public:
     explicit Session( std::shared_ptr<libp2p::connection::Stream> stream ) :
-        stream_( std::move( stream ) ), incoming_( std::make_shared<std::vector<uint8_t>>( 1 << 12 ) ){};
+        stream_( std::move( stream ) ), incoming_( std::make_shared<std::vector<uint8_t>>( 1 << 12 ) )
+    {
+    }
 
     bool read()
     {
@@ -236,11 +238,6 @@ int main( int argc, char *argv[] )
     }
 
     libp2p::log::setLoggingSystem( logging_system );
-    //if (std::getenv("TRACE_DEBUG") != nullptr) {
-    //  libp2p::log::setLevelOfGroup("main", soralog::Level::TRACE);
-    //} else {
-    //  libp2p::log::setLevelOfGroup("main", soralog::Level::ERROR_);
-    //}
 
     // resulting PeerId should be
     // 12D3KooWEgUjBV5FJAuBSoNMRYFRHjV7PjZwRQ7b43EKX9g7D6xV
@@ -263,35 +260,26 @@ int main( int argc, char *argv[] )
     kademlia_config.requestConcurency   = 20;
 
     auto injector = libp2p::injector::makeHostInjector(
-        // libp2p::injector::useKeyPair(kp), // Use predefined keypair
         libp2p::injector::makeKademliaInjector( libp2p::injector::useKademliaConfig( kademlia_config ) ) );
 
     try
     {
-        //if (argc < 2) {
-        //  std::cerr << "Needs one argument - address" << std::endl;
-        //  exit(EXIT_FAILURE);
-        //}
-
         auto bootstrap_nodes = []
         {
             std::vector<std::string> addresses = {
-                // clang-format off
-          "/dnsaddr/bootstrap.libp2p.io/ipfs/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
-          "/dnsaddr/bootstrap.libp2p.io/ipfs/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa",
-          "/dnsaddr/bootstrap.libp2p.io/ipfs/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
-          "/dnsaddr/bootstrap.libp2p.io/ipfs/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
-          "/ip4/104.131.131.82/tcp/4001/ipfs/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ",            // mars.i.ipfs.io
-          "/ip4/104.236.179.241/tcp/4001/ipfs/QmSoLPppuBtQSGwKDZT2M73ULpjvfd3aZ6ha4oFGL1KrGM",           // pluto.i.ipfs.io
-          "/ip4/128.199.219.111/tcp/4001/ipfs/QmSoLSafTMBsPKadTEgaXctDQVcqN88CNLHXMkTNwMKPnu",           // saturn.i.ipfs.io
-          "/ip4/104.236.76.40/tcp/4001/ipfs/QmSoLV4Bbm51jM9C4gDYZQ9Cy3U6aXMJDAbzgu2fzaDs64",             // venus.i.ipfs.io
-          "/ip4/178.62.158.247/tcp/4001/ipfs/QmSoLer265NRgSp2LA3dPaeykiS1J6DifTC88f5uVQKNAd",            // earth.i.ipfs.io
-          "/ip6/2604:a880:1:20::203:d001/tcp/4001/ipfs/QmSoLPppuBtQSGwKDZT2M73ULpjvfd3aZ6ha4oFGL1KrGM",  // pluto.i.ipfs.io
-          "/ip6/2400:6180:0:d0::151:6001/tcp/4001/ipfs/QmSoLSafTMBsPKadTEgaXctDQVcqN88CNLHXMkTNwMKPnu",  // saturn.i.ipfs.io
-          "/ip6/2604:a880:800:10::4a:5001/tcp/4001/ipfs/QmSoLV4Bbm51jM9C4gDYZQ9Cy3U6aXMJDAbzgu2fzaDs64", // venus.i.ipfs.io
-          "/ip6/2a03:b0c0:0:1010::23:1001/tcp/4001/ipfs/QmSoLer265NRgSp2LA3dPaeykiS1J6DifTC88f5uVQKNAd", // earth.i.ipfs.io
-          //"/ip4/127.0.0.1/tcp/4001/p2p/12D3KooWFMdNiBFk5ojGNzWjqSTL1HGLu8rXns5kwqUPTrbFNtEN",
-                // clang-format on
+                "/dnsaddr/bootstrap.libp2p.io/ipfs/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
+                "/dnsaddr/bootstrap.libp2p.io/ipfs/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa",
+                "/dnsaddr/bootstrap.libp2p.io/ipfs/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
+                "/dnsaddr/bootstrap.libp2p.io/ipfs/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
+                "/ip4/104.131.131.82/tcp/4001/ipfs/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ",  // mars.i.ipfs.io
+                "/ip4/104.236.179.241/tcp/4001/ipfs/QmSoLPppuBtQSGwKDZT2M73ULpjvfd3aZ6ha4oFGL1KrGM", // pluto.i.ipfs.io
+                "/ip4/128.199.219.111/tcp/4001/ipfs/QmSoLSafTMBsPKadTEgaXctDQVcqN88CNLHXMkTNwMKPnu", // saturn.i.ipfs.io
+                "/ip4/104.236.76.40/tcp/4001/ipfs/QmSoLV4Bbm51jM9C4gDYZQ9Cy3U6aXMJDAbzgu2fzaDs64",   // venus.i.ipfs.io
+                "/ip4/178.62.158.247/tcp/4001/ipfs/QmSoLer265NRgSp2LA3dPaeykiS1J6DifTC88f5uVQKNAd",  // earth.i.ipfs.io
+                "/ip6/2604:a880:1:20::203:d001/tcp/4001/ipfs/QmSoLPppuBtQSGwKDZT2M73ULpjvfd3aZ6ha4oFGL1KrGM", // pluto.i.ipfs.io
+                "/ip6/2400:6180:0:d0::151:6001/tcp/4001/ipfs/QmSoLSafTMBsPKadTEgaXctDQVcqN88CNLHXMkTNwMKPnu", // saturn.i.ipfs.io
+                "/ip6/2604:a880:800:10::4a:5001/tcp/4001/ipfs/QmSoLV4Bbm51jM9C4gDYZQ9Cy3U6aXMJDAbzgu2fzaDs64", // venus.i.ipfs.io
+                "/ip6/2a03:b0c0:0:1010::23:1001/tcp/4001/ipfs/QmSoLer265NRgSp2LA3dPaeykiS1J6DifTC88f5uVQKNAd", // earth.i.ipfs.io
             };
 
             std::unordered_map<libp2p::peer::PeerId, std::vector<libp2p::multi::Multiaddress>> addresses_by_peer_id;
@@ -315,7 +303,6 @@ int main( int argc, char *argv[] )
             return v;
         }();
 
-        //auto ma = libp2p::multi::Multiaddress::create(argv[1]).value();  // NOLINT
         auto ma = libp2p::multi::Multiaddress::create( "/ip4/127.0.0.1/tcp/40000" ).value();
         auto io = injector.create<std::shared_ptr<boost::asio::io_context>>();
 
@@ -335,13 +322,8 @@ int main( int argc, char *argv[] )
             host->getNetwork().getConnectionManager(),
             *identityManager,
             keyMarshaller );
-        //auto identify = std::make_shared<libp2p::protocol::Identify>(*host, identifyMessageProcessor, host->getBus());
-        // Handle streams for observed protocol
-        //host->setProtocolHandler("/chat/1.0.0", handleIncomingStream);
-        //host->setProtocolHandler("/chat/1.1.0", handleIncomingStream);
 
         // Key for group of chat
-        //libp2p::protocol::kademlia::ContentId content_id("QmSnuWmxptJZdLJpKRarxBMS2Ju2oANVrgbr2xWbie9b2D");
         auto cid = libp2p::multi::ContentIdentifierCodec::fromString( "QmSnuWmxptJZdLJpKRarxBMS2Ju2oANVrgbr2xWbie9b2D" )
                        .value();
         auto content_id = libp2p::protocol::kademlia::ContentId::fromWire(
@@ -369,7 +351,6 @@ int main( int argc, char *argv[] )
                     auto &providers = res.value();
                     for ( auto &provider : providers )
                     {
-                        //  host->newStream(provider, "/chat/1.1.0", handleOutgoingStream);
                         std::cout << "provider" << std::endl;
                     }
                 } );
@@ -398,47 +379,15 @@ int main( int argc, char *argv[] )
                 {
                     kademlia->addPeer( bootstrap_node, true );
                 }
-                //identify->start();
                 host->start();
-
-                //auto cid = libp2p::multi::ContentIdentifierCodec::decode(content_id.data)
-                //               .value();
-                //auto peer_id =
-                //   libp2p::peer::PeerId::fromHash(cid.content_address).value();
-
-                //[[maybe_unused]] auto res = kademlia->findPeer(peer_id, [&](auto) {
-                // Say to world about his providing
-                //provide();
 
                 // Ask provider from world
                 find_providers();
 
                 kademlia->start();
-                //});
             } );
 
-        //boost::asio::posix::stream_descriptor in(*io, ::dup(STDIN_FILENO));
         std::array<uint8_t, 1 << 12> buffer{};
-
-        // Asynchronous transmit data from standard input to peers, that's privided
-        // same content id
-        //std::function<void()> read_from_console = [&] {
-        //  in.async_read_some(boost::asio::buffer(buffer), [&](auto ec, auto size) {
-        //    auto i = std::find_if(buffer.begin(), buffer.begin() + size + 1,
-        //                          [](auto c) { return c == '\n'; });
-
-        //    if (i != buffer.begin() + size + 1) {
-        //      auto out = std::make_shared<std::vector<uint8_t>>();
-        //      out->assign(buffer.begin(), buffer.begin() + size);
-
-        //      for (const auto &session : sessions) {
-        //        session->write(out);
-        //      }
-        //    }
-        //    read_from_console();
-        //  });
-        //};
-        //read_from_console();
 
         boost::asio::signal_set signals( *io, SIGINT, SIGTERM );
         signals.async_wait( [&io]( const boost::system::error_code &, int ) { io->stop(); } );

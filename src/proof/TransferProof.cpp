@@ -125,18 +125,6 @@ namespace sgns
         public_inputs_json_array.push_back( GenerateCurveParameter( ( balance_ - amount_ ) * generator ) );
         public_inputs_json_array.push_back( GenerateCurveParameter( generator ) ); //GENERATOR
         public_inputs_json_array.push_back( GenerateArrayParameter( ranges ) );
-        //private_inputs_json_array.push_back( GenerateFieldParameter( base_seed ) );
-        //private_inputs_json_array.push_back( GenerateFieldParameter( provided_totp ) );
-
-        //boost::json::value json_value = public_inputs_json_array;
-
-        //// Print the JSON structure
-        //std::cout << boost::json::serialize( json_value ) << std::endl;
-
-        //boost::json::value json_value2 = private_inputs_json_array;
-
-        //// Print the JSON structure
-        //std::cout << boost::json::serialize( json_value2 ) << std::endl;
 
         return std::make_pair( public_inputs_json_array, private_inputs_json_array );
     }
@@ -205,18 +193,7 @@ namespace sgns
         public_inputs_json_array.push_back( GenerateCurveParameter( new_balance_commitment ) );
         public_inputs_json_array.push_back( GenerateCurveParameter( generator ) );
         public_inputs_json_array.push_back( GenerateArrayParameter( ranges ) );
-        //private_inputs_json_array.push_back( GenerateFieldParameter( 0 ) );
-        //private_inputs_json_array.push_back( GenerateFieldParameter( 0 ) );
-
-        //boost::json::value json_value = public_inputs_json_array;
-        //
-        //// Print the JSON structure
-        //std::cout << boost::json::serialize( json_value ) << std::endl;
-        //
-        //boost::json::value json_value2 = private_inputs_json_array;
-        //
-        //// Print the JSON structure
-        //std::cout << boost::json::serialize( json_value2 ) << std::endl;
+        
         return std::make_pair( public_inputs_json_array, private_inputs_json_array );
     }
 

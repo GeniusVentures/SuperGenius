@@ -33,8 +33,6 @@ namespace sgns
         if ( !kadCID )
         {
             logger_->error( "Wrong CID {}", libp2p::peer::PeerId::fromHash( cid.content_address ).value().toBase58() );
-            // TODO: pass an error to callback
-            //onProvidersFound(ERROR);
         }
         else
         {

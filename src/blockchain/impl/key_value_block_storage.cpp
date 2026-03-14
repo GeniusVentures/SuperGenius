@@ -191,7 +191,6 @@ namespace sgns::blockchain
             to_insert.receipt       = block_data.receipt ? block_data.receipt : existing_data.receipt;
         }
 
-        //OUTCOME_TRY((auto &&, encoded_block_data), scale::encode(to_insert));
         auto encoded_block_data = GetSerializedBlockData( to_insert );
         BOOST_OUTCOME_TRY( auto id_string, idToStringKey( *db_, block_number ) );
         //TODO - For now one block data per block header. Revisit this
@@ -200,22 +199,12 @@ namespace sgns::blockchain
                                        Buffer{ encoded_block_data },
                                        { "topic" } ) );
 
-        //BOOST_OUTCOME_TRYV2(auto &&, putWithPrefix(*db_,
-        //                          Prefix::BLOCK_DATA,
-        //                          block_number,
-        //                          block_data.hash,
-        //                          Buffer{encoded_block_data}));
         return outcome::success();
     }
 
     outcome::result<primitives::BlockHash> KeyValueBlockStorage::putBlock( const primitives::Block &block )
     {
-        // TODO(xDimon): Need to implement mechanism for wipe out orphan blocks
-        //  (in side-chains whom rejected by finalization)
-        //  for avoid leaks of storage space
         auto block_hash = hasher_->blake2b_256( header_repo_->GetHeaderSerializedData( block.header ) );
-        //auto block_in_storage_res =
-        //    getWithPrefix(*db_, Prefix::HEADER, block_hash);
         auto block_in_storage_res = header_repo_->getBlockHeader( block_hash );
         if ( block_in_storage_res.has_value() )
         {
@@ -247,7 +236,6 @@ namespace sgns::blockchain
                                                                   const primitives::BlockNumber   &block_number )
     {
         // insert justification into the database as a part of BlockData
-        // primitives::BlockData block_data{.hash = hash, .justification = j};
         primitives::BlockData block_data;
         block_data.hash          = hash;
         block_data.justification = j;

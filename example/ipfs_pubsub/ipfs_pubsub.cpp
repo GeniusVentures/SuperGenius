@@ -81,8 +81,6 @@ int main( int argc, char *argv[] )
                 receivedMessages.push_back( std::move( message ) );
             }
         } );
-    //std::string message("Hello Pubsub");
-    //pubs.Publish(topic, std::vector<uint8_t>(message.begin(), message.end()));
     auto publishMessage = [&]( GossipPubSub &pubsub )
     {
         std::string message;
@@ -94,7 +92,6 @@ int main( int argc, char *argv[] )
     std::cout << "Choose pubsub to send message (1 for pubs, 2 for pubs2, 3 to quit): ";
     while ( true )
     {
-        //std::cout << "Choose pubsub to send message (1 for pubs, 2 for pubs2, 3 to quit): ";
         int choice;
         std::cin >> choice;
         std::cin.ignore( std::numeric_limits<std::streamsize>::max(), '\n' );

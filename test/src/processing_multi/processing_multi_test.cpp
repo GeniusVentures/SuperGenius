@@ -80,33 +80,18 @@ protected:
 
         bootstrappers = { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() };
         node_proc1->GetPubSub()->AddPeers( bootstrappers );
-
-        // bootstrappers = { node_main->GetPubSub()->GetLocalAddress(), node_proc1->GetPubSub()->GetLocalAddress() };
-        // node_proc2->GetPubSub()->AddPeers( bootstrappers );
     }
 
     static void TearDownTestSuite()
     {
         std::cout << "Tear down main" << std::endl;
         delete node_main;
-        // if ( !std::filesystem::remove_all( DEV_CONFIG.BaseWritePath ) )
-        // {
-        //     std::cerr << "Could not delete main node files\n";
-        // }
 
         std::cout << "Tear down 2" << std::endl;
         delete node_proc1;
-        // if ( !std::filesystem::remove_all( DEV_CONFIG2.BaseWritePath ) )
-        // {
-        //     std::cerr << "Could not delete node 2 files\n";
-        // }
 
         std::cout << "Tear down 3" << std::endl;
         delete node_proc2;
-        // if ( !std::filesystem::remove_all( DEV_CONFIG3.BaseWritePath ) )
-        // {
-        //     std::cerr << "Could not delete node 3 files\n";
-        // }
     }
 };
 
@@ -253,7 +238,6 @@ TEST_F( ProcessingMultiTest, ProcessOne )
     auto balance_main  = node_main->GetBalance();
     auto balance_node1 = node_proc1->GetBalance();
     auto balance_node2 = node_proc2->GetBalance();
-    //node_main->ProcessImage(json_data);
 
     std::this_thread::sleep_for( std::chrono::milliseconds( 40000 ) );
     std::cout << "Balance main (Before):  " << balance_main << std::endl;
@@ -264,14 +248,7 @@ TEST_F( ProcessingMultiTest, ProcessOne )
     std::cout << "Balance node1 (After):  " << node_proc1->GetBalance() << std::endl;
     std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
 
-    // ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
-    //TODO: convert DEV_CONFIG.Cut from string to fixed and use below
-    // ASSERT_EQ( balance_node1 + balance_node2 + ( cost * 65 ) / 100,
-    //            node_proc1->GetBalance() + node_proc2->GetBalance() );
-
     auto gameDeveloperPayment = cost - ( ( cost * 65 ) / 100 );
-    // ASSERT_EQ( balance_main + balance_node1 + balance_node2,
-    //            node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + gameDeveloperPayment );
 }
 
 TEST_F( ProcessingMultiTest, ProcessTwo )
@@ -329,7 +306,6 @@ TEST_F( ProcessingMultiTest, ProcessTwo )
                                   node_proc1->GetPubSub()->GetLocalAddress() };
     node_proc2->GetPubSub()->AddPeers( bootstrappers );
     node_main->ProcessImage( json_data );
-    //node_main->ProcessImage(json_data);
 
     std::this_thread::sleep_for( std::chrono::milliseconds( 40000 ) );
     std::cout << "Balance main (Before):  " << balance_main << std::endl;
@@ -340,12 +316,5 @@ TEST_F( ProcessingMultiTest, ProcessTwo )
     std::cout << "Balance node1 (After):  " << node_proc1->GetBalance() << std::endl;
     std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
 
-    // ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
-    //TODO: convert DEV_CONFIG.Cut from string to fixed and use below
-    // ASSERT_EQ( balance_node1 + balance_node2 + ( cost * 65 ) / 100,
-    //            node_proc1->GetBalance() + node_proc2->GetBalance() );
-
     auto gameDeveloperPayment = cost - ( ( cost * 65 ) / 100 );
-    // ASSERT_EQ( balance_main + balance_node1 + balance_node2,
-    //            node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + gameDeveloperPayment );
 }

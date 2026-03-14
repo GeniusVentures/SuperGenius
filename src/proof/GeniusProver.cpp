@@ -130,16 +130,6 @@ namespace sgns
                                        COMPONENT_CONSTANT_COLUMNS_DEFAULT;
 
         auto pub_input = assignment_table.public_inputs();
-        //auto pub_input = pub_parameters;
-        //for ( auto input_vector : pub_input )
-        //{
-        //    std::cout << "input :";
-        //    for ( auto input : input_vector )
-        //    {
-        //        std::cout << ", " << input;
-        //    }
-        //    std::cout << std::endl;
-        //}
 
         PublicPreprocessedData public_preprocessed_data(
             crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType, PlaceholderParams>::process(
