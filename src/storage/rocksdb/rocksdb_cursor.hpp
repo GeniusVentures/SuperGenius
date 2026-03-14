@@ -40,6 +40,6 @@ namespace sgns::storage
         std::shared_ptr<Iterator> i_;
     };
 
-} // namespace sgns::storage
+}
 
 #endif // SUPERGENIUS_rocksdb_CURSOR_HPP

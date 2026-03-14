@@ -290,4 +290,4 @@ namespace sgns::api
         std::cerr << "Error in " << context << ": " << ec.message() << std::endl;
     }
 
-} // namespace sgns::api  // namespace sgns::api
+}

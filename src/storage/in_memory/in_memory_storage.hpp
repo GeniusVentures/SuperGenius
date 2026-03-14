@@ -49,6 +49,6 @@ namespace sgns::storage
         std::map<std::string, base::Buffer> storage;
     };
 
-} // namespace sgns::storage
+}
 
 #endif // SUPERGENIUS_STORAGE_IN_MEMORY_IN_MEMORY_STORAGE_HPP

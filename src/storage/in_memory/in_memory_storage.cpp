@@ -57,4 +57,4 @@ namespace sgns::storage
     {
         return nullptr;
     }
-} // namespace sgns::storage
+}

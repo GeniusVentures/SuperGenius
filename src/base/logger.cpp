@@ -78,4 +78,4 @@ namespace sgns::base
         }
         return logger;
     }
-} // namespace sgns::base
+}

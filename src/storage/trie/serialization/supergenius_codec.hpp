@@ -72,7 +72,7 @@ namespace sgns::storage::trie
                                                              BufferStream         &stream ) const;
     };
 
-} // namespace sgns::storage::trie
+}
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns::storage::trie, SuperGeniusCodec::Error );
 

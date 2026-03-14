@@ -86,6 +86,6 @@ namespace sgns
         std::deque<std::shared_ptr<IMigrationStep>> steps_;               ///< Queue of registered migration steps.
         base::Logger m_logger = base::createLogger( "MigrationManager" ); ///< Logger instance.
     };
-} // namespace sgns
+}
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns, MigrationManager::Error );

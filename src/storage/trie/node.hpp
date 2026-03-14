@@ -14,6 +14,6 @@ namespace sgns::storage::trie
         virtual int getType() const = 0;
     };
 
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_NODE_HPP

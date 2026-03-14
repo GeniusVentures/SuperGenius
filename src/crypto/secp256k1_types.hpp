@@ -11,7 +11,7 @@ namespace sgns::crypto::secp256k1
         static constexpr size_t kCompressedPublicKeySize   = 33u;
         static constexpr size_t kCompactSignatureSize      = 65u;
         static constexpr size_t kGeneralPublicKeySize      = 64u;
-    } // namespace constants
+    }
 
     using EcdsaVerifyError = uint8_t;
 
@@ -20,7 +20,7 @@ namespace sgns::crypto::secp256k1
         static constexpr EcdsaVerifyError kInvalidRS        = 0;
         static constexpr EcdsaVerifyError kInvalidV         = 1;
         static constexpr EcdsaVerifyError kInvalidSignature = 2;
-    } // namespace ecdsa_verify_error
+    }
 
     /**
    * compressed form of public key

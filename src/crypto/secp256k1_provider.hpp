@@ -35,6 +35,6 @@ namespace sgns::crypto
             const secp256k1::MessageHash  &message_hash ) const = 0;
     };
 
-} // namespace sgns::crypto
+}
 
 #endif

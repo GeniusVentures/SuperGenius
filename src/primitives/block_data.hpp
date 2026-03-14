@@ -77,6 +77,6 @@ namespace sgns::primitives
         return s >> v.hash >> v.header >> v.body >> v.receipt >> v.message_queue >> v.justification;
     }
 
-} // namespace sgns::primitives
+}
 
 #endif // SUPERGENIUS_SRC_PRIMITIVES_BLOCK_DATA_HPP

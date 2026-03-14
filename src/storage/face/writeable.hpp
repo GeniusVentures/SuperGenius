@@ -33,6 +33,6 @@ namespace sgns::storage::face
         virtual outcome::result<void> remove( const K &key ) = 0;
     };
 
-} // namespace sgns::storage::face
+}
 
 #endif // SUPERGENIUS_WRITEABLE_HPP

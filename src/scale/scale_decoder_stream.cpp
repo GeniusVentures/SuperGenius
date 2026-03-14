@@ -156,4 +156,4 @@ namespace sgns::scale
         ++current_index_;
         return *current_iterator_++;
     }
-} // namespace sgns::scale
+}

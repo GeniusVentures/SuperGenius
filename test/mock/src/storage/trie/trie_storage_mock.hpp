@@ -26,6 +26,6 @@ namespace sgns::storage::trie
         MOCK_METHOD0( GetName, std::string() );
     };
 
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_TEST_MOCK_SRC_STORAGE_TRIE_TRIE_DB_MOCK_HPP

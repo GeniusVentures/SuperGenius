@@ -36,6 +36,6 @@ namespace sgns::storage::trie
         virtual outcome::result<std::unique_ptr<SuperGeniusTrie>> retrieveTrie( const base::Buffer &db_key ) const = 0;
     };
 
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_STORAGE_SUPERGENIUS_TRIE_SERIALIZER

@@ -82,4 +82,4 @@ namespace sgns
             return lhs_patch < rhs_patch;
         }
     };
-} // namespace sgns
+}

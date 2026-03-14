@@ -136,4 +136,4 @@ namespace sgns::crdt
 
     void CustomDagSyncer::Stop() {}
 
-} // namespace sgns::crdt
+}

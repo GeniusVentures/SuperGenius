@@ -21,6 +21,6 @@ namespace sgns::verification::finality
         MOCK_CONST_METHOD1( signPrecommit, SignedMessage( const Precommit &precommit ) );
     };
 
-} // namespace sgns::verification::finality
+}
 
 #endif // SUPERGENIUS_TEST_MOCK_SRC_VERIFICATION_FINALITY_VOTE_CRYPTO_PROVIDER_MOCK_HPP

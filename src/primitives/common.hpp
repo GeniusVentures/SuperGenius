@@ -44,10 +44,10 @@ namespace sgns::primitives
         {
             return s >> msg.block_hash >> msg.block_number;
         }
-    } // namespace detail
+    }
 
     using BlockInfo = detail::BlockInfoT<struct BlockInfoTag>;
 
-} // namespace sgns::primitives
+}
 
 #endif // SUPERGENIUS_SRC_PRIMITIVES_COMMON_HPP

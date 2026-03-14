@@ -41,6 +41,6 @@ namespace sgns::storage::trie
         virtual base::Buffer getRootHash() const = 0;
     };
 
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_STORAGE_TRIE_TRIE_STORAGE

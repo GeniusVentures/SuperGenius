@@ -110,4 +110,4 @@ namespace sgns::storage::trie
         return res;
     }
 
-} // namespace sgns::storage::trie
+}

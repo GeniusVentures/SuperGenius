@@ -167,4 +167,4 @@ namespace sgns
         }
     }
 
-} // namespace sgns
+}

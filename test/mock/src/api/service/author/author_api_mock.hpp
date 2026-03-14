@@ -23,6 +23,6 @@ namespace sgns::api
         MOCK_METHOD0( GetName, std::string() );
     };
 
-} // namespace sgns::api
+}
 
 #endif // SUPERGENIUS_TEST_SRC_API_SERVICE_AUTHOR_AUTHOR_API_MOCK_HPP

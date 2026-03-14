@@ -128,4 +128,4 @@ namespace sgns
         TokenAmount( uint64_t minion_units );
     };
 
-} // namespace sgns
+}

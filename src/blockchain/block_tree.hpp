@@ -183,6 +183,6 @@ namespace sgns::blockchain
      */
         [[nodiscard]] virtual primitives::BlockInfo getLastFinalized() const = 0;
     };
-} // namespace sgns::blockchain
+}
 
 #endif // SUPERGENIUS_BLOCK_TREE_HPP

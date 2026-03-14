@@ -19,6 +19,6 @@ namespace sgns::authorship
                      ( const ) );
     };
 
-} // namespace sgns::authorship
+}
 
 #endif // SUPERGENIUS_TEST_MOCK_SRC_AUTHORSHIP_BLOCK_BUILDER_FACTORY_MOCK_HPP

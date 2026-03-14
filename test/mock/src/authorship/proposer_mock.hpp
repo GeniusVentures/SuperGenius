@@ -19,6 +19,6 @@ namespace sgns::authorship
 
         MOCK_METHOD0( GetName, std::string() );
     };
-} // namespace sgns::authorship
+}
 
 #endif // SUPERGENIUS_PROPOSER_MOCK_HPP

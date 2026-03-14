@@ -265,4 +265,4 @@ namespace sgns::storage
         return ret_val;
     }
 
-} // namespace sgns::storage
+}

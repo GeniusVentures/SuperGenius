@@ -121,6 +121,6 @@ namespace sgns::primitives
     {
         return s >> v.spec_name >> v.impl_name >> v.authoring_version >> v.spec_version >> v.impl_version >> v.apis;
     }
-} // namespace sgns::primitives
+}
 
 #endif // SUPERGENIUS_SRC_PRIMITIVES_VERSION_HPP

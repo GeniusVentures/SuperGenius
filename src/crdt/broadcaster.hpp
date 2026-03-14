@@ -59,6 +59,6 @@ namespace sgns::crdt
             return nullptr;
         }
     };
-} // namespace sgns::crdt
+}
 
 #endif // SUPERGENIUS_BROADCASTER_HPP

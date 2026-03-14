@@ -48,6 +48,6 @@ namespace sgns::face
         }
     };
 
-} // namespace sgns::face
+}
 
 #endif // SUPERGENIUS_GENERIC_ITERATOR_HPP

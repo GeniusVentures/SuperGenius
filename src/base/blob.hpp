@@ -228,7 +228,7 @@ namespace sgns::base
         return os << blob.toHex();
     }
 
-} // namespace sgns::base
+}
 
 template <size_t N>
 struct std::hash<sgns::base::Blob<N>>

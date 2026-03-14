@@ -145,6 +145,6 @@ namespace sgns::face
         std::unique_ptr<GenericIterator<Container>> it_;
     };
 
-} // namespace sgns::face
+}
 
 #endif // SUPERGENIUS_GENERIC_LIST_HPP

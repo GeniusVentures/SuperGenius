@@ -50,6 +50,6 @@ namespace sgns::blockchain
         std::string block_header_key_prefix;
     };
 
-} // namespace sgns::blockchain
+}
 
 #endif // SUPERGENIUS_CORE_BLOCKCHAIN_IMPL_KEY_VALUE_BLOCK_HEADER_REPOSITORY_HPP

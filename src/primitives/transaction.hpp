@@ -66,6 +66,6 @@ namespace sgns::primitives
                v1.should_propagate == v2.should_propagate;
     }
 
-} // namespace sgns::primitives
+}
 
 #endif // SUPERGENIUS_TRANSACTION_HPP

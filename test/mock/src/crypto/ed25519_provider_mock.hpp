@@ -24,6 +24,6 @@ namespace sgns::crypto
         MOCK_METHOD0( GetName, std::string() );
     };
 
-} // namespace sgns::crypto
+}
 
 #endif // SUPERGENIUS_TEST_MOCK_CORE_CRYPTO_ED25519_PROVIDER_MOCK_HPP

@@ -84,7 +84,7 @@ namespace sgns::scale::detail
         {
             variant_impl::for_each_apply_impl<0, F, T...>( f );
         }
-    } // namespace variant_impl
+    }
 
     /**
    * @brief encodes boost::variant value
@@ -128,6 +128,6 @@ namespace sgns::scale::detail
         return stream;
     }
 
-} // namespace sgns::scale::detail
+}
 
 #endif // SUPERGENIUS_SCALE_DETAIL_VARIANT_HPP

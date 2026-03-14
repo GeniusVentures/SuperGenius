@@ -26,6 +26,6 @@ namespace sgns::primitives
         return s >> v.is_okay >> v.is_fatal_error >> v.errors;
     }
 
-} // namespace sgns::primitives
+}
 
 #endif // SUPERGENIUS_SRC_PRIMITIVES_CHECK_INHERENTS_RESULT_HPP

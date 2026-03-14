@@ -40,6 +40,6 @@ namespace sgns::crdt
         std::mutex mutex_;
     };
 
-} // namespace sgns::crdt
+}
 
 #endif // SUPERGENIUS_CRDT_CUSTOM_BROADCASTER_HPP

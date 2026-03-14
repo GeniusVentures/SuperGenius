@@ -21,6 +21,6 @@ namespace sgns::runtime
         MOCK_METHOD0( random_seed, outcome::result<base::Hash256>() );
     };
 
-} // namespace sgns::runtime
+}
 
 #endif // SUPERGENIUS_TEST_MOCK_SRC_RUNTIME_BLOCK_BUILDER_API_MOCK_HPP

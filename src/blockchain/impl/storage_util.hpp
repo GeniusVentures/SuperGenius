@@ -107,7 +107,7 @@ namespace sgns::blockchain
    */
     bool isNotFoundError( outcome::result<void> result );
 
-} // namespace sgns::blockchain
+}
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns::blockchain, KeyValueRepositoryError );
 

@@ -38,6 +38,6 @@ namespace sgns::storage::face
         virtual bool empty() const = 0;
     };
 
-} // namespace sgns::storage::face
+}
 
 #endif // SUPERGENIUS_WRITEABLE_KEY_VALUE_HPP

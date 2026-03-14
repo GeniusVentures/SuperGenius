@@ -14,6 +14,6 @@ namespace testutil
 
         MOCK_METHOD1( asyncWait, void( const std::function<void( const std::error_code & )> &h ) );
     };
-} // namespace testutil
+}
 
 #endif // SUPERGENIUS_TIMER_MOCK_HPP

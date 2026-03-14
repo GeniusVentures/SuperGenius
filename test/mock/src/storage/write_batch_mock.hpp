@@ -28,6 +28,6 @@ namespace sgns::storage::face
         MOCK_METHOD1_T( remove, outcome::result<void>( const K &key ) );
     };
 
-} // namespace sgns::storage::face
+}
 
 #endif // SUPERGENIUS_WRITE_BATCH_MOCK_HPP

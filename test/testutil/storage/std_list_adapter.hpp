@@ -144,6 +144,6 @@ namespace test
         std::list<T> list_;
     };
 
-} // namespace test
+}
 
 #endif // SUPERGENIUS_STD_LIST_ADAPTER_HPP

@@ -41,6 +41,6 @@ namespace sgns::storage::trie
     private:
         gsl::span<const uint8_t> data_;
     };
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_SRC_STORAGE_TRIE_BUFFER_STREAM

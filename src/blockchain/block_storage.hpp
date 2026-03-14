@@ -46,6 +46,6 @@ namespace sgns::blockchain
                                                    const primitives::BlockNumber &number ) = 0;
     };
 
-} // namespace sgns::blockchain
+}
 
 #endif // SUPERGENIUS_SRC_BLOCK_STORAGE_HPP

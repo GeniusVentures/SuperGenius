@@ -72,7 +72,7 @@ namespace sgns::scale::detail
         {
             tuple_impl::for_each_apply_impl<0, F, T...>( f );
         }
-    } // namespace tuple_impl
+    }
 
     /**
    * @brief encodes std::tuple value
@@ -106,6 +106,6 @@ namespace sgns::scale::detail
         return stream;
     }
 
-} // namespace sgns::scale::detail
+}
 
 #endif // SUPERGENIUS_SCALE_DETAIL_TUPLE_HPP

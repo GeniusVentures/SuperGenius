@@ -303,4 +303,4 @@ namespace sgns
         OUTCOME_TRY( auto &&convert_res, ScaledInteger::ConvertPrecision( value_, precision_, to ) );
         return outcome::success( ScaledInteger( convert_res, to ) );
     }
-} // namespace sgns
+}

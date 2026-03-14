@@ -62,6 +62,6 @@ namespace sgns::primitives
 
     using ApplyResult = boost::variant<ApplyOutcome, ApplyError>;
 
-} // namespace sgns::primitives
+}
 
 #endif // SUPERGENIUS_SRC_PRIMITIVES_APPLY_RESULT_HPP

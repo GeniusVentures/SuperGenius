@@ -28,6 +28,6 @@ namespace sgns::storage::face
         virtual std::unique_ptr<WriteBatch<K, V>> batch() = 0;
     };
 
-} // namespace sgns::storage::face
+}
 
 #endif // SUPERGENIUS_BATCHABLE_HPP

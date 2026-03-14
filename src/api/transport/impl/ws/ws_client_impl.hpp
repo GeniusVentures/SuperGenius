@@ -65,6 +65,6 @@ namespace sgns::api
         void reportError( const boost::system::error_code &ec, const std::string &context );
     };
 
-} // namespace sgns::api
+}
 
 #endif // WS_CLIENT_IMPL_HPP

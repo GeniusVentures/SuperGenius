@@ -104,7 +104,7 @@ namespace sgns::crypto
             return ED25519ProviderError::VERIFY_UNKNOWN_ERROR;
         }
     }
-} // namespace sgns::crypto
+}
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crypto, ED25519ProviderError, e )
 {

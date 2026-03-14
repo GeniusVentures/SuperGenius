@@ -57,6 +57,6 @@ namespace sgns::storage::trie
         std::shared_ptr<Codec>                  codec_;
         std::shared_ptr<TrieStorageBackend>     backend_;
     };
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_STORAGE_TRIE_SERIALIZER_IMPL

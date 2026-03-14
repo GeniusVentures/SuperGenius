@@ -200,4 +200,4 @@ namespace sgns
         uint64_t precision_;
     };
 
-} // namespace sgns
+}

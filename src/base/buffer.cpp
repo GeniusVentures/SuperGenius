@@ -230,4 +230,4 @@ namespace sgns::base
         return os << buffer.toHex();
     }
 
-} // namespace sgns::base
+}

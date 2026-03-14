@@ -30,6 +30,6 @@ namespace sgns::storage
 
     using BufferMapCursor = face::MapCursor<Buffer, Buffer>;
 
-} // namespace sgns::storage
+}
 
 #endif // SUPERGENIUS_BUFFER_MAP_TYPES_HPP

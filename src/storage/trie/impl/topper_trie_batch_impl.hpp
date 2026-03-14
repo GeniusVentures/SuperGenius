@@ -47,7 +47,7 @@ namespace sgns::storage::trie
         std::weak_ptr<TrieBatch>                  parent_;
     };
 
-} // namespace sgns::storage::trie
+}
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns::storage::trie, TopperTrieBatchImpl::Error );
 

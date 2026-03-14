@@ -43,6 +43,6 @@ namespace sgns::storage::trie
         RootChangedEventHandler                                        root_changed_handler_;
     };
 
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_STORAGE_TRIE_IMPL_PERSISTENT_TRIE_BATCH

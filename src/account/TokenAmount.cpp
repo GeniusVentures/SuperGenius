@@ -134,4 +134,4 @@ namespace sgns
         return outcome::success( minion_fp.Value() );
     }
 
-} // namespace sgns
+}

@@ -63,6 +63,6 @@ namespace sgns::storage::trie
         virtual outcome::result<void> writeBack() = 0;
     };
 
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_STORAGE_TRIE_IMPL_TRIE_BATCH

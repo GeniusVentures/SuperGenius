@@ -14,6 +14,6 @@ namespace sgns::primitives
     /// Block id is the variant over BlockHash and BlockNumber
     using BlockId = boost::variant<BlockHash, BlockNumber>;
 
-} // namespace sgns::primitives
+}
 
 #endif // SUPERGENIUS_SRC_PRIMITIVES_BLOCK_ID_HPP

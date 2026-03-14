@@ -62,6 +62,6 @@ namespace sgns::storage::face
         virtual outcome::result<V> value() const = 0;
     };
 
-} // namespace sgns::storage::face
+}
 
 #endif //SUPERGENIUS_MAP_CURSOR_HPP

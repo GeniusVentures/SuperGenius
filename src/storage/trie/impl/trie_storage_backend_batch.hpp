@@ -36,6 +36,6 @@ namespace sgns::storage::trie
         base::Buffer                                                  node_prefix_;
     };
 
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_STORAGE_TRIE_IMPL_TRIE_STORAGE_BACKEND_BATCH

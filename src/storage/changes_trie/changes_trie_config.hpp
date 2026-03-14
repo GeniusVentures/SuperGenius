@@ -56,6 +56,6 @@ namespace sgns::storage::changes_trie
         s >> config.digest_interval >> config.digest_levels;
         return s;
     }
-} // namespace sgns::storage::changes_trie
+}
 
 #endif // SUPERGENIUS_STORAGE_CHANGES_TRIE_CHANGES_TRIE_CONFIG

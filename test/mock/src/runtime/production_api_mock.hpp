@@ -18,6 +18,6 @@ namespace sgns::runtime
         //                 outcome::result<primitives::ProductionConfiguration>());
     };
 
-} // namespace sgns::runtime
+}
 
 #endif // SUPERGENIUS_TEST_MOCK_SRC_RUNTIME_PRODUCTION_API_MOCK_HPP

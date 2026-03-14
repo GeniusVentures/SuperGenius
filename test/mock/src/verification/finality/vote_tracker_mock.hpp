@@ -24,6 +24,6 @@ namespace sgns::verification::finality
         MOCK_CONST_METHOD1( getJustification, Justification( const BlockInfo & ) );
     };
 
-} // namespace sgns::verification::finality
+}
 
 #endif // SUPERGENIUS_TEST_MOCK_SRC_VERIFICATION_FINALITY_VOTE_TRACKER_MOCK_HPP

@@ -56,6 +56,6 @@ namespace sgns::blockchain
 
         MOCK_METHOD0( GetName, std::string() );
     };
-} // namespace sgns::blockchain
+}
 
 #endif // SUPERGENIUS_BLOCK_TREE_MOCK_HPP

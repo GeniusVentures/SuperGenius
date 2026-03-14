@@ -475,4 +475,4 @@ namespace sgns::crdt
         return new_content;
     }
 
-} // namespace sgns::crdt
+}

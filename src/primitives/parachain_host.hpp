@@ -73,5 +73,5 @@ namespace sgns::primitives::parachain
     {
         return s;
     }
-} // namespace sgns::primitives::parachain
+}
 #endif // SUPERGENIUS_SRC_PRIMITIVES_PARACHAIN_HOST_HPP

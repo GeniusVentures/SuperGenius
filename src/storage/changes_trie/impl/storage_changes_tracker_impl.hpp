@@ -12,7 +12,7 @@ namespace sgns::storage::trie
 {
     class Codec;
     class SuperGeniusTrieFactory;
-} // namespace sgns::storage::trie
+}
 
 namespace sgns::api
 {
@@ -75,7 +75,7 @@ namespace sgns::storage::changes_trie
         SubscriptionEnginePtr     subscription_engine_;
     };
 
-} // namespace sgns::storage::changes_trie
+}
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns::storage::changes_trie, StorageChangesTrackerImpl::Error );
 

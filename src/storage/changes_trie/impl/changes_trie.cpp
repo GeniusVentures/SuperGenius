@@ -64,4 +64,4 @@ namespace sgns::storage::changes_trie
         return hash_bytes;
     }
 
-} // namespace sgns::storage::changes_trie
+}

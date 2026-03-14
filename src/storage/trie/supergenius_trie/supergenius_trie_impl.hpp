@@ -83,7 +83,7 @@ namespace sgns::storage::trie
         NodePtr              root_;
     };
 
-} // namespace sgns::storage::trie
+}
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns::storage::trie, SuperGeniusTrieImpl::Error );
 

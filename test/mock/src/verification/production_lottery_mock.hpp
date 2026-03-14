@@ -20,6 +20,6 @@ namespace sgns::verification
 
         MOCK_METHOD0( GetName, std::string() );
     };
-} // namespace sgns::verification
+}
 
 #endif // SUPERGENIUS_PRODUCTION_LOTTERY_MOCK_HPP

@@ -191,6 +191,6 @@ namespace sgns::extensions
         MOCK_METHOD1( ext_allocator_free_version_1, void( runtime::WasmPointer ) );
     };
 
-} // namespace sgns::extensions
+}
 
 #endif // SUPERGENIUS_TEST_SRC_RUNTIME_MOCK_EXTENSION_HPP_

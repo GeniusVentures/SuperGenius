@@ -33,6 +33,6 @@ namespace sgns::storage::changes_trie
         MOCK_METHOD0( GetName, std::string() );
     };
 
-} // namespace sgns::storage::changes_trie
+}
 
 #endif // SUPERGENIUS_TEST_MOCK_CORE_STORAGE_CHANGES_TRIE_CHANGES_TRACKER_MOCK

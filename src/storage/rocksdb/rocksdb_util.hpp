@@ -80,6 +80,6 @@ namespace sgns::storage
         return { ptr, ptr + s.size() };
     }
 
-} // namespace sgns::storage
+}
 
 #endif // SUPERGENIUS_rocksdb_UTIL_HPP

@@ -45,6 +45,6 @@ namespace sgns::storage::trie
         ~SuperGeniusTrieFactory() override = default;
     };
 
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_STORAGE_TRIE_IMPL_SUPERGENIUS_TRIE_FACTORY

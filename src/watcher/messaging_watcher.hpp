@@ -44,6 +44,6 @@ namespace sgns::watcher
         static std::vector<std::shared_ptr<MessagingWatcher>> m_watchers;
     };
 
-} // namespace sgns::watcher
+}
 
 #endif // MESSAGING_WATCHER_HPP

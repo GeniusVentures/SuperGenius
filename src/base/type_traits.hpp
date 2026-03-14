@@ -42,5 +42,5 @@ namespace sgns
     {
     };
 
-} // namespace sgns
+}
 #endif // SUPERGENIUS_TYPE_TRAITS

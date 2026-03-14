@@ -37,7 +37,7 @@ namespace sgns::primitives
                 return !operator==( rhs );
             }
         };
-    } // namespace detail
+    }
 
     /// A pre-runtime digest.
     ///
@@ -105,6 +105,6 @@ namespace sgns::primitives
    * information, needed to verify the block
    */
     using Digest = std::vector<DigestItem>;
-} // namespace sgns::primitives
+}
 
 #endif // SUPERGENIUS_SRC_PRIMITIVES_DIGEST_HPP

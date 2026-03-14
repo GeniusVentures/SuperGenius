@@ -51,6 +51,6 @@ namespace sgns::storage
         std::map<std::string, Buffer> entries;
         InMemoryStorage              &db;
     };
-} // namespace sgns::storage
+}
 
 #endif // SUPERGENIUS_IN_MEMORY_BATCH_HPP

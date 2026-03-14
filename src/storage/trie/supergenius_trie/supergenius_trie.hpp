@@ -54,6 +54,6 @@ namespace sgns::storage::trie
             const KeyNibbles &key_nibbles ) const = 0;
     };
 
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_STORAGE_TRIE_SUPERGENIUS_TRIE_HPP

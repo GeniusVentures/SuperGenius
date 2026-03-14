@@ -45,4 +45,4 @@ namespace sgns::storage::trie
         return prefixed_key;
     }
 
-} // namespace sgns::storage::trie
+}

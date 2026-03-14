@@ -18,6 +18,6 @@ namespace sgns::runtime
         MOCK_METHOD1( authorities,
                       outcome::result<std::vector<primitives::AuthorityId>>( const primitives::BlockId & ) );
     };
-} // namespace sgns::runtime
+}
 
 #endif // SUPERGENIUS_TEST_MOCK_CORE_RUNTIME_CORE_MOCK_HPP

@@ -345,6 +345,6 @@ namespace sgns::scale
         SizeType     current_index_;
     };
 
-} // namespace sgns::scale
+}
 
 #endif // SUPERGENIUS_SRC_SCALE_SCALE_DECODER_STREAM_HPP

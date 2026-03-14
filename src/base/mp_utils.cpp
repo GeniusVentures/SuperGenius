@@ -27,7 +27,7 @@ namespace sgns::base
             import_bits( result, bytes.begin(), bytes.end(), 8, false );
             return result;
         }
-    } // namespace detail
+    }
 
     std::array<uint8_t, 8> uint64_t_to_bytes( uint64_t number )
     {
@@ -69,4 +69,4 @@ namespace sgns::base
         return detail::bytes_to_uint<32, boost::multiprecision::uint256_t>( bytes );
     }
 
-} // namespace sgns::base
+}

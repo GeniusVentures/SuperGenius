@@ -124,4 +124,4 @@ namespace sgns::blockchain
         return result.error() == storage::DatabaseError::NOT_FOUND;
     }
 
-} // namespace sgns::blockchain
+}

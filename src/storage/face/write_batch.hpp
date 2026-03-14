@@ -28,6 +28,6 @@ namespace sgns::storage::face
         virtual void clear() = 0;
     };
 
-} // namespace sgns::storage::face
+}
 
 #endif // SUPERGENIUS_WRITE_BATCH_HPP

@@ -303,6 +303,6 @@ namespace sgns::scale
         std::deque<uint8_t> stream_;
     };
 
-} // namespace sgns::scale
+}
 
 #endif // SUPERGENIUS_SRC_SCALE_SCALE_ENCODER_STREAM_HPP

@@ -14,7 +14,7 @@ namespace sgns::base
 
         template <size_t size, typename uint>
         uint bytes_to_uint( gsl::span<uint8_t, size> bytes );
-    } // namespace detail
+    }
 
     std::array<uint8_t, 8> uint64_t_to_bytes( uint64_t number );
 
@@ -28,6 +28,6 @@ namespace sgns::base
 
     boost::multiprecision::uint256_t bytes_to_uint256_t( gsl::span<uint8_t, 32> bytes );
 
-} // namespace sgns::base
+}
 
 #endif // SUPERGENIUS_SRC_CRYPTO_MP_UTILS_HPP

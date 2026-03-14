@@ -116,4 +116,4 @@ namespace sgns
         return outcome::success();
     }
 
-} // namespace sgns
+}

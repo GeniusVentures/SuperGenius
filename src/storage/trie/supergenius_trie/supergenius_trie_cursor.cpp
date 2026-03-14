@@ -283,4 +283,4 @@ namespace sgns::storage::trie
         return last_visited_child;
     }
 
-} // namespace sgns::storage::trie
+}

@@ -19,6 +19,6 @@ namespace sgns::verification::finality
         MOCK_CONST_METHOD1( bestChainContaining, outcome::result<BlockInfo>( const BlockHash &base ) );
     };
 
-} // namespace sgns::verification::finality
+}
 
 #endif // SUPERGENIUS_TEST_MOCK_SRC_VERIFICATION_FINALITY_CHAIN_MOCK_HPP

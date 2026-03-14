@@ -96,7 +96,7 @@ namespace sgns::crypto
 
         return pubkey;
     }
-} // namespace sgns::crypto
+}
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crypto, Secp256k1ProviderError, e )
 {

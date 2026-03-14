@@ -13,6 +13,6 @@ namespace sgns::runtime
         MOCK_METHOD1( validate_transaction,
                       outcome::result<primitives::TransactionValidity>( const primitives::Extrinsic & ) );
     };
-} // namespace sgns::runtime
+}
 
 #endif // SUPERGENIUS_TAGGED_TRANSACTION_QUEUE_MOCK_HPP

@@ -25,6 +25,6 @@ namespace sgns::storage::trie
         SuperGeniusTrieImpl::ChildRetrieveFunctor default_child_retrieve_f_;
     };
 
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_SRC_STORAGE_TRIE_IMPL_SUPERGENIUS_TRIE_FACTORY_IMPL

@@ -13,6 +13,6 @@ namespace sgns::verification
     {
         MOCK_METHOD1( blockAnnounce, void( const network::BlockAnnounce & ) );
     };
-} // namespace sgns::verification
+}
 
 #endif // SUPERGENIUS_PRODUCTION_GOSSIPER_MOCK_HPP

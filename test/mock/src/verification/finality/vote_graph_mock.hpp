@@ -23,6 +23,6 @@ namespace sgns::verification::finality
         MOCK_METHOD2( findGhost, boost::optional<BlockInfo>( const boost::optional<BlockInfo> &, const Condition & ) );
     };
 
-} // namespace sgns::verification::finality
+}
 
 #endif // SUPERGENIUS_TEST_MOCK_SRC_VERIFICATION_FINALITY_VOTE_GRAPH_MOCK_HPP

@@ -32,6 +32,6 @@ namespace sgns::crypto
 
         MOCK_METHOD0( GetName, std::string() );
     };
-} // namespace sgns::crypto
+}
 
 #endif // SUPERGENIUS_VRF_PROVIDER_MOCK_HPP

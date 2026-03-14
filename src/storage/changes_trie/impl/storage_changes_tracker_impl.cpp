@@ -118,4 +118,4 @@ namespace sgns::storage::changes_trie
         return trie->getHash();
     }
 
-} // namespace sgns::storage::changes_trie
+}

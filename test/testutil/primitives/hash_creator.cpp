@@ -11,4 +11,4 @@ namespace testutil
         std::copy_n( bytes.begin(), bytes.size(), h.begin() );
         return h;
     }
-} // namespace testutil
+}

@@ -28,4 +28,4 @@ namespace sgns::primitives
         return !operator==( rhs );
     }
 
-} // namespace sgns::primitives
+}

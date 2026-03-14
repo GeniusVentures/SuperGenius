@@ -30,6 +30,6 @@ namespace sgns::storage::trie
         std::unique_ptr<SuperGeniusTrie> trie_;
     };
 
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_STORAGE_TRIE_IMPL_EPHEMERAL_TRIE_BATCH

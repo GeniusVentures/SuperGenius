@@ -113,6 +113,6 @@ namespace sgns::scale::detail
 
         return sv;
     }
-} // namespace sgns::scale::detail
+}
 
 #endif // SUPERGENIUS_SCALE_UTIL_HPP

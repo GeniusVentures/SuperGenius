@@ -49,6 +49,6 @@ namespace sgns::storage::trie
         virtual base::Hash256 hash256( const base::Buffer &buf ) const = 0;
     };
 
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_TRIE_CODEC_HPP

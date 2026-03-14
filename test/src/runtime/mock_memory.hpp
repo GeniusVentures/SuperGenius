@@ -39,6 +39,6 @@ namespace sgns::runtime
         MOCK_METHOD1( storeBuffer, WasmSpan( gsl::span<const uint8_t> ) );
     };
 
-} // namespace sgns::runtime
+}
 
 #endif // SUPERGENIUS_TEST_SRC_RUNTIME_MOCK_MEMORY_HPP_

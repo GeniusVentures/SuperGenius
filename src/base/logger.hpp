@@ -19,6 +19,6 @@ namespace sgns::base
      * @return Logger object.
      */
     Logger createLogger( const std::string &tag, const std::string &basepath = "" );
-} // namespace sgns::base
+}
 
 #endif // SUPERGENIUS_LOGGER_HPP

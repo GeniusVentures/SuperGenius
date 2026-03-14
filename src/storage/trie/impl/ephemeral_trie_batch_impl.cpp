@@ -54,4 +54,4 @@ namespace sgns::storage::trie
     {
         return trie_->remove( key );
     }
-} // namespace sgns::storage::trie
+}

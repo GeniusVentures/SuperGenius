@@ -118,4 +118,4 @@ namespace sgns
         std::unordered_set<std::string>          topics_;
         base::Logger m_logger = base::createLogger( "MigrationStep" ); ///< Logger for this step.
     };
-} // namespace sgns
+}

@@ -16,6 +16,6 @@ namespace sgns::verification::finality
         MOCK_METHOD1( finalize, void( const Fin &fin ) );
     };
 
-} // namespace sgns::verification::finality
+}
 
 #endif // SUPERGENIUS_TEST_MOCK_SRC_VERIFICATION_FINALITY_GOSSIPER_MOCK_HPP

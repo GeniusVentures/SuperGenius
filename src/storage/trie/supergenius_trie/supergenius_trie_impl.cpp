@@ -481,4 +481,4 @@ namespace sgns::storage::trie
         return length;
     }
 
-} // namespace sgns::storage::trie
+}

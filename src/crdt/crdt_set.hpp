@@ -320,6 +320,6 @@ namespace sgns::crdt
         static constexpr std::string_view prioritySuffix_ = "p"; // "p" for /keys namespace
     };
 
-} // namespace sgns::crdt
+}
 
 #endif //SUPERGENIUS_CRDT_SET_HPP

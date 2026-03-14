@@ -40,6 +40,6 @@ namespace sgns::storage::face
     struct BatchWriteMap : public Writeable<K, V>, public Batchable<K, V>
     {
     };
-} // namespace sgns::storage::face
+}
 
 #endif // SUPERGENIUS_GENERIC_MAPS_HPP

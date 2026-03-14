@@ -16,6 +16,6 @@ namespace sgns::extensions
                                                         std::shared_ptr<runtime::TrieStorageProvider> storage ) );
     };
 
-} // namespace sgns::extensions
+}
 
 #endif // SUPERGENIUS_TEST_SRC_EXTENSIONS_MOCK_EXTENSION_FACTORY_HPP

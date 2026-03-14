@@ -77,4 +77,4 @@ namespace sgns::blockchain
         BOOST_ASSERT_MSG( encode_res.has_value(), "Trie encoding failed" );
         return base::Buffer{ codec.hash256( encode_res.value() ) };
     }
-} // namespace sgns::blockchain
+}

@@ -157,4 +157,4 @@ namespace sgns::storage::trie
         return false;
     }
 
-} // namespace sgns::storage::trie
+}

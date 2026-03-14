@@ -32,6 +32,6 @@ namespace sgns::authority
 
         MOCK_METHOD0( GetName, std::string() );
     };
-} // namespace sgns::authority
+}
 
 #endif // SUPERGENIUS_AUTHORITY_MANAGER_MOCK

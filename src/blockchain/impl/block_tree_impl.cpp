@@ -650,4 +650,4 @@ namespace sgns::blockchain
         }
     }
 
-} // namespace sgns::blockchain
+}

@@ -35,4 +35,4 @@ namespace sgns::storage::trie
         return static_cast<int>( SuperGeniusNode::Type::Leaf );
     }
 
-} // namespace sgns::storage::trie
+}

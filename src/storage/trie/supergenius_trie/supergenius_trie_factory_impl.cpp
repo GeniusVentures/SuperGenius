@@ -16,4 +16,4 @@ namespace sgns::storage::trie
         return std::make_unique<SuperGeniusTrieImpl>( std::move( root ), std::move( f ) );
     }
 
-} // namespace sgns::storage::trie
+}

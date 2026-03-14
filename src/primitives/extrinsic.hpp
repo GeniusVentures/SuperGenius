@@ -56,6 +56,6 @@ namespace sgns::primitives
     {
         return s >> v.data;
     }
-} // namespace sgns::primitives
+}
 
 #endif // SUPERGENIUS_PRIMITIVES_EXTRINSIC_HPP

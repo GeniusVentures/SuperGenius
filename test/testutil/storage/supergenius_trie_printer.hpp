@@ -119,7 +119,7 @@ namespace sgns::storage::trie
             bool             print_enc_;
             bool             print_hash_;
         };
-    } // namespace printer_internal
+    }
 
     template <typename Stream>
     Stream &operator<<( Stream &s, const SuperGeniusTrie &trie )
@@ -133,6 +133,6 @@ namespace sgns::storage::trie
         return s;
     }
 
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_CORE_STORAGE_TRIE_SUPERGENIUS_TRIE_DB_SUPERGENIUS_TRIE_DB_PRINTER_HPP

@@ -39,7 +39,7 @@ namespace sgns::scale
     {
         UNKNOWN_ERROR = 1 ///< unknown error
     };
-} // namespace sgns::scale
+}
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns::scale, EncodeError )
 OUTCOME_HPP_DECLARE_ERROR_2( sgns::scale, DecodeError )

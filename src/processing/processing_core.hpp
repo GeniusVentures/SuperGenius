@@ -37,6 +37,6 @@ namespace sgns::processing
         }
     };
 
-} // namespace sgns::processing
+}
 
 #endif // GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_HPP

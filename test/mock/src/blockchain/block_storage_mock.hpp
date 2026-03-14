@@ -42,6 +42,6 @@ namespace sgns::blockchain
         MOCK_METHOD0( GetName, std::string() );
     };
 
-} // namespace sgns::blockchain
+}
 
 #endif // SUPERGENIUS_BLOCK_STORAGE_MOCK_HPP

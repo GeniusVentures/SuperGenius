@@ -60,4 +60,4 @@ namespace sgns::storage::trie
         return base::Buffer{ node_prefix_ }.put( key );
     }
 
-} // namespace sgns::storage::trie
+}

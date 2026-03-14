@@ -150,6 +150,6 @@ namespace sgns::crdt
         base::Logger                                             logger_ = base::createLogger( "CrdtHeads" );
     };
 
-} // namespace sgns::crdt
+}
 
 #endif //SUPERGENIUS_CRDT_HEADS_HPP

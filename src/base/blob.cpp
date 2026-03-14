@@ -22,4 +22,4 @@ namespace sgns::base
     template class Blob<32ul>;
     template class Blob<64ul>;
 
-} // namespace sgns::base
+}

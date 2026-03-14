@@ -58,6 +58,6 @@ namespace sgns::test
 #endif
     }
 
-} // namespace sgns::test
+}
 
 #endif // SUPERGENIUS_COLOR_SUPPORT_HPP

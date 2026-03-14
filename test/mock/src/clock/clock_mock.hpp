@@ -24,6 +24,6 @@ namespace sgns::clock
         MOCK_CONST_METHOD0( nowUint64, uint64_t() );
     };
 
-} // namespace sgns::clock
+}
 
 #endif // SUPERGENIUS_TEST_CORE_CLOCK_CLOCK_MOCK_HPP

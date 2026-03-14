@@ -40,4 +40,4 @@ namespace sgns::storage
         batch_.Clear();
     }
 
-} // namespace sgns::storage
+}

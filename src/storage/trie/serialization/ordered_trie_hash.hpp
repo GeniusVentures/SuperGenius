@@ -45,6 +45,6 @@ namespace sgns::storage::trie
         return base::Buffer{ codec.hash256( enc ) };
     }
 
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_ORDERED_TRIE_HASH_HPP

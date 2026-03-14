@@ -146,6 +146,6 @@ namespace sgns::subscription
         }
     };
 
-} // namespace sgns::subscription
+}
 
 #endif // SUPERGENIUS_SUBSCRIPTION_SUBSCRIBER_HPP

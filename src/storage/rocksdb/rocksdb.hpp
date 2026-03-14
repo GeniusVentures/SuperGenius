@@ -116,6 +116,6 @@ namespace sgns::storage
         std::string              path_;
     };
 
-} // namespace sgns::storage
+}
 
 #endif // SUPERGENIUS_rocksdb_HPP

@@ -35,7 +35,7 @@ namespace sgns::blockchain
    * Buffer containing merkle root of resulting trie
    */
     base::Buffer trieRoot( const std::vector<std::pair<base::Buffer, base::Buffer>> &key_vals );
-} // namespace sgns::blockchain
+}
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns::blockchain, Error )
 

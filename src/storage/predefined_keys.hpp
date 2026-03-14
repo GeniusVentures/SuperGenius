@@ -31,6 +31,6 @@ namespace sgns::storage
         return kLastFinalizedBlockHashLookupKey;
     }
 
-} // namespace sgns::storage
+}
 
 #endif // SUPERGENIUS_SRC_STORAGE_PREDEFINED_KEYS_HPP

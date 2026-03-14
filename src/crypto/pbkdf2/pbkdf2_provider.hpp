@@ -34,7 +34,7 @@ namespace sgns::crypto
                                                          size_t                   iterations,
                                                          size_t                   key_length ) const = 0;
     };
-} // namespace sgns::crypto
+}
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns::crypto, Pbkdf2ProviderError );
 

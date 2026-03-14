@@ -134,6 +134,6 @@ namespace sgns::primitives
         // destruction to avoid memory leaks or any other problem
         using std::vector<Authority>::vector;
     };
-} // namespace sgns::primitives
+}
 
 #endif // SUPERGENIUS_AUTHORITY_HPP

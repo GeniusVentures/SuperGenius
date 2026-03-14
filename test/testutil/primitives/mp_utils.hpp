@@ -14,6 +14,6 @@ namespace testutil
    */
     sgns::base::Hash256 createHash256( std::initializer_list<uint8_t> bytes );
 
-} // namespace testutil
+}
 
 #endif //SUPERGENIUS_TEST_TESTUTIL_PRIMITIVES_MP_UTILS_HPP

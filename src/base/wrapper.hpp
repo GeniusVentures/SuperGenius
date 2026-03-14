@@ -50,7 +50,7 @@ namespace sgns::base
         return a.unwrap() < b.unwrap();
     }
 
-} // namespace sgns::base
+}
 
 template <typename T, typename Tag>
 struct std::hash<sgns::base::Wrapper<T, Tag>>

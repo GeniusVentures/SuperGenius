@@ -52,6 +52,6 @@ namespace sgns::storage::changes_trie
                                                                      const ChangesTrieConfig     &conf ) = 0;
     };
 
-} // namespace sgns::storage::changes_trie
+}
 
 #endif // SUPERGENIUS_STORAGE_CHANGES_TRIE_CHANGES_TRACKER

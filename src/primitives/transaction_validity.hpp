@@ -224,7 +224,7 @@ namespace sgns::primitives
     {
         return s >> v.priority >> v.requires >> v.provides >> v.longevity >> v.propagate;
     }
-} // namespace sgns::primitives
+}
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns::primitives, InvalidTransaction )
 OUTCOME_HPP_DECLARE_ERROR_2( sgns::primitives, UnknownTransaction )

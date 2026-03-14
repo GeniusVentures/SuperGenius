@@ -27,6 +27,6 @@ namespace sgns::verification
         MOCK_METHOD0( GetName, std::string() );
     };
 
-} // namespace sgns::verification
+}
 
 #endif // SUPERGENIUS_TEST_MOCK_SRC_VERIFICATION_VALIDATION_BLOCK_VALIDATOR_MOCK_HPP

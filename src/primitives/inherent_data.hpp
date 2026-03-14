@@ -24,7 +24,7 @@ namespace sgns::primitives
         IDENTIFIER_ALREADY_EXISTS = 1,
         IDENTIFIER_DOES_NOT_EXIST
     };
-} // namespace sgns::primitives
+}
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns::primitives, InherentDataError );
 
@@ -152,6 +152,6 @@ namespace sgns::primitives
 
         return s;
     }
-} // namespace sgns::primitives
+}
 
 #endif // SUPERGENIUS_INHERENT_DATA_HPP

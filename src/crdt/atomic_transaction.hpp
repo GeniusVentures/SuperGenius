@@ -115,6 +115,6 @@ namespace sgns::crdt
         bool                            is_committed_;
     };
 
-} // namespace sgns::crdt
+}
 
 #endif // SUPERGENIUS_ATOMIC_TRANSACTION_HPP

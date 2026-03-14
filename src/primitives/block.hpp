@@ -68,6 +68,6 @@ namespace sgns::primitives
     {
         return s >> b.header >> b.body;
     }
-} // namespace sgns::primitives
+}
 
 #endif // SUPERGENIUS_PRIMITIVES_BLOCK_HPP

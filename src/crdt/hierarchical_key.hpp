@@ -77,6 +77,6 @@ namespace sgns::crdt
     private:
         std::string key_;
     };
-} // namespace sgns::crdt
+}
 
 #endif //SUPERGENIUS_HIERARCHICAL_KEY_HPP

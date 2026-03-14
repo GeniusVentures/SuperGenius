@@ -66,4 +66,4 @@ namespace sgns::crypto
     {
         return crypto::sha256( buffer );
     }
-} // namespace sgns::crypto
+}

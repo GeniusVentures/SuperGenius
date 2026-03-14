@@ -46,6 +46,6 @@ namespace sgns::verification::finality
         MOCK_METHOD0( GetName, std::string() );
     };
 
-} // namespace sgns::verification::finality
+}
 
 #endif // SUPERGENIUS_TEST_MOCK_SRC_VERIFICATION_FINALITY_ENVIRONMENT_MOCK_HPP

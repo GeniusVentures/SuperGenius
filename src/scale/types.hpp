@@ -25,7 +25,7 @@ namespace sgns::scale
         FALSE_ = 1u,
         TRUE_  = 2u
     };
-} // namespace sgns::scale
+}
 
 namespace sgns::scale::compact
 {
@@ -41,5 +41,5 @@ namespace sgns::scale::compact
         // min integer encoded as multibyte
         constexpr static size_t kMinBigInteger = ( 1ul << 30u );
     };
-} // namespace sgns::scale::compact
+}
 #endif // SUPERGENIUS_SCALE_TYPES_HPP

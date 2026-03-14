@@ -125,4 +125,4 @@ namespace sgns::storage::trie
         return std::dynamic_pointer_cast<SuperGeniusNode>( n );
     }
 
-} // namespace sgns::storage::trie
+}

@@ -191,7 +191,7 @@ namespace sgns::blockchain
         std::shared_ptr<crypto::Hasher> hasher_;
         base::Logger                    log_ = base::createLogger( "BlockTreeImpl" );
     };
-} // namespace sgns::blockchain
+}
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns::blockchain, BlockTreeImpl::Error );
 

@@ -20,6 +20,6 @@ namespace sgns::storage::trie
         ~TrieStorageBackend() override = default;
     };
 
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_TRIE_DB_BACKEND_HPP

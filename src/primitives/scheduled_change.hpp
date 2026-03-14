@@ -92,6 +92,6 @@ namespace sgns::primitives
     {
         return s >> alc.authorities >> alc.subchain_lenght;
     }
-} // namespace sgns::primitives
+}
 
 #endif // SUPERGENIUS_SRC_PRIMITIVES_SCHEDULED_CHANGE

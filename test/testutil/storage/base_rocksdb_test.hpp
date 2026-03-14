@@ -25,6 +25,6 @@ namespace test
         std::shared_ptr<rocksdb> db_;
     };
 
-} // namespace test
+}
 
 #endif // SUPERGENIUS_BASE_ROCKSDB_TEST_HPP

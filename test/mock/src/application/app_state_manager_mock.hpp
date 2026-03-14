@@ -43,6 +43,6 @@ namespace sgns::application
         MOCK_CONST_METHOD0( state, State() );
     };
 
-} // namespace sgns
+}
 
 #endif // SUPERGENIUS_APP_STATE_MANAGER_MOCK

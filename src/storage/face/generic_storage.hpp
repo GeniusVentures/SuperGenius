@@ -20,6 +20,6 @@ namespace sgns::storage::face
     {
     };
 
-} // namespace sgns::storage::face
+}
 
 #endif // SUPERGENIUS_GENERIC_STORAGE_HPP

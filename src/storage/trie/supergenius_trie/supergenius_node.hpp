@@ -146,6 +146,6 @@ namespace sgns::storage::trie
         base::Buffer db_key;
     };
 
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_STORAGE_TRIE_SUPERGENIUS_NODE

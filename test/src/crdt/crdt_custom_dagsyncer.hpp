@@ -104,6 +104,6 @@ namespace sgns::crdt
         std::set<CID> cids_cache;
     };
 
-} // namespace sgns::crdt
+}
 
 #endif // SUPERGENIUS_CRDT_CUSTOM_DAGSYNCER_HPP

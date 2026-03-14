@@ -112,4 +112,4 @@ namespace sgns::storage::trie
     {
         return root_hash_;
     }
-} // namespace sgns::storage::trie
+}

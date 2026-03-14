@@ -284,7 +284,7 @@ namespace sgns::base
 
     std::ostream &operator<<( std::ostream &os, const Buffer &buffer );
 
-} // namespace sgns::base
+}
 
 namespace std
 {
@@ -296,6 +296,6 @@ namespace std
             return boost::hash_range( x.begin(), x.end() );
         }
     };
-} // namespace std
+}
 
 #endif // SUPERGENIUS_BUFFER_HPP

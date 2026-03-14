@@ -169,4 +169,4 @@ namespace sgns::scale
         return putByte( static_cast<uint8_t>( result ) );
     }
 
-} // namespace sgns::scale
+}

@@ -27,6 +27,6 @@ namespace sgns::storage::face
         virtual std::unique_ptr<MapCursor<K, V>> cursor() = 0;
     };
 
-} // namespace sgns::storage::face
+}
 
 #endif // SUPERGENIUS_ITERABLE_HPP

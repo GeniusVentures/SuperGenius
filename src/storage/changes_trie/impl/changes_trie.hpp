@@ -83,6 +83,6 @@ namespace sgns::storage::changes_trie
         base::Logger                           logger_;
     };
 
-} // namespace sgns::storage::changes_trie
+}
 
 #endif // SUPERGENIUS_SRC_STORAGE_CHANGES_TRIE_IMPL_CHANGES_TRIE

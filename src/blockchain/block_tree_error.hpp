@@ -19,7 +19,7 @@ namespace sgns::blockchain
         INCORRECT_ARGS,
         INTERNAL_ERROR
     };
-} // namespace sgns::blockchain
+}
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns::blockchain, BlockTreeError )
 

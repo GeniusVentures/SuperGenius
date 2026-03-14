@@ -28,6 +28,6 @@ namespace sgns::base
     {
         boost::throw_exception( std::system_error( t.value(), t.category() ) );
     }
-} // namespace sgns::base
+}
 
 #endif // SUPERGENIUS_SRC_COMMON_OUTCOME_THROW_HPP

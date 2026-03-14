@@ -70,6 +70,6 @@ namespace sgns::storage::trie
         base::Logger                                                   logger_;
     };
 
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_STORAGE_TRIE_IMPL_TRIE_STORAGE_IMPL

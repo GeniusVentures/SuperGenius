@@ -23,6 +23,6 @@ namespace sgns::blockchain
 
         MOCK_METHOD0( GetName, std::string() );
     };
-} // namespace sgns::blockchain
+}
 
 #endif // SUPERGENIUS_TEST_MOCK_BLOCKCHAIN_HEADER_BACKEND_MOCK_HPP

@@ -55,6 +55,6 @@ namespace sgns::evmwatcher
         ChainConfig                        chain; // Add chains vector to store chain configurations
     };
 
-} // namespace sgns::evmwatcher
+}
 
 #endif // EVM_MESSAGING_WATCHER_HPP

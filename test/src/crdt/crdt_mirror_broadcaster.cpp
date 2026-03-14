@@ -66,4 +66,4 @@ namespace sgns::crdt
         return true;
     }
 
-} // namespace sgns::crdt
+}

@@ -32,6 +32,6 @@ namespace sgns::crypto
 
         MOCK_METHOD0( GetName, std::string() );
     };
-} // namespace sgns::crypto
+}
 
 #endif // SUPERGENIUS_TEST_MOCK_CRYPTO_HASHER_HPP

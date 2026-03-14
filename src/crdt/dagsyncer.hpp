@@ -40,6 +40,6 @@ namespace sgns::crdt
         virtual IPFS::outcome::result<void> markResolved( const CID &cid )       = 0;
         virtual IPFS::outcome::result<bool> isResolved( const CID &cid ) const   = 0;
     };
-} // namespace sgns::crdt
+}
 
 #endif // SUPERGENIUS_DAGSYNCER_HPP

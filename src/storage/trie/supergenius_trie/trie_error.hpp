@@ -14,7 +14,7 @@ namespace sgns::storage::trie
     {
         NO_VALUE = 1, // no stored value found by the given key
     };
-} // namespace sgns::storage::trie
+}
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns::storage::trie, TrieError )
 

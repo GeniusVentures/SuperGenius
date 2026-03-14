@@ -31,6 +31,6 @@ namespace sgns
         return s;
     }
 
-} // namespace sgns
+}
 
 #endif // SUPERGENIUS_UNUSED

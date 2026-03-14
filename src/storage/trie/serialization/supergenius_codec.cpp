@@ -375,4 +375,4 @@ namespace sgns::storage::trie
         return node;
     }
 
-} // namespace sgns::storage::trie
+}

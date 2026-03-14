@@ -174,6 +174,6 @@ namespace sgns::test
                                         __FILE__,                                                                      \
                                         __LINE__ )
 
-} // namespace sgns::test
+}
 
 #endif // SUPERGENIUS_GTEST_WAIT_CONDITION_HPP

@@ -54,4 +54,4 @@ namespace sgns::storage
         return make_buffer( i_->value() );
     }
 
-} // namespace sgns::storage
+}

@@ -17,6 +17,6 @@ namespace sgns::authorship
         MOCK_CONST_METHOD0( bake, outcome::result<primitives::Block>() );
     };
 
-} // namespace sgns::authorship
+}
 
 #endif // SUPERGENIUS_TEST_MOCK_SRC_AUTHORSHIP_BLOCK_BUILDER_MOCK_HPP

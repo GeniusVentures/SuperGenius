@@ -66,6 +66,6 @@ namespace sgns::primitives
         config.slot_duration = std::chrono::milliseconds( slot_duration_u64 );
         return s;
     }
-} // namespace sgns::primitives
+}
 
 #endif // SUPERGENIUS_CORE_PRIMITIVES_PRODUCTION_CONFIGURATION_HPP

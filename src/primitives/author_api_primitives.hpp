@@ -48,6 +48,6 @@ namespace sgns::primitives
     using ExtrinsicKey = std::vector<uint8_t>;
     // TODO: PRE-221 investigate and implement Subscriber primitive
 
-} // namespace sgns::primitives
+}
 
 #endif //SUPERGENIUS_SRC_PRIMITIVES_EXTRINSIC_API_PRIMITIVES_HPP

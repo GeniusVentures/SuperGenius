@@ -66,6 +66,6 @@ namespace sgns::storage::trie
         MOCK_CONST_METHOD0( empty, bool() );
     };
 
-} // namespace sgns::storage::trie
+}
 
 #endif // SUPERGENIUS_TEST_MOCK_CORE_STORAGE_TRIE_TRIE_BATCHES_MOCK

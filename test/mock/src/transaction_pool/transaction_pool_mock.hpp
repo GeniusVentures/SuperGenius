@@ -32,6 +32,6 @@ namespace sgns::transaction_pool
         MOCK_METHOD0( GetName, std::string() );
     };
 
-} // namespace sgns::transaction_pool
+}
 
 #endif // SUPERGENIUS_TEST_MOCK_SRC_TRANSACTION_POOL_TRANSACTION_POOL_MOCK_HPP

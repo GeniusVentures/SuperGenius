@@ -58,5 +58,5 @@ namespace sgns::scale
 
         return outcome::success( t );
     }
-} // namespace sgns::scale
+}
 #endif // SUPERGENIUS_SCALE_HPP

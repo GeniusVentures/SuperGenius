@@ -75,6 +75,6 @@ namespace sgns::crdt
             return !operator==( rhs );
         }
     };
-} // namespace sgns::crdt
+}
 
 #endif //SUPERGENIUS_CRDT_OPTIONS_HPP

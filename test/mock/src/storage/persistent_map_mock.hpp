@@ -43,6 +43,6 @@ namespace sgns::storage::face
         //--------------
     };
 
-} // namespace sgns::storage::face
+}
 
 #endif // SUPERGENIUS_PERSISTENT_MAP_MOCK_HPP

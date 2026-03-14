@@ -75,4 +75,4 @@ namespace sgns::watcher
         return running;
     }
 
-} // namespace sgns::watcher
+}
