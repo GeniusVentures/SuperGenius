@@ -66,11 +66,11 @@ namespace sgns
         GeniusAssigner assigner;
         GeniusProver   prover;
 
-        OUTCOME_TRY( ( auto &&, assign_value ),
-                     assigner.GenerateCircuitAndTable( public_inputs_json_array,
-                                                       private_inputs_json_array,
-                                                       bytecode_payload_ ) );
-        OUTCOME_TRY( ( auto &&, proof_value ), prover.CreateProof( assign_value.at( 0 ) ) );
+        BOOST_OUTCOME_TRY( auto assign_value,
+                           assigner.GenerateCircuitAndTable( public_inputs_json_array,
+                                                             private_inputs_json_array,
+                                                             bytecode_payload_ ) );
+        BOOST_OUTCOME_TRY( auto proof_value, prover.CreateProof( assign_value.at( 0 ) ) );
 
         auto proof_vector = prover.WriteProofToVector( proof_value.proof );
         retval.set_snark( std::string( proof_vector.begin(), proof_vector.end() ) );
@@ -80,8 +80,8 @@ namespace sgns
 
     outcome::result<std::vector<uint8_t>> IBasicProof::GenerateFullProof()
     {
-        OUTCOME_TRY( ( auto &&, proof_value ), GenerateProof() );
-        OUTCOME_TRY( ( auto &&, full_proof_data ), SerializeFullProof( proof_value ) );
+        BOOST_OUTCOME_TRY( auto proof_value, GenerateProof() );
+        BOOST_OUTCOME_TRY( auto full_proof_data, SerializeFullProof( proof_value ) );
 
         return full_proof_data;
     }
@@ -99,7 +99,7 @@ namespace sgns
 
     outcome::result<bool> IBasicProof::VerifyFullProof( const std::vector<uint8_t> &proof_data )
     {
-        OUTCOME_TRY( ( auto &&, base_proof ), DeSerializeBaseProof( proof_data ) );
+        BOOST_OUTCOME_TRY( auto base_proof, DeSerializeBaseProof( proof_data ) );
 
         auto ParameterDeserializer = PublicParamDeSerializers.find( base_proof.proof_data().type() );
 
@@ -118,7 +118,7 @@ namespace sgns
             return true;
         }
 
-        OUTCOME_TRY( ( auto &&, parameter_pair ), ParameterDeserializer->second( proof_data ) );
+        BOOST_OUTCOME_TRY( auto parameter_pair, ParameterDeserializer->second( proof_data ) );
 
         return VerifyFullProof( parameter_pair, base_proof.proof_data(), bytecode->second );
     }
@@ -135,10 +135,10 @@ namespace sgns
 
         GeniusAssigner assigner;
 
-        OUTCOME_TRY( ( auto &&, assign_value ),
-                     assigner.GenerateCircuitAndTable( public_inputs_json_array,
-                                                       private_inputs_json_array,
-                                                       std::move( proof_bytecode ) ) );
+        BOOST_OUTCOME_TRY( auto assign_value,
+                           assigner.GenerateCircuitAndTable( public_inputs_json_array,
+                                                             private_inputs_json_array,
+                                                             std::move( proof_bytecode ) ) );
 
         GeniusProver::GeniusProof genius_proof( snark, assign_value.at( 0 ).constrains, assign_value.at( 0 ).table );
 

@@ -85,7 +85,7 @@ namespace
         nil::crypto3::multiprecision::uint256_t key_seed( maybe_key->value.GetString() );
         ethereum::EthereumKeyGenerator          eth_key( key_seed );
         auto                                    pub_key = eth_key.GetEntirePubValue();
-        OUTCOME_TRY( std::vector<uint8_t> pub_key_vec, base::unhex( pub_key ) );
+        BOOST_OUTCOME_TRY( std::vector<uint8_t> pub_key_vec, base::unhex( pub_key ) );
 
         auto secure_storage = std::make_shared<SecureStorageImpl>( std::string( SECURE_STORAGE_PREFIX ) +
                                                                    libp2p::multi::detail::encodeBase58( pub_key_vec ) );
@@ -97,7 +97,7 @@ namespace
 
         rj::Document new_doc;
         new_doc.CopyFrom( maybe_field->value, new_doc.GetAllocator() );
-        OUTCOME_TRY( secure_storage->SaveJSON( std::move( new_doc ) ) );
+        BOOST_OUTCOME_TRY( secure_storage->SaveJSON( std::move( new_doc ) ) );
         genius_account_logger()->debug( "Successfully migrated JSON secure storage" );
 
         return secure_storage;
@@ -224,7 +224,7 @@ namespace sgns
                                            public_key.substr( 0, 16 ) + "...",
                                            public_key.length() );
 
-            OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( public_key ) );
+            BOOST_OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( public_key ) );
 
             storage = std::make_shared<SecureStorageImpl>( std::string( SECURE_STORAGE_PREFIX ) +
                                                            libp2p::multi::detail::encodeBase58( vec ) );
@@ -235,7 +235,7 @@ namespace sgns
         else
         {
             genius_account_logger()->debug( "Secure storage ID file does not exist, will try migration" );
-            OUTCOME_TRY( storage, MigrateSecureStorage( base_path ) );
+            BOOST_OUTCOME_TRY( storage, MigrateSecureStorage( base_path ) );
         }
 
         auto load_res = storage->Load( "sgns_key" );
@@ -294,7 +294,7 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        OUTCOME_TRY( auto pri_key_vec, base::unhex( eth_private_key ) );
+        BOOST_OUTCOME_TRY( auto pri_key_vec, base::unhex( eth_private_key ) );
         auto signed_secret = TW::PrivateKey( pri_key_vec )
                                  .sign(
                                      TW::Data( ELGAMAL_PUBKEY_PREDEFINED.cbegin(), ELGAMAL_PUBKEY_PREDEFINED.cend() ),
@@ -311,7 +311,7 @@ namespace sgns
         // Create storage and keys
         ethereum::EthereumKeyGenerator eth_key( key_seed );
         auto                           pub_key = eth_key.GetEntirePubValue();
-        OUTCOME_TRY( std::vector<uint8_t> pub_key_vec, base::unhex( pub_key ) );
+        BOOST_OUTCOME_TRY( std::vector<uint8_t> pub_key_vec, base::unhex( pub_key ) );
 
         auto storage = std::make_shared<SecureStorageImpl>( std::string( SECURE_STORAGE_PREFIX ) +
                                                             libp2p::multi::detail::encodeBase58( pub_key_vec ) );

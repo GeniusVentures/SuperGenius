@@ -262,7 +262,7 @@ namespace sgns::crdt
 
         for ( auto &data : data_vector )
         {
-            BOOST_OUTCOME_TRYV2( auto &&, batch.Put( std::get<0>( data ), std::get<1>( data ) ) );
+            BOOST_OUTCOME_TRY( batch.Put( std::get<0>( data ), std::get<1>( data ) ) );
         }
 
         return batch.Commit( topics );

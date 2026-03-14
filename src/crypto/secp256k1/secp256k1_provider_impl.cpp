@@ -14,7 +14,7 @@ namespace sgns::crypto
         const secp256k1::RSVSignature &signature,
         const secp256k1::MessageHash  &message_hash ) const
     {
-        OUTCOME_TRY( ( auto &&, pubkey ), recoverPublickey( signature, message_hash ) );
+        BOOST_OUTCOME_TRY( auto pubkey, recoverPublickey( signature, message_hash ) );
         secp256k1::UncompressedPublicKey pubkey_out;
         size_t                           outputlen = pubkey_out.size();
 
@@ -34,7 +34,7 @@ namespace sgns::crypto
         const secp256k1::RSVSignature &signature,
         const secp256k1::MessageHash  &message_hash ) const
     {
-        OUTCOME_TRY( ( auto &&, pubkey ), recoverPublickey( signature, message_hash ) );
+        BOOST_OUTCOME_TRY( auto pubkey, recoverPublickey( signature, message_hash ) );
         secp256k1::CompressedPublicKey pubkey_out;
         size_t                         outputlen = secp256k1::CompressedPublicKey::size();
 
@@ -78,7 +78,7 @@ namespace sgns::crypto
         const secp256k1::RSVSignature &signature,
         const secp256k1::MessageHash  &message_hash ) const
     {
-        OUTCOME_TRY( ( auto &&, rec_id ), validateRecoveryId( static_cast<int>( signature[64] ) ) );
+        BOOST_OUTCOME_TRY( auto rec_id, validateRecoveryId( static_cast<int>( signature[64] ) ) );
 
         secp256k1_ecdsa_recoverable_signature sig_rec;
         secp256k1_pubkey                      pubkey;

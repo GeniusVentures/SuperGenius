@@ -55,8 +55,8 @@ namespace sgns::storage::changes_trie
                                                             bool                is_new_entry )
     {
         auto change_it = extrinsics_changes_.find( key );
-        OUTCOME_TRY( ( auto &&, idx_bytes ), get_extrinsic_index_() );
-        OUTCOME_TRY( ( auto &&, idx ), scale::decode<primitives::ExtrinsicIndex>( idx_bytes ) );
+        BOOST_OUTCOME_TRY( auto idx_bytes, get_extrinsic_index_() );
+        BOOST_OUTCOME_TRY( auto idx, scale::decode<primitives::ExtrinsicIndex>( idx_bytes ) );
 
         // if key was already changed in the same block, just add extrinsic to
         // the changers list
@@ -79,8 +79,8 @@ namespace sgns::storage::changes_trie
     outcome::result<void> StorageChangesTrackerImpl::onRemove( const base::Buffer &key )
     {
         auto change_it = extrinsics_changes_.find( key );
-        OUTCOME_TRY( ( auto &&, idx_bytes ), get_extrinsic_index_() );
-        OUTCOME_TRY( ( auto &&, idx ), scale::decode<primitives::ExtrinsicIndex>( idx_bytes ) );
+        BOOST_OUTCOME_TRY( auto idx_bytes, get_extrinsic_index_() );
+        BOOST_OUTCOME_TRY( auto idx, scale::decode<primitives::ExtrinsicIndex>( idx_bytes ) );
 
         // if key was already changed in the same block, just add extrinsic to
         // the changers list
@@ -112,7 +112,7 @@ namespace sgns::storage::changes_trie
         {
             return Error::INVALID_PARENT_HASH;
         }
-        OUTCOME_TRY(
+        BOOST_OUTCOME_TRY(
             ( auto &&, trie ),
             ChangesTrie::buildFromChanges( parent_number_, trie_factory_, codec_, extrinsics_changes_, conf ) );
         return trie->getHash();

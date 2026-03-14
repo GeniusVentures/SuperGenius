@@ -33,10 +33,10 @@ namespace sgns::storage::trie
         const SuperGeniusTrie &trie )
     {
         auto c = std::make_unique<SuperGeniusTrieCursor>( trie );
-        OUTCOME_TRY( ( auto &&, node ), trie.getNode( trie.getRoot(), c->codec_.keyToNibbles( key ) ) );
+        BOOST_OUTCOME_TRY( auto node, trie.getNode( trie.getRoot(), c->codec_.keyToNibbles( key ) ) );
         c->visited_root_ = true; // root is always visited first
         c->current_      = node;
-        OUTCOME_TRY( ( auto &&, last_child_path ), c->constructLastVisitedChildPath( key ) );
+        BOOST_OUTCOME_TRY( auto last_child_path, c->constructLastVisitedChildPath( key ) );
         c->last_visited_child_ = std::move( last_child_path );
 
         return c;
@@ -57,9 +57,9 @@ namespace sgns::storage::trie
             return Error::NULL_ROOT;
         }
         visited_root_ = true; // root is always visited first
-        OUTCOME_TRY( ( auto &&, last_child_path ), constructLastVisitedChildPath( key ) );
+        BOOST_OUTCOME_TRY( auto last_child_path, constructLastVisitedChildPath( key ) );
         auto nibbles = SuperGeniusCodec::keyToNibbles( key );
-        OUTCOME_TRY( ( auto &&, node ), trie_.getNode( trie_.getRoot(), nibbles ) );
+        BOOST_OUTCOME_TRY( auto node, trie_.getNode( trie_.getRoot(), nibbles ) );
 
         bool node_has_value = node != nullptr && node->value.has_value();
         if ( node_has_value )
@@ -97,7 +97,7 @@ namespace sgns::storage::trie
                 {
                     if ( branch->children.at( i ) != nullptr )
                     {
-                        OUTCOME_TRY( ( auto &&, c ), trie_.retrieveChild( branch, i ) );
+                        BOOST_OUTCOME_TRY( auto c, trie_.retrieveChild( branch, i ) );
                         last_visited_child_.emplace_back( branch, i );
                         current = c;
                     }
@@ -157,7 +157,7 @@ namespace sgns::storage::trie
                     p = last_visited_child_.back().parent; // p.parent
                 }
                 auto i = getNextChildIdx( p, last_visited_child_.back().child_idx );
-                OUTCOME_TRY( ( auto &&, c ), trie_.retrieveChild( p, i ) );
+                BOOST_OUTCOME_TRY( auto c, trie_.retrieveChild( p, i ) );
                 current_ = c;
                 updateLastVisitedChild( p, i );
             }
@@ -180,7 +180,7 @@ namespace sgns::storage::trie
                     p = last_visited_child_.back().parent; // p.parent
                 }
                 auto i = getNextChildIdx( p, last_visited_child_.back().child_idx );
-                OUTCOME_TRY( ( auto &&, c ), trie_.retrieveChild( p, i ) );
+                BOOST_OUTCOME_TRY( auto c, trie_.retrieveChild( p, i ) );
                 current_ = c;
                 updateLastVisitedChild( p, i );
             }
@@ -274,7 +274,7 @@ namespace sgns::storage::trie
     auto SuperGeniusTrieCursor::constructLastVisitedChildPath( const base::Buffer &key )
         -> outcome::result<std::list<TriePathEntry>>
     {
-        OUTCOME_TRY( ( auto &&, path ), trie_.getPath( trie_.getRoot(), codec_.keyToNibbles( key ) ) );
+        BOOST_OUTCOME_TRY( auto path, trie_.getPath( trie_.getRoot(), codec_.keyToNibbles( key ) ) );
         std::list<TriePathEntry> last_visited_child;
         for ( auto &&[branch, idx] : path )
         {

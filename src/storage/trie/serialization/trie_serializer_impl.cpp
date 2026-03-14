@@ -38,7 +38,7 @@ namespace sgns::storage::trie
         {
             return trie_factory_->createEmpty( std::move( f ) );
         }
-        OUTCOME_TRY( ( auto &&, root ), retrieveNode( db_key ) );
+        BOOST_OUTCOME_TRY( auto root, retrieveNode( db_key ) );
         return trie_factory_->createFromRoot( std::move( root ), std::move( f ) );
     }
 
@@ -53,13 +53,13 @@ namespace sgns::storage::trie
         if ( node.getTrieType() == T::BranchEmptyValue || node.getTrieType() == T::BranchWithValue )
         {
             auto &branch = dynamic_cast<BranchNode &>( node );
-            BOOST_OUTCOME_TRYV2( auto &&, storeChildren( branch, *batch ) );
+            BOOST_OUTCOME_TRY( storeChildren( branch, *batch ) );
         }
 
-        OUTCOME_TRY( ( auto &&, enc ), codec_->encodeNode( node ) );
+        BOOST_OUTCOME_TRY( auto enc, codec_->encodeNode( node ) );
         auto key = Buffer{ codec_->hash256( enc ) };
-        BOOST_OUTCOME_TRYV2( auto &&, batch->put( key, enc ) );
-        BOOST_OUTCOME_TRYV2( auto &&, batch->commit() );
+        BOOST_OUTCOME_TRY( batch->put( key, enc ) );
+        BOOST_OUTCOME_TRY( batch->commit() );
 
         return key;
     }
@@ -74,11 +74,11 @@ namespace sgns::storage::trie
         if ( node.getTrieType() == T::BranchEmptyValue || node.getTrieType() == T::BranchWithValue )
         {
             auto &branch = dynamic_cast<BranchNode &>( node );
-            BOOST_OUTCOME_TRYV2( auto &&, storeChildren( branch, batch ) );
+            BOOST_OUTCOME_TRY( storeChildren( branch, batch ) );
         }
-        OUTCOME_TRY( ( auto &&, enc ), codec_->encodeNode( node ) );
+        BOOST_OUTCOME_TRY( auto enc, codec_->encodeNode( node ) );
         auto key = Buffer{ codec_->merkleValue( enc ) };
-        BOOST_OUTCOME_TRYV2( auto &&, batch.put( key, enc ) );
+        BOOST_OUTCOME_TRY( batch.put( key, enc ) );
         return key;
     }
 
@@ -88,7 +88,7 @@ namespace sgns::storage::trie
         {
             if ( child && !child->isDummy() )
             {
-                OUTCOME_TRY( ( auto &&, hash ), storeNode( *child, batch ) );
+                BOOST_OUTCOME_TRY( auto hash, storeNode( *child, batch ) );
                 // when a node is written to the storage, it is replaced with a dummy
                 // node to avoid memory waste
                 child = std::make_shared<DummyNode>( hash );
@@ -108,7 +108,7 @@ namespace sgns::storage::trie
         if ( parent->children.at( idx )->isDummy() )
         {
             auto dummy = std::dynamic_pointer_cast<DummyNode>( parent->children.at( idx ) );
-            OUTCOME_TRY( ( auto &&, n ), retrieveNode( dummy->db_key ) );
+            BOOST_OUTCOME_TRY( auto n, retrieveNode( dummy->db_key ) );
             parent->children.at( idx ) = n;
         }
         return parent->children.at( idx );
@@ -120,8 +120,8 @@ namespace sgns::storage::trie
         {
             return nullptr;
         }
-        OUTCOME_TRY( ( auto &&, enc ), backend_->get( db_key ) );
-        OUTCOME_TRY( ( auto &&, n ), codec_->decodeNode( enc ) );
+        BOOST_OUTCOME_TRY( auto enc, backend_->get( db_key ) );
+        BOOST_OUTCOME_TRY( auto n, codec_->decodeNode( enc ) );
         return std::dynamic_pointer_cast<SuperGeniusNode>( n );
     }
 

@@ -37,7 +37,7 @@ namespace sgns::storage
         {
             for ( auto &entry : entries )
             {
-                BOOST_OUTCOME_TRYV2( auto &&, db.put( Buffer::fromHex( entry.first ).value(), entry.second ) );
+                BOOST_OUTCOME_TRY( db.put( Buffer::fromHex( entry.first ).value(), entry.second ) );
             }
             return outcome::success();
         }

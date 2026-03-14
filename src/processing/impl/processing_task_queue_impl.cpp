@@ -40,7 +40,7 @@ namespace sgns::processing
             sgns::crdt::HierarchicalKey key( complete_subtask_path.str() );
             sgns::base::Buffer          value;
             value.put( subTask.SerializeAsString() );
-            BOOST_OUTCOME_TRYV2( auto &&, job_crdt_transaction_->Put( std::move( key ), std::move( value ) ) );
+            BOOST_OUTCOME_TRY( job_crdt_transaction_->Put( std::move( key ), std::move( value ) ) );
 
             m_logger->debug( "[{}] placed to GlobalDB ", complete_subtask_path.str() );
         }
@@ -51,7 +51,7 @@ namespace sgns::processing
         sgns::base::Buffer          value;
         value.put( task.SerializeAsString() );
 
-        BOOST_OUTCOME_TRYV2( auto &&, job_crdt_transaction_->Put( std::move( key ), std::move( value ) ) );
+        BOOST_OUTCOME_TRY( job_crdt_transaction_->Put( std::move( key ), std::move( value ) ) );
         m_logger->debug( "[{}] placed to GlobalDB ", complete_task_path.str() );
 
         return outcome::success();
@@ -105,7 +105,7 @@ namespace sgns::processing
     outcome::result<std::pair<std::string, SGProcessing::Task>> ProcessingTaskQueueImpl::GrabTask()
     {
         m_logger->info( "GRAB_TASK called - blacklist has {} items", m_badjobs.size() );
-        OUTCOME_TRY( ( auto &&, queryTasks ), m_db->QueryKeyValues( std::string( TASK_LIST_KEY ) ) );
+        BOOST_OUTCOME_TRY( auto queryTasks, m_db->QueryKeyValues( std::string( TASK_LIST_KEY ) ) );
 
         //m_logger->info( "Task list grabbed from CRDT datastore" );
 
@@ -205,7 +205,7 @@ namespace sgns::processing
 
         auto job_completion_transaction = m_db->BeginTransaction();
         data.put( taskResult.SerializeAsString() );
-        BOOST_OUTCOME_TRYV2( auto &&, job_completion_transaction->Put( std::move( result_key ), std::move( data ) ) );
+        BOOST_OUTCOME_TRY( job_completion_transaction->Put( std::move( result_key ), std::move( data ) ) );
 
         m_logger->debug( "TASK_COMPLETED: {}, results stored", taskKey );
         return job_completion_transaction;
@@ -228,7 +228,7 @@ namespace sgns::processing
         complete_task_path % taskId;
         sgns::crdt::HierarchicalKey task_key( complete_task_path.str() );
 
-        OUTCOME_TRY( ( auto &&, task_buffer ), m_db->Get( task_key ) );
+        BOOST_OUTCOME_TRY( auto task_buffer, m_db->Get( task_key ) );
 
         SGProcessing::Task task;
 
@@ -251,7 +251,7 @@ namespace sgns::processing
 
     outcome::result<void> ProcessingTaskQueueImpl::IsTaskValid( const std::string taskJson )
     {
-        OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( taskJson ) );
+        BOOST_OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( taskJson ) );
         return outcome::success();
     }
 
@@ -363,8 +363,8 @@ namespace sgns::processing
 
         sgns::crdt::HierarchicalKey key( path );
 
-        BOOST_OUTCOME_TRYV2( auto &&, job_crdt_transaction_->Put( std::move( key ), std::move( value ) ) );
-        BOOST_OUTCOME_TRYV2( auto &&, job_crdt_transaction_->Commit( { m_processing_topic } ) );
+        BOOST_OUTCOME_TRY( job_crdt_transaction_->Put( std::move( key ), std::move( value ) ) );
+        BOOST_OUTCOME_TRY( job_crdt_transaction_->Commit( { m_processing_topic } ) );
 
         ResetAtomicTransaction();
 

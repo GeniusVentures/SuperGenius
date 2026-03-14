@@ -121,8 +121,9 @@ namespace sgns
             uint64_t                             amount,
             const std::string                   &destination )
         {
-            OUTCOME_TRY( auto &&params,
-                         utxo_manager.CreateTxParameter( amount, destination, sgns::TokenID::FromBytes( { 0x00 } ) ) );
+            BOOST_OUTCOME_TRY(
+                auto params,
+                utxo_manager.CreateTxParameter( amount, destination, sgns::TokenID::FromBytes( { 0x00 } ) ) );
 
             auto timestamp = std::chrono::system_clock::now();
 
@@ -139,7 +140,7 @@ namespace sgns
             std::optional<std::vector<uint8_t>> maybe_proof;
 
             TransferProof prover( static_cast<uint64_t>( utxo_manager.GetBalance() ), static_cast<uint64_t>( amount ) );
-            OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
+            BOOST_OUTCOME_TRY( auto proof_result, prover.GenerateFullProof() );
 
             maybe_proof = std::move( proof_result );
 

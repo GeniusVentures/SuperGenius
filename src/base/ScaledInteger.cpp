@@ -26,7 +26,7 @@ namespace sgns
 
     outcome::result<std::shared_ptr<ScaledInteger>> ScaledInteger::New( double raw_value, uint64_t precision )
     {
-        OUTCOME_TRY( auto &&from_dbl_value, FromDouble( raw_value, precision ) );
+        BOOST_OUTCOME_TRY( auto from_dbl_value, FromDouble( raw_value, precision ) );
         auto ptr = std::shared_ptr<ScaledInteger>( new ScaledInteger( from_dbl_value, precision ) );
         return outcome::success( ptr );
     }
@@ -35,7 +35,7 @@ namespace sgns
                                                                         uint64_t           precision,
                                                                         ParseMode          mode )
     {
-        OUTCOME_TRY( auto &&from_str_value, FromString( str_value, precision, mode ) );
+        BOOST_OUTCOME_TRY( auto from_str_value, FromString( str_value, precision, mode ) );
         auto ptr = std::shared_ptr<ScaledInteger>( new ScaledInteger( from_str_value, precision ) );
         return outcome::success( ptr );
     }
@@ -52,7 +52,7 @@ namespace sgns
         {
             precision_calc = str_value.size() - dot_pos - 1;
         }
-        OUTCOME_TRY( auto &&raw_value, FromString( str_value, precision_calc ) );
+        BOOST_OUTCOME_TRY( auto raw_value, FromString( str_value, precision_calc ) );
         auto ptr = std::shared_ptr<ScaledInteger>( new ScaledInteger( raw_value, precision_calc ) );
         return outcome::success( ptr );
     }
@@ -284,7 +284,7 @@ namespace sgns
         {
             return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
         }
-        OUTCOME_TRY( auto &&multiply_res, ScaledInteger::Multiply( value_, other.value_, precision_ ) );
+        BOOST_OUTCOME_TRY( auto multiply_res, ScaledInteger::Multiply( value_, other.value_, precision_ ) );
         return outcome::success( ScaledInteger( multiply_res, precision_ ) );
     }
 
@@ -294,13 +294,13 @@ namespace sgns
         {
             return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
         }
-        OUTCOME_TRY( auto &&divide_res, ScaledInteger::Divide( value_, other.value_, precision_ ) );
+        BOOST_OUTCOME_TRY( auto divide_res, ScaledInteger::Divide( value_, other.value_, precision_ ) );
         return outcome::success( ScaledInteger( divide_res, precision_ ) );
     }
 
     outcome::result<ScaledInteger> ScaledInteger::ConvertPrecision( uint64_t to ) const
     {
-        OUTCOME_TRY( auto &&convert_res, ScaledInteger::ConvertPrecision( value_, precision_, to ) );
+        BOOST_OUTCOME_TRY( auto convert_res, ScaledInteger::ConvertPrecision( value_, precision_, to ) );
         return outcome::success( ScaledInteger( convert_res, to ) );
     }
 }

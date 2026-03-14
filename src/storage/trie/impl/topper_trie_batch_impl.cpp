@@ -124,17 +124,17 @@ namespace sgns::storage::trie
             auto it = cache_.begin();
             for ( auto &prefix : cleared_prefixes_ )
             {
-                BOOST_OUTCOME_TRYV2( auto &&, p->clearPrefix( prefix ) );
+                BOOST_OUTCOME_TRY( p->clearPrefix( prefix ) );
             }
             for ( ; it != cache_.end(); it++ )
             {
                 if ( it->second.has_value() )
                 {
-                    BOOST_OUTCOME_TRYV2( auto &&, p->put( it->first, it->second.value() ) );
+                    BOOST_OUTCOME_TRY( p->put( it->first, it->second.value() ) );
                 }
                 else
                 {
-                    BOOST_OUTCOME_TRYV2( auto &&, p->remove( it->first ) );
+                    BOOST_OUTCOME_TRY( p->remove( it->first ) );
                 }
             }
             return outcome::success();
