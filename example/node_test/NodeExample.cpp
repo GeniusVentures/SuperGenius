@@ -352,9 +352,10 @@ void status_polling_thread( std::shared_ptr<sgns::GeniusNode> genius_node )
         }
 
         auto status = genius_node->GetProcessingStatus();
-        
+
         std::string status_str;
-        switch (status.status) {
+        switch ( status.status )
+        {
             case sgns::processing::ProcessingServiceImpl::Status::DISABLED:
                 status_str = "DISABLED";
                 break;
@@ -365,10 +366,10 @@ void status_polling_thread( std::shared_ptr<sgns::GeniusNode> genius_node )
                 status_str = "PROCESSING";
                 break;
         }
-        
+
         // Simple output without terminal manipulation
-        std::cout << "[Status: " << status_str << " | Progress: " 
-                  << std::fixed << std::setprecision(2) << status.percentage << "%]" << std::endl;
+        std::cout << "[Status: " << status_str << " | Progress: " << std::fixed << std::setprecision( 2 )
+                  << status.percentage << "%]" << std::endl;
     }
 }
 
@@ -738,7 +739,7 @@ int main( int argc, char *argv[] )
     {
         input_thread.join();
     }
-    
+
     if ( status_thread.joinable() )
     {
         status_thread.join();

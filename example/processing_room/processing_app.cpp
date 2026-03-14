@@ -111,12 +111,14 @@ namespace
             return true;
         }
 
-        outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CompleteTask( const std::string &taskKey, const SGProcessing::TaskResult &task ) override
+        outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CompleteTask(
+            const std::string              &taskKey,
+            const SGProcessing::TaskResult &task ) override
         {
             return outcome::success();
         }
 
-        void MarkTaskBad(const std::string& taskKey) override
+        void MarkTaskBad( const std::string &taskKey ) override
         {
             return;
         }

@@ -46,8 +46,7 @@ namespace sgns
             true,
             account_->GetAddress(),
             [this]( const std::vector<uint8_t> &data ) { return this->account_->Sign( data ); },
-            []( const std::string &address, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
-            {
+            []( const std::string &address, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data ) {
                 return GeniusAccount::VerifySignature( address,
                                                        std::string( signature.begin(), signature.end() ),
                                                        data );

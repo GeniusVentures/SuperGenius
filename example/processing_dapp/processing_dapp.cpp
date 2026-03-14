@@ -247,11 +247,11 @@ int main( int argc, char *argv[] )
                                                    scheduler,
                                                    generator );
 
-    if (globaldb_ret.has_error())
+    if ( globaldb_ret.has_error() )
     {
         return -1;
     }
-    auto globalDB     = std::move( globaldb_ret.value() );
+    auto globalDB = std::move( globaldb_ret.value() );
 
     globalDB->AddListenTopic( "CRDT.Datastore.TEST.Channel" );
     globalDB->AddBroadcastTopic( "CRDT.Datastore.TEST.Channel" );

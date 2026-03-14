@@ -29,36 +29,37 @@ namespace
         std::optional<std::string> remote;
     };
 
-    boost::optional<Options> parseCommandLine(int argc, char** argv) {
+    boost::optional<Options> parseCommandLine( int argc, char **argv )
+    {
         namespace po = boost::program_options;
         try
         {
-            Options o;
+            Options     o;
             std::string remote;
 
-            po::options_description desc("ipfs service options");
-            desc.add_options()("help,h", "print usage message")
-                ("remote,r", po::value(&remote), "remote service multiaddress to connect to")
-                ;
+            po::options_description desc( "ipfs service options" );
+            desc.add_options()( "help,h", "print usage message" )( "remote,r",
+                                                                   po::value( &remote ),
+                                                                   "remote service multiaddress to connect to" );
 
             po::variables_map vm;
-            po::store(parse_command_line(argc, argv, desc), vm);
-            po::notify(vm);
+            po::store( parse_command_line( argc, argv, desc ), vm );
+            po::notify( vm );
 
-            if (vm.count("help") != 0 || argc == 1)
+            if ( vm.count( "help" ) != 0 || argc == 1 )
             {
                 std::cerr << desc << "\n";
                 return boost::none;
             }
 
-            if (!remote.empty())
+            if ( !remote.empty() )
             {
                 o.remote = remote;
             }
 
             return o;
         }
-        catch (const std::exception& e)
+        catch ( const std::exception &e )
         {
             std::cerr << e.what() << std::endl;
         }
@@ -68,64 +69,59 @@ namespace
     class BlockRequestor
     {
     public:
-        BlockRequestor(
-            std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap,
-            const sgns::ipfs_bitswap::CID& cid,
-            const std::vector<libp2p::peer::PeerInfo>& providers);
+        BlockRequestor( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap,
+                        const sgns::ipfs_bitswap::CID               &cid,
+                        const std::vector<libp2p::peer::PeerInfo>   &providers );
 
         bool RequestBlock();
+
     private:
-        bool RequestBlock(
-            std::vector<libp2p::peer::PeerInfo>::iterator addressBeginIt,
-            std::vector<libp2p::peer::PeerInfo>::iterator addressEndIt);
+        bool RequestBlock( std::vector<libp2p::peer::PeerInfo>::iterator addressBeginIt,
+                           std::vector<libp2p::peer::PeerInfo>::iterator addressEndIt );
 
         std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap_;
-        sgns::ipfs_bitswap::CID cid_;
-        std::vector<libp2p::peer::PeerInfo> providers_;
+        sgns::ipfs_bitswap::CID                      cid_;
+        std::vector<libp2p::peer::PeerInfo>          providers_;
     };
 
-    BlockRequestor::BlockRequestor(
-        std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap,
-        const sgns::ipfs_bitswap::CID& cid,
-        const std::vector<libp2p::peer::PeerInfo>& providers)
-        : bitswap_(std::move(bitswap))
-        , cid_(cid)
-        , providers_(providers)
+    BlockRequestor::BlockRequestor( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap,
+                                    const sgns::ipfs_bitswap::CID               &cid,
+                                    const std::vector<libp2p::peer::PeerInfo>   &providers ) :
+        bitswap_( std::move( bitswap ) ), cid_( cid ), providers_( providers )
     {
     }
 
     bool BlockRequestor::RequestBlock()
     {
-        return RequestBlock(providers_.begin(), providers_.end());
+        return RequestBlock( providers_.begin(), providers_.end() );
     }
 
-    bool BlockRequestor::RequestBlock(
-        std::vector<libp2p::peer::PeerInfo>::iterator addressBeginIt,
-        std::vector<libp2p::peer::PeerInfo>::iterator addressEndIt)
+    bool BlockRequestor::RequestBlock( std::vector<libp2p::peer::PeerInfo>::iterator addressBeginIt,
+                                       std::vector<libp2p::peer::PeerInfo>::iterator addressEndIt )
     {
-        if (addressBeginIt != addressEndIt)
+        if ( addressBeginIt != addressEndIt )
         {
-            bitswap_->RequestBlock(*addressBeginIt, cid_,
-                [this, addressBeginIt, addressEndIt](libp2p::outcome::result<std::string> data)
-                {
-                    if (data)
-                    {
-                        std::cout << "Bitswap data received: " << data.value() << std::endl;
-                        return true;
-                    }
-                    else
-                    {
-                        return RequestBlock(addressBeginIt + 1, addressEndIt);
-                    }
-                });
+            bitswap_->RequestBlock( *addressBeginIt,
+                                    cid_,
+                                    [this, addressBeginIt, addressEndIt]( libp2p::outcome::result<std::string> data )
+                                    {
+                                        if ( data )
+                                        {
+                                            std::cout << "Bitswap data received: " << data.value() << std::endl;
+                                            return true;
+                                        }
+                                        else
+                                        {
+                                            return RequestBlock( addressBeginIt + 1, addressEndIt );
+                                        }
+                                    } );
         }
 
         return false;
     }
 }
 
-
-int main(int argc, char* argv[])
+int main( int argc, char *argv[] )
 {
     //auto options = parseCommandLine(argc, argv);
     //if (!options)
@@ -133,7 +129,7 @@ int main(int argc, char* argv[])
     //    return EXIT_FAILURE;
     //}
 
-    const std::string logger_config(R"(
+    const std::string logger_config( R"(
     # ----------------
     sinks:
       - name: console
@@ -147,47 +143,43 @@ int main(int argc, char* argv[])
           - name: libp2p
           - name: kademlia
     # ----------------
-    )");
+    )" );
 
     // prepare log system
-    auto logging_system = std::make_shared<soralog::LoggingSystem>(
-        std::make_shared<soralog::ConfiguratorFromYAML>(
-            // Original LibP2P logging config
-            std::make_shared<libp2p::log::Configurator>(),
-            // Additional logging config for application
-            logger_config));
+    auto logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
+        // Original LibP2P logging config
+        std::make_shared<libp2p::log::Configurator>(),
+        // Additional logging config for application
+        logger_config ) );
     logging_system->configure();
 
-    libp2p::log::setLoggingSystem(logging_system);
+    libp2p::log::setLoggingSystem( logging_system );
 
-    auto loggerIdentifyMsgProcessor = libp2p::log::createLogger("IdentifyMsgProcessor");
-    loggerIdentifyMsgProcessor->setLevel(soralog::Level::ERROR_);
+    auto loggerIdentifyMsgProcessor = libp2p::log::createLogger( "IdentifyMsgProcessor" );
+    loggerIdentifyMsgProcessor->setLevel( soralog::Level::ERROR_ );
 
-    auto loggerBitswap = sgns::ipfs_bitswap::createLogger("Bitswap");
-    loggerBitswap->set_level(spdlog::level::debug);
+    auto loggerBitswap = sgns::ipfs_bitswap::createLogger( "Bitswap" );
+    loggerBitswap->set_level( spdlog::level::debug );
 
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
 
     libp2p::protocol::kademlia::Config kademlia_config;
-    kademlia_config.randomWalk.enabled = true;
-    kademlia_config.randomWalk.interval = std::chrono::seconds(300);
-    kademlia_config.requestConcurency = 20;
+    kademlia_config.randomWalk.enabled  = true;
+    kademlia_config.randomWalk.interval = std::chrono::seconds( 300 );
+    kademlia_config.requestConcurency   = 20;
 
     auto injector = libp2p::injector::makeHostInjector(
         // libp2p::injector::useKeyPair(kp), // Use predefined keypair
-        libp2p::injector::makeKademliaInjector(
-            libp2p::injector::useKademliaConfig(kademlia_config)));
+        libp2p::injector::makeKademliaInjector( libp2p::injector::useKademliaConfig( kademlia_config ) ) );
 
     try
     {
-        auto ma = libp2p::multi::Multiaddress::create("/ip4/127.0.0.1/tcp/40000").value();  // NOLINT
+        auto ma = libp2p::multi::Multiaddress::create( "/ip4/127.0.0.1/tcp/40000" ).value(); // NOLINT
 
-        auto io = injector.create<std::shared_ptr<boost::asio::io_context>>();
+        auto io   = injector.create<std::shared_ptr<boost::asio::io_context>>();
         auto host = injector.create<std::shared_ptr<libp2p::Host>>();
 
-        auto kademlia =
-            injector
-            .create<std::shared_ptr<libp2p::protocol::kademlia::Kademlia>>();
+        auto kademlia = injector.create<std::shared_ptr<libp2p::protocol::kademlia::Kademlia>>();
 
         std::vector<std::string> bootstrapAddresses = {
             //"/dnsaddr/bootstrap.libp2p.io/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
@@ -201,13 +193,14 @@ int main(int argc, char* argv[])
         };
 
         // Hello world
-        auto cid = libp2p::multi::ContentIdentifierCodec::fromString("QmSnuWmxptJZdLJpKRarxBMS2Ju2oANVrgbr2xWbie9b2D").value();
+        auto cid = libp2p::multi::ContentIdentifierCodec::fromString( "QmSnuWmxptJZdLJpKRarxBMS2Ju2oANVrgbr2xWbie9b2D" )
+                       .value();
 
         // The peer id is received in findProviders response.
         //auto peer_id = libp2p::peer::PeerId::fromBase58("QmRXP6S7qwSH4vjSrZeJUGT68ww8rQVhoFWU5Kp7UkVkPN").value();
         //auto peer_id = libp2p::peer::PeerId::fromBase58("QmTigmvYEhvcwEpZMuXHcC5HGQG4iKDCKaNeZuoy69QsJw").value();
 
-        // Peers addresses: 
+        // Peers addresses:
         // /ip4/127.0.0.1/udp/4001/quic;
         // /ip4/54.89.142.24/udp/4001/quic;
         // /ip4/54.89.142.24/tcp/1031;
@@ -219,13 +212,11 @@ int main(int argc, char* argv[])
         // /ip4/10.0.65.121/tcp/4001;
         // /ip4/127.0.0.1/tcp/4001;
         // /ip4/54.89.142.24/tcp/1024;
-        auto peer_address = 
-            libp2p::multi::Multiaddress::create(
-                //"/ip4/10.0.65.121/tcp/4001/p2p/QmRXP6S7qwSH4vjSrZeJUGT68ww8rQVhoFWU5Kp7UkVkPN"
-                //"/ip4/54.89.142.24/tcp/4001/p2p/QmRXP6S7qwSH4vjSrZeJUGT68ww8rQVhoFWU5Kp7UkVkPN"
-                "/ip4/54.89.112.218/tcp/4001/p2p/QmSrq3jnqGAja4z96Jq9SMQFJ8TzbRAgrMLi1sTR6Ane6W"
-            ).value();
-
+        auto peer_address = libp2p::multi::Multiaddress::create(
+                                //"/ip4/10.0.65.121/tcp/4001/p2p/QmRXP6S7qwSH4vjSrZeJUGT68ww8rQVhoFWU5Kp7UkVkPN"
+                                //"/ip4/54.89.142.24/tcp/4001/p2p/QmRXP6S7qwSH4vjSrZeJUGT68ww8rQVhoFWU5Kp7UkVkPN"
+                                "/ip4/54.89.112.218/tcp/4001/p2p/QmSrq3jnqGAja4z96Jq9SMQFJ8TzbRAgrMLi1sTR6Ane6W" )
+                                .value();
 
         //auto identityManager = injector.create<std::shared_ptr<libp2p::peer::IdentityManager>>();
         //auto keyMarshaller = injector.create<std::shared_ptr<libp2p::crypto::marshaller::KeyMarshaller>>();
@@ -234,30 +225,33 @@ int main(int argc, char* argv[])
         //    *host, host->getNetwork().getConnectionManager(), *identityManager, keyMarshaller);
         //auto identify = std::make_shared<libp2p::protocol::Identify>(*host, identifyMessageProcessor, host->getBus());
 
-        auto pingSession = std::make_shared<PingSession>(io, host);
+        auto pingSession = std::make_shared<PingSession>( io, host );
         pingSession->Init();
 
-        auto dht = std::make_shared<sgns::IpfsDHT>(kademlia, bootstrapAddresses);
+        auto dht = std::make_shared<sgns::IpfsDHT>( kademlia, bootstrapAddresses );
 
         // Bitswap setup
-        auto bitswap = std::make_shared<sgns::ipfs_bitswap::Bitswap>(*host, host->getBus(), io);
+        auto bitswap = std::make_shared<sgns::ipfs_bitswap::Bitswap>( *host, host->getBus(), io );
 
         std::shared_ptr<BlockRequestor> blockRequestor;
 
         ////////////////////////////////////////////////////////////////////////////////
-        io->post([&] {
-            auto listen = host->listen(ma);
-            if (!listen) {
-                std::cerr << "Cannot listen address " << ma.getStringAddress().data()
-                    << ". Error: " << listen.error().message() << std::endl;
-                std::exit(EXIT_FAILURE);
-            }
+        io->post(
+            [&]
+            {
+                auto listen = host->listen( ma );
+                if ( !listen )
+                {
+                    std::cerr << "Cannot listen address " << ma.getStringAddress().data()
+                              << ". Error: " << listen.error().message() << std::endl;
+                    std::exit( EXIT_FAILURE );
+                }
 
-            //identify->start();
-            bitswap->start();
-            host->start();
+                //identify->start();
+                bitswap->start();
+                host->start();
 
-            /*
+                /*
             bitswap->RequestBlock(peer_id, peer_address, cid,
                 [](libp2p::outcome::result<std::string> data)
                 {
@@ -271,56 +265,70 @@ int main(int argc, char* argv[])
                     }
                 });
             /*/
-            dht->Start();
+                dht->Start();
 
-            //dht->FindProviders(cid, [dht, bitswap, &cid, &blockRequestor](libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res) {
-            dht->FindProviders(cid, [dht, host, io, bitswap, &cid, &blockRequestor](libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res) {
-                if (!res) {
-                    std::cerr << "Cannot find providers: " << res.error().message() << std::endl;
-                    return;
-                }
-
-                std::cout << "Providers: " << std::endl;
-                auto& providers = res.value();
-                if (!providers.empty())
-                {
-                    for (auto& provider : providers) {
-                        std::cout << provider.id.toBase58() << std::endl;
-                    }
-
-                    const auto& pi = providers.front();
-                    std::cout << "Trying to request a block from peer: " << pi.id.toBase58() << std::endl;
-                    std::cout << "Addresses: [";
-                    std::string sep = "";
-                    for (auto& address : pi.addresses)
+                //dht->FindProviders(cid, [dht, bitswap, &cid, &blockRequestor](libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res) {
+                dht->FindProviders(
+                    cid,
+                    [dht, host, io, bitswap, &cid, &blockRequestor](
+                        libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res )
                     {
-                        std::cout << sep << address.getStringAddress();
-                        sep = ",";
-                    }
-                    std::cout << std::endl;
+                        if ( !res )
+                        {
+                            std::cerr << "Cannot find providers: " << res.error().message() << std::endl;
+                            return;
+                        }
 
-                    blockRequestor = std::make_shared<BlockRequestor>(bitswap, cid, providers);
-                    if (!blockRequestor->RequestBlock())
-                    {
-                        std::cout << "CANNOT GET REQUESTED DATA: " << std::endl;
-                    }
-                }
-                else
-                {
-                    std::cout << "Empty providers list received" << std::endl;
-                    //std::exit(EXIT_FAILURE);
-                }
-            });
-            //*/
+                        std::cout << "Providers: " << std::endl;
+                        auto &providers = res.value();
+                        if ( !providers.empty() )
+                        {
+                            for ( auto &provider : providers )
+                            {
+                                std::cout << provider.id.toBase58() << std::endl;
+                            }
 
-        }); // io->post()
+                            const auto &pi = providers.front();
+                            std::cout << "Trying to request a block from peer: " << pi.id.toBase58() << std::endl;
+                            std::cout << "Addresses: [";
+                            std::string sep = "";
+                            for ( auto &address : pi.addresses )
+                            {
+                                std::cout << sep << address.getStringAddress();
+                                sep = ",";
+                            }
+                            std::cout << std::endl;
 
-        boost::asio::signal_set signals(*io, SIGINT, SIGTERM);
+                            blockRequestor = std::make_shared<BlockRequestor>( bitswap, cid, providers );
+                            if ( !blockRequestor->RequestBlock() )
+                            {
+                                std::cout << "CANNOT GET REQUESTED DATA: " << std::endl;
+                            }
+                        }
+                        else
+                        {
+                            std::cout << "Empty providers list received" << std::endl;
+                            //std::exit(EXIT_FAILURE);
+                        }
+                    } );
+                //*/
+            } ); // io->post()
+
+        boost::asio::signal_set signals( *io, SIGINT, SIGTERM );
         signals.async_wait(
-            [&io](const boost::system::error_code&, int) { std::cout << "test" << std::endl << "test" << std::endl << "test" << std::endl << "test" << std::endl << "test" << std::endl << "test" << std::endl;  io->stop(); });
+            [&io]( const boost::system::error_code &, int )
+            {
+                std::cout << "test" << std::endl
+                          << "test" << std::endl
+                          << "test" << std::endl
+                          << "test" << std::endl
+                          << "test" << std::endl
+                          << "test" << std::endl;
+                io->stop();
+            } );
         io->run();
     }
-    catch (const std::exception& e)
+    catch ( const std::exception &e )
     {
         std::cerr << "Exception: " << e.what() << std::endl;
         return EXIT_FAILURE;
@@ -329,10 +337,10 @@ int main(int argc, char* argv[])
     return EXIT_SUCCESS;
 }
 
-
-void findprovhandler(libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res)
+void findprovhandler( libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res )
 {
-    if (!res) {
+    if ( !res )
+    {
         std::cerr << "Cannot find providers: " << res.error().message() << std::endl;
         return;
     }

@@ -8,30 +8,30 @@
 
 namespace sgns
 {
-class IpfsDHT
-{
-public:
-    IpfsDHT(
-        std::shared_ptr<libp2p::protocol::kademlia::Kademlia> kademlia,
-        std::vector<std::string> bootstrapAddresses);
+    class IpfsDHT
+    {
+    public:
+        IpfsDHT( std::shared_ptr<libp2p::protocol::kademlia::Kademlia> kademlia,
+                 std::vector<std::string>                              bootstrapAddresses );
 
-    void Start();
+        void Start();
 
-    void FindProviders(
-        const libp2p::multi::ContentIdentifier& cid,
-        std::function<void(libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> onProvidersFound)> onProvidersFound);
+        void FindProviders(
+            const libp2p::multi::ContentIdentifier &cid,
+            std::function<void( libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> onProvidersFound )>
+                onProvidersFound );
 
-    void FindPeer(
-        const libp2p::peer::PeerId& peerId,
-        std::function<void(libp2p::outcome::result<libp2p::peer::PeerInfo>)> onPeerFound);
-private:
-    std::vector<libp2p::peer::PeerInfo> GetBootstrapNodes() const;
+        void FindPeer( const libp2p::peer::PeerId                                            &peerId,
+                       std::function<void( libp2p::outcome::result<libp2p::peer::PeerInfo> )> onPeerFound );
 
-    std::shared_ptr<libp2p::protocol::kademlia::Kademlia> kademlia_;
-    std::vector<std::string> bootstrapAddresses_;
+    private:
+        std::vector<libp2p::peer::PeerInfo> GetBootstrapNodes() const;
 
-    base::Logger logger_ = base::createLogger("IpfsDHT");
-};
+        std::shared_ptr<libp2p::protocol::kademlia::Kademlia> kademlia_;
+        std::vector<std::string>                              bootstrapAddresses_;
+
+        base::Logger logger_ = base::createLogger( "IpfsDHT" );
+    };
 
 }
 

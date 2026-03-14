@@ -125,7 +125,6 @@ int main( int argc, char **argv )
     auto crdtOptions      = sgns::crdt::CrdtOptions::DefaultOptions();
     crdtOptions->logger   = logger;
 
-
     auto globaldb_ret =
         sgns::crdt::GlobalDB::New( io, strDatabasePath, pubsub, crdtOptions, graphsyncnetwork, scheduler, generator );
 
