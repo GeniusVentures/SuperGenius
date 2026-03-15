@@ -246,6 +246,9 @@ find_package(libsecp256k1 CONFIG REQUIRED)
 set(xxHash_DIR "${_THIRDPARTY_BUILD_DIR}/xxhash/lib/cmake/xxHash")
 find_package(xxHash CONFIG REQUIRED)
 
+# zlib
+set(ZLIB_ROOT "${_THIRDPARTY_BUILD_DIR}/zlib")
+
 # libssh2
 set(Libssh2_DIR "${_THIRDPARTY_BUILD_DIR}/libssh2/lib/cmake/libssh2")
 find_package(Libssh2 CONFIG REQUIRED)
