@@ -1,5 +1,3 @@
-
-
 #include "storage/trie/impl/topper_trie_batch_impl.hpp"
 
 #include "storage/trie/supergenius_trie/trie_error.hpp"

@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_rocksdb_UTIL_HPP
 #define SUPERGENIUS_rocksdb_UTIL_HPP
 

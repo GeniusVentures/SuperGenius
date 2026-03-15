@@ -1,5 +1,3 @@
-
-
 #include "crypto/ed25519/ed25519_provider_impl.hpp"
 
 #include <gtest/gtest.h>

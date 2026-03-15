@@ -1,5 +1,3 @@
-
-
 #include "base/mp_utils.hpp"
 
 #include <gtest/gtest.h>

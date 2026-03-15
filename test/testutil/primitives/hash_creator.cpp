@@ -1,5 +1,3 @@
-
-
 #include "testutil/primitives/mp_utils.hpp"
 
 namespace testutil {
