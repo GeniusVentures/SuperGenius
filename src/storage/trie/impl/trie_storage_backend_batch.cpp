@@ -1,5 +1,3 @@
-
-
 #include "storage/trie/impl/trie_storage_backend_batch.hpp"
 
 namespace sgns::storage::trie {

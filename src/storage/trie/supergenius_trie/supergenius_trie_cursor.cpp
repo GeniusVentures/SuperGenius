@@ -1,5 +1,3 @@
-
-
 #include "storage/trie/supergenius_trie/supergenius_trie_cursor.hpp"
 #include "base/buffer_back_insert_iterator.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"

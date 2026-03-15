@@ -1,5 +1,3 @@
-
-
 #include "storage/changes_trie/impl/changes_trie.hpp"
 
 #include "scale/scale.hpp"

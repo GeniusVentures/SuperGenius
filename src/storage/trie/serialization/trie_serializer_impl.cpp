@@ -1,5 +1,3 @@
-
-
 #include "storage/trie/serialization/trie_serializer_impl.hpp"
 
 namespace sgns::storage::trie {
