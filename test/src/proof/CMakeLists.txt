@@ -1,4 +1,3 @@
-
 addtest(prover_test
     ProverTest.cpp
 )

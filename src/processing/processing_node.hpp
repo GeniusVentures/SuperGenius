@@ -19,12 +19,27 @@
 namespace sgns::processing
 {
     /**
-* A node for distributed computation.
-* Allows to conduct a computation processing by multiple workers 
-*/
+     * @brief Node for distributed computation.
+     *
+     * Coordinates subtask queue ownership, processing, and result publication.
+     */
     class ProcessingNode : public std::enable_shared_from_this<ProcessingNode>
     {
     public:
+        /**
+         * @brief Creates a processing node instance.
+         * @param gossipPubSub PubSub service for queue coordination.
+         * @param subTaskResultStorage Storage for subtask results.
+         * @param processingCore Processing core to execute subtasks.
+         * @param taskResultProcessingSink Callback for task result processing.
+         * @param processingErrorSink Callback for processing errors.
+         * @param processingDoneSink Callback when processing is done.
+         * @param node_id Identifier of the processing node.
+         * @param processingQueueChannelId Queue channel identifier.
+         * @param subTasks Optional initial subtask list.
+         * @param msSubscriptionWaitingDuration Wait duration for queue subscription.
+         * @param ttl Time-to-live for node ownership.
+         */
         static std::shared_ptr<ProcessingNode> New(
             std::shared_ptr<ipfs_pubsub::GossipPubSub>              gossipPubSub,
             std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
@@ -48,8 +63,15 @@ namespace sgns::processing
         float GetProgress() const;
 
     private:
-        /** Constructs a processing node
-        * @param gossipPubSub - pubsub service
+        /** Constructs a processing node.
+        * @param gossipPubSub PubSub service.
+        * @param subTaskResultStorage Storage for subtask results.
+        * @param processingCore Processing core to execute subtasks.
+        * @param taskResultProcessingSink Callback for task result processing.
+        * @param processingErrorSink Callback for processing errors.
+        * @param processingDoneSink Callback when processing is done.
+        * @param node_id Identifier of the processing node.
+        * @param ttl Time-to-live for node ownership.
         */
         ProcessingNode( std::shared_ptr<ipfs_pubsub::GossipPubSub>              gossipPubSub,
                         std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,

@@ -59,7 +59,7 @@ namespace sgns
         return hash == calculated_hash.toReadableString();
     }
 
-    std::vector<uint8_t> IGeniusTransactions::MakeSignature( GeniusAccount& account )
+    std::vector<uint8_t> IGeniusTransactions::MakeSignature( GeniusAccount &account )
     {
         dag_st.clear_signature();
         auto serialized = SerializeByteVector();
@@ -92,5 +92,15 @@ namespace sgns
         dag_st.set_signature( str_signature );
 
         return GeniusAccount::VerifySignature( dag_st.source_addr(), str_signature, serialized ) && CheckHash();
+    }
+
+    std::string IGeniusTransactions::GetHash() const
+    {
+        return dag_st.data_hash();
+    }
+
+    std::unordered_set<std::string> IGeniusTransactions::GetTopics() const
+    {
+        return { GetSrcAddress() };
     }
 }

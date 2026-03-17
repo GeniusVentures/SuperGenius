@@ -1,4 +1,3 @@
-
 #ifndef PROCESSINGMOCK_HPP
 #define PROCESSINGMOCK_HPP
 

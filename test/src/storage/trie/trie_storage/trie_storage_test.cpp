@@ -1,5 +1,3 @@
-
-
 #include "storage/trie/impl/trie_storage_impl.hpp"
 
 #include <gtest/gtest.h>

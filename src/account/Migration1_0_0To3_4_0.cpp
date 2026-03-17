@@ -10,6 +10,14 @@
 
 namespace sgns
 {
+    namespace
+    {
+        std::string BuildLegacyProofPath_1_0_0( const IGeniusTransactions &tx )
+        {
+            return tx.GetSrcAddress() + "/proof/" + tx.GetTransactionSpecificPath() + "/" +
+                   std::to_string( tx.dag_st.nonce() );
+        }
+    }
 
     Migration1_0_0To3_4_0::Migration1_0_0To3_4_0(
         std::shared_ptr<boost::asio::io_context>                        ioContext,
@@ -96,7 +104,7 @@ namespace sgns
 
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
         auto                  crdt_transaction_ = db_3_4_0_->BeginTransaction();
-        std::set<std::string> topics_;
+        std::unordered_set<std::string> topics_;
 
         topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
 
@@ -131,7 +139,7 @@ namespace sgns
                     continue;
                 }
             }
-            auto maybe_proof = db_1_0_0_->Get( { BASE + tx->GetProofFullPath() } );
+            auto maybe_proof = db_1_0_0_->Get( { BASE + BuildLegacyProofPath_1_0_0( *tx ) } );
 
             if ( !maybe_proof.has_value() )
             {
@@ -157,7 +165,7 @@ namespace sgns
             data_transaction.put( tx->SerializeByteVector() );
             BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Put( transaction_key, std::move( data_transaction ) ) );
 
-            sgns::crdt::HierarchicalKey  proof_crdt_key( BASE + tx->GetProofFullPath() );
+            sgns::crdt::HierarchicalKey  proof_crdt_key( BASE + BuildLegacyProofPath_1_0_0( *tx ) );
             sgns::crdt::GlobalDB::Buffer proof_transaction;
             proof_transaction.put( maybe_proof.value() );
             BOOST_OUTCOME_TRYV2(

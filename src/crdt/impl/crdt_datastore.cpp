@@ -4,6 +4,7 @@
 #include <storage/rocksdb/rocksdb.hpp>
 #include <iostream>
 #include "crdt/proto/bcast.pb.h"
+#include "storage/database_error.hpp"
 #include <google/protobuf/unknown_field_set.h>
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
 #include <thread>
@@ -597,11 +598,9 @@ namespace sgns::crdt
     {
         std::set<CID> cids_to_fetch;
         auto          node_to_process = job.node_;
-        bool          processing_root = false;
         if ( node_to_process == nullptr )
         {
             node_to_process = job.root_node_;
-            processing_root = true;
         }
 
         std::set<std::string> topics_to_update_cid = node_to_process->getDestinations();
@@ -647,15 +646,12 @@ namespace sgns::crdt
                         }
                         std::lock_guard<std::mutex> lock( pendingHeadsMutex_ );
                         pendingHeadsByRootCID_[job.root_node_->getCID()].emplace( cid, topic );
-                        if ( logger_->level() <= spdlog::level::debug )
-                        {
-                            logger_->debug( "{}: Recorded replacement of {} with {} on topic {} ({}) ",
-                                            __func__,
-                                            cid.toString().value(),
-                                            job.root_node_->getCID().toString().value(),
-                                            topic,
-                                            _dontcare );
-                        }
+                        logger_->debug( "{}: Recorded replacement of {} with {} on topic {} ({}) ",
+                                        __func__,
+                                        cid.toString().value(),
+                                        job.root_node_->getCID().toString().value(),
+                                        topic,
+                                        _dontcare );
                     }
                 }
 
@@ -948,13 +944,13 @@ namespace sgns::crdt
 
     void CrdtDatastore::RebroadcastHeads()
     {
-        std::set<std::string> pending_topics;
+        std::unordered_set<std::string> pending_topics;
         {
-            std::lock_guard<std::mutex> lock( pendingBroadcastMutex_ );
+            std::lock_guard lock( pendingBroadcastMutex_ );
             pending_topics = pendingBroadcastTopics_;
         }
 
-        std::set<std::string> topics_to_broadcast = topicNames_;
+        std::unordered_set<std::string> topics_to_broadcast = GetTopicNames();
         topics_to_broadcast.insert( pending_topics.begin(), pending_topics.end() );
 
         if ( topics_to_broadcast.empty() )
@@ -1091,12 +1087,12 @@ namespace sgns::crdt
         return set_->KeysKey( "" ).GetKey();
     }
 
-    std::string CrdtDatastore::GetValueSuffix() const
+    std::string CrdtDatastore::GetValueSuffix()
     {
-        return '/' + set_->GetValueSuffix();
+        return '/' + CrdtSet::GetValueSuffix();
     }
 
-    outcome::result<CrdtDatastore::QueryResult> CrdtDatastore::QueryKeyValues( const std::string &aPrefix ) const
+    outcome::result<CrdtDatastore::QueryResult> CrdtDatastore::QueryKeyValues( std::string_view aPrefix ) const
     {
         return set_->QueryElements( aPrefix, CrdtSet::QuerySuffix::QUERY_VALUESUFFIX );
     }
@@ -1108,7 +1104,7 @@ namespace sgns::crdt
     {
         if ( set_ == nullptr )
         {
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( storage::DatabaseError::UNITIALIZED );
         }
         return set_->QueryElements( prefix_base,
                                     middle_part,
@@ -1121,9 +1117,9 @@ namespace sgns::crdt
         return set_->IsValueInSet( aKey.GetKey() );
     }
 
-    outcome::result<CID> CrdtDatastore::PutKey( const HierarchicalKey       &aKey,
-                                                const Buffer                &aValue,
-                                                const std::set<std::string> &topics )
+    outcome::result<CID> CrdtDatastore::PutKey( const HierarchicalKey                 &aKey,
+                                                const Buffer                          &aValue,
+                                                const std::unordered_set<std::string> &topics )
     {
         auto deltaResult = CreateDeltaToAdd( aKey.GetKey(), std::string( aValue.toString() ) );
         if ( deltaResult.has_failure() )
@@ -1134,7 +1130,8 @@ namespace sgns::crdt
         return Publish( deltaResult.value(), topics );
     }
 
-    outcome::result<CID> CrdtDatastore::DeleteKey( const HierarchicalKey &aKey, const std::set<std::string> &topics )
+    outcome::result<CID> CrdtDatastore::DeleteKey( const HierarchicalKey                 &aKey,
+                                                   const std::unordered_set<std::string> &topics )
     {
         auto deltaResult = CreateDeltaToRemove( aKey.GetKey() );
         if ( deltaResult.has_failure() )
@@ -1150,10 +1147,11 @@ namespace sgns::crdt
         return Publish( deltaResult.value(), topics );
     }
 
-    outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta,
-                                                 const std::set<std::string>  &topics )
+    outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta>          &aDelta,
+                                                 const std::unordered_set<std::string> &topics )
     {
-        OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta, topics ) );
+        OUTCOME_TRY( auto &&node, CreateDAGNode( aDelta, topics ) );
+        OUTCOME_TRY( auto &&newCID, AddDAGNode( node ) );
         return newCID;
     }
 
@@ -1187,10 +1185,10 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<std::shared_ptr<CrdtDatastore::IPLDNode>> CrdtDatastore::PutBlock(
+    outcome::result<std::shared_ptr<CrdtDatastore::IPLDNode>> CrdtDatastore::CreateIPLDNode(
         const std::vector<std::pair<CID, std::string>> &aHeads,
         const std::shared_ptr<Delta>                   &aDelta,
-        const std::set<std::string>                    &topics ) const
+        const std::unordered_set<std::string>          &topics ) const
     {
         if ( aDelta == nullptr )
         {
@@ -1205,7 +1203,8 @@ namespace sgns::crdt
         //Log expensive toString only if trace enabled
         if ( logger_->level() == spdlog::level::trace )
         {
-            logger_->trace( "PutBlock: added destination for block {{ cid=\"{}\" }}",
+            logger_->trace( "{}: added destination for block {{ cid=\"{}\" }}",
+                            __func__,
                             node->getCID().toString().value() );
         }
 
@@ -1226,7 +1225,8 @@ namespace sgns::crdt
             //Log expensive toString only if trace enabled
             if ( logger_->level() == spdlog::level::trace )
             {
-                logger_->trace( "PutBlock: added link {{ cid=\"{}\", name=\"{}\", size={} }}",
+                logger_->trace( "{}: added link {{ cid=\"{}\", name=\"{}\", size={} }}",
+                                __func__,
                                 link.getCID().toString().value(),
                                 link.getName(),
                                 link.getSize() );
@@ -1236,8 +1236,9 @@ namespace sgns::crdt
         return node;
     }
 
-    outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<Delta> &aDelta,
-                                                    const std::set<std::string>  &topics )
+    outcome::result<std::shared_ptr<CrdtDatastore::IPLDNode>> CrdtDatastore::CreateDAGNode(
+        const std::shared_ptr<Delta>          &aDelta,
+        const std::unordered_set<std::string> &topics )
     {
         OUTCOME_TRY( auto &&head_list, heads_->GetList( topics ) );
         auto [head_map, height] = head_list;
@@ -1255,16 +1256,21 @@ namespace sgns::crdt
             }
         }
 
-        OUTCOME_TRY( auto &&node, PutBlock( headsWithTopics, aDelta, topics ) );
+        OUTCOME_TRY( auto &&node, CreateIPLDNode( headsWithTopics, aDelta, topics ) );
 
         //Log expensive toString only if trace enabled
-        if ( logger_->level() == spdlog::level::trace )
+        if ( logger_->level() == spdlog::level::debug )
         {
-            logger_->trace( "AddDAGNode: Processing generated block {} from {}",
+            logger_->debug( "{}: Created Node to insert in DAG: {} (instance {})",
+                            __func__,
                             node->getCID().toString().value(),
                             reinterpret_cast<uint64_t>( this ) );
         }
+        return node;
+    }
 
+    outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<CrdtDatastore::IPLDNode> &node )
+    {
         RootCIDJob rootJob{ nullptr, node, true };
 
         {
@@ -1737,11 +1743,13 @@ namespace sgns::crdt
         {
             has_full_node_topic_ = true;
         }
+        std::lock_guard lock( topicNamesMutex_ );
         topicNames_.emplace( topic );
     }
 
-    std::set<std::string> CrdtDatastore::GetTopicNames() const
+    std::unordered_set<std::string> CrdtDatastore::GetTopicNames() const
     {
+        std::lock_guard lock( topicNamesMutex_ );
         return topicNames_;
     }
 }

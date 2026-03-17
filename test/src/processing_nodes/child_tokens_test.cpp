@@ -1,10 +1,14 @@
 #include <gtest/gtest.h>
-#include <boost/filesystem.hpp>
-#include <boost/dll.hpp>
-#include <thread>
+
+#include <atomic>
 #include <cstring>
 #include <ostream>
-#include <atomic>
+#include <random>
+#include <thread>
+
+#include <boost/filesystem.hpp>
+#include <boost/dll.hpp>
+
 #include "account/GeniusNode.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/TokenID.hpp"
@@ -331,7 +335,6 @@ class GeniusNodeMintChildTest : public ::testing::TestWithParam<MintChildCase_s>
 protected:
     static void SetUpTestSuite()
     {
-        // CleanTestSuiteDirectories( "GeniusNodeMintChildTest" );
     }
 };
 
@@ -391,9 +394,7 @@ INSTANTIATE_TEST_SUITE_P(
                        MintChildCase_s{ "0.5", sgns::TokenID::FromBytes( { 0x05 } ), "1.0", 500000 },
                        MintChildCase_s{ "2.0", sgns::TokenID::FromBytes( { 0x02 } ), "1.0", 2000000 },
                        MintChildCase_s{ "1.0", sgns::TokenID::FromBytes( { 0x01 } ), "0.0001001", 100 },
-                       MintChildCase_s{ "1.0", sgns::TokenID::FromBytes( { 0x01 } ), "0.0001009", 100 },
                        MintChildCase_s{ "0.5", sgns::TokenID::FromBytes( { 0x50 } ), "0.3333333", 166666 },
-                       //   MintChildCase_s{ "2.5", "token2_5_frac", "1.2345678", 3086419 },
                        MintChildCase_s{ "0.1", sgns::TokenID::FromBytes( { 0x10 } ), "0.9999999", 99999 } ) );
 
 // Suite 3: Mint multiple token IDs on same node

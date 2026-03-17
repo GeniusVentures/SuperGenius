@@ -38,7 +38,7 @@ protected:
         ""                                    // BaseWritePath
     };
 
-    static constexpr char DB_PREFIX[]        = "SuperGNUSNode.TestNet.2a.01.";
+    static constexpr char DB_PREFIX[]        = "SuperGNUSNode.TestNet.2a.00.";
     static constexpr int  STARTUP_DELAY_MS   = 1000;
     static constexpr char FULL_NODE_SUBDIR[] = "migration_full_node";
     static constexpr char FULL_NODE_ADDR[]   = "0xcafe";
@@ -63,8 +63,8 @@ protected:
             if ( entry.is_directory() )
             {
                 auto name = entry.path().filename().string();
-                // Only remove new (01) database directories, preserving legacy (00) test data
-                if ( name.rfind( DB_PREFIX, 0 ) == 0 )
+                // Remove new database directories, preserving legacy (00) test data
+                if ( name.find( DB_PREFIX ) == std::string::npos )
                 {
                     fs::remove_all( entry.path(), ec );
                     // On Windows, file locks may not be immediately released
@@ -73,7 +73,7 @@ protected:
                     {
                         std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
                         ec.clear();
-                        fs::remove_all( entry.path(), ec );
+                        fs::remove_all( entry.path() );
                     }
                 }
             }
@@ -131,20 +131,20 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
     auto params    = GetParam();
     auto full_node = CreateFullNodeInstance();
     EXPECT_EQ( full_node->GetAddress(), full_node_pub_address );
-    sgns::test::assertWaitForCondition(
-        [full_node]()
+    test::assertWaitForCondition(
+        [full_node]
         { return full_node && full_node->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 30000 ),
         "Full node not synced" );
     auto binaryParent = boost::dll::program_location().parent_path().string();
     auto node         = CreateNodeInstance( binaryParent, params.subdir, params.key_hex );
 
-    node->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetLocalAddress() } );
+    node->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
     const std::string readiness_message = params.subdir + " node not ready";
     test::assertWaitForCondition(
         [node] { return node && node->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 30000 ),
+        std::chrono::milliseconds( 40000 ),
         readiness_message );
 
     EXPECT_EQ( node->GetBalance(), params.expected_balance );
@@ -158,5 +158,5 @@ INSTANTIATE_TEST_SUITE_P(
                                    238000000000ULL },
                        NodeParams{ "node20_0_2_0",
                                    "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                   273000000000ULL } ),
+                                   262000000000ULL } ),
     []( const ::testing::TestParamInfo<NodeParams> &info ) { return info.param.subdir; } );

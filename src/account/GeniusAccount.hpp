@@ -14,10 +14,11 @@
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
-#include <filesystem>
 #include <functional>
 #include <optional>
 #include <set>
+#include <storage/rocksdb/rocksdb.hpp>
+#include <string_view>
 
 #include <boost/multiprecision/cpp_int.hpp>
 
@@ -27,6 +28,8 @@
 #include "account/TokenID.hpp"
 #include "local_secure_storage/ISecureStorage.hpp"
 #include "outcome/outcome.hpp"
+
+#include <unordered_set>
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
 
@@ -44,23 +47,52 @@ namespace sgns
         class GlobalDB;
     }
     class AccountMessenger;
+    class TransactionManager;
 
     class GeniusAccount : public std::enable_shared_from_this<GeniusAccount>
     {
     public:
+        using StorageWithAddress = std::pair<std::shared_ptr<ISecureStorage>,
+                                             std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>;
+
+        struct Credentials
+        {
+            std::string email;
+            std::string password;
+        };
+
         static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;      ///< Predefined ElGamal public key
         static constexpr uint64_t            NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
 
         /**
+         * @brief       Factory constructor of new GeniusAccount.
+         * @param[in]   token_id Token ID of the account.
+         * @param[in]   eth_private_key Ethereum private key in hex format (0x...).
+         * @param[in]   base_path Base path to store/retrieve keys.
+         * @param[in]   full_node Whether to initialize as a full node.
+         * @return      Valid pointer if succeeds, nullptr otherwise.
+         */
+        static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
+                                                   const char                    *eth_private_key,
+                                                   const boost::filesystem::path &base_path,
+                                                   bool                           full_node = false );
+
+        /**
          * @brief       Factory constructor of new GeniusAccount
          * @param[in]   token_id Token ID of the account
-         * @param[in]   eth_private_key Ethereum private key in hex format (0x...)
-         * @return      Valid pointer if succeeds, nullptr otherwise
          */
-        static std::shared_ptr<GeniusAccount> New( TokenID               token_id,
-                                                   const char           *eth_private_key,
-                                                   boost::filesystem::path base_path,
-                                                   bool                  full_node = false );
+        static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
+                                                   const Credentials             &credentials,
+                                                   const boost::filesystem::path &base_path,
+                                                   bool                           full_node = false );
+
+        /**
+         * @brief       Factory constructor of new GeniusAccount
+         * @param[in]   token_id Token ID of the account
+         */
+        static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
+                                                   const boost::filesystem::path &base_path,
+                                                   bool                           full_node = false );
 
         /**
          * @brief       Initialize the messenger for the account
@@ -70,11 +102,16 @@ namespace sgns
         bool InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub );
 
         /**
-         * @brief       Configures the block response handler
-         * @param[in]   broadcaster: the pubsub broadcaster which adds the block CID to be fetched
-         * @return      true if successfully configured, false otherwise
+         * @brief       Configures the block response handler.
+         * @param[in]   global_db GlobalDB instance used to store fetched block CIDs.
+         * @return      true if successfully configured, false otherwise.
          */
-        bool ConfigureMessengerHandlers( std::shared_ptr<crdt::GlobalDB> global_db );
+        bool ConfigureDatabaseDependencies( std::shared_ptr<crdt::GlobalDB> global_db );
+
+        /**
+         * @brief       Clears handlers and methods set by ConfigureDatabaseDependencies.
+         */
+        void DeconfigureDatabaseDependencies();
 
         /**
          * @brief       Destroy the Genius Account object
@@ -109,14 +146,16 @@ namespace sgns
          * @param[in]   data data to be verified
          * @return      true if the signature is valid, false otherwise
          */
-        static bool VerifySignature( std::string address, std::string sig, std::vector<uint8_t> data );
+        static bool VerifySignature( const std::string          &address,
+                                     std::string_view            sig,
+                                     const std::vector<uint8_t> &data );
 
         /**
          * @brief       Sign data using the Genius account's private key
          * @param[in]   data data to be signed
          * @return      the signature as a vector of bytes
          */
-        std::vector<uint8_t> Sign( std::vector<uint8_t> data );
+        std::vector<uint8_t> Sign( const std::vector<uint8_t> &data ) const;
 
         /**
          * @brief       Set the local confirmed nonce
@@ -129,21 +168,21 @@ namespace sgns
          * @param[in]   nonce The nonce value to be set
          * @param[in]   address The address of the peer
          */
-        void SetPeerConfirmedNonce( uint64_t nonce, std::string address );
+        void SetPeerConfirmedNonce( uint64_t nonce, const std::string &address );
 
         /**
          * @brief       Rollback the local confirmed nonce for a peer
          * @param[in]   nonce The nonce value to be rolled back to
          * @param[in]   address The address of the peer
          */
-        void RollBackPeerConfirmedNonce( uint64_t nonce, std::string address );
+        void RollBackPeerConfirmedNonce( uint64_t nonce, const std::string &address );
 
         /**
          * @brief       Get the confirmed nonce for a peer
          * @param[in]   address The address of the peer
          * @return      The confirmed nonce of the peer if exists, error otherwise
          */
-        outcome::result<uint64_t> GetPeerNonce( std::string address ) const;
+        outcome::result<uint64_t> GetPeerNonce( const std::string &address ) const;
 
         /**
          * @brief       Get the local confirmed nonce
@@ -157,6 +196,13 @@ namespace sgns
          * @return      The confirmed nonce if success, error otherwise
          */
         outcome::result<uint64_t> GetConfirmedNonce( uint64_t timeout_ms ) const;
+
+        /**
+         * @brief       Fetch the latest nonce from the network without relying on cached values
+         * @param[in]   timeout_ms Timeout in miliseconds to get the confirmed nonce
+         * @return      Error if no response received, optional nonce if success
+         */
+        outcome::result<std::optional<uint64_t>> FetchNetworkNonce( uint64_t timeout_ms ) const;
 
         /**
          * @brief       Get the next available nonce without reserving it
@@ -186,33 +232,59 @@ namespace sgns
             uint64_t                                            timeout_ms,
             const std::string                                  &cid,
             std::function<void( outcome::result<std::string> )> callback = nullptr ) const;
+        outcome::result<void> RequestTransaction(
+            uint64_t                                            timeout_ms,
+            const std::string                                  &tx_hash,
+            std::function<void( outcome::result<std::string> )> callback = nullptr ) const;
+        /**
+         * @brief       Request UTXOs for a specific address and return the selected response
+         * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
+         * @param[in]   address Address to request UTXOs for
+         * @param[in]   silent_time_ms Time to wait for subsequent responses after first one
+         * @return      Set of UTXO strings based on selection criteria, or error otherwise
+         */
+        outcome::result<std::unordered_set<std::string>> RequestUTXOs( uint64_t           timeout_ms,
+                                                                       const std::string &address,
+                                                                       uint64_t           silent_time_ms = 150 ) const;
         /**
          * @brief       Request heads broadcast for specific topics
          * @param[in]   topics Vector of topic names to request heads for
          * @return      outcome::success if request was sent, error otherwise
          */
-        outcome::result<void> RequestHeads( const std::set<std::string> &topics ) const;
+        outcome::result<void> RequestHeads( const std::unordered_set<std::string> &topics ) const;
 
-        /**
-         * @brief       Derives a Genius address from a given Ethereum private key
-         * @param[in]   eth_private_key Ethereum private key in hex format (0x...)
-         * @param       base_path The base path to store/retrieve the key
-         * @return      Pair of ElGamal and Ethereum key generators if succeeds, error otherwise
-         */
-        static outcome::result<std::pair<std::shared_ptr<ISecureStorage>,
-                                         std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
-        GenerateGeniusAddress( const char *eth_private_key, boost::filesystem::path base_path );
+        static outcome::result<StorageWithAddress> GenerateGeniusAddress( const char *eth_private_key,
+                                                                          const boost::filesystem::path &base_path );
+
+        static outcome::result<StorageWithAddress> GenerateGeniusAddress( const Credentials             &credentials,
+                                                                          const boost::filesystem::path &base_path );
 
     protected:
         friend class Blockchain;
+        friend class TransactionManager;
         void SetGetBlockChainCIDMethod(
             std::function<outcome::result<std::string>( uint8_t, const std::string & )> method );
         void ClearGetBlockChainCIDMethod();
         void SetHasBlockCidMethod( std::function<outcome::result<bool>( const std::string & )> method );
         void ClearHasBlockCidMethod();
+        void SetGetUTXOsMethod(
+            std::function<outcome::result<std::vector<std::string>>( const std::string & )> method );
+        void ClearGetUTXOsMethod();
+        void SetGetValidatorWeightMethod(
+            std::function<outcome::result<std::optional<uint64_t>>( const std::string & )> method );
+        void ClearGetValidatorWeightMethod();
+        void SetGetTransactionCIDMethod( std::function<outcome::result<std::string>( const std::string & )> method );
+        void ClearGetTransactionCIDMethod();
+        void SetNonceStore( std::shared_ptr<storage::rocksdb> db );
 
     private:
         static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes
+
+        static outcome::result<StorageWithAddress> LoadGeniusAccount( const boost::filesystem::path &base_path );
+
+        static std::shared_ptr<GeniusAccount> CreateInstanceFromResponse( TokenID            token_id,
+                                                                          StorageWithAddress response_value,
+                                                                          bool               full_node );
 
         TokenID token;         ///< Token ID of the account
         bool    is_full_node_; ///< Whether this account is a full node
@@ -238,12 +310,26 @@ namespace sgns
         std::function<outcome::result<std::string>( uint8_t, const std::string & )>
             get_cids_method_; ///< Function to get blockchain CIDs
         std::function<outcome::result<bool>( const std::string & )> has_cid_method_; ///< Function to check CID presence
+        std::function<outcome::result<std::vector<std::string>>( const std::string & )>
+            get_utxos_method_; ///< Function to get UTXOs for an address
+        std::function<outcome::result<std::optional<uint64_t>>( const std::string & )>
+            get_validator_weight_method_; ///< Function to get validator weight for an address
+        std::function<outcome::result<std::string>( const std::string & )>
+                                          get_transaction_cid_method_; ///< Function to get transaction CID by hash
+        std::shared_ptr<storage::rocksdb> nonce_db_;                   ///< RocksDB for nonce persistence
+
+        static constexpr std::string_view NONCE_KEY_PREFIX = "gnus-confirmed-nonce-";
+
+        void LoadConfirmedNonces();
+        void PersistConfirmedNonce( const std::string &address, uint64_t nonce );
 
         uint64_t GetNextNonceLocked() const;
 
         /**
-         * @brief       Private constructor a new Genius Account object
-         * @param[in]   token_id
+         * @brief       Private constructor for a new GeniusAccount.
+         * @param[in]   token_id Token ID for the account.
+         * @param[in]   storage Secure storage instance.
+         * @param[in]   full_node Whether this account is a full node.
          */
         GeniusAccount( TokenID token_id, std::shared_ptr<ISecureStorage> storage, bool full_node );
     };

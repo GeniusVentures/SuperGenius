@@ -19,7 +19,7 @@ namespace sgns::crdt
 
     strNamespace = hKey.GetKey();
     std::string childString = "qwerty";
-    HierarchicalKey childKey = hKey.ChildString(childString);
+    HierarchicalKey childKey = hKey.ChildString( childString );
     EXPECT_TRUE(hKey != childKey);
     EXPECT_STRCASEEQ((strNamespace + "/" + childString).c_str(), childKey.GetKey().c_str());
   }

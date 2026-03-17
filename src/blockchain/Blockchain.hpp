@@ -31,6 +31,8 @@ namespace sgns
         class ValidatorRegistry;
     }
 
+    class Migration3_5_0To3_6_0;
+
     class Blockchain : public std::enable_shared_from_this<Blockchain>
     {
     public:
@@ -57,10 +59,11 @@ namespace sgns
         using BlockchainCallback = std::function<void( outcome::result<void> )>;
 
         /**
-         * @brief Factory method to create Blockchain as shared_ptr
-         * @param global_db CRDT database instance
-         * @param account GeniusAccount instance
-         * @return shared_ptr to Blockchain instance
+         * @brief Factory method to create Blockchain as shared_ptr.
+         * @param global_db CRDT database instance.
+         * @param account GeniusAccount instance.
+         * @param callback Called when initialization completes.
+         * @return shared_ptr to Blockchain instance.
          */
         static std::shared_ptr<Blockchain> New( std::shared_ptr<crdt::GlobalDB> global_db,
                                                 std::shared_ptr<GeniusAccount>  account,
@@ -69,8 +72,7 @@ namespace sgns
         ~Blockchain();
 
         /**
-         * @brief Start the blockchain with async genesis block handling
-         * @param callback Called when genesis block check/creation/retrieval completes
+         * @brief Start the blockchain with async genesis block handling.
          */
         outcome::result<void> Start();
         outcome::result<void> Stop();
@@ -104,6 +106,12 @@ namespace sgns
 
         void SetFullNodeMode();
 
+    protected:
+        friend class Migration3_5_0To3_6_0;
+
+        static outcome::result<void> MigrateCids( const std::shared_ptr<crdt::GlobalDB> &old_db,
+                                                  const std::shared_ptr<crdt::GlobalDB> &new_db );
+
     private:
         /// Make constructor private to force use of factory method
         Blockchain( std::shared_ptr<crdt::GlobalDB> global_db,
@@ -115,10 +123,10 @@ namespace sgns
         outcome::result<void> SaveGenesisCID( const std::string &cid );
         outcome::result<void> SaveAccountCreationCID( const std::string &address, const std::string &cid );
 
-        std::vector<uint8_t> ComputeSignatureData( const sgns::blockchain::GenesisBlock &g );
-        std::vector<uint8_t> ComputeSignatureData( const sgns::blockchain::AccountCreationBlock &ac );
-        bool                 VerifySignature( const sgns::blockchain::GenesisBlock &g );
-        bool                 VerifySignature( const sgns::blockchain::AccountCreationBlock &ac );
+        std::vector<uint8_t> ComputeSignatureData( const sgns::blockchain::GenesisBlock &g ) const;
+        std::vector<uint8_t> ComputeSignatureData( const sgns::blockchain::AccountCreationBlock &ac ) const;
+        bool                 VerifySignature( const sgns::blockchain::GenesisBlock &g ) const;
+        bool                 VerifySignature( const sgns::blockchain::AccountCreationBlock &ac ) const;
 
         outcome::result<void> CreateGenesisBlock();
         outcome::result<void> VerifyGenesisBlock( const std::string &serialized_genesis );
@@ -128,18 +136,19 @@ namespace sgns
 
         std::optional<std::vector<crdt::pb::Element>> FilterGenesis( const crdt::pb::Element &element );
         std::optional<std::vector<crdt::pb::Element>> FilterAccountCreation( const crdt::pb::Element &element );
-        bool ShouldReplaceGenesis( const sgns::blockchain::GenesisBlock &existing,
-                                   const sgns::blockchain::GenesisBlock &candidate ) const;
-        bool ShouldReplaceAccountCreation( const sgns::blockchain::AccountCreationBlock &existing,
-                                           const sgns::blockchain::AccountCreationBlock &candidate ) const;
 
-        void GenesisReceivedCallback( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
-        void AccountCreationReceivedCallback( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
-        outcome::result<void> InformBlockchainResult( outcome::result<void> result );
+        static bool ShouldReplaceGenesis( const blockchain::GenesisBlock &existing,
+                                          const blockchain::GenesisBlock &candidate );
+        static bool ShouldReplaceAccountCreation( const blockchain::AccountCreationBlock &existing,
+                                                  const blockchain::AccountCreationBlock &candidate );
+
+        void GenesisReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair &new_data, const std::string &cid );
+        void AccountCreationReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair& new_data, const std::string &cid );
+        outcome::result<void> InformBlockchainResult( outcome::result<void> result ) const;
         void                  InformGenesisResult( outcome::result<std::string> result );
         void                  InformAccountCreationResponse( outcome::result<std::string> creation_result );
         void                  WatchCIDDownload( const std::string &cid, Error error_on_failure, uint64_t timeout_ms );
-        outcome::result<void> EnsureValidatorRegistry();
+        outcome::result<void> EnsureValidatorRegistry() const;
 
         /// Topic used for the blockchain CRDT
         static constexpr std::string_view BLOCKCHAIN_TOPIC = "gnus-blockchain";
@@ -162,7 +171,7 @@ namespace sgns
 
         struct BlockchainCIDs
         {
-            std::optional<std::string> genesis_;
+            std::optional<std::string>                   genesis_;
             std::unordered_map<std::string, std::string> account_creation_;
 
             bool hasGenesis() const
@@ -194,12 +203,12 @@ namespace sgns
 
         base::Logger logger_ = base::createLogger( "Blockchain" ); ///< Logger instance
 
-        bool               created_successfully_ = false;
-        bool               filters_registered_ = false;
-        bool               callbacks_registered_ = false;
-        std::atomic<bool>  validator_registry_initialized_{ false };
-        bool genesis_ready_          = false;
-        bool account_creation_ready_ = false;
+        bool              created_successfully_ = false;
+        bool              filters_registered_   = false;
+        bool              callbacks_registered_ = false;
+        std::atomic<bool> validator_registry_initialized_{ false };
+        bool              genesis_ready_          = false;
+        bool              account_creation_ready_ = false;
     };
 
 }

@@ -6,7 +6,7 @@
 
 namespace sgns::crypto {
   /**
-   * @class Secp256k1Provider provides public key recovery functionality
+   * @brief Interface for secp256k1 public key recovery.
    */
   class Secp256k1Provider {
    public:
@@ -35,6 +35,6 @@ namespace sgns::crypto {
         const secp256k1::MessageHash &message_hash) const = 0;
   };
 
-}
+}  // namespace sgns::crypto
 
 #endif

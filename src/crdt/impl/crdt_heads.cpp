@@ -256,7 +256,7 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<CrdtHeads::CRDTListResult> CrdtHeads::GetList( const std::set<std::string> &topics ) const
+    outcome::result<CrdtHeads::CRDTListResult> CrdtHeads::GetList( const std::unordered_set<std::string> &topics ) const
     {
         CRDTHeadList result_heads;
         uint64_t     max_value = 0;

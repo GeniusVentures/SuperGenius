@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_PRIMITIVES_BLOCK_HPP
 #define SUPERGENIUS_PRIMITIVES_BLOCK_HPP
 
@@ -10,7 +8,7 @@ namespace sgns::primitives {
   using BlockBody = std::vector<Extrinsic>;
 
   /**
-   * @brief Block class represents supergenius block primitive
+   * @brief Block primitive consisting of a header and extrinsics.
    */
   struct Block {
     BlockHeader header;  ///< block header
@@ -41,7 +39,7 @@ namespace sgns::primitives {
    * @brief outputs object of type Block to stream
    * @tparam Stream output stream type
    * @param s stream reference
-   * @param v value to output
+   * @param b value to output
    * @return reference to stream
    */
   template <class Stream,
@@ -54,7 +52,7 @@ namespace sgns::primitives {
    * @brief decodes object of type Block from stream
    * @tparam Stream input stream type
    * @param s stream reference
-   * @param v value to decode
+   * @param b value to decode
    * @return reference to stream
    */
   template <class Stream,

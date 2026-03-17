@@ -2,7 +2,10 @@
 
 #include "GeniusUTXO.hpp"
 #include "UTXOStructs.hpp"
+
 #include "base/logger.hpp"
+#include "crdt/globaldb/globaldb.hpp"
+#include "storage/rocksdb/rocksdb.hpp"
 
 #include <shared_mutex>
 
@@ -11,8 +14,27 @@ namespace sgns
     class UTXOManager
     {
     public:
-        UTXOManager( const bool is_full_node, std::string address ) :
-            is_full_node_( is_full_node ), address_( std::move( address ) )
+        enum class UTXOState : uint8_t
+        {
+            UTXO_READY,
+            UTXO_RESERVED,
+            UTXO_CONSUMED
+        };
+
+        using UTXOData            = std::pair<UTXOState, GeniusUTXO>;
+        using SignFunc            = std::function<std::vector<uint8_t>( const std::vector<uint8_t> &data )>;
+        using VerifySignatureFunc = std::function<bool( const std::string          &address,
+                                                        const std::vector<uint8_t> &signature,
+                                                        const std::vector<uint8_t> &data )>;
+
+        UTXOManager( const bool          is_full_node,
+                     std::string         address,
+                     SignFunc            sign,
+                     VerifySignatureFunc verify_signature ) :
+            is_full_node_( is_full_node ),
+            address_( std::move( address ) ),
+            sign_( std::move( sign ) ),
+            verify_signature_( std::move( verify_signature ) )
         {
         }
 
@@ -39,7 +61,7 @@ namespace sgns
          * @param       address Address to add the UTXO to
          * @return      true if the UTXO was added, false otherwise
          */
-        bool PutUTXO( const GeniusUTXO &new_utxo, const std::string &address );
+        bool PutUTXO( GeniusUTXO new_utxo, const std::string &address );
 
         bool PutUTXO( const GeniusUTXO &new_utxo )
         {
@@ -56,9 +78,15 @@ namespace sgns
         /**
          * @brief       Consume UTXOs from the account
          * @param[in]   infos Vector of UTXO information to be consumed
+         * @param       address Address to consume UTXOs from
          * @return      true if all UTXOs were consumed, false otherwise
          */
-        bool ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos );
+        bool ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos, const std::string &address );
+
+        bool ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos )
+        {
+            return ConsumeUTXOs( infos, address_ );
+        }
 
         /**
          * @brief       Get UTXOs for a specific address
@@ -72,16 +100,18 @@ namespace sgns
             return GetUTXOs( address_ );
         }
 
+        std::unordered_map<std::string, std::vector<UTXOData>> GetAllUTXOs() const;
+
         /**
          * @brief       Set UTXOs for a specific address (replaces existing UTXOs)
          * @param[in]   utxos Vector of UTXOs to set for the address
          * @param[in]   address The address to set UTXOs for
          */
-        void SetUTXOs( const std::vector<GeniusUTXO> &utxos, const std::string &address );
+        outcome::result<void> SetUTXOs( const std::vector<GeniusUTXO> &utxos, const std::string &address );
 
-        void SetUTXOs( const std::vector<GeniusUTXO> &utxos )
+        outcome::result<void> SetUTXOs( const std::vector<GeniusUTXO> &utxos )
         {
-            SetUTXOs( utxos, address_ );
+            return SetUTXOs( utxos, address_ );
         }
 
         outcome::result<UTXOTxParameters> CreateTxParameter( uint64_t           amount,
@@ -95,14 +125,38 @@ namespace sgns
 
         void RollbackUTXOs( const std::vector<InputUTXOInfo> &inputs );
 
+        bool VerifyParameters( const UTXOTxParameters &params ) const
+        {
+            return VerifyParameters( params, address_ );
+        }
+
+        bool VerifyParameters( const UTXOTxParameters &params, const std::string &address ) const;
+
+        outcome::result<bool> LoadUTXOs( std::shared_ptr<storage::rocksdb> db );
+
+        /**
+         * @return True if loaded any UTXOs, false if loaded 0 UTXOs and error if one occurred
+         */
+        outcome::result<void> StoreUTXOs( const std::string &address );
+
     private:
+        static constexpr std::string_view DB_PREFIX = "/utxo";
+
+        outcome::result<std::pair<std::vector<InputUTXOInfo>, uint64_t>> SelectUTXOs( uint64_t       required_amount,
+                                                                                      const TokenID &token_id );
+
+        void SignInputs( std::vector<InputUTXOInfo> &inputs ) const;
+
         base::Logger logger_ = base::createLogger( "UTXOManager" );
 
-        bool        is_full_node_;
-        std::string address_;
+        bool                              is_full_node_;
+        std::string                       address_;
+        SignFunc                          sign_;
+        VerifySignatureFunc               verify_signature_;
+        std::shared_ptr<storage::rocksdb> db_;
 
-        mutable std::shared_mutex                                utxos_mutex_; ///< Mutex for the UTXOs map
-        std::unordered_map<std::string, std::vector<GeniusUTXO>> utxos_;       ///< Map of UTXOs by address
+        mutable std::shared_mutex                              utxos_mutex_; ///< Mutex for the UTXOs map
+        std::unordered_map<std::string, std::vector<UTXOData>> utxos_;       ///< Map of UTXOs by address
     };
 
 }

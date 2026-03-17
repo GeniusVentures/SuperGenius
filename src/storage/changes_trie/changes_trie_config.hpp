@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_STORAGE_CHANGES_TRIE_CHANGES_TRIE_CONFIG
 #define SUPERGENIUS_STORAGE_CHANGES_TRIE_CHANGES_TRIE_CONFIG
 
@@ -28,11 +26,10 @@ namespace sgns::storage::changes_trie {
   };
 
   /**
-   * @brief scale-encodes blob instance to stream
+   * @brief scale-encodes config instance to stream
    * @tparam Stream output stream type
-   * @tparam size blob size
    * @param s output stream reference
-   * @param blob value to encode
+   * @param config value to encode
    * @return reference to stream
    */
   template <class Stream,
@@ -43,11 +40,10 @@ namespace sgns::storage::changes_trie {
   }
 
   /**
-   * @brief decodes blob instance from stream
+   * @brief decodes config instance from stream
    * @tparam Stream output stream type
-   * @tparam size blob size
    * @param s input stream reference
-   * @param blob value to encode
+   * @param config value to decode
    * @return reference to stream
    */
   template <class Stream,

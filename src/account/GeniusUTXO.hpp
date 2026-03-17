@@ -20,7 +20,7 @@ namespace sgns
             output_idx_( previous_index ), //
             amount_( amount ),             //
             locked_( false ),              //
-            tokein_id_( token_id )         //
+            token_id_( token_id )          //
         {
         }
 
@@ -51,7 +51,7 @@ namespace sgns
 
         TokenID GetTokenID() const
         {
-            return tokein_id_;
+            return token_id_;
         }
 
     private:
@@ -59,7 +59,7 @@ namespace sgns
         uint32_t      output_idx_;
         uint64_t      amount_;
         bool          locked_;
-        TokenID       tokein_id_;
+        TokenID       token_id_;
     };
 }
 

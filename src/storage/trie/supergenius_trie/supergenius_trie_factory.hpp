@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_STORAGE_TRIE_IMPL_SUPERGENIUS_TRIE_FACTORY
 #define SUPERGENIUS_STORAGE_TRIE_IMPL_SUPERGENIUS_TRIE_FACTORY
 
@@ -31,6 +29,7 @@ namespace sgns::storage::trie {
 
     /**
      * Creates a trie with the given root
+     * @param root root node for the trie
      * @param f functor that a trie uses to obtain a child of a branch. If
      * optional is none, the default one will be used
      */

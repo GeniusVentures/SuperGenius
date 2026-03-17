@@ -30,7 +30,7 @@ namespace sgns::processing
         enum class Error
         {
             NO_RESULTS_FOR_SUBTASK = 0,  ///< a subtask had no result entry
-            WRONG_RESULT_HASHES_LENGTH,  ///< #hashes != #chunks
+            WRONG_RESULT_HASHES_LENGTH,  ///< number of hashes != number of chunks
             DUPLICATE_CHUNK_RESULT_HASH, ///< duplicate hash inside a result
             EMPTY_CHUNK_RESULT_HASH,     ///< empty hash seen
             MISSING_CHUNK_RESULT,        ///< a chunk from subtask is missing from results map

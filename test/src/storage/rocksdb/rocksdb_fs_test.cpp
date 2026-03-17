@@ -1,5 +1,3 @@
-
-
 #include "testutil/storage/base_fs_test.hpp"
 
 #include <gtest/gtest.h>

@@ -8,6 +8,7 @@
 #include <rocksdb/slice_transform.h>
 
 #include <storage/rocksdb/rocksdb.hpp>
+#include "storage/database_error.hpp"
 #include "storage/rocksdb/rocksdb_cursor.hpp"
 #include "storage/rocksdb/rocksdb_batch.hpp"
 #include "storage/rocksdb/rocksdb_util.hpp"
@@ -132,8 +133,6 @@ namespace sgns::storage
         ReadOptions read_options      = ro_;
         read_options.auto_prefix_mode = true; //Adaptive Prefix Mode
 
-        auto strKeyPrefix = std::string( keyPrefix.toString() );
-
         QueryResult results;
         auto        iter        = std::unique_ptr<rocksdb::Iterator>( db_->NewIterator( read_options ) );
         auto        slicePrefix = make_slice( keyPrefix );
@@ -145,6 +144,12 @@ namespace sgns::storage
             value.put( iter->value().ToString() );
             results.emplace( std::move( key ), std::move( value ) );
         }
+
+        if ( !iter->status().ok() )
+        {
+            return error_from_rocksdb( iter->status().code() );
+        }
+
         return results;
     }
 
@@ -154,8 +159,8 @@ namespace sgns::storage
     {
         ReadOptions read_options      = ro_;
         read_options.auto_prefix_mode = true; //Adaptive Prefix Mode
-        bool negated_query            = ( !middle_part.empty() && middle_part[0] == '!' );
-        bool simplified_query         = ( !( middle_part == "*" ) ) && ( !negated_query );
+        bool negated_query            = !middle_part.empty() && middle_part[0] == '!';
+        bool simplified_query         = middle_part != "*" && !negated_query;
 
         auto strKeyPrefix = prefix_base;
         if ( simplified_query )
@@ -165,6 +170,7 @@ namespace sgns::storage
 
         QueryResult results;
         auto        iter = std::unique_ptr<rocksdb::Iterator>( db_->NewIterator( read_options ) );
+
         for ( iter->Seek( strKeyPrefix ); iter->Valid() && iter->key().starts_with( strKeyPrefix ); iter->Next() )
         {
             const std::string &key_string = iter->key().ToString();
@@ -191,6 +197,12 @@ namespace sgns::storage
             value.put( iter->value().ToString() );
             results.emplace( std::move( key ), std::move( value ) );
         }
+
+        if ( !iter->status().ok() )
+        {
+            return error_from_rocksdb( iter->status().code() );
+        }
+
         return results;
     }
 

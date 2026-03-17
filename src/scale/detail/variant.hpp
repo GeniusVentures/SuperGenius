@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_SCALE_DETAIL_VARIANT_HPP
 #define SUPERGENIUS_SCALE_DETAIL_VARIANT_HPP
 
@@ -93,6 +91,7 @@ namespace sgns::scale::detail {
    * @tparam Stream input stream type
    * @tparam T... sequence of types
    * @param stream source stream
+   * @param result destination variant
    * @return decoded value or error
    */
   template <class Stream, class... T>

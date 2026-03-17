@@ -162,12 +162,12 @@ namespace sgns::crdt
     }
 
     outcome::result<CrdtSet::QueryResult> CrdtSet::QueryElements(
-        const std::string &aPrefix,
+        std::string_view   aPrefix,
         const QuerySuffix &aSuffix /*=QuerySuffix::QUERY_ALL*/ ) const
     {
         if ( this->dataStore_ == nullptr )
         {
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( storage::DatabaseError::UNITIALIZED );
         }
 
         // We can only GET an element if it's part of the Set (in
@@ -234,7 +234,7 @@ namespace sgns::crdt
     {
         if ( this->dataStore_ == nullptr )
         {
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( storage::DatabaseError::UNITIALIZED );
         }
 
         // We can only GET an element if it's part of the Set (in
@@ -383,7 +383,7 @@ namespace sgns::crdt
         return this->KeyPrefix( std::string( tombsNamespace_ ) ).ChildString( aKey );
     }
 
-    HierarchicalKey CrdtSet::KeysKey( const std::string &aKey ) const
+    HierarchicalKey CrdtSet::KeysKey( std::string_view aKey ) const
     {
         // /namespace/k/<key>
         return this->KeyPrefix( std::string( keysNamespace_ ) ).ChildString( aKey );

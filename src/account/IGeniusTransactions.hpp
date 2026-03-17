@@ -57,32 +57,21 @@ namespace sgns
 
         virtual std::vector<uint8_t> SerializeByteVector() = 0;
 
-        virtual std::string GetTransactionSpecificPath() = 0;
+        virtual std::string GetTransactionSpecificPath() const = 0;
 
-        static std::string GetTransactionFullPath( const std::string &address,
-                                                   const std::string &type,
-                                                   const uint64_t    &nonce )
+        static std::string GetTransactionFullPath( const std::string &tx_hash )
         {
-            boost::format full_path( address + "/tx/" + type + "/%llu" );
-            full_path % nonce;
-
-            return full_path.str();
+            return "tx/" + tx_hash;
         }
 
-        std::string GetTransactionFullPath()
+        std::string GetTransactionFullPath() const
         {
-            boost::format full_path( GetSrcAddress() + "/tx/" + GetTransactionSpecificPath() + "/%llu" );
-            full_path % dag_st.nonce();
-
-            return full_path.str();
+            return "tx/" + GetHash();
         }
 
-        std::string GetProofFullPath()
+        std::string GetProofFullPath() const
         {
-            boost::format full_path( GetSrcAddress() + "/proof/" + GetTransactionSpecificPath() + "/%llu" );
-            full_path % dag_st.nonce();
-
-            return full_path.str();
+            return "proof/" + GetHash();
         }
 
         std::string GetSrcAddress() const
@@ -90,11 +79,29 @@ namespace sgns
             return dag_st.source_addr();
         }
 
+        std::string GetHash() const;
+
         uint64_t GetTimestamp() const
         {
             return dag_st.timestamp();
         }
 
+        virtual std::unordered_set<std::string> GetTopics() const;
+
+        void FillHash();
+        bool CheckHash();
+
+        std::vector<uint8_t> MakeSignature( GeniusAccount &account );
+        bool                 CheckSignature();
+        bool                 CheckDAGSignatureLegacy();
+
+        SGTransaction::DAGStruct dag_st;
+
+    private:
+        static inline std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;
+        const std::string                                                       transaction_type;
+
+    public:
         /**
          * @brief       Registers a deserializer function for a specific transaction type.
          * @param[in]   transaction_type The transaction type for which the deserializer is registered.
@@ -109,19 +116,6 @@ namespace sgns
         {
             return deserializers_map;
         }
-
-        void FillHash();
-        bool CheckHash();
-
-        std::vector<uint8_t> MakeSignature( GeniusAccount& account );
-        bool                 CheckSignature();
-        bool                 CheckDAGSignatureLegacy();
-
-        SGTransaction::DAGStruct                                                dag_st;
-        static inline std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;
-
-    private:
-        const std::string transaction_type;
     };
 }
 

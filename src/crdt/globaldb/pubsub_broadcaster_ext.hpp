@@ -31,9 +31,8 @@ namespace sgns::crdt
 
         /**
          * @brief Factory method to create a broadcaster for multiple topics.
-         * @param pubSubTopics Vector of pubsub topic instances to subscribe to.
          * @param dagSyncer    Graphsync DAG syncer for block exchange.
-         * @param dagSyncerMultiaddress Multiaddress of the DAG syncer node.
+         * @param pubSub       PubSub instance used to subscribe and publish.
          * @return Shared pointer to the new PubSubBroadcasterExt.
          */
         static std::shared_ptr<PubSubBroadcasterExt> New( std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
@@ -95,9 +94,8 @@ namespace sgns::crdt
         /**
          * @brief Private constructor initializing members with provided topics and syncer.
          *
-         * @param pubSubTopics Vector of pubsub topics to subscribe to.
          * @param dagSyncer    Graphsync DAG syncer instance.
-         * @param dagSyncerMultiaddress Multiaddress for DAG syncer node.
+         * @param pubSub       PubSub instance used to subscribe and publish.
          */
         PubSubBroadcasterExt( std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
                               std::shared_ptr<GossipPubSub>                   pubSub );

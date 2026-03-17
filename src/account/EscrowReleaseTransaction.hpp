@@ -17,7 +17,7 @@ namespace sgns
       * This transaction holds the UTXO parameters, the amount to be released, the release address,
       * the escrow source, and the original escrow hash.
       */
-    class EscrowReleaseTransaction : public IGeniusTransactions
+    class EscrowReleaseTransaction final : public IGeniusTransactions
     {
     public:
         /**
@@ -98,7 +98,9 @@ namespace sgns
           *
           * @return A string representing the transaction path.
           */
-        std::string GetTransactionSpecificPath() override;
+        std::string GetTransactionSpecificPath() const override;
+
+        std::unordered_set<std::string> GetTopics() const override;
 
     private:
         /**

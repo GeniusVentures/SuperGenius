@@ -209,7 +209,7 @@ namespace sgns::crdt
 
         // First operation should succeed
         EXPECT_OUTCOME_TRUE_1( transaction.Put( key, value ) );
-        EXPECT_OUTCOME_TRUE_1( transaction.Commit( {"test"} ) );
+        EXPECT_OUTCOME_TRUE_1( transaction.Commit( { "test" } ) );
 
         // Second operation on same transaction should fail
         Buffer value2;

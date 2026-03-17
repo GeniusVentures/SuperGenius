@@ -16,7 +16,7 @@ namespace sgns
 {
     using namespace boost::multiprecision;
 
-    class ProcessingTransaction : public IGeniusTransactions
+    class ProcessingTransaction final : public IGeniusTransactions
     {
     public:
         static std::shared_ptr<ProcessingTransaction> DeSerializeByteVector( const std::vector<uint8_t> &data );
@@ -50,7 +50,7 @@ namespace sgns
             return job_id_;
         }
 
-        std::string GetTransactionSpecificPath() override
+        std::string GetTransactionSpecificPath() const override
         {
             boost::format processing_fmt( GetType() + "/%s" );
 
@@ -73,7 +73,7 @@ namespace sgns
          * @brief       Registers the deserializer for the transfer transaction type.
          * @return      A boolean indicating successful registration.
          */
-        static inline bool Register()
+        static bool Register()
         {
             RegisterDeserializer( "process", &ProcessingTransaction::DeSerializeByteVector );
             return true;

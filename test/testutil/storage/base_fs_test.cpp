@@ -2,31 +2,25 @@
 
 namespace test
 {
-
-    void FSFixture::clear()
-    {
-        if ( fs::exists( base_path ) )
-        {
-            fs::remove_all( base_path );
-        }
-    }
-
     FSFixture::FSFixture( fs::path path ) : base_path( std::move( path ) )
     {
         clear();
-        mkdir();
+        fs::create_directory( base_path );
 
         logger = sgns::base::createLogger( getPathString() );
         logger->set_level( spdlog::level::debug );
     }
 
-    void FSFixture::SetUp()
+    FSFixture::~FSFixture()
     {
         clear();
-        mkdir();
     }
 
-    void FSFixture::TearDown()
+    void FSFixture::clear() const
     {
+        if ( fs::exists( base_path ) )
+        {
+            fs::remove_all( base_path );
+        }
     }
 }

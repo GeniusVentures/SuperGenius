@@ -34,6 +34,7 @@ namespace sgns
          * @brief       Constructor for the TransferProof class.
          * @param[in]   balance The balance of the account for the transfer.
          * @param[in]   amount The amount to be transferred.
+         * @param[in]   bytecode Optional bytecode override for proof verification.
          */
         explicit TransferProof( uint64_t balance, uint64_t amount, std::optional<std::string> bytecode = std::nullopt );
 

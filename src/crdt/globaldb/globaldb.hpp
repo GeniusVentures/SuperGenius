@@ -1,20 +1,23 @@
 #ifndef SUPERGENIUS_CRDT_GLOBALDB_HPP
 #define SUPERGENIUS_CRDT_GLOBALDB_HPP
 
+#include <unordered_set>
+
 #include <boost/asio/io_context.hpp>
 #include <boost/filesystem/path.hpp>
-#include "pubsub_broadcaster_ext.hpp"
-#include "outcome/outcome.hpp"
-#include <ipfs_pubsub/gossip_pubsub_topic.hpp>
-#include "crdt/crdt_options.hpp"
-#include "crdt/crdt_datastore.hpp"
-#include "crdt/atomic_transaction.hpp"
-#include <libp2p/protocol/identify/identify.hpp>
-#include <libp2p/protocol/autonat/autonat.hpp>
-#include <libp2p/protocol/holepunch/holepunch_server.hpp>
-#include <libp2p/protocol/holepunch/holepunch_client.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/graphsync_impl.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
+#include <ipfs_pubsub/gossip_pubsub_topic.hpp>
+#include <libp2p/protocol/autonat/autonat.hpp>
+#include <libp2p/protocol/holepunch/holepunch_client.hpp>
+#include <libp2p/protocol/holepunch/holepunch_server.hpp>
+#include <libp2p/protocol/identify/identify.hpp>
+
+#include "crdt/atomic_transaction.hpp"
+#include "crdt/crdt_datastore.hpp"
+#include "crdt/crdt_options.hpp"
+#include "outcome/outcome.hpp"
+#include "pubsub_broadcaster_ext.hpp"
 
 namespace sgns::crdt
 {
@@ -64,7 +67,7 @@ namespace sgns::crdt
          * @enum        Error
          * @brief       Enumeration of error codes used in the proof classes.
          */
-        enum class Error
+        enum class Error: uint8_t
         {
             ROCKSDB_IO = 0,                 ///< RocksDB wasn't opened
             IPFS_DB_NOT_CREATED,            ///< IPFS datastore not created
@@ -79,16 +82,21 @@ namespace sgns::crdt
          * @brief Puts key-value pair to the CRDT store, optionally specifying a broadcast topic.
          * @param[in] key The hierarchical key where the value should be stored.
          * @param[in] value The value to store.
+         * @param[in] topics Topics to publish to.
          * @return outcome::success on success, or outcome::failure otherwise.
          */
-        outcome::result<CID> Put( const HierarchicalKey &key, const Buffer &value, std::set<std::string> topics );
+        outcome::result<CID> Put( const HierarchicalKey                 &key,
+                                  const Buffer                          &value,
+                                  const std::unordered_set<std::string> &topics );
 
         /**
          * @brief       Writes a batch of CRDT data all at once
          * @param[in]   data_vector A set of crdt to be written in a single transaction
+         * @param[in]   topics Topics to publish to.
          * @return      outcome::failure on error or success otherwise
          */
-        outcome::result<CID> Put( const std::vector<DataPair> &data_vector, std::set<std::string> topics );
+        outcome::result<CID> Put( const std::vector<DataPair>           &data_vector,
+                                  const std::unordered_set<std::string> &topics );
 
         /** Gets a value that corresponds to specified key.
         * @param key - value key
@@ -98,15 +106,16 @@ namespace sgns::crdt
 
         /** Removes value for a given key.
         * @param key to remove from storage
+        * @param topics Topics to publish to
         * @return outcome::failure on error or success otherwise
         */
-        outcome::result<CID> Remove( const HierarchicalKey &key, const std::set<std::string> &topics );
+        outcome::result<CID> Remove( const HierarchicalKey &key, const std::unordered_set<std::string> &topics );
 
         /** Queries CRDT key-value pairs by prefix. If the prefix is empty returns all elements that were not tombstoned
-        * @param prefix - keys prefix to match. An empty prefix matches any key.
+        * @param keyPrefix - keys prefix to match. An empty prefix matches any key.
         * @return list of key-value pairs matches prefix
         */
-        outcome::result<QueryResult> QueryKeyValues( const std::string &keyPrefix );
+        outcome::result<QueryResult> QueryKeyValues( std::string_view keyPrefix );
 
         /**
          * @brief       Queries with a middle part that can be a wildcard, negated string or normal string
@@ -130,8 +139,8 @@ namespace sgns::crdt
         */
         std::shared_ptr<AtomicTransaction> BeginTransaction();
 
-        void AddBroadcastTopic( const std::string &topicName );
-        void AddListenTopic( const std::string &topicName );
+        outcome::result<void> AddBroadcastTopic( const std::string &topicName );
+        void                  AddListenTopic( const std::string &topicName );
 
         void PrintDataStore();
 
@@ -162,7 +171,9 @@ namespace sgns::crdt
          * @brief       Get the topics that are being listened to
          * @return      A set of the monitored topic names 
          */
-        outcome::result<std::set<std::string>> GetMonitoredTopics() const;
+        outcome::result<std::unordered_set<std::string>> GetMonitoredTopics() const;
+
+        std::shared_ptr<crdt::CrdtDatastore> GetCRDTDataStore();
 
     private:
         /**

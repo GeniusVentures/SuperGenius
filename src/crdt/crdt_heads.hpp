@@ -4,6 +4,7 @@
 #include <shared_mutex>
 #include <map>
 #include <set>
+#include <unordered_set>
 
 #include <storage/rocksdb/rocksdb.hpp>
 #include "base/logger.hpp"
@@ -56,21 +57,24 @@ namespace sgns::crdt
         */
         HierarchicalKey GetNamespaceKey() const;
 
-        /** Get full path to CID key
-         *   /<namespace>/<topic>/<cid>
-         * @param aCid Content identifier
+        /** Get full path to CID key.
+         *   Path format: /namespace/topic/cid
+         * @param topic Topic namespace.
+         * @param aCid Content identifier.
          * @return full path to CID key as HierarchicalKey or outcome::failure on error
          */
         outcome::result<HierarchicalKey> GetKey( const std::string &topic, const CID &aCid ) const;
 
         /** Check if CID is among the current heads.
          * @param aCid Content identifier
+         * @param topic Topic namespace
          * @return true is CID is head, false otherwise
          */
         bool IsHead( const CID &aCid, const std::string &topic ) const;
 
         /** Check if CID is head and return it height if it is
          * @param aCid Content identifier
+         * @param topic Topic namespace
          * @return Height of head or outcome::failure on error
          */
         [[nodiscard]] outcome::result<uint64_t> GetHeadHeight( const CID &aCid, const std::string &topic ) const;
@@ -83,6 +87,7 @@ namespace sgns::crdt
         /** Add head CID to datastore with full namespace
         * @param aCid Content identifier
         * @param aHeight height of head
+        * @param topic Topic namespace
         * @return outcome::failure on error
         */
         outcome::result<void> Add( const CID &aCid, uint64_t aHeight, const std::string &topic );
@@ -93,6 +98,7 @@ namespace sgns::crdt
         * @param aCidHead Content identifier of head to replace
         * @param aNewHeadCid Content identifier of new head
         * @param aHeight height of head
+        * @param topic Topic namespace
         * @return outcome::failure on error
         */
         outcome::result<void> Replace( const CID         &aCidHead,
@@ -104,7 +110,7 @@ namespace sgns::crdt
         * @param topics Topic to get list from
         * @return outcome::failure on error
         */
-        outcome::result<CRDTListResult> GetList( const std::set<std::string> &topics = {} ) const;
+        outcome::result<CRDTListResult> GetList( const std::unordered_set<std::string> &topics = {} ) const;
 
         /** primeCache builds the heads cache based on what's in storage; since
         * it is called from the constructor only we don't bother locking.
@@ -117,6 +123,7 @@ namespace sgns::crdt
         * @param aDataStore Pointer to datastore batch
         * @param aCid Content identifier to add
         * @param aHeight height of CID head
+        * @param topic Topic namespace
         * @return outcome::failure on error
         */
         outcome::result<void> Write( storage::BufferBatch &aDataStore,
@@ -127,6 +134,7 @@ namespace sgns::crdt
         /** Delete data from datastore in batch mode
         * @param aDataStore Pointer to datastore batch
         * @param aCid Content identifier to remove
+        * @param topic Topic namespace
         */
         outcome::result<void> Delete( const std::unique_ptr<storage::BufferBatch> &aDataStore,
                                       const CID                                   &aCid,

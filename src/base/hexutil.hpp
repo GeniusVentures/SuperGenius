@@ -22,24 +22,21 @@ namespace sgns::base {
 
   /**
    * @brief Converts bytes to uppercase hex representation
-   * @param array bytes
-   * @param len length of bytes
+   * @param bytes input bytes
    * @return hexstring
    */
   std::string hex_upper(gsl::span<const uint8_t> bytes) noexcept;
 
   /**
    * @brief Converts bytes to hex representation
-   * @param array bytes
-   * @param len length of bytes
+   * @param bytes input bytes
    * @return hexstring
    */
   std::string hex_lower(gsl::span<const uint8_t> bytes) noexcept;
 
   /**
    * @brief Converts hex representation to bytes
-   * @param array individual chars
-   * @param len length of chars
+   * @param hex hex string input
    * @return result containing array of bytes if input string is hex encoded and
    * has even length
    *

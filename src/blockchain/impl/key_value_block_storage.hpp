@@ -35,9 +35,11 @@ namespace sgns::blockchain
             const BlockHandler                                   &on_finalized_block_found );
 
         /**
-     * Initialise block storage with existing data
+     * Initialise block storage with existing data.
      * @param db underlying storage (must be empty)
      * @param hasher a hasher instance
+     * @param header_repo header repository
+     * @param on_finalized_block_found callback when finalized block is found
      */
         static outcome::result<std::shared_ptr<KeyValueBlockStorage>> loadExisting(
             std::shared_ptr<crdt::GlobalDB>                db,
@@ -46,10 +48,12 @@ namespace sgns::blockchain
             const BlockHandler                            &on_finalized_block_found );
 
         /**
-     * Initialise block storage with a genesis block which is created inside
-     * from merkle trie root
+     * Initialise block storage with a genesis block created from the merkle trie root.
+     * @param state_root merkle trie state root
      * @param db underlying storage (must be empty)
      * @param hasher a hasher instance
+     * @param header_repo header repository
+     * @param on_genesis_created callback when genesis is created
      */
         static outcome::result<std::shared_ptr<KeyValueBlockStorage>> createWithGenesis(
             base::Buffer                                   state_root,

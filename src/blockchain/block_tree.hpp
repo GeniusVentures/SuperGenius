@@ -80,7 +80,7 @@ namespace sgns::blockchain {
      * @return nothing or error; if error happens, no changes in the tree are
      * made
      *
-     * @note if block, which is specified in PARENT_HASH field of (\param block)
+     * @note if block, which is specified in PARENT_HASH field of (block)
      * is not in our local storage, corresponding error is returned. It is
      * suggested that after getting that error, the caller would ask another
      * peer for the parent block and try to insert it; this operation is to be
@@ -99,7 +99,7 @@ namespace sgns::blockchain {
         const primitives::Justification &justification) = 0;
 
     /**
-     * Get a chain of blocks from the specified as a (\param block) up to the
+     * Get a chain of blocks from the specified block up to the
      * closest finalized one
      * @param block to get a chain from
      * @return chain of blocks in top-to-bottom order (from the last finalized
@@ -109,8 +109,8 @@ namespace sgns::blockchain {
         const primitives::BlockHash &block) = 0;
 
     /**
-     * Get a chain of blocks from the (\param block)
-     * @param block, from which the chain is started
+     * Get a chain of blocks from the block
+     * @param block block from which the chain is started
      * @param ascending - if true, the chain will grow up from the provided
      * block (it is the lowest one); if false, down
      * @param maximum number of blocks to be retrieved
@@ -134,7 +134,7 @@ namespace sgns::blockchain {
      * Check if one block is ancestor of second one (direct chain exists)
      * @param ancestor - block, which is at the top of the chain
      * @param descendant - block, which is the bottom of the chain
-     * @return true if \param ancestor is ancestor of \param descendant
+     * @return true if ancestor is ancestor of descendant
      */
     virtual bool hasDirectChain(const primitives::BlockHash &ancestor,
                                 const primitives::BlockHash &descendant) = 0;
@@ -159,7 +159,7 @@ namespace sgns::blockchain {
 
     /**
      * @brief Get the most recent block of the best (longest) chain among those
-     * that contain a block with \param target_hash
+     * that contain a block with target_hash
      * @param target_hash is a hash of a block that the chosen chain must
      * contain
      * @param max_number is the max block number that the resulting block (and

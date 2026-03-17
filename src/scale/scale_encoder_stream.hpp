@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_SRC_SCALE_SCALE_ENCODER_STREAM_HPP
 #define SUPERGENIUS_SRC_SCALE_SCALE_ENCODER_STREAM_HPP
 
@@ -16,7 +14,7 @@
 
 namespace sgns::scale {
   /**
-   * @class ScaleEncoderStream designed to scale-encode data to stream
+   * @brief Scale-encodes data into a byte stream.
    */
   class ScaleEncoderStream {
    public:

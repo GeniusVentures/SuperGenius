@@ -7,12 +7,26 @@
 
 #include "Migration3_4_0To3_5_0.hpp"
 
+#include "account/EscrowReleaseTransaction.hpp"
 #include "account/GeniusAccount.hpp"
+#include "account/MintTransaction.hpp"
 #include "account/TransactionManager.hpp"
 #include "account/MigrationManager.hpp"
+#include "account/TransferTransaction.hpp"
+#include "blockchain/ValidatorRegistry.hpp"
 
 namespace sgns
 {
+
+    namespace
+    {
+        std::string BuildLegacyTransactionPath_3_5_0( const IGeniusTransactions &tx )
+        {
+            return tx.GetSrcAddress() + "/tx/" + tx.GetTransactionSpecificPath() + "/" +
+                   std::to_string( tx.dag_st.nonce() );
+        }
+    }
+
     Migration3_4_0To3_5_0::Migration3_4_0To3_5_0(
         std::shared_ptr<boost::asio::io_context>                        ioContext,
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
@@ -52,7 +66,7 @@ namespace sgns
         if ( !db_3_4_0_ )
         {
             logger_->info( "Legacy 3.4.0 DB not found; skipping migration to {}", ToVersion() );
-            return false;
+            return ret;
         }
 
         do
@@ -107,7 +121,7 @@ namespace sgns
 
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
 
-        account_->ConfigureMessengerHandlers( db_3_5_0_ );
+        account_->ConfigureDatabaseDependencies( db_3_5_0_ );
 
         db_3_5_0_->Start();
         //init blockchain
@@ -123,6 +137,8 @@ namespace sgns
                         if ( result.has_error() )
                         {
                             strong->logger_->error( "Error starting blockchain: {}", result.error().message() );
+                            strong->account_->RequestHeads(
+                                { std::string( sgns::blockchain::ValidatorRegistry::ValidatorTopic() ) } );
                             strong->blockchain_status_.store( Status::ST_ERROR );
                             return;
                         }
@@ -218,8 +234,8 @@ namespace sgns
             return outcome::failure( MigrationManager::Error::BLOCKCHAIN_INIT_FAILED );
         }
 
-        auto                  crdt_transaction_ = db_3_5_0_->BeginTransaction();
-        std::set<std::string> topics_;
+        auto                            crdt_transaction_ = db_3_5_0_->BeginTransaction();
+        std::unordered_set<std::string> topics_;
 
         topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
 
@@ -359,7 +375,7 @@ namespace sgns
                     logger_->info( "Synthesizing zero-value mint for missing nonce {} on network {}",
                                    nonce,
                                    network_id );
-                    auto tx_path = blockchain_base + mint_tx->GetTransactionFullPath();
+                    auto tx_path = blockchain_base + BuildLegacyTransactionPath_3_5_0( *mint_tx );
                     return TransactionRecord{ std::move( mint_tx ), std::move( tx_path ) };
                 };
 
@@ -387,7 +403,7 @@ namespace sgns
                 OUTCOME_TRY( persist_record( record ) );
             }
         }
-        if ( migrated_count )
+        if ( migrated_count != 0 )
         {
             OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
             logger_->debug( "Committed remaining {}  transactions", migrated_count );
@@ -466,6 +482,7 @@ namespace sgns
 
     outcome::result<void> Migration3_4_0To3_5_0::ShutDown()
     {
+        account_->DeconfigureDatabaseDependencies();
         db_3_4_0_.reset();
         db_3_5_0_.reset();
         blockchain_.reset();

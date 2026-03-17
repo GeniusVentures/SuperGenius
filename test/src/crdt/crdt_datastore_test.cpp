@@ -166,11 +166,11 @@ namespace sgns::crdt
         buffer.put( "Data" );
 
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey ), false );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( newKey, buffer, { "topic"} ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( newKey, buffer, { "topic" } ) );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey ), true );
         EXPECT_OUTCOME_TRUE( valueBuffer, crdtDatastore_->GetKey( newKey ) );
         EXPECT_TRUE( buffer.toString() == valueBuffer.toString() );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->DeleteKey( newKey, { "topic"} ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->DeleteKey( newKey, { "topic" } ) );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey ), false );
     }
 
@@ -194,11 +194,11 @@ namespace sgns::crdt
         EXPECT_OUTCOME_TRUE_1( transaction.Put( newKey3, buffer3 ) );
         // this won't work as part of the same atomic transaction, because the Remove looks for the existing key
         // to create the delta, and since it's queued in the atomic transaction, it doesn't find key2
-        EXPECT_OUTCOME_TRUE_1( transaction.Commit( { "topic"} ) );
+        EXPECT_OUTCOME_TRUE_1( transaction.Commit( { "topic" } ) );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey1 ), true );
         AtomicTransaction transactionRemoveKey2 = AtomicTransaction( crdtDatastore_ );
         EXPECT_OUTCOME_TRUE_1( transactionRemoveKey2.Remove( newKey2 ) );
-        EXPECT_OUTCOME_TRUE_1( transactionRemoveKey2.Commit( { "topic"} ) );
+        EXPECT_OUTCOME_TRUE_1( transactionRemoveKey2.Commit( { "topic" } ) );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey1 ), true );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey2 ), false );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey3 ), true );

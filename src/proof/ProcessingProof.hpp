@@ -30,8 +30,7 @@ namespace sgns
     public:
         /**
          * @brief       Constructor for the ProcessingProof class.
-         * @param[in]   balance The balance of the account for the processing.
-         * @param[in]   amount The amount to be processingred.
+         * @param[in]   subtask_id Subtask identifier used in proof context.
          */
         explicit ProcessingProof( std::string subtask_id ) :
             IBasicProof( "Bypass" ), //
@@ -54,7 +53,7 @@ namespace sgns
         }
 
     private:
-        std::string subtask_id_m; ///< The balance associated with the processing.
+        std::string subtask_id_m; ///< Subtask identifier associated with the processing proof.
 
         /**
          * @brief       Serializes the full proof data and parameters

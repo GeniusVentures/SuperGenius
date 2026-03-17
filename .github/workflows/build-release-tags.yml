@@ -35,13 +35,15 @@ jobs:
         abi: [""]
         include:
           - target: Linux
-            host: ubuntu-22.04
+            host: sg-ubuntu-linux
             abi: "x86_64"
             build-type: "Release"
+            container: ghcr.io/geniusventures/debian-bullseye:latest
           - target: Linux
-            host: gv-Linux-large
+            host: sg-ubuntu-linux
             abi: "x86_64"
             build-type: "Debug"
+            container: ghcr.io/geniusventures/debian-bullseye:latest
           - target: Linux
             host: ubuntu-24.04-arm
             abi: "aarch64"
@@ -53,23 +55,23 @@ jobs:
             build-type: "Debug"
             container: ghcr.io/geniusventures/debian-bullseye:latest
           - target: Windows
-            host: windows-latest
+            host: SG-WIN11
           - target: OSX
             host: gv-OSX-Large
           - target: Android
-            host: ubuntu-22.04
+            host: sg-ubuntu-linux
             abi: arm64-v8a
             build-type: "Release"
           - target: Android
-            host: gv-Linux-large
+            host: sg-ubuntu-linux
             abi: arm64-v8a
             build-type: "Debug"
           - target: Android
-            host: ubuntu-22.04
+            host: sg-ubuntu-linux
             abi: armeabi-v7a
             build-type: "Release"
           - target: Android
-            host: gv-Linux-large
+            host: sg-ubuntu-linux
             abi: armeabi-v7a
             build-type: "Debug"
           - target: iOS
@@ -80,53 +82,84 @@ jobs:
           - target: Linux
             abi: ""
     steps:
-      - name: Clean workspace (self-hosted runners)
-        if: ${{ runner.environment == 'self-hosted' }}
+      - name: Clean workspace (self-hosted runners - Unix)
+        if: ${{ runner.environment == 'self-hosted' && matrix.target != 'Windows' }}
+        working-directory: ${{runner.workspace}}
         run: |
           echo "=== PRE-CLEANUP DEBUG ==="
           echo "Current working directory: $(pwd)"
-          echo "Workspace: ${{github.workspace}}"
+          echo "Runner workspace: ${{runner.workspace}}"
+          echo "GitHub workspace: ${{github.workspace}}"
+
+          echo "=== CLEANUP ARTIFACTS ==="
+          # Clean up artifacts from previous runs (self-hosted runners only)
           
-          if [ -d "${{github.workspace}}" ]; then
-            cd "${{github.workspace}}"
-            echo "Changed to workspace directory: $(pwd)"
-            echo "Contents:"
-            ls -la
-            
-            # Check for SuperGenius subdirectory and clean git repo
-            if [ -d "SuperGenius/.git" ]; then
-              echo "Git repository detected in SuperGenius/, performing deep clean..."
-              cd SuperGenius
-              git clean -xfd
-              git submodule foreach --recursive git clean -xfd
-              git reset --hard
-              git submodule foreach --recursive git reset --hard
-              echo "Git clean completed"
-              cd "${{github.workspace}}"
-            else
-              echo "No git repository found in SuperGenius/, skipping git clean"
-            fi
-            
-            # Remove thirdparty and zkLLVM directories if they exist
-            echo "Removing thirdparty directory..."
-            rm -rf thirdparty
-            
-            echo "Removing zkLLVM directory..."
-            rm -rf zkLLVM
-          else
-            echo "Workspace directory does not exist yet, skipping cleanup"
+          # Clean contents of SuperGenius directory but keep the directory itself
+          if [ -d "SuperGenius" ]; then
+            echo "Cleaning SuperGenius directory contents..."
+            rm -rf SuperGenius/* SuperGenius/.* 2>/dev/null || true
+            echo "SuperGenius directory cleaned (kept the directory)"
           fi
           
+          # Delete sibling dependency directories completely
+          if [ -d "thirdparty" ]; then
+            echo "Removing thirdparty directory..."
+            rm -rf thirdparty
+          fi
+          if [ -d "zkLLVM" ]; then
+            echo "Removing zkLLVM directory..."
+            rm -rf zkLLVM
+          fi
+
           echo "=== POST-CLEANUP DEBUG ==="
-          if [ -d "${{github.workspace}}" ]; then
-            cd "${{github.workspace}}"
-            echo "Final workspace contents:"
-            ls -la
+          echo "Runner workspace contents:"
+          ls -la
+          if [ -d "SuperGenius" ]; then
+            echo "SuperGenius directory exists and contains:"
+            ls -la SuperGenius/ 2>/dev/null || echo "  (empty)"
           fi
         shell: bash
 
+      - name: Clean workspace (self-hosted runners - Windows)
+        if: ${{ runner.environment == 'self-hosted' && matrix.target == 'Windows' }}
+        working-directory: ${{runner.workspace}}
+        run: |
+          Write-Output "=== PRE-CLEANUP DEBUG ==="
+          Write-Output "Current working directory: $(Get-Location)"
+          Write-Output "Runner workspace: ${{runner.workspace}}"
+          Write-Output "GitHub workspace: ${{github.workspace}}"
+
+          Write-Output "=== CLEANUP ARTIFACTS ==="
+          # Clean up artifacts from previous runs (self-hosted runners only)
+          
+          # Clean contents of SuperGenius directory but keep the directory itself
+          if (Test-Path "SuperGenius") {
+            Write-Output "Cleaning SuperGenius directory contents..."
+            Get-ChildItem -Path "SuperGenius" -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Output "SuperGenius directory cleaned (kept the directory)"
+          }
+          
+          # Delete sibling dependency directories completely
+          if (Test-Path "thirdparty") {
+            Write-Output "Removing thirdparty directory..."
+            Remove-Item -Path "thirdparty" -Recurse -Force -ErrorAction SilentlyContinue
+          }
+          if (Test-Path "zkLLVM") {
+            Write-Output "Removing zkLLVM directory..."
+            Remove-Item -Path "zkLLVM" -Recurse -Force -ErrorAction SilentlyContinue
+          }
+
+          Write-Output "=== POST-CLEANUP DEBUG ==="
+          Write-Output "Runner workspace contents:"
+          Get-ChildItem -Force
+          if (Test-Path "SuperGenius") {
+            Write-Output "SuperGenius directory exists and contains:"
+            Get-ChildItem -Path "SuperGenius" -Force -ErrorAction SilentlyContinue | Out-Null
+            if ($?) { Get-ChildItem -Path "SuperGenius" -Force } else { Write-Output "  (empty)" }
+          }
+
       - name: Checkout SuperGenius repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: "SuperGenius"
           submodules: "recursive"
@@ -221,8 +254,8 @@ jobs:
           sudo update-alternatives --install /usr/bin/c++ c++ $(which clang++) 100
           sudo update-alternatives --set cc $(which clang)
           sudo update-alternatives --set c++ $(which clang++)
-           
-          sudo apt install ccache ninja-build libvulkan-dev -y
+          
+          sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev -y
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
       - name: Configure Windows host
@@ -233,7 +266,8 @@ jobs:
       - name: Configure macOS host
         if: ${{ runner.os == 'macOS'}}
         run: |
-          brew install ccache ninja bash gnu-tar
+          brew install ninja bash gnu-tar
+          
           # Ensure GNU tar is first in PATH - check both possible Homebrew locations
           if [ -d "/opt/homebrew/opt/gnu-tar/libexec/gnubin" ]; then
             echo "PATH=/opt/homebrew/opt/gnu-tar/libexec/gnubin:$PATH" >> $GITHUB_ENV
@@ -245,6 +279,7 @@ jobs:
             echo "WARNING: GNU tar installation not found in expected locations"
             echo "Available tar: $(which tar)"
           fi
+          
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
       - name: Add Darwin toolchain
@@ -261,7 +296,22 @@ jobs:
       - name: Add Android toolchain
         if: ${{ matrix.target == 'Android' }}
         run: |
+          NDK_VERSION="r27b"
+          NDK_DIR="$HOME/android-ndk-$NDK_VERSION"
+          
+          if [ ! -d "$NDK_DIR" ]; then
+            echo "Downloading Android NDK..."
+            wget https://dl.google.com/android/repository/android-ndk-$NDK_VERSION-linux.zip -O ndk.zip
+            unzip -o ndk.zip -d $HOME
+            rm ndk.zip
+          else
+            echo "Android NDK already exists at $NDK_DIR, skipping download"
+          fi
+
+          echo "ANDROID_NDK_HOME=$NDK_DIR" >> $GITHUB_ENV
+
           rustup target add aarch64-linux-android
+          rustup target add armv7-linux-androideabi
 
       - name: Install bindgen
         run: cargo install cbindgen

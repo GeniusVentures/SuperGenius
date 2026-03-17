@@ -24,6 +24,9 @@ namespace sgns::sgprocessing {
 
 namespace sgns::processing
 {
+    /**
+     * @brief Default implementation of ProcessingCore backed by GlobalDB.
+     */
     class ProcessingCoreImpl : public ProcessingCore
     {
     public:
@@ -47,25 +50,19 @@ namespace sgns::processing
         ~ProcessingCoreImpl()
         {
         }
-        /** Process a single subtask
-        * @param subTask - subtask that needs to be processed
-        * @param result - subtask result
-        * @param initialHashCode - an initial hash code which is used to calculate result hash
+        /** Process a single subtask.
+        * @param subTask - Subtask that needs to be processed.
+        * @param initialHashCode - Initial hash code used to calculate result hash.
         */
         outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
         const SGProcessing::SubTask& subTask, uint32_t initialHashCode) override;
 
-        /** Register an available processor
-        * @param name - Name of processor
-        * @param factoryFunction - Pointer to processor
-        */
+        // Register an available processor.
         //void RegisterProcessorFactory(const std::string& name, std::function<std::unique_ptr<ProcessingProcessor>()> factoryFunction) {
         //    m_processorFactories[name] = std::move( factoryFunction );
         //}
 
-        /** Set the current processor by name
-        * @param name - Name of processor
-        */
+        // Set the current processor by name.
        // bool SetProcessorByName(const std::string& name) {
        //     auto factoryFunction = m_processorFactories.find(name);
        //     if (factoryFunction != m_processorFactories.end()) {
@@ -89,13 +86,11 @@ namespace sgns::processing
        //     }
        // }
 
-        /** Get processing type from json data to set processor
-        * @param jsondata - jsondata that needs to be parsed
-        */
-        //bool SetProcessingTypeFromJson(std::string jsondata) override;
+        // Get processing type from json data to set processor.
+        // bool SetProcessingTypeFromJson(std::string jsondata) override;
 
-        /** Get current processing progress
-        * @return Progress percentage (0.0 to 100.0)
+        /** Get current processing progress.
+        * @return Progress percentage (0.0 to 100.0).
         */
         float GetProgress() const override;
 
