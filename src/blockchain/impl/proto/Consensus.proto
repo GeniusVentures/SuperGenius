@@ -25,6 +25,7 @@ message UTXOTransitionCommitment {
   uint64 utxo_count_before = 3;
   uint64 utxo_count_after = 4;
   uint64 account_state_version = 5;
+  bytes produced_outputs_root = 6;
 }
 
 message MerkleProofStep {
@@ -37,6 +38,7 @@ message ConsumedInputProof {
   uint32 output_index = 2;
   bytes leaf_payload = 3;
   repeated MerkleProofStep branch = 4;
+  repeated MerkleProofStep produced_branch = 5;
 }
 
 message UTXOWitness {

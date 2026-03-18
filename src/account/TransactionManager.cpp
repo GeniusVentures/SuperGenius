@@ -38,6 +38,97 @@ namespace sgns
         using utxo_merkle::ReadUInt32BE;
         using utxo_merkle::ReadUInt64BE;
         using utxo_merkle::SerializeUTXOLeafPayload;
+
+        bool ExtractProducedUTXOs( const std::shared_ptr<IGeniusTransactions> &tx, std::vector<GeniusUTXO> &outputs )
+        {
+            if ( !tx )
+            {
+                return false;
+            }
+            auto tx_hash = base::Hash256::fromReadableString( tx->GetHash() );
+            if ( tx_hash.has_error() )
+            {
+                return false;
+            }
+
+            outputs.clear();
+            if ( tx->GetType() == "transfer" )
+            {
+                auto transfer_tx = std::dynamic_pointer_cast<const TransferTransaction>( tx );
+                if ( !transfer_tx )
+                {
+                    return false;
+                }
+                const auto &dst_infos = transfer_tx->GetDstInfos();
+                outputs.reserve( dst_infos.size() );
+                for ( std::uint32_t i = 0; i < dst_infos.size(); ++i )
+                {
+                    outputs.emplace_back( tx_hash.value(),
+                                          i,
+                                          dst_infos[i].encrypted_amount,
+                                          dst_infos[i].token_id,
+                                          dst_infos[i].dest_address );
+                }
+                return true;
+            }
+
+            if ( tx->GetType() == "mint" )
+            {
+                auto mint_tx = std::dynamic_pointer_cast<const MintTransaction>( tx );
+                if ( !mint_tx )
+                {
+                    return false;
+                }
+                outputs.emplace_back( tx_hash.value(),
+                                      0,
+                                      mint_tx->GetAmount(),
+                                      mint_tx->GetTokenID(),
+                                      mint_tx->GetSrcAddress() );
+                return true;
+            }
+
+            if ( tx->GetType() == "escrow-hold" )
+            {
+                auto escrow_tx = std::dynamic_pointer_cast<const EscrowTransaction>( tx );
+                if ( !escrow_tx )
+                {
+                    return false;
+                }
+                const auto &dst_infos = escrow_tx->GetUTXOParameters().second;
+                outputs.reserve( dst_infos.size() );
+                for ( std::uint32_t i = 0; i < dst_infos.size(); ++i )
+                {
+                    outputs.emplace_back( tx_hash.value(),
+                                          i,
+                                          dst_infos[i].encrypted_amount,
+                                          dst_infos[i].token_id,
+                                          dst_infos[i].dest_address );
+                }
+                return true;
+            }
+
+            if ( tx->GetType() == "escrow-release" )
+            {
+                auto escrow_release_tx = std::dynamic_pointer_cast<const EscrowReleaseTransaction>( tx );
+                if ( !escrow_release_tx )
+                {
+                    return false;
+                }
+                const auto &dst_infos = escrow_release_tx->GetUTXOParameters().second;
+                outputs.reserve( dst_infos.size() );
+                for ( std::uint32_t i = 0; i < dst_infos.size(); ++i )
+                {
+                    outputs.emplace_back( tx_hash.value(),
+                                          i,
+                                          dst_infos[i].encrypted_amount,
+                                          dst_infos[i].token_id,
+                                          dst_infos[i].dest_address );
+                }
+                return true;
+            }
+
+            return false;
+        }
     } // namespace
 
     base::Logger TransactionManagerLogger()
@@ -3601,28 +3692,8 @@ namespace sgns
         }
         const auto pre_root = pre_root_result.value();
 
-        // Anchor pre-state root in the certified per-account chain.
-        if ( tx->GetNonce() == 0 )
-        {
-            auto checkpoint_result = utxo_manager_.LoadLatestCheckpoint( tx->GetSrcAddress() );
-            if ( checkpoint_result.has_error() )
-            {
-                return false;
-            }
-
-            if ( checkpoint_result.value().has_value() )
-            {
-                if ( checkpoint_result.value()->utxo_merkle_root != pre_root )
-                {
-                    return false;
-                }
-            }
-            else if ( pre_root != utxo_merkle::EmptyUTXOMerkleRoot() )
-            {
-                return false;
-            }
-        }
-        else
+        // For nonce > 0, anchor pre-state root in the certified per-account chain.
+        if ( tx->GetNonce() > 0 )
         {
             const auto prev_hash = tx->GetPreviousHash();
             if ( prev_hash.empty() )
@@ -3821,6 +3892,57 @@ namespace sgns
             {
                 return false;
             }
+
+            auto producer_cert_result =
+                blockchain_->GetCertificateBySubjectHash( input.txid_hash_.toReadableString() );
+            if ( producer_cert_result.has_error() )
+            {
+                return false;
+            }
+            const auto &producer_subject = producer_cert_result.value().proposal().subject();
+            if ( !producer_subject.has_nonce() || !producer_subject.nonce().has_utxo_commitment() )
+            {
+                return false;
+            }
+            const auto &producer_commitment = producer_subject.nonce().utxo_commitment();
+            if ( producer_commitment.produced_outputs_root().size() != base::Hash256::size() )
+            {
+                return false;
+            }
+            auto produced_root_result = base::Hash256::fromSpan(
+                gsl::span( reinterpret_cast<uint8_t *>(
+                               const_cast<char *>( producer_commitment.produced_outputs_root().data() ) ),
+                           producer_commitment.produced_outputs_root().size() ) );
+            if ( produced_root_result.has_error() )
+            {
+                return false;
+            }
+
+            auto produced_hash = HashLeaf( payload_vec );
+            for ( const auto &step : proof.produced_branch() )
+            {
+                auto sibling_hash_result = base::Hash256::fromSpan(
+                    gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( step.sibling_hash().data() ) ),
+                               step.sibling_hash().size() ) );
+                if ( sibling_hash_result.has_error() )
+                {
+                    return false;
+                }
+
+                if ( step.is_left_sibling() )
+                {
+                    produced_hash = HashNode( sibling_hash_result.value(), produced_hash );
+                }
+                else
+                {
+                    produced_hash = HashNode( produced_hash, sibling_hash_result.value() );
+                }
+            }
+
+            if ( produced_hash != produced_root_result.value() )
+            {
+                return false;
+            }
         }
 
         for ( const auto &output : outputs )
@@ -3864,44 +3986,8 @@ namespace sgns
         const auto pre_root  = utxo_manager_.ComputeUTXOMerkleRootFromSnapshot( before_snapshot );
         const auto post_root = utxo_manager_.ComputeUTXOMerkleRootFromSnapshot( after_snapshot );
 
-        // Safety guard before proposing: local pre-state must be anchored to bootstrap/certified chain.
-        if ( tx->GetNonce() == 0 )
-        {
-            auto checkpoint_result = utxo_manager_.LoadLatestCheckpoint( tx->GetSrcAddress() );
-            if ( checkpoint_result.has_error() )
-            {
-                TransactionManagerLogger()->warn( "[{} - full: {}] {}: Failed checkpoint lookup for tx={} err={}",
-                                                  account_m->GetAddress().substr( 0, 8 ),
-                                                  full_node_m,
-                                                  __func__,
-                                                  tx->GetHash(),
-                                                  checkpoint_result.error().message() );
-                return std::nullopt;
-            }
-            if ( checkpoint_result.value().has_value() )
-            {
-                if ( checkpoint_result.value()->utxo_merkle_root != pre_root )
-                {
-                    TransactionManagerLogger()->warn(
-                        "[{} - full: {}] {}: Nonce-0 pre_root mismatches checkpoint root tx={}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        __func__,
-                        tx->GetHash() );
-                    return std::nullopt;
-                }
-            }
-            else if ( pre_root != utxo_merkle::EmptyUTXOMerkleRoot() )
-            {
-                TransactionManagerLogger()->warn( "[{} - full: {}] {}: Nonce-0 pre_root is not empty root tx={}",
-                                                  account_m->GetAddress().substr( 0, 8 ),
-                                                  full_node_m,
-                                                  __func__,
-                                                  tx->GetHash() );
-                return std::nullopt;
-            }
-        }
-        else
+        // Safety guard before proposing: for nonce > 0 pre-state must be anchored to certified chain.
+        if ( tx->GetNonce() > 0 )
         {
             const auto previous_hash = tx->GetPreviousHash();
             if ( previous_hash.empty() )
@@ -3954,11 +4040,24 @@ namespace sgns
             }
         }
 
+        std::vector<GeniusUTXO> produced_outputs;
+        if ( !ExtractProducedUTXOs( tx, produced_outputs ) )
+        {
+            TransactionManagerLogger()->warn( "[{} - full: {}] {}: Could not extract produced outputs for tx={}",
+                                              account_m->GetAddress().substr( 0, 8 ),
+                                              full_node_m,
+                                              __func__,
+                                              tx->GetHash() );
+            return std::nullopt;
+        }
+        const auto produced_outputs_root = utxo_manager_.ComputeUTXOMerkleRootFromSnapshot( produced_outputs );
+
         commitment.set_pre_utxo_root( pre_root.data(), pre_root.size() );
         commitment.set_post_utxo_root( post_root.data(), post_root.size() );
         commitment.set_utxo_count_before( before_snapshot.size() );
         commitment.set_utxo_count_after( after_snapshot.size() );
         commitment.set_account_state_version( tx->GetNonce() > 0 ? tx->GetNonce() - 1 : 0 );
+        commitment.set_produced_outputs_root( produced_outputs_root.data(), produced_outputs_root.size() );
         return commitment;
     }
 
@@ -4075,6 +4174,75 @@ namespace sgns
 
                 current_index = current_index / 2;
                 current_level = std::move( next_level );
+            }
+
+            auto producer_tx = GetTransactionByHash( input.txid_hash_.toReadableString() );
+            if ( !producer_tx )
+            {
+                return std::nullopt;
+            }
+            std::vector<GeniusUTXO> produced_outputs;
+            if ( !ExtractProducedUTXOs( producer_tx, produced_outputs ) )
+            {
+                return std::nullopt;
+            }
+
+            std::vector<SnapshotLeaf> produced_leaves;
+            produced_leaves.reserve( produced_outputs.size() );
+            for ( const auto &output_utxo : produced_outputs )
+            {
+                produced_leaves.push_back(
+                    { OutPointKey( output_utxo.GetTxID(), output_utxo.GetOutputIdx() ),
+                      SerializeUTXOLeafPayload( output_utxo ) } );
+            }
+            std::sort( produced_leaves.begin(),
+                       produced_leaves.end(),
+                       []( const SnapshotLeaf &a, const SnapshotLeaf &b ) { return a.payload < b.payload; } );
+
+            std::unordered_map<std::string, size_t> produced_outpoint_to_index;
+            produced_outpoint_to_index.reserve( produced_leaves.size() );
+            std::vector<base::Hash256> produced_level_hashes;
+            produced_level_hashes.reserve( produced_leaves.size() );
+            for ( size_t i = 0; i < produced_leaves.size(); ++i )
+            {
+                produced_outpoint_to_index.emplace( produced_leaves[i].outpoint_key, i );
+                produced_level_hashes.push_back( HashLeaf( produced_leaves[i].payload ) );
+            }
+
+            auto produced_it = produced_outpoint_to_index.find( key );
+            if ( produced_it == produced_outpoint_to_index.end() )
+            {
+                return std::nullopt;
+            }
+            if ( produced_leaves[produced_it->second].payload != leaves[leaf_index].payload )
+            {
+                return std::nullopt;
+            }
+
+            size_t                    produced_index = produced_it->second;
+            std::vector<base::Hash256> produced_level = produced_level_hashes;
+            while ( produced_level.size() > 1 )
+            {
+                if ( ( produced_level.size() % 2 ) != 0 )
+                {
+                    produced_level.push_back( produced_level.back() );
+                }
+
+                const size_t sibling_index = produced_index ^ 1U;
+                auto        *step          = proof->add_produced_branch();
+                step->set_sibling_hash( produced_level[sibling_index].data(),
+                                        produced_level[sibling_index].size() );
+                step->set_is_left_sibling( sibling_index < produced_index );
+
+                std::vector<base::Hash256> next_level;
+                next_level.reserve( produced_level.size() / 2 );
+                for ( size_t i = 0; i < produced_level.size(); i += 2 )
+                {
+                    next_level.push_back( HashNode( produced_level[i], produced_level[i + 1] ) );
+                }
+
+                produced_index = produced_index / 2;
+                produced_level = std::move( next_level );
             }
         }
 
