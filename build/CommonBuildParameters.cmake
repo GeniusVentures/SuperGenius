@@ -169,11 +169,37 @@ set(boost_random_DIR "${Boost_LIB_DIR}/cmake/boost_random-${BOOST_VERSION}")
 set(boost_regex_DIR "${Boost_LIB_DIR}/cmake/boost_regex-${BOOST_VERSION}")
 set(boost_system_DIR "${Boost_LIB_DIR}/cmake/boost_system-${BOOST_VERSION}")
 set(boost_thread_DIR "${Boost_LIB_DIR}/cmake/boost_thread-${BOOST_VERSION}")
+set(boost_context_DIR "${Boost_LIB_DIR}/cmake/boost_context-${BOOST_VERSION}")
+set(boost_coroutine_DIR "${Boost_LIB_DIR}/cmake/boost_coroutine-${BOOST_VERSION}")
 set(boost_unit_test_framework_DIR "${Boost_LIB_DIR}/cmake/boost_unit_test_framework-${BOOST_VERSION}")
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_NO_SYSTEM_PATHS ON)
 option(Boost_USE_STATIC_RUNTIME "Use static runtimes" ON)
+set(_BOOST_CACHE_ARGS
+    -DBOOST_ROOT:PATH=${_BOOST_ROOT}
+    -DBoost_DIR:PATH=${Boost_DIR}/Boost-${BOOST_VERSION}
+    -DBoost_INCLUDE_DIR:PATH=${Boost_INCLUDE_DIR}
+    -Dboost_headers_DIR:PATH=${Boost_DIR}/boost_headers-${BOOST_VERSION}
+    -Dboost_date_time_DIR:PATH=${Boost_DIR}/boost_date_time-${BOOST_VERSION}
+    -Dboost_filesystem_DIR:PATH=${Boost_DIR}/boost_filesystem-${BOOST_VERSION}
+    -Dboost_program_options_DIR:PATH=${Boost_DIR}/boost_program_options-${BOOST_VERSION}
+    -Dboost_random_DIR:PATH=${Boost_DIR}/boost_random-${BOOST_VERSION}
+    -Dboost_regex_DIR:PATH=${Boost_DIR}/boost_regex-${BOOST_VERSION}
+    -Dboost_system_DIR:PATH=${Boost_DIR}/boost_system-${BOOST_VERSION}
+    -Dboost_context_DIR:PATH=${Boost_DIR}/boost_context-${BOOST_VERSION}
+    -Dboost_coroutine_DIR:PATH=${Boost_DIR}/boost_coroutine-${BOOST_VERSION}
+    -Dboost_thread_DIR:PATH=${Boost_DIR}/boost_thread-${BOOST_VERSION}
+    -Dboost_log_DIR:PATH=${Boost_DIR}/boost_log-${BOOST_VERSION}
+    -Dboost_log_setup_DIR:PATH=${Boost_DIR}/boost_log_setup-${BOOST_VERSION}
+    -Dboost_unit_test_framework_DIR:PATH=${Boost_DIR}/boost_unit_test_framework-${BOOST_VERSION}
+    -Dboost_json_DIR:PATH=${Boost_DIR}/boost_json-${BOOST_VERSION}
+    -DBoost_USE_STATIC_RUNTIME:BOOL=ON
+    -DBoost_NO_SYSTEM_PATHS:BOOL=ON
+    -DBoost_USE_MULTITHREADED:BOOL=ON
+    -DBoost_USE_STATIC_LIBS:BOOL=ON
+    -DBoost_USE_STATIC_RUNTIME:BOOL=ON
+)
 
 option(SGNS_STACKTRACE_BACKTRACE "Use BOOST_STACKTRACE_USE_BACKTRACE in stacktraces, for POSIX" OFF)
 
@@ -186,7 +212,8 @@ if(SGNS_STACKTRACE_BACKTRACE)
 endif()
 
 # header only libraries must not be added here
-find_package(Boost REQUIRED COMPONENTS container date_time filesystem random regex system thread log log_setup program_options unit_test_framework json)
+message(STATUS "Booost coroutine dir: ${boost_coroutine_DIR}")
+find_package(Boost REQUIRED COMPONENTS container date_time filesystem random regex system thread log log_setup program_options unit_test_framework json context coroutine)
 include_directories(${Boost_INCLUDE_DIRS})
 
 # SQLiteModernCpp project
@@ -377,6 +404,48 @@ endif()
 
 if(${IOS})
     target_link_libraries(TrustWalletCore INTERFACE ${SECURITY_FRAMEWORK})
+endif()
+include(ExternalProject)
+message(STATUS "Protobuf_DIR: ${Protobuf_DIR}")
+message(STATUS "libsecp256k1_DIR: ${libsecp256k1_DIR}")
+ExternalProject_Add(
+    rlp
+    PREFIX rlp 
+    SOURCE_DIR "${PROJECT_ROOT}/../rlp"
+    CMAKE_CACHE_ARGS
+    -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
+    -DProtobuf_DIR:PATH=${Protobuf_DIR}
+    -Dprotobuf_MODULE_COMPATIBLE:BOOL=ON
+    -DProtobuf_PROTOC_EXECUTABLE:FILEPATH=${PROTOC_EXECUTABLE}
+    -Dfmt_DIR:PATH=${fmt_DIR}
+    -Dspdlog_DIR:PATH=${spdlog_DIR}
+    -Dabsl_DIR:PATH=${absl_DIR}
+    -Dutf8_range_DIR:PATH=${utf8_range_DIR}
+    -DSnappy_DIR:PATH=${Snappy_DIR}
+    -Dlibsecp256k1_DIR:PATH=${libsecp256k1_DIR}
+    -DGSL_INCLUDE_DIR:PATH=${GSL_INCLUDE_DIR}
+    -Dcrypto3_INCLUDE_DIR:PATH=${ZKLLVM_BUILD_DIR}/zkLLVM/include
+    ${_BOOST_CACHE_ARGS}
+)
+ExternalProject_Get_Property(rlp SOURCE_DIR INSTALL_DIR)
+set(rlp_DIR "${INSTALL_DIR}/lib/cmake/rlp" CACHE PATH "Path to rlp install folder" FORCE)
+message(STATUS "rlp will install its package config to: ${rlp_DIR}")
+
+set(_RLP_INSTALL_LIBDIR "${INSTALL_DIR}/lib")
+set(_RLP_IMPORTED_LOCATION "${_RLP_INSTALL_LIBDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}rlp${CMAKE_STATIC_LIBRARY_SUFFIX}")
+
+if(NOT TARGET rlp::rlp)
+    add_library(rlp::rlp STATIC IMPORTED GLOBAL)
+    if(EXISTS "${SOURCE_DIR}/include")
+        set(_RLP_INCLUDE_DIR "${SOURCE_DIR}/include")
+    else()
+        set(_RLP_INCLUDE_DIR "${INSTALL_DIR}/include")
+    endif()
+    set_target_properties(rlp::rlp PROPERTIES
+        IMPORTED_LOCATION "${_RLP_IMPORTED_LOCATION}"
+        INTERFACE_INCLUDE_DIRECTORIES "${_RLP_INCLUDE_DIR}"
+        INTERFACE_LINK_LIBRARIES "Boost::headers;Boost::context;Boost::coroutine;OpenSSL::SSL;OpenSSL::Crypto;Snappy::snappy;libsecp256k1::secp256k1;logger"
+    )
 endif()
 
 include_directories(

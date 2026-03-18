@@ -115,7 +115,10 @@ target_link_libraries(genius_node
     ${WIN_CRYPT_LIBRARY}
     transfer_proof
     processing_proof
+    rlp::rlp
 )
+
+add_dependencies(genius_node rlp)
 
 set_target_properties(genius_node PROPERTIES PUBLIC_HEADER "GeniusNode.hpp")
 if(MSVC)
