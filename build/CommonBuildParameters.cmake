@@ -405,48 +405,6 @@ endif()
 if(${IOS})
     target_link_libraries(TrustWalletCore INTERFACE ${SECURITY_FRAMEWORK})
 endif()
-include(ExternalProject)
-message(STATUS "Protobuf_DIR: ${Protobuf_DIR}")
-message(STATUS "libsecp256k1_DIR: ${libsecp256k1_DIR}")
-ExternalProject_Add(
-    rlp
-    PREFIX rlp 
-    SOURCE_DIR "${PROJECT_ROOT}/../rlp"
-    CMAKE_CACHE_ARGS
-    -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
-    -DProtobuf_DIR:PATH=${Protobuf_DIR}
-    -Dprotobuf_MODULE_COMPATIBLE:BOOL=ON
-    -DProtobuf_PROTOC_EXECUTABLE:FILEPATH=${PROTOC_EXECUTABLE}
-    -Dfmt_DIR:PATH=${fmt_DIR}
-    -Dspdlog_DIR:PATH=${spdlog_DIR}
-    -Dabsl_DIR:PATH=${absl_DIR}
-    -Dutf8_range_DIR:PATH=${utf8_range_DIR}
-    -DSnappy_DIR:PATH=${Snappy_DIR}
-    -Dlibsecp256k1_DIR:PATH=${libsecp256k1_DIR}
-    -DGSL_INCLUDE_DIR:PATH=${GSL_INCLUDE_DIR}
-    -Dcrypto3_INCLUDE_DIR:PATH=${ZKLLVM_BUILD_DIR}/zkLLVM/include
-    ${_BOOST_CACHE_ARGS}
-)
-ExternalProject_Get_Property(rlp SOURCE_DIR INSTALL_DIR)
-set(rlp_DIR "${INSTALL_DIR}/lib/cmake/rlp" CACHE PATH "Path to rlp install folder" FORCE)
-message(STATUS "rlp will install its package config to: ${rlp_DIR}")
-
-set(_RLP_INSTALL_LIBDIR "${INSTALL_DIR}/lib")
-set(_RLP_IMPORTED_LOCATION "${_RLP_INSTALL_LIBDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}rlp${CMAKE_STATIC_LIBRARY_SUFFIX}")
-
-if(NOT TARGET rlp::rlp)
-    add_library(rlp::rlp STATIC IMPORTED GLOBAL)
-    if(EXISTS "${SOURCE_DIR}/include")
-        set(_RLP_INCLUDE_DIR "${SOURCE_DIR}/include")
-    else()
-        set(_RLP_INCLUDE_DIR "${INSTALL_DIR}/include")
-    endif()
-    set_target_properties(rlp::rlp PROPERTIES
-        IMPORTED_LOCATION "${_RLP_IMPORTED_LOCATION}"
-        INTERFACE_INCLUDE_DIRECTORIES "${_RLP_INCLUDE_DIR}"
-        INTERFACE_LINK_LIBRARIES "Boost::headers;Boost::context;Boost::coroutine;OpenSSL::SSL;OpenSSL::Crypto;Snappy::snappy;libsecp256k1::secp256k1;logger"
-    )
-endif()
 
 include_directories(
     ${PROJECT_ROOT}/src
@@ -488,6 +446,7 @@ add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
 
 add_subdirectory(${PROJECT_ROOT}/ProofSystem ${CMAKE_BINARY_DIR}/ProofSystem)
 add_subdirectory(${PROJECT_ROOT}/SGProcessingManager ${CMAKE_BINARY_DIR}/SGProcessingManager)
+add_subdirectory(${PROJECT_ROOT}/../rlp ${CMAKE_BINARY_DIR}/rlp)
 
 # rlp: build as an ExternalProject mirroring the thirdparty layout.
 # PREFIX        = <binary_dir>/rlp

@@ -83,6 +83,7 @@ target_link_libraries(genius_node
     sgns_genius_account  # Link to the GeniusAccount library
     blockchain_genesis
 	ProcessingBase
+    rlp
     PRIVATE
     secure_storage
     component_factory
@@ -115,7 +116,6 @@ target_link_libraries(genius_node
     ${WIN_CRYPT_LIBRARY}
     transfer_proof
     processing_proof
-    rlp::rlp
 )
 
 add_dependencies(genius_node rlp)
