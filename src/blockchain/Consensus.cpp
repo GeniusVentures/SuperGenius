@@ -1950,7 +1950,9 @@ namespace sgns
 
     outcome::result<ConsensusManager::Subject> ConsensusManager::CreateNonceSubject( const std::string &account_id,
                                                                                      uint64_t           nonce,
-                                                                                     const std::string &tx_hash )
+                                                                                     const std::string &tx_hash,
+                                                                                     const UTXOTransitionCommitment *utxo_commitment,
+                                                                                     const UTXOWitness              *utxo_witness )
     {
         ConsensusManagerLogger()->trace( "{}: called account_id={} nonce={}", __func__, account_id, nonce );
         Subject subject;
@@ -1959,6 +1961,14 @@ namespace sgns
         auto *payload = subject.mutable_nonce();
         payload->set_nonce( nonce );
         payload->set_tx_hash( tx_hash.data(), tx_hash.size() );
+        if ( utxo_commitment != nullptr )
+        {
+            *payload->mutable_utxo_commitment() = *utxo_commitment;
+        }
+        if ( utxo_witness != nullptr )
+        {
+            *payload->mutable_utxo_witness() = *utxo_witness;
+        }
 
         auto subject_id = ComputeSubjectId( subject );
         if ( subject_id.has_error() )
@@ -2034,6 +2044,16 @@ namespace sgns
         {
             return false;
         }
+        if ( subject.subject_id().empty() )
+        {
+            return false;
+        }
+
+        const auto expected_subject_id = ComputeSubjectId( subject );
+        if ( expected_subject_id.has_error() || expected_subject_id.value() != subject.subject_id() )
+        {
+            return false;
+        }
 
         switch ( subject.type() )
         {
@@ -2043,19 +2063,8 @@ namespace sgns
                 return subject.has_task_result() && !subject.task_result().task_result_hash().empty();
             case SubjectType::SUBJECT_UNSPECIFIED:
             default:
-                break;
+                return false;
         }
-
-        if ( subject.has_nonce() )
-        {
-            return !subject.nonce().tx_hash().empty();
-        }
-        if ( subject.has_task_result() )
-        {
-            return !subject.task_result().task_result_hash().empty();
-        }
-
-        return false;
     }
 
     void ConsensusManager::OnConsensusMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
@@ -2112,6 +2121,12 @@ namespace sgns
         if ( subject.subject_id().empty() )
         {
             ConsensusManagerLogger()->error( "{}: subject subject_id is empty", __func__ );
+            return false;
+        }
+        auto expected_subject_id = ComputeSubjectId( subject );
+        if ( expected_subject_id.has_error() || expected_subject_id.value() != subject.subject_id() )
+        {
+            ConsensusManagerLogger()->error( "{}: subject subject_id mismatch", __func__ );
             return false;
         }
 

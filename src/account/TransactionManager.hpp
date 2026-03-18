@@ -374,12 +374,20 @@ namespace sgns
         outcome::result<std::string>                    GetTransactionCID( const std::string &tx_hash ) const;
         outcome::result<ConsensusManager::SubjectCheck> HandleNonceConsensusSubject(
             const ConsensusManager::Subject &subject );
-        bool ValidateTransactionForConsensus( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        bool ValidateTransactionForConsensus( const std::shared_ptr<IGeniusTransactions> &tx,
+                                             bool skip_utxo_state_validation = false ) const;
         bool CheckTransactionWellFormed( const IGeniusTransactions &tx ) const;
         bool CheckTransactionAuthorization( const IGeniusTransactions &tx ) const;
         bool CheckTransactionTimestamp( const IGeniusTransactions &tx ) const;
         bool CheckTransactionReplayProtection( const IGeniusTransactions &tx ) const;
         bool CheckTransactionTypeRules( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        std::optional<UTXOTransitionCommitment> BuildUTXOTransitionCommitment(
+            const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        std::optional<UTXOWitness> BuildUTXOWitness( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        bool ApplyTransactionToUTXOSnapshot( const std::shared_ptr<IGeniusTransactions> &tx,
+                                             std::vector<GeniusUTXO>                     &snapshot ) const;
+        bool ValidateWitnessForConsensus( const ConsensusSubject                    &subject,
+                                          const std::shared_ptr<IGeniusTransactions> &tx ) const;
         bool ValidateUTXOParametersForConsensus( const UTXOTxParameters &params, const std::string &address ) const;
         void SetNonceWindow( uint64_t window );
 

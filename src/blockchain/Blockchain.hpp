@@ -113,17 +113,22 @@ namespace sgns
 
         outcome::result<ConsensusManager::Subject> CreateConsensusNonceSubject( const std::string &account_id,
                                                                                 uint64_t           nonce,
-                                                                                const std::string &tx_hash );
+                                                                                const std::string &tx_hash,
+                                                                                const UTXOTransitionCommitment *utxo_commitment = nullptr,
+                                                                                const UTXOWitness              *utxo_witness = nullptr );
 
         outcome::result<ConsensusManager::Proposal> CreateConsensusProposal( const std::string &account_id,
                                                                              uint64_t           nonce,
-                                                                             const std::string &tx_hash );
+                                                                             const std::string &tx_hash,
+                                                                             const UTXOTransitionCommitment *utxo_commitment = nullptr,
+                                                                             const UTXOWitness              *utxo_witness = nullptr );
 
         outcome::result<void> SubmitProposal( const ConsensusManager::Proposal &proposal );
 
         outcome::result<void> TryResumeProposal( const std::string &hash );
         bool                  CheckCertificate( const std::string &subject_hash ) const;
         bool                  CheckCertificateStrict( const ConsensusManager::Subject &subject ) const;
+        outcome::result<ConsensusManager::Certificate> GetCertificateBySubjectHash( const std::string &subject_hash ) const;
         const std::string    &BestHash( const std::string &a, const std::string &b ) const;
 
     protected:

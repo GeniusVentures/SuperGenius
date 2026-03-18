@@ -138,7 +138,9 @@ namespace sgns
         static outcome::result<std::string>          ComputeSubjectId( const Subject &subject );
         static outcome::result<Subject>              CreateNonceSubject( const std::string &account_id,
                                                                          uint64_t           nonce,
-                                                                         const std::string &tx_hash );
+                                                                         const std::string &tx_hash,
+                                                                         const UTXOTransitionCommitment *utxo_commitment = nullptr,
+                                                                         const UTXOWitness              *utxo_witness = nullptr );
         static outcome::result<Subject>              CreateTaskResultSubject( const std::string &account_id,
                                                                               const std::string &escrow_path,
                                                                               const std::string &task_result_hash,

@@ -477,15 +477,15 @@ namespace sgns
         // Debug mode
         node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::debug );
         auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::debug );
-        auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::debug );
+        auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::err );
         auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
         auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
         auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
         auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::err );
         auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
         auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::debug );
-        auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::trace );
-        auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::trace );
+        auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::err );
+        auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::err );
         auto loggerQueue          = ConfigureLogger( "ProcessingTaskQueueImpl", logdir, spdlog::level::err );
         auto loggerRocksDB        = ConfigureLogger( "rocksdb", logdir, spdlog::level::err );
         auto logkad               = ConfigureLogger( "Kademlia", logdir, spdlog::level::err );
@@ -497,11 +497,11 @@ namespace sgns
         auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
         auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
-        auto loggerAccountMessenger  = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::debug );
-        auto loggerGeniusAccount     = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::debug );
+        auto loggerAccountMessenger  = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
+        auto loggerGeniusAccount     = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
         auto loggerKeyPair           = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
-        auto loggerBlockchain        = ConfigureLogger( "Blockchain", logdir, spdlog::level::debug );
-        auto loggerValidator         = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::debug );
+        auto loggerBlockchain        = ConfigureLogger( "Blockchain", logdir, spdlog::level::err );
+        auto loggerValidator         = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::trace );
         auto loggerProcMgr           = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
         auto loggerProcessor         = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
         auto loggerCrdtCallback      = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );

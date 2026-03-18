@@ -219,6 +219,29 @@ TEST_F( UTXOManagerTest, MerkleRootChangesWhenUTXOSetChanges )
     EXPECT_NE( root_before, root_after );
 }
 
+TEST_F( UTXOManagerTest, CheckpointRoundtrip )
+{
+    const std::array<uint8_t, 1> seed_tx{ 0x11 };
+    const std::array<uint8_t, 1> seed_registry{ 0x22 };
+    const auto                   tx_hash = HASHER.sha2_256( gsl::span<const uint8_t>( seed_tx ) );
+    const auto                   registry_hash = HASHER.sha2_256( gsl::span<const uint8_t>( seed_registry ) );
+
+    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( tx_hash, 0, 123, TOKEN_1 ) ) );
+
+    ASSERT_TRUE( utxo_manager->CreateCheckpoint( 7, tx_hash, registry_hash ).has_value() );
+    auto checkpoint_res = utxo_manager->LoadLatestCheckpoint();
+    ASSERT_TRUE( checkpoint_res.has_value() );
+    ASSERT_TRUE( checkpoint_res.value().has_value() );
+
+    const auto &checkpoint = checkpoint_res.value().value();
+    EXPECT_EQ( checkpoint.owner_address, std::string( PRIV_KEY ) );
+    EXPECT_EQ( checkpoint.epoch, 7u );
+    EXPECT_EQ( checkpoint.last_finalized_tx, tx_hash );
+    EXPECT_EQ( checkpoint.registry_hash, registry_hash );
+    EXPECT_EQ( checkpoint.utxo_count, 1u );
+    EXPECT_GT( checkpoint.created_at_ms, 0u );
+}
+
 TEST( GeniusUTXO, PropertyAccessors )
 {
     uint32_t   idx = 5;

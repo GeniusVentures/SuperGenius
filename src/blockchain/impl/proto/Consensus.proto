@@ -19,9 +19,35 @@ enum SubjectType {
   SUBJECT_TASK_RESULT = 2;
 }
 
+message UTXOTransitionCommitment {
+  bytes pre_utxo_root = 1;
+  bytes post_utxo_root = 2;
+  uint64 utxo_count_before = 3;
+  uint64 utxo_count_after = 4;
+  uint64 account_state_version = 5;
+}
+
+message MerkleProofStep {
+  bytes sibling_hash = 1;
+  bool is_left_sibling = 2;
+}
+
+message ConsumedInputProof {
+  bytes tx_id_hash = 1;
+  uint32 output_index = 2;
+  bytes leaf_payload = 3;
+  repeated MerkleProofStep branch = 4;
+}
+
+message UTXOWitness {
+  repeated ConsumedInputProof consumed_inputs = 1;
+}
+
 message NonceSubject {
   uint64 nonce = 1;
   bytes tx_hash = 2;
+  UTXOTransitionCommitment utxo_commitment = 3;
+  UTXOWitness utxo_witness = 4;
 }
 
 message TaskResultSubject {

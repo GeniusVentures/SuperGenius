@@ -446,6 +446,7 @@ namespace sgns
             std::shared_lock<std::shared_mutex> lock( cache_mutex_ );
             if ( cached_registry_ )
             {
+                logger_->debug( "{}: returning cached registry", __func__ );
                 return cached_registry_.value();
             }
         }

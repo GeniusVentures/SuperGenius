@@ -62,6 +62,17 @@ message UTXOEntryRecord
     bytes spent_by_txid = 8;
 }
 
+message UTXOCheckpointRecord
+{
+    string owner_address = 1;
+    uint64 epoch = 2;
+    bytes last_finalized_tx = 3;
+    bytes registry_hash = 4;
+    bytes utxo_merkle_root = 5;
+    uint64 utxo_count = 6;
+    uint64 created_at_ms = 7;
+}
+
 message UTXOList
 {
     repeated UTXO utxos = 1;
@@ -106,4 +117,3 @@ message EscrowReleaseTx
   string escrow_source = 5; 
   string original_escrow_hash = 6; 
 }
-

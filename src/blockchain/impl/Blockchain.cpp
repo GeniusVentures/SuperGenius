@@ -1557,16 +1557,21 @@ namespace sgns
 
     outcome::result<ConsensusManager::Subject> Blockchain::CreateConsensusNonceSubject( const std::string &account_id,
                                                                                         uint64_t           nonce,
-                                                                                        const std::string &tx_hash )
+                                                                                        const std::string &tx_hash,
+                                                                                        const UTXOTransitionCommitment *utxo_commitment,
+                                                                                        const UTXOWitness              *utxo_witness )
     {
-        return consensus_manager_->CreateNonceSubject( account_id, nonce, tx_hash );
+        return consensus_manager_->CreateNonceSubject( account_id, nonce, tx_hash, utxo_commitment, utxo_witness );
     }
 
     outcome::result<ConsensusManager::Proposal> Blockchain::CreateConsensusProposal( const std::string &account_id,
                                                                                      uint64_t           nonce,
-                                                                                     const std::string &tx_hash )
+                                                                                     const std::string &tx_hash,
+                                                                                     const UTXOTransitionCommitment *utxo_commitment,
+                                                                                     const UTXOWitness              *utxo_witness )
     {
-        OUTCOME_TRY( auto &&nonce_subject, CreateConsensusNonceSubject( account_id, nonce, tx_hash ) );
+        OUTCOME_TRY( auto &&nonce_subject,
+                     CreateConsensusNonceSubject( account_id, nonce, tx_hash, utxo_commitment, utxo_witness ) );
         OUTCOME_TRY( auto &&nonce_proposal,
                      consensus_manager_->CreateProposal( nonce_subject,
                                                          account_id,
@@ -1594,6 +1599,12 @@ namespace sgns
     bool Blockchain::CheckCertificateStrict( const ConsensusManager::Subject &subject ) const
     {
         return consensus_manager_->CheckCertificateForSubject( subject );
+    }
+
+    outcome::result<ConsensusManager::Certificate> Blockchain::GetCertificateBySubjectHash(
+        const std::string &subject_hash ) const
+    {
+        return consensus_manager_->GetCertificateBySubjectHash( subject_hash );
     }
 
     const std::string &Blockchain::BestHash( const std::string &a, const std::string &b ) const

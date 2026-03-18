@@ -9,6 +9,7 @@
 #include <utility>
 #include <thread>
 #include <system_error>
+#include <limits>
 
 #include <boost/asio/post.hpp>
 #include <openssl/err.h>
@@ -18,6 +19,7 @@
 #include "MintTransaction.hpp"
 #include "EscrowTransaction.hpp"
 #include "EscrowReleaseTransaction.hpp"
+#include "UTXOMerkle.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/AccountMessenger.hpp"
 #include "account/proto/SGTransaction.pb.h"
@@ -28,6 +30,16 @@
 
 namespace sgns
 {
+    namespace
+    {
+        using utxo_merkle::HashLeaf;
+        using utxo_merkle::HashNode;
+        using utxo_merkle::OutPointKey;
+        using utxo_merkle::ReadUInt32BE;
+        using utxo_merkle::ReadUInt64BE;
+        using utxo_merkle::SerializeUTXOLeafPayload;
+    } // namespace
+
     base::Logger TransactionManagerLogger()
     {
         // Always call base::createLogger to get the current logger
@@ -499,7 +511,7 @@ namespace sgns
         transfer_transaction->MakeSignature( *account_m );
         RecordOutgoingTxHash( transfer_transaction->GetNonce(), transfer_transaction->GetHash() );
 
-        utxo_manager_.ReserveUTXOs( inputs );
+        utxo_manager_.ReserveUTXOs( inputs, transfer_transaction->GetHash() );
 
         EnqueueTransaction( std::make_pair( transfer_transaction, std::nullopt ) );
 
@@ -548,13 +560,12 @@ namespace sgns
                                                       "0x" + hash_data.toReadableString(),
                                                       TokenID::FromBytes( { 0x00 } ) ) );
         auto [inputs, outputs] = params;
-        utxo_manager_.ReserveUTXOs( inputs );
-
         auto escrow_transaction = std::make_shared<EscrowTransaction>(
             EscrowTransaction::New( params, amount, dev_addr, peers_cut, FillDAGStruct() ) );
 
         escrow_transaction->MakeSignature( *account_m );
         RecordOutgoingTxHash( escrow_transaction->GetNonce(), escrow_transaction->GetHash() );
+        utxo_manager_.ReserveUTXOs( inputs, escrow_transaction->GetHash() );
 
         // Get the transaction ID for tracking
         auto txId = escrow_transaction->GetHash();
@@ -870,10 +881,27 @@ namespace sgns
 
         for ( auto &transaction : transactions_sent )
         {
+            std::optional<UTXOTransitionCommitment> utxo_commitment = BuildUTXOTransitionCommitment( transaction );
+            std::optional<UTXOWitness>              utxo_witness    = BuildUTXOWitness( transaction );
+            const bool is_utxo_tx = transaction->GetType() == "transfer" || transaction->GetType() == "escrow-hold" ||
+                                    transaction->GetType() == "escrow-release";
+            if ( is_utxo_tx && ( !utxo_commitment.has_value() || !utxo_witness.has_value() ) )
+            {
+                TransactionManagerLogger()->error(
+                    "[{} - full: {}] {}: Missing UTXO commitment/witness for tx={} type={}",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    __func__,
+                    transaction->GetHash(),
+                    transaction->GetType() );
+                return outcome::failure( std::errc::invalid_argument );
+            }
             OUTCOME_TRY( auto &&proposal,
                          blockchain_->CreateConsensusProposal( transaction->GetSrcAddress(),
                                                                transaction->GetNonce(),
-                                                               transaction->GetHash() ) );
+                                                               transaction->GetHash(),
+                                                               utxo_commitment ? &utxo_commitment.value() : nullptr,
+                                                               utxo_witness ? &utxo_witness.value() : nullptr ) );
             OUTCOME_TRY( blockchain_->SubmitProposal( proposal ) );
 
             OUTCOME_TRY( ChangeTransactionState( transaction, TransactionStatus::SENDING ) );
@@ -1322,7 +1350,7 @@ namespace sgns
                 OUTCOME_TRY( ParseTransaction( tx ) );
             }
         }
-        utxo_manager_.RollbackUTXOs( transfer_tx->GetInputInfos() );
+        utxo_manager_.RollbackUTXOs( transfer_tx->GetInputInfos(), transfer_tx->GetHash() );
 
         return outcome::success();
     }
@@ -1369,7 +1397,7 @@ namespace sgns
                         OUTCOME_TRY( ParseTransaction( tx ) );
                     }
                 }
-                utxo_manager_.RollbackUTXOs( inputs );
+                utxo_manager_.RollbackUTXOs( inputs, escrow_tx->GetHash() );
             }
         }
 
@@ -1600,8 +1628,45 @@ namespace sgns
                                                full_node_m );
         }
 
-        const bool has_local_utxos    = utxo_result.has_value() && utxo_result.value();
-        auto       monitored_networks = GetMonitoredNetworkIDs();
+        bool has_local_utxos          = utxo_result.has_value() && utxo_result.value();
+        auto monitored_networks       = GetMonitoredNetworkIDs();
+
+        if ( has_local_utxos )
+        {
+            auto checkpoint_result = utxo_manager_.LoadLatestCheckpoint( account_m->GetAddress() );
+            if ( checkpoint_result.has_error() )
+            {
+                TransactionManagerLogger()->warn( "[{} - full: {}] Failed to load local UTXO checkpoint during init: {}",
+                                                  account_m->GetAddress().substr( 0, 8 ),
+                                                  full_node_m,
+                                                  checkpoint_result.error().message() );
+            }
+            else if ( checkpoint_result.value().has_value() )
+            {
+                const auto local_root = utxo_manager_.ComputeUTXOMerkleRoot( account_m->GetAddress() );
+                if ( local_root != checkpoint_result.value()->utxo_merkle_root )
+                {
+                    TransactionManagerLogger()->warn(
+                        "[{} - full: {}] Local UTXO root mismatch with checkpoint during init. Clearing local UTXOs and rebuilding",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m );
+
+                    auto clear_result = utxo_manager_.SetUTXOs( std::vector<GeniusUTXO>{}, account_m->GetAddress() );
+                    if ( clear_result.has_error() )
+                    {
+                        TransactionManagerLogger()->error(
+                            "[{} - full: {}] Failed to clear local UTXOs after checkpoint mismatch: {}",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            clear_result.error().message() );
+                    }
+                    else
+                    {
+                        has_local_utxos = false;
+                    }
+                }
+            }
+        }
 
         std::unordered_set<std::string> network_hashes;
         bool                            has_network_utxos = false;
@@ -2908,6 +2973,46 @@ namespace sgns
                                            full_node_m,
                                            __func__,
                                            tx_hash );
+
+        auto tx_hash_bin = base::Hash256::fromReadableString( tx_hash );
+        if ( tx_hash_bin.has_error() )
+        {
+            TransactionManagerLogger()->warn( "[{} - full: {}] {}: Could not parse tx hash for checkpoint tx={}",
+                                              account_m->GetAddress().substr( 0, 8 ),
+                                              full_node_m,
+                                              __func__,
+                                              tx_hash );
+            return;
+        }
+
+        auto validator_registry = blockchain_->GetValidatorRegistry();
+        if ( !validator_registry )
+        {
+            TransactionManagerLogger()->warn( "[{} - full: {}] {}: No validator registry, skipping checkpoint",
+                                              account_m->GetAddress().substr( 0, 8 ),
+                                              full_node_m,
+                                              __func__ );
+            return;
+        }
+
+        const uint64_t registry_epoch = validator_registry->GetRegistryEpoch();
+        const auto     registry_cid   = validator_registry->GetRegistryCid();
+        auto           registry_hash =
+            hasher_m->sha2_256( gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( registry_cid.data() ),
+                                                          registry_cid.size() ) );
+
+        if ( auto checkpoint_res =
+                 utxo_manager_.CreateCheckpoint( registry_epoch, tx_hash_bin.value(), registry_hash );
+             checkpoint_res.has_error() )
+        {
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: Failed to create UTXO checkpoint tx={} epoch={} err={}",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               __func__,
+                                               tx_hash,
+                                               registry_epoch,
+                                               checkpoint_res.error().message() );
+        }
     }
 
     outcome::result<ConsensusManager::SubjectCheck> TransactionManager::HandleNonceConsensusSubject(
@@ -2979,7 +3084,18 @@ namespace sgns
             return ConsensusManager::SubjectCheck::Reject;
         }
 
-        auto validate_result = ValidateTransactionForConsensus( tracked.tx );
+        const bool witness_valid = ValidateWitnessForConsensus( subject, tracked.tx );
+        if ( !witness_valid )
+        {
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: Witness validation failed for hash {}",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               __func__,
+                                               tx_hash );
+            return ConsensusManager::SubjectCheck::Reject;
+        }
+
+        auto validate_result = ValidateTransactionForConsensus( tracked.tx, witness_valid );
 
         return validate_result ? ConsensusManager::SubjectCheck::Approve : ConsensusManager::SubjectCheck::Reject;
     }
@@ -3019,7 +3135,8 @@ namespace sgns
         return true;
     }
 
-    bool TransactionManager::ValidateTransactionForConsensus( const std::shared_ptr<IGeniusTransactions> &tx ) const
+    bool TransactionManager::ValidateTransactionForConsensus( const std::shared_ptr<IGeniusTransactions> &tx,
+                                                              bool skip_utxo_state_validation ) const
     {
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Validating transaction",
                                            account_m->GetAddress().substr( 0, 8 ),
@@ -3070,7 +3187,11 @@ namespace sgns
                                                tx->GetHash() );
             return false;
         }
-        if ( !CheckTransactionTypeRules( tx ) )
+        //TODO - Deal with checking the Mint
+        //TODO - Make all transactions have UTXOs maybe.
+        const bool is_utxo_type =
+            tx->GetType() == "transfer" || tx->GetType() == "escrow-hold" || tx->GetType() == "escrow-release";
+        if ( !( skip_utxo_state_validation && is_utxo_type ) && !CheckTransactionTypeRules( tx ) )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Type rules failed tx={}",
                                                account_m->GetAddress().substr( 0, 8 ),
@@ -3232,15 +3353,26 @@ namespace sgns
                 full_node_m,
                 __func__,
                 tx.GetSrcAddress() );
-            auto previous_hash_subject_result = blockchain_->CreateConsensusNonceSubject( tx.GetSrcAddress(),
-                                                                                          tx.GetNonce() - 1,
-                                                                                          tx.GetPreviousHash() );
-            if ( previous_hash_subject_result.has_error() )
+            const auto previous_hash = tx.GetPreviousHash();
+            if ( previous_hash.empty() )
             {
                 return false;
             }
-
-            return blockchain_->CheckCertificateStrict( previous_hash_subject_result.value() );
+            auto previous_cert_result = blockchain_->GetCertificateBySubjectHash( previous_hash );
+            if ( previous_cert_result.has_error() )
+            {
+                return false;
+            }
+            const auto &previous_subject = previous_cert_result.value().proposal().subject();
+            if ( !previous_subject.has_nonce() )
+            {
+                return false;
+            }
+            if ( previous_subject.account_id() != tx.GetSrcAddress() )
+            {
+                return false;
+            }
+            return ( previous_subject.nonce().nonce() + 1 ) == tx.GetNonce();
         }
 
         const auto confirmed_nonce = nonce_result.value();
@@ -3393,6 +3525,676 @@ namespace sgns
         }
 
         return true;
+    }
+
+    bool TransactionManager::ValidateWitnessForConsensus( const ConsensusSubject                    &subject,
+                                                          const std::shared_ptr<IGeniusTransactions> &tx ) const
+    {
+        if ( !tx )
+        {
+            return false;
+        }
+
+        if ( !subject.has_nonce() )
+        {
+            return true;
+        }
+
+        std::vector<InputUTXOInfo> inputs;
+        if ( tx->GetType() == "transfer" )
+        {
+            auto transfer_tx = std::dynamic_pointer_cast<const TransferTransaction>( tx );
+            if ( !transfer_tx )
+            {
+                return false;
+            }
+            inputs = transfer_tx->GetInputInfos();
+        }
+        else if ( tx->GetType() == "escrow-hold" )
+        {
+            auto escrow_tx = std::dynamic_pointer_cast<const EscrowTransaction>( tx );
+            if ( !escrow_tx )
+            {
+                return false;
+            }
+            inputs = escrow_tx->GetUTXOParameters().first;
+        }
+        else if ( tx->GetType() == "escrow-release" )
+        {
+            auto escrow_release_tx = std::dynamic_pointer_cast<const EscrowReleaseTransaction>( tx );
+            if ( !escrow_release_tx )
+            {
+                return false;
+            }
+            inputs = escrow_release_tx->GetUTXOParameters().first;
+        }
+        else
+        {
+            return true;
+        }
+
+        if ( inputs.empty() )
+        {
+            return false;
+        }
+        if ( !subject.nonce().has_utxo_commitment() || !subject.nonce().has_utxo_witness() )
+        {
+            return false;
+        }
+
+        const auto &commitment = subject.nonce().utxo_commitment();
+        if ( commitment.pre_utxo_root().size() != base::Hash256::size() || commitment.post_utxo_root().size() != base::Hash256::size() )
+        {
+            return false;
+        }
+        if ( commitment.account_state_version() != ( tx->GetNonce() > 0 ? tx->GetNonce() - 1 : 0 ) )
+        {
+            return false;
+        }
+
+        auto pre_root_result = base::Hash256::fromSpan(
+            gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( commitment.pre_utxo_root().data() ) ),
+                       commitment.pre_utxo_root().size() ) );
+        if ( pre_root_result.has_error() )
+        {
+            return false;
+        }
+        const auto pre_root = pre_root_result.value();
+
+        // Anchor pre-state root in the certified per-account chain.
+        if ( tx->GetNonce() == 0 )
+        {
+            auto checkpoint_result = utxo_manager_.LoadLatestCheckpoint( tx->GetSrcAddress() );
+            if ( checkpoint_result.has_error() )
+            {
+                return false;
+            }
+
+            if ( checkpoint_result.value().has_value() )
+            {
+                if ( checkpoint_result.value()->utxo_merkle_root != pre_root )
+                {
+                    return false;
+                }
+            }
+            else if ( pre_root != utxo_merkle::EmptyUTXOMerkleRoot() )
+            {
+                return false;
+            }
+        }
+        else
+        {
+            const auto prev_hash = tx->GetPreviousHash();
+            if ( prev_hash.empty() )
+            {
+                return false;
+            }
+
+            auto prev_cert_result = blockchain_->GetCertificateBySubjectHash( prev_hash );
+            if ( prev_cert_result.has_error() )
+            {
+                return false;
+            }
+            const auto &prev_subject = prev_cert_result.value().proposal().subject();
+            if ( !prev_subject.has_nonce() || !prev_subject.nonce().has_utxo_commitment() )
+            {
+                return false;
+            }
+            if ( prev_subject.account_id() != tx->GetSrcAddress() )
+            {
+                return false;
+            }
+            if ( prev_subject.nonce().nonce() + 1 != tx->GetNonce() )
+            {
+                return false;
+            }
+
+            const auto &prev_commitment = prev_subject.nonce().utxo_commitment();
+            auto prev_post_root_result = base::Hash256::fromSpan(
+                gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( prev_commitment.post_utxo_root().data() ) ),
+                           prev_commitment.post_utxo_root().size() ) );
+            if ( prev_post_root_result.has_error() )
+            {
+                return false;
+            }
+            if ( prev_post_root_result.value() != pre_root )
+            {
+                return false;
+            }
+        }
+
+        std::unordered_map<std::string, const ConsumedInputProof *> proofs;
+        proofs.reserve( subject.nonce().utxo_witness().consumed_inputs_size() );
+        for ( const auto &proof : subject.nonce().utxo_witness().consumed_inputs() )
+        {
+            auto hash_result = base::Hash256::fromSpan(
+                gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( proof.tx_id_hash().data() ) ),
+                           proof.tx_id_hash().size() ) );
+            if ( hash_result.has_error() )
+            {
+                return false;
+            }
+            if ( !proofs.emplace( OutPointKey( hash_result.value(), proof.output_index() ), &proof ).second )
+            {
+                return false;
+            }
+        }
+
+        std::vector<OutputDestInfo> outputs;
+        if ( tx->GetType() == "transfer" )
+        {
+            auto transfer_tx = std::dynamic_pointer_cast<const TransferTransaction>( tx );
+            if ( !transfer_tx )
+            {
+                return false;
+            }
+            outputs = transfer_tx->GetDstInfos();
+        }
+        else if ( tx->GetType() == "escrow-hold" )
+        {
+            auto escrow_tx = std::dynamic_pointer_cast<const EscrowTransaction>( tx );
+            if ( !escrow_tx )
+            {
+                return false;
+            }
+            outputs = escrow_tx->GetUTXOParameters().second;
+        }
+        else if ( tx->GetType() == "escrow-release" )
+        {
+            auto escrow_release_tx = std::dynamic_pointer_cast<const EscrowReleaseTransaction>( tx );
+            if ( !escrow_release_tx )
+            {
+                return false;
+            }
+            outputs = escrow_release_tx->GetUTXOParameters().second;
+        }
+
+        if ( outputs.empty() )
+        {
+            return false;
+        }
+
+        const auto add_amount = []( std::unordered_map<std::string, uint64_t> &bucket,
+                                    const std::string                          &token_key,
+                                    uint64_t                                    amount ) -> bool
+        {
+            auto &total = bucket[token_key];
+            if ( amount > std::numeric_limits<uint64_t>::max() - total )
+            {
+                return false;
+            }
+            total += amount;
+            return true;
+        };
+
+        std::unordered_set<std::string>      seen_inputs;
+        std::unordered_map<std::string, uint64_t> input_amounts_by_token;
+        std::unordered_map<std::string, uint64_t> output_amounts_by_token;
+        seen_inputs.reserve( inputs.size() );
+        input_amounts_by_token.reserve( inputs.size() );
+        output_amounts_by_token.reserve( outputs.size() );
+
+        for ( const auto &input : inputs )
+        {
+            if ( !GeniusAccount::VerifySignature( tx->GetSrcAddress(),
+                                                 std::string_view( reinterpret_cast<const char *>( input.signature_.data() ),
+                                                                   input.signature_.size() ),
+                                                 input.SerializeForSigning() ) )
+            {
+                return false;
+            }
+
+            auto proof_it = proofs.find( OutPointKey( input.txid_hash_, input.output_idx_ ) );
+            if ( proof_it == proofs.end() )
+            {
+                return false;
+            }
+
+            const auto outpoint_key = OutPointKey( input.txid_hash_, input.output_idx_ );
+            if ( !seen_inputs.insert( outpoint_key ).second )
+            {
+                return false;
+            }
+            const auto &proof = *proof_it->second;
+
+            const auto &payload = proof.leaf_payload();
+            if ( payload.size() < 32 + 4 + 4 + 32 + 8 )
+            {
+                return false;
+            }
+
+            auto payload_hash_result = base::Hash256::fromSpan(
+                gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( payload.data() ) ), 32 ) );
+            if ( payload_hash_result.has_error() || payload_hash_result.value() != input.txid_hash_ )
+            {
+                return false;
+            }
+            const auto payload_output_idx =
+                ReadUInt32BE( reinterpret_cast<const uint8_t *>( payload.data() ) + 32 );
+            if ( payload_output_idx != input.output_idx_ )
+            {
+                return false;
+            }
+            const auto owner_len = ReadUInt32BE( reinterpret_cast<const uint8_t *>( payload.data() ) + 36 );
+            if ( payload.size() < 40 + owner_len + 32 + 8 )
+            {
+                return false;
+            }
+            const std::string payload_owner( payload.data() + 40, payload.data() + 40 + owner_len );
+            if ( payload_owner != tx->GetSrcAddress() )
+            {
+                return false;
+            }
+            const size_t token_offset = 40 + owner_len;
+            const size_t amount_offset = token_offset + 32;
+            const std::string token_key( payload.data() + token_offset, payload.data() + amount_offset );
+            const uint64_t input_amount =
+                ReadUInt64BE( reinterpret_cast<const uint8_t *>( payload.data() ) + amount_offset );
+            if ( !add_amount( input_amounts_by_token, token_key, input_amount ) )
+            {
+                return false;
+            }
+
+            std::vector<uint8_t> payload_vec( payload.begin(), payload.end() );
+            auto                 current_hash = HashLeaf( payload_vec );
+            for ( const auto &step : proof.branch() )
+            {
+                auto sibling_hash_result = base::Hash256::fromSpan(
+                    gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( step.sibling_hash().data() ) ),
+                               step.sibling_hash().size() ) );
+                if ( sibling_hash_result.has_error() )
+                {
+                    return false;
+                }
+
+                if ( step.is_left_sibling() )
+                {
+                    current_hash = HashNode( sibling_hash_result.value(), current_hash );
+                }
+                else
+                {
+                    current_hash = HashNode( current_hash, sibling_hash_result.value() );
+                }
+            }
+
+            if ( current_hash != pre_root )
+            {
+                return false;
+            }
+        }
+
+        for ( const auto &output : outputs )
+        {
+            const auto &token_bytes = output.token_id.bytes();
+            const std::string token_key( reinterpret_cast<const char *>( token_bytes.data() ), token_bytes.size() );
+            if ( !add_amount( output_amounts_by_token, token_key, output.encrypted_amount ) )
+            {
+                return false;
+            }
+        }
+
+        if ( input_amounts_by_token != output_amounts_by_token )
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    std::optional<UTXOTransitionCommitment> TransactionManager::BuildUTXOTransitionCommitment(
+        const std::shared_ptr<IGeniusTransactions> &tx ) const
+    {
+        if ( !tx )
+        {
+            return std::nullopt;
+        }
+        std::vector<GeniusUTXO> before_snapshot = utxo_manager_.GetUTXOsForReservation( tx->GetSrcAddress(), tx->GetHash() );
+        std::vector<GeniusUTXO> after_snapshot  = before_snapshot;
+        if ( !ApplyTransactionToUTXOSnapshot( tx, after_snapshot ) )
+        {
+            TransactionManagerLogger()->warn( "[{} - full: {}] {}: Could not build transition snapshot for tx={}",
+                                              account_m->GetAddress().substr( 0, 8 ),
+                                              full_node_m,
+                                              __func__,
+                                              tx->GetHash() );
+            return std::nullopt;
+        }
+
+        UTXOTransitionCommitment commitment;
+        const auto pre_root  = utxo_manager_.ComputeUTXOMerkleRootFromSnapshot( before_snapshot );
+        const auto post_root = utxo_manager_.ComputeUTXOMerkleRootFromSnapshot( after_snapshot );
+
+        // Safety guard before proposing: local pre-state must be anchored to bootstrap/certified chain.
+        if ( tx->GetNonce() == 0 )
+        {
+            auto checkpoint_result = utxo_manager_.LoadLatestCheckpoint( tx->GetSrcAddress() );
+            if ( checkpoint_result.has_error() )
+            {
+                TransactionManagerLogger()->warn( "[{} - full: {}] {}: Failed checkpoint lookup for tx={} err={}",
+                                                  account_m->GetAddress().substr( 0, 8 ),
+                                                  full_node_m,
+                                                  __func__,
+                                                  tx->GetHash(),
+                                                  checkpoint_result.error().message() );
+                return std::nullopt;
+            }
+            if ( checkpoint_result.value().has_value() )
+            {
+                if ( checkpoint_result.value()->utxo_merkle_root != pre_root )
+                {
+                    TransactionManagerLogger()->warn(
+                        "[{} - full: {}] {}: Nonce-0 pre_root mismatches checkpoint root tx={}",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        __func__,
+                        tx->GetHash() );
+                    return std::nullopt;
+                }
+            }
+            else if ( pre_root != utxo_merkle::EmptyUTXOMerkleRoot() )
+            {
+                TransactionManagerLogger()->warn( "[{} - full: {}] {}: Nonce-0 pre_root is not empty root tx={}",
+                                                  account_m->GetAddress().substr( 0, 8 ),
+                                                  full_node_m,
+                                                  __func__,
+                                                  tx->GetHash() );
+                return std::nullopt;
+            }
+        }
+        else
+        {
+            const auto previous_hash = tx->GetPreviousHash();
+            if ( previous_hash.empty() )
+            {
+                TransactionManagerLogger()->warn( "[{} - full: {}] {}: Missing previous hash for tx={}",
+                                                  account_m->GetAddress().substr( 0, 8 ),
+                                                  full_node_m,
+                                                  __func__,
+                                                  tx->GetHash() );
+                return std::nullopt;
+            }
+            auto previous_cert = blockchain_->GetCertificateBySubjectHash( previous_hash );
+            if ( previous_cert.has_error() )
+            {
+                TransactionManagerLogger()->warn( "[{} - full: {}] {}: Missing previous certificate tx={} prev={} err={}",
+                                                  account_m->GetAddress().substr( 0, 8 ),
+                                                  full_node_m,
+                                                  __func__,
+                                                  tx->GetHash(),
+                                                  previous_hash,
+                                                  previous_cert.error().message() );
+                return std::nullopt;
+            }
+            const auto &previous_subject = previous_cert.value().proposal().subject();
+            if ( !previous_subject.has_nonce() || !previous_subject.nonce().has_utxo_commitment() ||
+                 previous_subject.account_id() != tx->GetSrcAddress() ||
+                 ( previous_subject.nonce().nonce() + 1 ) != tx->GetNonce() )
+            {
+                TransactionManagerLogger()->warn( "[{} - full: {}] {}: Previous subject continuity mismatch tx={} prev={}",
+                                                  account_m->GetAddress().substr( 0, 8 ),
+                                                  full_node_m,
+                                                  __func__,
+                                                  tx->GetHash(),
+                                                  previous_hash );
+                return std::nullopt;
+            }
+
+            const auto &prev_commitment = previous_subject.nonce().utxo_commitment();
+            auto prev_post_root_result = base::Hash256::fromSpan(
+                gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( prev_commitment.post_utxo_root().data() ) ),
+                           prev_commitment.post_utxo_root().size() ) );
+            if ( prev_post_root_result.has_error() || prev_post_root_result.value() != pre_root )
+            {
+                TransactionManagerLogger()->warn( "[{} - full: {}] {}: Pre-root not anchored to prev certified post-root tx={}",
+                                                  account_m->GetAddress().substr( 0, 8 ),
+                                                  full_node_m,
+                                                  __func__,
+                                                  tx->GetHash() );
+                return std::nullopt;
+            }
+        }
+
+        commitment.set_pre_utxo_root( pre_root.data(), pre_root.size() );
+        commitment.set_post_utxo_root( post_root.data(), post_root.size() );
+        commitment.set_utxo_count_before( before_snapshot.size() );
+        commitment.set_utxo_count_after( after_snapshot.size() );
+        commitment.set_account_state_version( tx->GetNonce() > 0 ? tx->GetNonce() - 1 : 0 );
+        return commitment;
+    }
+
+    std::optional<UTXOWitness> TransactionManager::BuildUTXOWitness(
+        const std::shared_ptr<IGeniusTransactions> &tx ) const
+    {
+        if ( !tx )
+        {
+            return std::nullopt;
+        }
+
+        std::vector<InputUTXOInfo> inputs;
+        if ( tx->GetType() == "transfer" )
+        {
+            auto transfer_tx = std::dynamic_pointer_cast<const TransferTransaction>( tx );
+            if ( !transfer_tx )
+            {
+                return std::nullopt;
+            }
+            inputs = transfer_tx->GetInputInfos();
+        }
+        else if ( tx->GetType() == "escrow-hold" )
+        {
+            auto escrow_tx = std::dynamic_pointer_cast<const EscrowTransaction>( tx );
+            if ( !escrow_tx )
+            {
+                return std::nullopt;
+            }
+            inputs = escrow_tx->GetUTXOParameters().first;
+        }
+        else if ( tx->GetType() == "escrow-release" )
+        {
+            auto escrow_release_tx = std::dynamic_pointer_cast<const EscrowReleaseTransaction>( tx );
+            if ( !escrow_release_tx )
+            {
+                return std::nullopt;
+            }
+            inputs = escrow_release_tx->GetUTXOParameters().first;
+        }
+        else
+        {
+            return std::nullopt;
+        }
+
+        if ( inputs.empty() )
+        {
+            return std::nullopt;
+        }
+
+        struct SnapshotLeaf
+        {
+            std::string         outpoint_key;
+            std::vector<uint8_t> payload;
+        };
+
+        std::vector<SnapshotLeaf> leaves;
+        auto                      utxos = utxo_manager_.GetUTXOsForReservation( tx->GetSrcAddress(), tx->GetHash() );
+        leaves.reserve( utxos.size() );
+        for ( const auto &utxo : utxos )
+        {
+            leaves.push_back( { OutPointKey( utxo.GetTxID(), utxo.GetOutputIdx() ), SerializeUTXOLeafPayload( utxo ) } );
+        }
+
+        std::sort( leaves.begin(),
+                   leaves.end(),
+                   []( const SnapshotLeaf &a, const SnapshotLeaf &b ) { return a.payload < b.payload; } );
+
+        std::unordered_map<std::string, size_t> outpoint_to_index;
+        outpoint_to_index.reserve( leaves.size() );
+        std::vector<base::Hash256> level_hashes;
+        level_hashes.reserve( leaves.size() );
+        for ( size_t i = 0; i < leaves.size(); ++i )
+        {
+            outpoint_to_index.emplace( leaves[i].outpoint_key, i );
+            level_hashes.push_back( HashLeaf( leaves[i].payload ) );
+        }
+
+        UTXOWitness witness;
+        for ( const auto &input : inputs )
+        {
+            const auto key = OutPointKey( input.txid_hash_, input.output_idx_ );
+            auto       it  = outpoint_to_index.find( key );
+            if ( it == outpoint_to_index.end() )
+            {
+                return std::nullopt;
+            }
+
+            const size_t leaf_index = it->second;
+            auto        *proof      = witness.add_consumed_inputs();
+            proof->set_tx_id_hash( input.txid_hash_.data(), input.txid_hash_.size() );
+            proof->set_output_index( input.output_idx_ );
+            proof->set_leaf_payload( leaves[leaf_index].payload.data(), leaves[leaf_index].payload.size() );
+
+            size_t                    current_index  = leaf_index;
+            std::vector<base::Hash256> current_level = level_hashes;
+            while ( current_level.size() > 1 )
+            {
+                if ( ( current_level.size() % 2 ) != 0 )
+                {
+                    current_level.push_back( current_level.back() );
+                }
+
+                const size_t sibling_index = current_index ^ 1U;
+                auto        *step          = proof->add_branch();
+                step->set_sibling_hash( current_level[sibling_index].data(), current_level[sibling_index].size() );
+                step->set_is_left_sibling( sibling_index < current_index );
+
+                std::vector<base::Hash256> next_level;
+                next_level.reserve( current_level.size() / 2 );
+                for ( size_t i = 0; i < current_level.size(); i += 2 )
+                {
+                    next_level.push_back( HashNode( current_level[i], current_level[i + 1] ) );
+                }
+
+                current_index = current_index / 2;
+                current_level = std::move( next_level );
+            }
+        }
+
+        return witness;
+    }
+
+    bool TransactionManager::ApplyTransactionToUTXOSnapshot( const std::shared_ptr<IGeniusTransactions> &tx,
+                                                             std::vector<GeniusUTXO>                     &snapshot ) const
+    {
+        if ( !tx )
+        {
+            return false;
+        }
+        const auto remove_inputs = [&]( const std::vector<InputUTXOInfo> &inputs )
+        {
+            for ( const auto &input : inputs )
+            {
+                auto it = std::find_if( snapshot.begin(),
+                                        snapshot.end(),
+                                        [&]( const GeniusUTXO &u )
+                                        {
+                                            return u.GetTxID() == input.txid_hash_ && u.GetOutputIdx() == input.output_idx_;
+                                        } );
+                if ( it != snapshot.end() )
+                {
+                    snapshot.erase( it );
+                }
+            }
+        };
+        const auto tx_hash = base::Hash256::fromReadableString( tx->GetHash() );
+        if ( tx_hash.has_error() )
+        {
+            return false;
+        }
+
+        if ( tx->GetType() == "transfer" )
+        {
+            auto transfer_tx = std::dynamic_pointer_cast<const TransferTransaction>( tx );
+            if ( !transfer_tx )
+            {
+                return false;
+            }
+            remove_inputs( transfer_tx->GetInputInfos() );
+            const auto &outputs = transfer_tx->GetDstInfos();
+            for ( std::uint32_t i = 0; i < outputs.size(); ++i )
+            {
+                if ( outputs[i].dest_address == tx->GetSrcAddress() )
+                {
+                    snapshot.emplace_back( tx_hash.value(),
+                                           i,
+                                           outputs[i].encrypted_amount,
+                                           outputs[i].token_id,
+                                           tx->GetSrcAddress() );
+                }
+            }
+            return true;
+        }
+
+        if ( tx->GetType() == "mint" )
+        {
+            auto mint_tx = std::dynamic_pointer_cast<const MintTransaction>( tx );
+            if ( !mint_tx )
+            {
+                return false;
+            }
+            snapshot.emplace_back( tx_hash.value(),
+                                   0,
+                                   mint_tx->GetAmount(),
+                                   mint_tx->GetTokenID(),
+                                   tx->GetSrcAddress() );
+            return true;
+        }
+
+        if ( tx->GetType() == "escrow-hold" )
+        {
+            auto escrow_tx = std::dynamic_pointer_cast<const EscrowTransaction>( tx );
+            if ( !escrow_tx )
+            {
+                return false;
+            }
+            auto [inputs, outputs] = escrow_tx->GetUTXOParameters();
+            remove_inputs( inputs );
+            for ( std::uint32_t i = 0; i < outputs.size(); ++i )
+            {
+                if ( outputs[i].dest_address == tx->GetSrcAddress() )
+                {
+                    snapshot.emplace_back( tx_hash.value(),
+                                           i,
+                                           outputs[i].encrypted_amount,
+                                           outputs[i].token_id,
+                                           tx->GetSrcAddress() );
+                }
+            }
+            return true;
+        }
+
+        if ( tx->GetType() == "escrow-release" )
+        {
+            auto escrow_release_tx = std::dynamic_pointer_cast<const EscrowReleaseTransaction>( tx );
+            if ( !escrow_release_tx )
+            {
+                return false;
+            }
+            auto [inputs, outputs] = escrow_release_tx->GetUTXOParameters();
+            remove_inputs( inputs );
+            for ( std::uint32_t i = 0; i < outputs.size(); ++i )
+            {
+                if ( outputs[i].dest_address == tx->GetSrcAddress() )
+                {
+                    snapshot.emplace_back( tx_hash.value(),
+                                           i,
+                                           outputs[i].encrypted_amount,
+                                           outputs[i].token_id,
+                                           tx->GetSrcAddress() );
+                }
+            }
+            return true;
+        }
+
+        return false;
     }
 
     void TransactionManager::SetNonceWindow( uint64_t window )

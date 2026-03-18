@@ -464,4 +464,55 @@ namespace sgns::test
             "certificate handler",
             nullptr );
     }
+
+    TEST_F( ConsensusCertificateTest, ValidateSubjectRejectsTamperedSubjectIdBinding )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager  = MakeManager( registry, db_, pubs_, account );
+
+        auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(), 11, "0xabc123" );
+        ASSERT_TRUE( subject_result.has_value() );
+        auto subject = subject_result.value();
+
+        ASSERT_TRUE( manager->ValidateSubject( subject ) );
+
+        subject.mutable_nonce()->set_nonce( subject.nonce().nonce() + 1 );
+        EXPECT_FALSE( manager->ValidateSubject( subject ) );
+    }
+
+    TEST_F( ConsensusCertificateTest, ValidateSubjectRejectsTamperedWitnessWithStaleSubjectId )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager  = MakeManager( registry, db_, pubs_, account );
+
+        UTXOTransitionCommitment commitment;
+        commitment.set_pre_utxo_root( std::string( 32, '\x01' ) );
+        commitment.set_post_utxo_root( std::string( 32, '\x02' ) );
+        commitment.set_utxo_count_before( 1 );
+        commitment.set_utxo_count_after( 1 );
+        commitment.set_account_state_version( 0 );
+
+        UTXOWitness witness;
+        auto       *proof = witness.add_consumed_inputs();
+        proof->set_tx_id_hash( std::string( 32, '\x03' ) );
+        proof->set_output_index( 0 );
+        proof->set_leaf_payload( "leaf" );
+
+        auto subject_result = ConsensusManager::CreateNonceSubject(
+            account->GetAddress(),
+            1,
+            "0xdeadbeef",
+            &commitment,
+            &witness );
+        ASSERT_TRUE( subject_result.has_value() );
+        auto subject = subject_result.value();
+
+        ASSERT_TRUE( manager->ValidateSubject( subject ) );
+
+        auto *tampered = subject.mutable_nonce()->mutable_utxo_witness()->mutable_consumed_inputs( 0 );
+        tampered->set_output_index( 9 );
+        EXPECT_FALSE( manager->ValidateSubject( subject ) );
+    }
 } // namespace sgns::test

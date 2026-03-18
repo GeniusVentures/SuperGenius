@@ -9,6 +9,7 @@
 
 #include <optional>
 #include <shared_mutex>
+#include <unordered_map>
 #include <unordered_set>
 
 namespace sgns
@@ -17,8 +18,7 @@ namespace sgns
     {
         size_t operator()( const OutPoint &outpoint ) const
         {
-            size_t seed = 0;
-            boost::hash_combine( seed, outpoint.txid_hash_ );
+            size_t seed = std::hash<base::Hash256>{}( outpoint.txid_hash_ );
             boost::hash_combine( seed, outpoint.output_idx_ );
             return seed;
         }
@@ -41,6 +41,16 @@ namespace sgns
             uint64_t                      created_epoch{ 0 };
             std::optional<uint64_t>       spent_epoch;
             std::optional<base::Hash256>  spent_by_txid;
+        };
+        struct UTXOCheckpoint
+        {
+            std::string  owner_address;
+            uint64_t     epoch{ 0 };
+            base::Hash256 last_finalized_tx{};
+            base::Hash256 registry_hash{};
+            base::Hash256 utxo_merkle_root{};
+            uint64_t     utxo_count{ 0 };
+            uint64_t     created_at_ms{ 0 };
         };
 
         using UTXOOutPointMap     = std::unordered_map<OutPoint, UTXOEntry, OutPointHash>;
@@ -124,6 +134,9 @@ namespace sgns
             return GetUTXOs( address_ );
         }
 
+        std::vector<GeniusUTXO> GetUTXOsForReservation( const std::string &address,
+                                                        const std::string &reservation_id ) const;
+
         std::unordered_map<std::string, std::vector<UTXOData>> GetAllUTXOs() const;
 
         /**
@@ -145,9 +158,9 @@ namespace sgns
         outcome::result<UTXOTxParameters> CreateTxParameter( const std::vector<OutputDestInfo> &destinations,
                                                              const TokenID                     &token_id );
 
-        void ReserveUTXOs( const std::vector<InputUTXOInfo> &inputs );
+        void ReserveUTXOs( const std::vector<InputUTXOInfo> &inputs, const std::string &reservation_id );
 
-        void RollbackUTXOs( const std::vector<InputUTXOInfo> &inputs );
+        void RollbackUTXOs( const std::vector<InputUTXOInfo> &inputs, const std::string &reservation_id );
 
         bool VerifyParameters( const UTXOTxParameters &params ) const
         {
@@ -166,6 +179,11 @@ namespace sgns
          */
         [[nodiscard]] base::Hash256 ComputeUTXOMerkleRoot( const std::string &address ) const;
 
+        /**
+         * @brief Compute deterministic UTXO Merkle root from an explicit UTXO snapshot
+         */
+        [[nodiscard]] base::Hash256 ComputeUTXOMerkleRootFromSnapshot( const std::vector<GeniusUTXO> &utxos ) const;
+
         outcome::result<bool> LoadUTXOs( std::shared_ptr<storage::rocksdb> db );
 
         /**
@@ -173,8 +191,25 @@ namespace sgns
          */
         outcome::result<void> StoreUTXOs( const std::string &address );
 
+        outcome::result<void> CreateCheckpoint( uint64_t            epoch,
+                                                const base::Hash256 &last_finalized_tx,
+                                                const base::Hash256 &registry_hash );
+
+        outcome::result<void> CreateCheckpoint( const std::string   &address,
+                                                uint64_t             epoch,
+                                                const base::Hash256 &last_finalized_tx,
+                                                const base::Hash256 &registry_hash );
+
+        outcome::result<std::optional<UTXOCheckpoint>> LoadLatestCheckpoint() const
+        {
+            return LoadLatestCheckpoint( address_ );
+        }
+
+        outcome::result<std::optional<UTXOCheckpoint>> LoadLatestCheckpoint( const std::string &address ) const;
+
     private:
         static constexpr std::string_view DB_PREFIX = "/utxo";
+        static constexpr std::string_view CHECKPOINT_PREFIX = "/utxo-checkpoint";
 
         outcome::result<std::pair<std::vector<InputUTXOInfo>, uint64_t>> SelectUTXOs( uint64_t       required_amount,
                                                                                       const TokenID &token_id );
@@ -192,7 +227,7 @@ namespace sgns
         mutable std::shared_mutex                  utxos_mutex_; ///< Mutex for UTXO state structures
         UTXOOutPointMap                                        utxo_outpoints_;
         AddressOutPointList                                    address_outpoints_;
-        std::unordered_set<OutPoint, OutPointHash>             reserved_outpoints_;
+        std::unordered_map<OutPoint, std::string, OutPointHash> reserved_outpoints_;
     };
 
 }
