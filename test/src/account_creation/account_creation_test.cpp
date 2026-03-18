@@ -49,38 +49,17 @@ TEST_F( AccountCreationTest, CreationWithEthereumKey )
     EXPECT_NE( address_main, address_main2 ) << "Addresses are equal even though they should not be";
 }
 
-TEST_F( AccountCreationTest, CreationWithCredentials )
-{
-    this->cleanup = []
-    {
-        fs::remove_all( "./account1" );
-        fs::remove_all( "./account2" );
-    };
+TEST_F(AccountCreationTest, CreationWithMnemonic) {
+    this->cleanup = [] {fs::remove_all("./mnemonic");};
 
-    auto        account       = GeniusAccount::New( sgns::TokenID::FromBytes( { 0x00 } ),
-                                                    { "account1@gnus.ai", "1234" },
-                                       fs::path( "./account1" ) );
-    auto        account2      = GeniusAccount::New( sgns::TokenID::FromBytes( { 0x00 } ),
-                                                    { "account2@gnus.ai", "4321" },
-                                        fs::path( "./account2" ) );
-    std::string address_main  = account->GetAddress();
-    std::string address_main2 = account2->GetAddress();
+    auto account = GeniusNode::NewWithMnemonics({
+        "0xdeef",
+        "0.65",
+        "1.0",
+        sgns::TokenID::FromBytes( { 0x00 } ),
+        "./mnemonic"
+    }, "picture tooth meat version snack comic tribe craft switch cricket vacuum squeeze");
 
-    EXPECT_NE( address_main, address_main2 ) << "Addresses are equal even though they should not be";
-}
-
-TEST_F( AccountCreationTest, CreationWithRandomKeys )
-{
-    this->cleanup = []
-    {
-        fs::remove_all( "./account1" );
-        fs::remove_all( "./account2" );
-    };
-
-    auto        account       = GeniusAccount::New( sgns::TokenID::FromBytes( { 0x00 } ), fs::path( "./account1" ) );
-    auto        account2      = GeniusAccount::New( sgns::TokenID::FromBytes( { 0x00 } ), fs::path( "./account2" ) );
-    std::string address_main  = account->GetAddress();
-    std::string address_main2 = account2->GetAddress();
-
-    EXPECT_NE( address_main, address_main2 ) << "Addresses are equal even though they should not be";
+    ASSERT_FALSE(account == nullptr) << "Could not create account from mnemonic";
+    ASSERT_EQ(account->GetAddress(), "27d36713d68c35403832cc321199dac8ab5d2e66bea4d72718b84f6acb1fa69fb716991b5a39f7b3707822ba9eef059624c3bfde74b025f03e591d32c6d7b3ab");
 }
