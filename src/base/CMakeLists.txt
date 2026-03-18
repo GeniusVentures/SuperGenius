@@ -42,16 +42,6 @@ target_link_libraries(logger
 )
 supergenius_install(logger)
 
-add_library(mp_utils
-    mp_utils.cpp
-    mp_utils.hpp
-)
-target_link_libraries(mp_utils
-    PUBLIC
-    Boost::headers
-)
-supergenius_install(mp_utils)
-
 add_library(ScaledInteger
     ScaledInteger.cpp
     ScaledInteger.hpp
