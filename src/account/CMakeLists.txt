@@ -20,6 +20,7 @@ target_link_libraries(sgns_genius_account
     logger
     crdt_globaldb
     ipfs-pubsub
+    TrustWalletCore
     PRIVATE
     hasher
     json_secure_storage
@@ -29,7 +30,6 @@ target_link_libraries(sgns_genius_account
     SGTransactionProto
     ${WIN_API_LIBRARY}
     ${USER_ENV_LIBRARY}
-    TrustWalletCore
     wallet_core_rs
     TrezorCrypto
     protobuf::libprotobuf
