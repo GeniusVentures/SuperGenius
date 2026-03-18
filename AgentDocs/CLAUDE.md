@@ -61,10 +61,15 @@ Your default mode is “tiny, surgical insertion into existing code”.
 - Always run the linter before committing.
 - Always run the formatter before committing.
 - Always run the build before committing.
-- Always run in interactive mode with the user on a step by step basis
+- Always run in interactive mode with the user on a step-by-step basis
 - Always look in AgentDocs for other instructions.
     - The files can include SPRINT_PLAN.md, Architecture.md, CHECKPOINT.md, AGENT_MISTAKES.md
-
+- Always look in AgentDocs for other instructions.
+    - The files can include SPRINT_PLAN.md, Architecture.md, CHECKPOINT.md, AGENT_MISTAKES.md
+- Always make sure to only use C++17 features and below.
+    - For instance boost::coroutines only work in C++20, do NOT use it.
+    - Make sure not to use other C++ versions' features above C++17
+  
 ## Build Commands
 
 > **See `README.md` → "Building the Project" for the full authoritative build instructions.**

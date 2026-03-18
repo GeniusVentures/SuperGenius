@@ -157,6 +157,7 @@ set(Boost_DIR "${Boost_LIB_DIR}/cmake/Boost-${BOOST_VERSION}")
 set(boost_atomic_DIR "${Boost_LIB_DIR}/cmake/boost_atomic-${BOOST_VERSION}")
 set(boost_chrono_DIR "${Boost_LIB_DIR}/cmake/boost_chrono-${BOOST_VERSION}")
 set(boost_container_DIR "${Boost_LIB_DIR}/cmake/boost_container-${BOOST_VERSION}")
+set(boost_context_DIR "${Boost_LIB_DIR}/cmake/boost_context-${BOOST_VERSION}")
 set(boost_date_time_DIR "${Boost_LIB_DIR}/cmake/boost_date_time-${BOOST_VERSION}")
 set(boost_filesystem_DIR "${Boost_LIB_DIR}/cmake/boost_filesystem-${BOOST_VERSION}")
 set(boost_headers_DIR "${Boost_LIB_DIR}/cmake/boost_headers-${BOOST_VERSION}")
@@ -420,7 +421,25 @@ add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
 add_subdirectory(${PROJECT_ROOT}/ProofSystem ${CMAKE_BINARY_DIR}/ProofSystem)
 add_subdirectory(${PROJECT_ROOT}/SGProcessingManager ${CMAKE_BINARY_DIR}/SGProcessingManager)
 
-# add_subdirectory(${PROJECT_ROOT}/app ${CMAKE_BINARY_DIR}/app)
+# rlp: build as an ExternalProject mirroring the thirdparty layout.
+# PREFIX        = <binary_dir>/rlp
+#   src/rlp-build/   <- cmake build dir (auto from PREFIX)
+#   src/rlp-stamp/   <- stamp dir       (auto from PREFIX)
+# INSTALL_DIR   = <binary_dir>/rlp  (lib/, include/, lib/cmake/rlp/ land here)
+include(ExternalProject)
+
+ExternalProject_Add(rlp
+        PREFIX rlp
+        SOURCE_DIR "rlp"
+        CMAKE_CACHE_ARGS
+        ${_CMAKE_COMMON_CACHE_ARGS}
+        -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
+        -DBUILD_TESTING:BOOL=${BUILD_TESTING}
+        -DBUILD_EXAMPLES:BOOL=${BUILD_EXAMPLES}
+)
+ExternalProject_Get_Property(rlp INSTALL_DIR)
+set(RLP_ROOT ${INSTALL_DIR})
+
 if(BUILD_TESTING)
     enable_testing()
     add_subdirectory(${PROJECT_ROOT}/test ${CMAKE_BINARY_DIR}/test)
