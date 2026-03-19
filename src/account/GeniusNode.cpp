@@ -1139,7 +1139,12 @@ namespace sgns
             node_logger_->error( "{}: Transaction manager not ready", __func__ );
             return outcome::failure( boost::system::error_code{} );
         }
-        auto start_time = std::chrono::steady_clock::now();
+        auto        start_time = std::chrono::steady_clock::now();
+        std::string mint_dest  = destination;
+        if ( mint_dest.empty() )
+        {
+            mint_dest = account_->GetAddress();
+        }
 
         OUTCOME_TRY( auto &&manager, GetTransactionManager() );
         OUTCOME_TRY( auto &&tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid, destination ) );
