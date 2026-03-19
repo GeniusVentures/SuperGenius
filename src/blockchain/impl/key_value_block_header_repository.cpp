@@ -97,7 +97,10 @@ namespace sgns::blockchain
         size_t               size = header_proto.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
 
-        header_proto.SerializeToArray( serialized_proto.data(), static_cast<int>( serialized_proto.size() ) );
+        if ( !header_proto.SerializeToArray( serialized_proto.data(), static_cast<int>( serialized_proto.size() ) ) )
+        {
+            std::cerr << "Failed to serialize header into array.\n";
+        }
 
         return serialized_proto;
     }
@@ -109,7 +112,7 @@ namespace sgns::blockchain
 
         if ( !header_proto.ParseFromArray( serialized_data.data(), static_cast<int>( serialized_data.size() ) ) )
         {
-            std::cerr << "Failed to parse BlockHeaderData from array." << std::endl;
+            std::cerr << "Failed to parse BlockHeaderData from array.\n";
         }
 
         primitives::BlockHeader block_header;

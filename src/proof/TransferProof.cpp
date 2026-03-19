@@ -19,7 +19,7 @@ namespace sgns
 
     TransferProof::TransferProof( uint64_t                   balance,
                                   uint64_t                   amount,
-                                  std::optional<std::string> bytecode) :
+                                  std::optional<std::string> bytecode ) :
 #ifdef RELEASE_BYTECODE_CIRCUITS
         IBasicProof( bytecode.value_or( std::string( TransactionCircuit ) ) ), //
 #else
@@ -105,7 +105,11 @@ namespace sgns
         size_t               size = transfer_proof_proto.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
 
-        transfer_proof_proto.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
+        if ( !transfer_proof_proto.SerializeToArray( serialized_proto.data(), serialized_proto.size() ) )
+        {
+            return std::errc::bad_message;
+        }
+
         return serialized_proto;
     }
 

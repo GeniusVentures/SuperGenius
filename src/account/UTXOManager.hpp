@@ -61,9 +61,9 @@ namespace sgns
          * @param       address Address to add the UTXO to
          * @return      true if the UTXO was added, false otherwise
          */
-        bool PutUTXO( GeniusUTXO new_utxo, const std::string &address );
+        outcome::result<bool> PutUTXO( GeniusUTXO new_utxo, const std::string &address );
 
-        bool PutUTXO( const GeniusUTXO &new_utxo )
+        outcome::result<bool> PutUTXO( const GeniusUTXO &new_utxo )
         {
             return PutUTXO( new_utxo, address_ );
         }
@@ -73,7 +73,7 @@ namespace sgns
          * @param[in]   utxo_id The ID of the UTXO to be deleted
          * @param       address Address to remove the UTXO from
          */
-        void DeleteUTXO( const base::Hash256 &utxo_id, const std::string &address );
+        outcome::result<void> DeleteUTXO( const base::Hash256 &utxo_id, const std::string &address );
 
         /**
          * @brief       Consume UTXOs from the account
@@ -81,9 +81,9 @@ namespace sgns
          * @param       address Address to consume UTXOs from
          * @return      true if all UTXOs were consumed, false otherwise
          */
-        bool ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos, const std::string &address );
+        outcome::result<bool> ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos, const std::string &address );
 
-        bool ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos )
+        outcome::result<bool> ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos )
         {
             return ConsumeUTXOs( infos, address_ );
         }

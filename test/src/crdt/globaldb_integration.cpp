@@ -130,7 +130,7 @@ public:
             {
                 return;
             }
-            auto db = std::move(globaldb_ret.value());
+            auto db = std::move( globaldb_ret.value() );
 
             ++currentPubsubPort;
 
@@ -146,8 +146,7 @@ public:
             {
                 for ( size_t j = i + 1; j < nodes_.size(); ++j )
                 {
-                    nodes_[i].pubsub->AddPeers(
-                        { nodes_[j].pubsub->GetInterfaceAddress() } );
+                    nodes_[i].pubsub->AddPeers( { nodes_[j].pubsub->GetInterfaceAddress() } );
                 }
             }
             std::this_thread::sleep_for( delay );
@@ -222,7 +221,7 @@ TEST_F( GlobalDBIntegrationTest, ReplicationWithoutTopicSuccessfulTest )
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "firstTopic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "firstTopic" ).has_error() );
         node.db->AddListenTopic( "firstTopic" );
     }
 
@@ -266,7 +265,7 @@ TEST_F( GlobalDBIntegrationTest, ReplicationViaTopicBroadcastTest )
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "test_topic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "test_topic" ).has_error() );
         node.db->AddListenTopic( "test_topic" );
     }
 
@@ -310,13 +309,13 @@ TEST_F( GlobalDBIntegrationTest, ReplicationAcrossMultipleTopicsTest )
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "firstTopic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "firstTopic" ).has_error() );
         node.db->AddListenTopic( "firstTopic" );
 
-        node.db->AddBroadcastTopic( "topic_A" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "topic_A" ).has_error() );
         node.db->AddListenTopic( "topic_A" );
 
-        node.db->AddBroadcastTopic( "topic_B" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "topic_B" ).has_error() );
         node.db->AddListenTopic( "topic_B" );
     }
 
@@ -365,7 +364,7 @@ TEST_F( GlobalDBIntegrationTest, PreventDoubleCommitTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_node1" );
-    testNodes->getNodes()[0].db->AddBroadcastTopic( "firstTopic" );
+    ASSERT_FALSE( testNodes->getNodes()[0].db->AddBroadcastTopic( "firstTopic" ).has_error() );
     testNodes->connectNodes();
     using sgns::crdt::HierarchicalKey;
     sgns::base::Buffer value;
@@ -408,8 +407,8 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithTopicBroadcastTest )
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "firstTopic" );
-        node.db->AddBroadcastTopic( "direct_topic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "firstTopic" ).has_error() );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "direct_topic" ).has_error() );
         node.db->AddListenTopic( "direct_topic" );
     }
     testNodes->connectNodes();
@@ -449,7 +448,7 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithoutTopicBroadcastTest )
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "firstTopic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "firstTopic" ).has_error() );
         node.db->AddListenTopic( "firstTopic" );
     }
     testNodes->connectNodes();
@@ -489,11 +488,11 @@ TEST_F( GlobalDBIntegrationTest, NonSubscriberDoesNotReceiveTopicMessageTest )
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "first_topic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "first_topic" ).has_error() );
     }
-    testNodes->getNodes()[0].db->AddBroadcastTopic( "test_topic" );
+    ASSERT_FALSE( testNodes->getNodes()[0].db->AddBroadcastTopic( "test_topic" ).has_error() );
     testNodes->getNodes()[0].db->AddListenTopic( "test_topic" );
-    testNodes->getNodes()[1].db->AddBroadcastTopic( "test_topic" );
+    ASSERT_FALSE( testNodes->getNodes()[1].db->AddBroadcastTopic( "test_topic" ).has_error() );
     testNodes->getNodes()[1].db->AddListenTopic( "test_topic" );
     testNodes->connectNodes();
     using sgns::crdt::HierarchicalKey;
@@ -534,7 +533,7 @@ TEST_F( GlobalDBIntegrationTest, UnconnectedNodeDoesNotReplicateBroadcastMessage
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "isolated_topic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "isolated_topic" ).has_error() );
         node.db->AddListenTopic( "isolated_topic" );
     }
 

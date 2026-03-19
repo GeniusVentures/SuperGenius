@@ -26,6 +26,7 @@
 #include "crdt/proto/delta.pb.h"
 #include "base/sgns_version.hpp"
 
+#include "outcome/outcome.hpp"
 #include "proof/ProcessingProof.hpp"
 
 namespace sgns
@@ -1198,7 +1199,7 @@ namespace sgns
         {
             auto       hash = ( base::Hash256::fromReadableString( transfer_tx->GetHash() ) ).value();
             GeniusUTXO new_utxo( hash, i, dest_infos[i].encrypted_amount, dest_infos[i].token_id );
-            utxo_manager_.PutUTXO( new_utxo, dest_infos[i].dest_address );
+            BOOST_OUTCOME_TRY( utxo_manager_.PutUTXO( new_utxo, dest_infos[i].dest_address ) );
 
             m_logger->debug( "[{} - full: {}] Notify {} of transfer of {} to it",
                              account_m->GetAddress().substr( 0, 8 ),
@@ -1218,7 +1219,7 @@ namespace sgns
                              full_node_m,
                              input.output_idx_ );
         }
-        utxo_manager_.ConsumeUTXOs( transfer_tx->GetInputInfos(), transfer_tx->GetSrcAddress() );
+        BOOST_OUTCOME_TRY( utxo_manager_.ConsumeUTXOs( transfer_tx->GetInputInfos(), transfer_tx->GetSrcAddress() ) );
         return outcome::success();
     }
 
@@ -1228,7 +1229,7 @@ namespace sgns
 
         auto       hash = ( base::Hash256::fromReadableString( mint_tx->GetHash() ) ).value();
         GeniusUTXO new_utxo( hash, 0, mint_tx->GetAmount(), mint_tx->GetTokenID() );
-        utxo_manager_.PutUTXO( new_utxo, mint_tx->GetSrcAddress() );
+        BOOST_OUTCOME_TRY( utxo_manager_.PutUTXO( new_utxo, mint_tx->GetSrcAddress() ) );
         m_logger->info( "[{} - full: {}] Created tokens, amount {} balance {}",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
@@ -1253,9 +1254,10 @@ namespace sgns
                 if ( outputs.size() > 1 )
                 {
                     GeniusUTXO new_utxo( hash, 1, outputs[1].encrypted_amount, outputs[1].token_id );
-                    utxo_manager_.PutUTXO( new_utxo, outputs[1].dest_address );
+                    BOOST_OUTCOME_TRY( utxo_manager_.PutUTXO( new_utxo, outputs[1].dest_address ) );
                 }
-                utxo_manager_.ConsumeUTXOs( escrow_tx->GetUTXOParameters().first, escrow_tx->GetSrcAddress() );
+                BOOST_OUTCOME_TRY(
+                    utxo_manager_.ConsumeUTXOs( escrow_tx->GetUTXOParameters().first, escrow_tx->GetSrcAddress() ) );
             }
         }
 
@@ -1293,7 +1295,7 @@ namespace sgns
         for ( const auto &dest_info : dest_infos )
         {
             auto hash = ( base::Hash256::fromReadableString( transfer_tx->GetHash() ) ).value();
-            utxo_manager_.DeleteUTXO( hash, dest_info.dest_address );
+            BOOST_OUTCOME_TRY( utxo_manager_.DeleteUTXO( hash, dest_info.dest_address ) );
 
             m_logger->debug( "[{} - full: {}] Notify {} of deletion of {} to it",
                              account_m->GetAddress().substr( 0, 8 ),
@@ -1336,7 +1338,7 @@ namespace sgns
         auto mint_tx = std::dynamic_pointer_cast<MintTransaction>( tx );
 
         auto hash = ( base::Hash256::fromReadableString( mint_tx->GetHash() ) ).value();
-        utxo_manager_.DeleteUTXO( hash, mint_tx->GetSrcAddress() );
+        BOOST_OUTCOME_TRY( utxo_manager_.DeleteUTXO( hash, mint_tx->GetSrcAddress() ) );
         m_logger->info( "[{} - full: {}] Deleted {} tokens, from tx {}, final balance {}",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
@@ -1359,7 +1361,7 @@ namespace sgns
                 auto hash = ( base::Hash256::fromReadableString( escrow_tx->GetHash() ) ).value();
                 if ( outputs.size() > 1 )
                 {
-                    utxo_manager_.DeleteUTXO( hash, outputs[1].dest_address );
+                    BOOST_OUTCOME_TRY( utxo_manager_.DeleteUTXO( hash, outputs[1].dest_address ) );
                 }
                 for ( auto &input : inputs )
                 {
@@ -2032,7 +2034,7 @@ namespace sgns
 
         for ( auto it = invalid_transaction_keys.rbegin(); it != invalid_transaction_keys.rend(); ++it )
         {
-            RemoveTransactionFromProcessedMaps( *it, true );
+            BOOST_OUTCOME_TRY( RemoveTransactionFromProcessedMaps( *it, true ) );
         }
         return changed;
     }

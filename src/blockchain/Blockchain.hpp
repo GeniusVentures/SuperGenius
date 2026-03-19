@@ -142,11 +142,13 @@ namespace sgns
         static bool ShouldReplaceAccountCreation( const blockchain::AccountCreationBlock &existing,
                                                   const blockchain::AccountCreationBlock &candidate );
 
-        void GenesisReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair &new_data, const std::string &cid );
-        void AccountCreationReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair& new_data, const std::string &cid );
+        outcome::result<void> GenesisReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair &new_data,
+                                                       const std::string                            &cid );
+        outcome::result<void> AccountCreationReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair &new_data,
+                                                               const std::string                            &cid );
         outcome::result<void> InformBlockchainResult( outcome::result<void> result ) const;
-        void                  InformGenesisResult( outcome::result<std::string> result );
-        void                  InformAccountCreationResponse( outcome::result<std::string> creation_result );
+        outcome::result<void> InformGenesisResult( outcome::result<std::string> result );
+        outcome::result<void> InformAccountCreationResponse( outcome::result<std::string> creation_result );
         void                  WatchCIDDownload( const std::string &cid, Error error_on_failure, uint64_t timeout_ms );
         outcome::result<void> EnsureValidatorRegistry() const;
 
