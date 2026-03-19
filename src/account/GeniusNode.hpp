@@ -145,7 +145,14 @@ namespace sgns
             const std::string        &transaction_hash,
             const std::string        &chainid,
             TokenID                   tokenid,
+            const std::string        &destination,
             std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_MINT ) );
+
+        outcome::result<std::pair<std::string, uint64_t>> MintTokens( uint64_t                  amount,
+                                                                      const std::string        &transaction_hash,
+                                                                      const std::string        &chainid,
+                                                                      TokenID                   tokenid,
+                                                                      std::chrono::milliseconds timeout );
 
         void AddPeer( const std::string &peer );
         void RefreshUPNP( uint16_t pubsubport );

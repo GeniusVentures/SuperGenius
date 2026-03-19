@@ -1131,6 +1131,7 @@ namespace sgns
                                                                               const std::string &transaction_hash,
                                                                               const std::string &chainid,
                                                                               TokenID            tokenid,
+                                                                              const std::string &destination,
                                                                               std::chrono::milliseconds timeout )
     {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
@@ -1141,7 +1142,7 @@ namespace sgns
         auto start_time = std::chrono::steady_clock::now();
 
         OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid ) );
+        OUTCOME_TRY( auto &&tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid, destination ) );
 
         auto mint_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
 
@@ -1156,6 +1157,15 @@ namespace sgns
 
         node_logger_->debug( "Mint transaction {} completed in {} ms", tx_id, duration );
         return std::make_pair( tx_id, duration );
+    }
+
+    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::MintTokens( uint64_t           amount,
+                                                                              const std::string &transaction_hash,
+                                                                              const std::string &chainid,
+                                                                              TokenID            tokenid,
+                                                                              std::chrono::milliseconds timeout )
+    {
+        return MintTokens( amount, transaction_hash, chainid, std::move( tokenid ), account_->GetAddress(), timeout );
     }
 
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::TransferFunds( uint64_t                  amount,
