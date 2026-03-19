@@ -102,6 +102,16 @@ namespace sgns
         return input_tx_;
     }
 
+    bool TransferTransaction::HasUTXOParameters() const
+    {
+        return true;
+    }
+
+    std::optional<UTXOTxParameters> TransferTransaction::GetUTXOParametersOpt() const
+    {
+        return UTXOTxParameters{ input_tx_, outputs_ };
+    }
+
     std::unordered_set<std::string> TransferTransaction::GetTopics() const
     {
         auto topics = IGeniusTransactions::GetTopics();

@@ -126,6 +126,16 @@ namespace sgns
         return utxo_params_;
     }
 
+    bool EscrowReleaseTransaction::HasUTXOParameters() const
+    {
+        return true;
+    }
+
+    std::optional<UTXOTxParameters> EscrowReleaseTransaction::GetUTXOParametersOpt() const
+    {
+        return utxo_params_;
+    }
+
     uint64_t EscrowReleaseTransaction::GetReleaseAmount() const
     {
         return release_amount_;

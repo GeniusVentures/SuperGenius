@@ -10,11 +10,13 @@
 #include <utility>
 #include <vector>
 #include <string>
+#include <optional>
 
 #include <boost/format.hpp>
 
 #include "outcome/outcome.hpp"
 #include "account/proto/SGTransaction.pb.h"
+#include "account/UTXOStructs.hpp"
 #include "GeniusAccount.hpp"
 
 #include <gsl/span>
@@ -56,6 +58,24 @@ namespace sgns
         }
 
         virtual std::vector<uint8_t> SerializeByteVector() = 0;
+
+        /**
+         * @brief       Returns if transaction supports UTXOs
+         * @return      True if supported, false otherwise
+         */
+        virtual bool HasUTXOParameters() const
+        {
+            return false;
+        }
+
+        /**
+         * @brief       Returns the UTXOs
+         * @return      If exists, returns the UTXOs of the transaction
+         */
+        virtual std::optional<UTXOTxParameters> GetUTXOParametersOpt() const
+        {
+            return std::nullopt;
+        }
 
         virtual std::string GetTransactionSpecificPath() const = 0;
 
