@@ -1649,7 +1649,7 @@ namespace sgns
         do
         {
             std::shared_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
-            m_logger->trace( "[{} - full: {}] Searching for transaction {}",
+            m_logger->debug( "[{} - full: {}] Searching for transaction {}",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              txId );
@@ -1659,7 +1659,7 @@ namespace sgns
                 if ( tracked.tx && tracked.tx->dag_st.data_hash() == txId )
                 {
                     retval = tracked.status;
-                    m_logger->trace( "[{} - full: {}] Transaction status is {}",
+                    m_logger->debug( "[{} - full: {}] Transaction status is {}",
                                      account_m->GetAddress().substr( 0, 8 ),
                                      full_node_m,
                                      static_cast<int>( retval ) );
@@ -1669,7 +1669,7 @@ namespace sgns
             }
             if ( !found )
             {
-                m_logger->trace( "[{} - full: {}] Transaction untracked",
+                m_logger->debug( "[{} - full: {}] Transaction untracked",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m );
                 retval = TransactionStatus::FAILED;
@@ -1678,7 +1678,7 @@ namespace sgns
             if ( retval == TransactionStatus::INVALID || retval == TransactionStatus::CONFIRMED ||
                  retval == TransactionStatus::FAILED )
             {
-                m_logger->trace( "[{} - full: {}] Transaction has finalized state {}",
+                m_logger->debug( "[{} - full: {}] Transaction has finalized state {}",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
                                  static_cast<int>( retval ) );
@@ -2203,6 +2203,15 @@ namespace sgns
                                              nonce );
                         }
                     }
+                }
+                else
+                {
+                    m_logger->debug(
+                        "[{} - full: {}] VERIFYING tx nonce {} not yet confirmed (network confirmed nonce: {}), waiting",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        nonce,
+                        confirmed_nonce );
                 }
             }
         }

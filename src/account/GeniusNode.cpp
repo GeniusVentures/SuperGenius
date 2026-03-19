@@ -413,8 +413,8 @@ namespace sgns
         auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
         auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
-        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
-        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::debug );
+        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::debug );
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
         auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::trace );
         auto loggerValidator        = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::debug );
@@ -1188,9 +1188,12 @@ namespace sgns
                         }
                         if ( strong->GetTransactionManagerState() != TransactionManager::State::READY )
                         {
-                            strong->node_logger_->info( "[{}]{}: Transactions are not ready",
-                                                        strong->account_->GetAddress().substr( 0, 8 ),
-                                                        __func__ );
+                            strong->node_logger_->info(
+                                "[{}]{}: Transactions are not ready (state: {}), skipping escrow payout for task {}",
+                                strong->account_->GetAddress().substr( 0, 8 ),
+                                __func__,
+                                TransactionManager::StateToString( strong->GetTransactionManagerState() ),
+                                task_id );
                             break;
                         }
                         strong->node_logger_->info( "[{}]{}: Transactions READY",
