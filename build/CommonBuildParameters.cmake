@@ -270,10 +270,6 @@ find_package(ipfs-bitswap-cpp CONFIG REQUIRED)
 set(ed25519_DIR "${_THIRDPARTY_BUILD_DIR}/ed25519/lib/cmake/ed25519")
 find_package(ed25519 CONFIG REQUIRED)
 
-# sr25519-donna
-set(sr25519-donna_DIR "${_THIRDPARTY_BUILD_DIR}/sr25519-donna/lib/cmake/sr25519-donna")
-find_package(sr25519-donna CONFIG REQUIRED)
-
 set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS ON CACHE BOOL "Suppress developer warnings" FORCE)
 # Globally suppress ALL CMake deprecation warnings (including from third-party Config.cmake files)
 set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "Disable deprecation warnings" FORCE)
@@ -446,26 +442,7 @@ add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
 
 add_subdirectory(${PROJECT_ROOT}/ProofSystem ${CMAKE_BINARY_DIR}/ProofSystem)
 add_subdirectory(${PROJECT_ROOT}/SGProcessingManager ${CMAKE_BINARY_DIR}/SGProcessingManager)
-add_subdirectory(${PROJECT_ROOT}/../rlp ${CMAKE_BINARY_DIR}/rlp)
-
-# rlp: build as an ExternalProject mirroring the thirdparty layout.
-# PREFIX        = <binary_dir>/rlp
-#   src/rlp-build/   <- cmake build dir (auto from PREFIX)
-#   src/rlp-stamp/   <- stamp dir       (auto from PREFIX)
-# INSTALL_DIR   = <binary_dir>/rlp  (lib/, include/, lib/cmake/rlp/ land here)
-include(ExternalProject)
-
-ExternalProject_Add(rlp
-        PREFIX rlp
-        SOURCE_DIR "${PROJECT_ROOT}/rlp"
-        CMAKE_CACHE_ARGS
-        ${_CMAKE_COMMON_CACHE_ARGS}
-        -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
-        -DBUILD_TESTING:BOOL=${BUILD_TESTING}
-        -DBUILD_EXAMPLES:BOOL=${BUILD_EXAMPLES}
-)
-ExternalProject_Get_Property(rlp INSTALL_DIR)
-set(RLP_ROOT ${INSTALL_DIR})
+add_subdirectory(${PROJECT_ROOT}/rlp ${CMAKE_BINARY_DIR}/rlp)
 
 if(BUILD_TESTING)
     enable_testing()
