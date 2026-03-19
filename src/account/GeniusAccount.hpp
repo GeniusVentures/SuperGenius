@@ -21,6 +21,8 @@
 #include <string_view>
 
 #include <boost/multiprecision/cpp_int.hpp>
+#include <boost/filesystem/path.hpp>
+#include <WalletCore/PrivateKey.h>
 
 #include <ProofSystem/ElGamalKeyGenerator.hpp>
 #include <ProofSystem/EthereumKeyGenerator.hpp>
@@ -30,8 +32,6 @@
 #include "outcome/outcome.hpp"
 
 #include <unordered_set>
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem/operations.hpp>
 
 namespace sgns
 {
@@ -77,12 +77,8 @@ namespace sgns
                                                    const boost::filesystem::path &base_path,
                                                    bool                           full_node = false );
 
-        /**
-         * @brief       Factory constructor of new GeniusAccount
-         * @param[in]   token_id Token ID of the account
-         */
         static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
-                                                   const Credentials             &credentials,
+                                                   const TW::PrivateKey          &private_key,
                                                    const boost::filesystem::path &base_path,
                                                    bool                           full_node = false );
 
@@ -256,7 +252,7 @@ namespace sgns
         static outcome::result<StorageWithAddress> GenerateGeniusAddress( const char *eth_private_key,
                                                                           const boost::filesystem::path &base_path );
 
-        static outcome::result<StorageWithAddress> GenerateGeniusAddress( const Credentials             &credentials,
+        static outcome::result<StorageWithAddress> GenerateGeniusAddress( const TW::PrivateKey          &private_key,
                                                                           const boost::filesystem::path &base_path );
 
     protected:

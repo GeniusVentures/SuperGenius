@@ -137,6 +137,7 @@ namespace sgns
 
         genius_account_logger()->info(
             "Could not load Genius address from storage, attempting to generate from ethereum private key" );
+
         auto response = GenerateGeniusAddress( eth_private_key, base_path );
         if ( response.has_error() )
         {
@@ -149,7 +150,7 @@ namespace sgns
     }
 
     std::shared_ptr<GeniusAccount> GeniusAccount::New( TokenID                        token_id,
-                                                       const Credentials             &credentials,
+                                                       const TW::PrivateKey          &private_key,
                                                        const boost::filesystem::path &base_path,
                                                        bool                           full_node )
     {
@@ -160,20 +161,15 @@ namespace sgns
         }
 
         genius_account_logger()->info(
-            "Could not load Genius address from storage, attempting to generate from credentials" );
-        auto response = GenerateGeniusAddress( credentials, base_path );
+            "Could not load Genius address from storage, attempting to generate from ethereum private key" );
+        auto response = GenerateGeniusAddress( private_key, base_path );
         if ( response.has_error() )
         {
-            genius_account_logger()->error( "Failed to generate Genius address from credentials" );
+            genius_account_logger()->error( "Failed to generate Genius address from private key" );
             return nullptr;
         }
 
-        genius_account_logger()->debug( "Generated a Genius address from credentials" );
-        // Save credentials to storage
-        auto &[storage, addresses] = response.value();
-        storage->Save( "email", credentials.email );
-        storage->Save( "password", credentials.password );
-
+        genius_account_logger()->debug( "Generated a Genius address from private key" );
         return CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
     }
 
@@ -181,29 +177,16 @@ namespace sgns
                                                        const boost::filesystem::path &base_path,
                                                        bool                           full_node )
     {
-        static std::string_view SUFFIX = "@gnus.ai";
-        static std::mt19937_64  eng( ( std::random_device() )() );
-
         if ( auto response = LoadGeniusAccount( base_path ); response.has_value() )
         {
             genius_account_logger()->debug( "Loaded existing Genius address" );
             return CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
         }
 
-        genius_account_logger()->info(
+        genius_account_logger()->error(
             "Could not find existing Genius address, generating one with random credentials" );
 
-        std::uniform_int_distribution<uint64_t> dist( 0, std::numeric_limits<uint64_t>::max() );
-        uint64_t                                num   = dist( eng );
-        std::string                             email = base::hex_lower(
-            gsl::span<const uint8_t>( reinterpret_cast<uint8_t *>( &num ), sizeof( num ) ) );
-        email.append( SUFFIX );
-
-        num                  = dist( eng );
-        std::string password = base::hex_lower(
-            gsl::span<const uint8_t>( reinterpret_cast<uint8_t *>( &num ), sizeof( num ) ) );
-
-        return New( token_id, { std::move( email ), std::move( password ) }, base_path, full_node );
+        return nullptr;
     }
 
     outcome::result<GeniusAccount::StorageWithAddress> GeniusAccount::LoadGeniusAccount(
@@ -266,24 +249,6 @@ namespace sgns
     }
 
     outcome::result<GeniusAccount::StorageWithAddress> GeniusAccount::GenerateGeniusAddress(
-        const Credentials             &credentials,
-        const boost::filesystem::path &base_path )
-    {
-        genius_account_logger()->trace( "Key seed from credentials" );
-
-        if ( credentials.email.empty() || credentials.password.empty() )
-        {
-            return std::errc::invalid_argument;
-        }
-
-        std::string s      = credentials.email + credentials.password;
-        auto        hashed = TW::Hash::sha256( s );
-        auto        hexed  = base::hex_lower( hashed );
-
-        return GenerateGeniusAddress( hexed.data(), base_path );
-    }
-
-    outcome::result<GeniusAccount::StorageWithAddress> GeniusAccount::GenerateGeniusAddress(
         const char                    *eth_private_key,
         const boost::filesystem::path &base_path )
     {
@@ -291,14 +256,31 @@ namespace sgns
 
         if ( eth_private_key == nullptr )
         {
-            return outcome::failure( std::errc::invalid_argument );
+            genius_account_logger()->error( "No ethereum address to generate from" );
+            return std::errc::invalid_argument;
         }
 
-        OUTCOME_TRY( auto pri_key_vec, base::unhex( eth_private_key ) );
-        auto signed_secret = TW::PrivateKey( pri_key_vec )
-                                 .sign(
-                                     TW::Data( ELGAMAL_PUBKEY_PREDEFINED.cbegin(), ELGAMAL_PUBKEY_PREDEFINED.cend() ),
-                                     TWCurveSECP256k1 );
+        auto private_key_vec = base::unhex( eth_private_key );
+        if ( private_key_vec.has_error() )
+        {
+            genius_account_logger()->error( "Could not extract private key from hexadecimal" );
+            return std::errc::invalid_argument;
+        }
+
+        TW::PrivateKey tw_private_key( private_key_vec.value() );
+
+        return GenerateGeniusAddress( tw_private_key, base_path );
+    }
+
+    outcome::result<GeniusAccount::StorageWithAddress> GeniusAccount::GenerateGeniusAddress(
+        const TW::PrivateKey          &private_key,
+        const boost::filesystem::path &base_path )
+    {
+        genius_account_logger()->trace( "Key seed from TW private key" );
+
+        auto signed_secret = private_key.sign(
+            TW::Data( ELGAMAL_PUBKEY_PREDEFINED.cbegin(), ELGAMAL_PUBKEY_PREDEFINED.cend() ),
+            TWCurveSECP256k1 );
 
         if ( signed_secret.empty() )
         {
