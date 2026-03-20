@@ -145,7 +145,8 @@ namespace sgns
             const std::string        &transaction_hash,
             const std::string        &chainid,
             TokenID                   tokenid,
-            std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_MINT ) );
+            std::string               destination = "",
+            std::chrono::milliseconds timeout     = std::chrono::milliseconds( TIMEOUT_MINT ) );
 
         void AddPeer( const std::string &peer );
         void RefreshUPNP( uint16_t pubsubport );

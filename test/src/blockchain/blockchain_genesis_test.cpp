@@ -304,11 +304,7 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
     auto balance_regular_2_before = node_regular_2->GetBalance();
 
     // Mint tokens on the first regular node after sync is confirmed
-    auto mint_result = node_regular_1->MintTokens( mint_amount,
-                                                   "",
-                                                   "",
-                                                   token_id,
-                                                   std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    auto mint_result = node_regular_1->MintTokens( mint_amount, "", "", token_id );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
     auto [mint_tx_id, mint_duration] = mint_result.value();

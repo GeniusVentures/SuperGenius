@@ -56,6 +56,7 @@ add_library(genius_node
     IGeniusTransactions.cpp
     TransferTransaction.cpp
     MintTransaction.cpp
+    MintTransactionV2.cpp
     ProcessingTransaction.cpp
     EscrowTransaction.cpp
     EscrowReleaseTransaction.cpp

@@ -66,6 +66,18 @@ namespace sgns
         UTXOTxParameters GetUTXOParameters() const;
 
         /**
+         * @brief       Returns if transaction supports UTXOs
+         * @return      True if supported, false otherwise
+         */
+        bool HasUTXOParameters() const override;
+
+        /**
+         * @brief       Returns the UTXOs
+         * @return      If exists, returns the UTXOs of the transaction
+         */
+        std::optional<UTXOTxParameters> GetUTXOParametersOpt() const override;
+
+        /**
           * @brief Gets the release amount.
           *
           * @return The amount to be released.

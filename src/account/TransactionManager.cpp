@@ -18,6 +18,7 @@
 #include <ProofSystem/EthereumKeyPairParams.hpp>
 #include "TransferTransaction.hpp"
 #include "MintTransaction.hpp"
+#include "MintTransactionV2.hpp"
 #include "EscrowTransaction.hpp"
 #include "EscrowReleaseTransaction.hpp"
 #include "account/TokenAmount.hpp"
@@ -477,17 +478,23 @@ namespace sgns
     outcome::result<std::string> TransactionManager::MintFunds( uint64_t    amount,
                                                                 std::string transaction_hash,
                                                                 std::string chainid,
-                                                                TokenID     tokenid )
+                                                                TokenID     tokenid,
+                                                                std::string destination )
     {
         if ( GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        auto mint_transaction = std::make_shared<MintTransaction>(
-            MintTransaction::New( amount,
-                                  std::move( chainid ),
-                                  std::move( tokenid ),
-                                  FillDAGStruct( std::move( transaction_hash ) ) ) );
+        if ( destination.empty() )
+        {
+            destination = account_m->GetAddress();
+        }
+        auto mint_transaction = std::make_shared<MintTransactionV2>(
+            MintTransactionV2::New( amount,
+                                    std::move( chainid ),
+                                    std::move( tokenid ),
+                                    FillDAGStruct( std::move( transaction_hash ) ),
+                                    destination ) );
 
         mint_transaction->MakeSignature( *account_m );
 
@@ -1225,11 +1232,38 @@ namespace sgns
 
     outcome::result<void> TransactionManager::ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
     {
-        auto mint_tx = std::dynamic_pointer_cast<MintTransaction>( tx );
+        if ( auto mint_tx_v2 = std::dynamic_pointer_cast<MintTransactionV2>( tx ) )
+        {
+            auto [inputs, outputs] = mint_tx_v2->GetUTXOParameters();
+            auto hash              = ( base::Hash256::fromReadableString( mint_tx_v2->GetHash() ) ).value();
+            for ( std::uint32_t i = 0; i < outputs.size(); ++i )
+            {
+                GeniusUTXO new_utxo( hash, i, outputs[i].encrypted_amount, outputs[i].token_id );
+                utxo_manager_.PutUTXO( new_utxo, outputs[i].dest_address );
+            }
 
-        auto       hash = ( base::Hash256::fromReadableString( mint_tx->GetHash() ) ).value();
-        GeniusUTXO new_utxo( hash, 0, mint_tx->GetAmount(), mint_tx->GetTokenID() );
-        BOOST_OUTCOME_TRY( utxo_manager_.PutUTXO( new_utxo, mint_tx->GetSrcAddress() ) );
+            if ( !inputs.empty() )
+            {
+                utxo_manager_.ConsumeUTXOs( inputs, mint_tx_v2->GetSrcAddress() );
+            }
+
+            m_logger->info( "[{} - full: {}] Created tokens (mint-v2), amount {} balance {}",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            std::to_string( mint_tx_v2->GetAmount() ),
+                            std::to_string( utxo_manager_.GetBalance() ) );
+            return outcome::success();
+        }
+
+        auto mint_tx = std::dynamic_pointer_cast<MintTransaction>( tx );
+        if ( !mint_tx )
+        {
+            return std::errc::invalid_argument;
+        }
+
+        auto hash = ( base::Hash256::fromReadableString( mint_tx->GetHash() ) ).value();
+        BOOST_OUTCOME_TRY( utxo_manager_.PutUTXO( GeniusUTXO( hash, 0, mint_tx->GetAmount(), mint_tx->GetTokenID() ),
+                                                  mint_tx->GetSrcAddress() ) );
         m_logger->info( "[{} - full: {}] Created tokens, amount {} balance {}",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
@@ -1335,7 +1369,34 @@ namespace sgns
 
     outcome::result<void> TransactionManager::RevertMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
     {
+        if ( auto mint_tx_v2 = std::dynamic_pointer_cast<MintTransactionV2>( tx ) )
+        {
+            auto [inputs, outputs] = mint_tx_v2->GetUTXOParameters();
+            auto hash              = ( base::Hash256::fromReadableString( mint_tx_v2->GetHash() ) ).value();
+
+            for ( const auto &dest_info : outputs )
+            {
+                utxo_manager_.DeleteUTXO( hash, dest_info.dest_address );
+            }
+            if ( !inputs.empty() )
+            {
+                utxo_manager_.RollbackUTXOs( inputs );
+            }
+
+            m_logger->info( "[{} - full: {}] Deleted {} tokens (mint-v2), from tx {}, final balance {}",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            mint_tx_v2->GetAmount(),
+                            mint_tx_v2->GetHash(),
+                            std::to_string( utxo_manager_.GetBalance() ) );
+            return outcome::success();
+        }
+
         auto mint_tx = std::dynamic_pointer_cast<MintTransaction>( tx );
+        if ( !mint_tx )
+        {
+            return std::errc::invalid_argument;
+        }
 
         auto hash = ( base::Hash256::fromReadableString( mint_tx->GetHash() ) ).value();
         BOOST_OUTCOME_TRY( utxo_manager_.DeleteUTXO( hash, mint_tx->GetSrcAddress() ) );

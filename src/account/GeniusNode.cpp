@@ -1131,6 +1131,7 @@ namespace sgns
                                                                               const std::string &transaction_hash,
                                                                               const std::string &chainid,
                                                                               TokenID            tokenid,
+                                                                              std::string        destination,
                                                                               std::chrono::milliseconds timeout )
     {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
@@ -1139,9 +1140,13 @@ namespace sgns
             return outcome::failure( boost::system::error_code{} );
         }
         auto start_time = std::chrono::steady_clock::now();
+        if ( destination.empty() )
+        {
+            destination = account_->GetAddress();
+        }
 
         OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid ) );
+        OUTCOME_TRY( auto &&tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid, destination ) );
 
         auto mint_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
 
