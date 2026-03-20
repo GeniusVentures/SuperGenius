@@ -49,6 +49,14 @@ if(NOT DEFINED Protobuf_DIR)
     set(Protobuf_DIR "${_THIRDPARTY_BUILD_DIR}/protobuf/lib/cmake/protobuf")
 endif()
 
+if(NOT DEFINED grpc_INCLUDE_DIR)
+    set(grpc_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/include")
+endif()
+
+if(NOT DEFINED Protobuf_INCLUDE_DIR)
+    set(Protobuf_INCLUDE_DIR "${grpc_INCLUDE_DIR}/google/protobuf")
+endif()
+
 find_package(Protobuf CONFIG REQUIRED)
 
 if(NOT DEFINED PROTOC_EXECUTABLE)
@@ -149,6 +157,7 @@ set(Boost_DIR "${Boost_LIB_DIR}/cmake/Boost-${BOOST_VERSION}")
 set(boost_atomic_DIR "${Boost_LIB_DIR}/cmake/boost_atomic-${BOOST_VERSION}")
 set(boost_chrono_DIR "${Boost_LIB_DIR}/cmake/boost_chrono-${BOOST_VERSION}")
 set(boost_container_DIR "${Boost_LIB_DIR}/cmake/boost_container-${BOOST_VERSION}")
+set(boost_context_DIR "${Boost_LIB_DIR}/cmake/boost_context-${BOOST_VERSION}")
 set(boost_date_time_DIR "${Boost_LIB_DIR}/cmake/boost_date_time-${BOOST_VERSION}")
 set(boost_filesystem_DIR "${Boost_LIB_DIR}/cmake/boost_filesystem-${BOOST_VERSION}")
 set(boost_headers_DIR "${Boost_LIB_DIR}/cmake/boost_headers-${BOOST_VERSION}")
@@ -160,11 +169,37 @@ set(boost_random_DIR "${Boost_LIB_DIR}/cmake/boost_random-${BOOST_VERSION}")
 set(boost_regex_DIR "${Boost_LIB_DIR}/cmake/boost_regex-${BOOST_VERSION}")
 set(boost_system_DIR "${Boost_LIB_DIR}/cmake/boost_system-${BOOST_VERSION}")
 set(boost_thread_DIR "${Boost_LIB_DIR}/cmake/boost_thread-${BOOST_VERSION}")
+set(boost_context_DIR "${Boost_LIB_DIR}/cmake/boost_context-${BOOST_VERSION}")
+set(boost_coroutine_DIR "${Boost_LIB_DIR}/cmake/boost_coroutine-${BOOST_VERSION}")
 set(boost_unit_test_framework_DIR "${Boost_LIB_DIR}/cmake/boost_unit_test_framework-${BOOST_VERSION}")
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_NO_SYSTEM_PATHS ON)
 option(Boost_USE_STATIC_RUNTIME "Use static runtimes" ON)
+set(_BOOST_CACHE_ARGS
+    -DBOOST_ROOT:PATH=${_BOOST_ROOT}
+    -DBoost_DIR:PATH=${Boost_DIR}/Boost-${BOOST_VERSION}
+    -DBoost_INCLUDE_DIR:PATH=${Boost_INCLUDE_DIR}
+    -Dboost_headers_DIR:PATH=${Boost_DIR}/boost_headers-${BOOST_VERSION}
+    -Dboost_date_time_DIR:PATH=${Boost_DIR}/boost_date_time-${BOOST_VERSION}
+    -Dboost_filesystem_DIR:PATH=${Boost_DIR}/boost_filesystem-${BOOST_VERSION}
+    -Dboost_program_options_DIR:PATH=${Boost_DIR}/boost_program_options-${BOOST_VERSION}
+    -Dboost_random_DIR:PATH=${Boost_DIR}/boost_random-${BOOST_VERSION}
+    -Dboost_regex_DIR:PATH=${Boost_DIR}/boost_regex-${BOOST_VERSION}
+    -Dboost_system_DIR:PATH=${Boost_DIR}/boost_system-${BOOST_VERSION}
+    -Dboost_context_DIR:PATH=${Boost_DIR}/boost_context-${BOOST_VERSION}
+    -Dboost_coroutine_DIR:PATH=${Boost_DIR}/boost_coroutine-${BOOST_VERSION}
+    -Dboost_thread_DIR:PATH=${Boost_DIR}/boost_thread-${BOOST_VERSION}
+    -Dboost_log_DIR:PATH=${Boost_DIR}/boost_log-${BOOST_VERSION}
+    -Dboost_log_setup_DIR:PATH=${Boost_DIR}/boost_log_setup-${BOOST_VERSION}
+    -Dboost_unit_test_framework_DIR:PATH=${Boost_DIR}/boost_unit_test_framework-${BOOST_VERSION}
+    -Dboost_json_DIR:PATH=${Boost_DIR}/boost_json-${BOOST_VERSION}
+    -DBoost_USE_STATIC_RUNTIME:BOOL=ON
+    -DBoost_NO_SYSTEM_PATHS:BOOL=ON
+    -DBoost_USE_MULTITHREADED:BOOL=ON
+    -DBoost_USE_STATIC_LIBS:BOOL=ON
+    -DBoost_USE_STATIC_RUNTIME:BOOL=ON
+)
 
 option(SGNS_STACKTRACE_BACKTRACE "Use BOOST_STACKTRACE_USE_BACKTRACE in stacktraces, for POSIX" OFF)
 
@@ -177,7 +212,8 @@ if(SGNS_STACKTRACE_BACKTRACE)
 endif()
 
 # header only libraries must not be added here
-find_package(Boost REQUIRED COMPONENTS container date_time filesystem random regex system thread log log_setup program_options unit_test_framework json)
+message(STATUS "Booost coroutine dir: ${boost_coroutine_DIR}")
+find_package(Boost REQUIRED COMPONENTS container date_time filesystem random regex system thread log log_setup program_options unit_test_framework json context coroutine)
 include_directories(${Boost_INCLUDE_DIRS})
 
 # SQLiteModernCpp project
@@ -234,6 +270,9 @@ find_package(ipfs-bitswap-cpp CONFIG REQUIRED)
 set(ed25519_DIR "${_THIRDPARTY_BUILD_DIR}/ed25519/lib/cmake/ed25519")
 find_package(ed25519 CONFIG REQUIRED)
 
+set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS ON CACHE BOOL "Suppress developer warnings" FORCE)
+# Globally suppress ALL CMake deprecation warnings (including from third-party Config.cmake files)
+set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "Disable deprecation warnings" FORCE)
 # RapidJSON
 set(RapidJSON_DIR "${_THIRDPARTY_BUILD_DIR}/rapidjson/lib/cmake/RapidJSON")
 find_package(RapidJSON CONFIG REQUIRED)
@@ -403,8 +442,8 @@ add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
 
 add_subdirectory(${PROJECT_ROOT}/ProofSystem ${CMAKE_BINARY_DIR}/ProofSystem)
 add_subdirectory(${PROJECT_ROOT}/SGProcessingManager ${CMAKE_BINARY_DIR}/SGProcessingManager)
+add_subdirectory(${PROJECT_ROOT}/rlp ${CMAKE_BINARY_DIR}/rlp)
 
-# add_subdirectory(${PROJECT_ROOT}/app ${CMAKE_BINARY_DIR}/app)
 if(BUILD_TESTING)
     enable_testing()
     add_subdirectory(${PROJECT_ROOT}/test ${CMAKE_BINARY_DIR}/test)

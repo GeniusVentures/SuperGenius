@@ -83,6 +83,7 @@ target_link_libraries(genius_node
     sgns_genius_account  # Link to the GeniusAccount library
     blockchain_genesis
 	ProcessingBase
+    rlp
     PRIVATE
     secure_storage
     component_factory
@@ -116,6 +117,8 @@ target_link_libraries(genius_node
     transfer_proof
     processing_proof
 )
+
+add_dependencies(genius_node rlp)
 
 set_target_properties(genius_node PROPERTIES PUBLIC_HEADER "GeniusNode.hpp")
 if(MSVC)
