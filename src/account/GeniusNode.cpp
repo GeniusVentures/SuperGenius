@@ -172,23 +172,19 @@ namespace sgns
         return instance;
     }
 
-    std::shared_ptr<GeniusNode> GeniusNode::NewWithMnemonics( const DevConfig_st &dev_config,
-                                                              const char         *mnemonics,
-                                                              bool                autodht,
-                                                              bool                isprocessor,
-                                                              uint16_t            base_port,
-                                                              bool                is_full_node,
-                                                              bool                use_upnp )
+    std::shared_ptr<GeniusNode> GeniusNode::NewFromMnemonic( const DevConfig_st &dev_config,
+                                                             const std::string  &mnemonic,
+                                                             bool                autodht,
+                                                             bool                isprocessor,
+                                                             uint16_t            base_port,
+                                                             bool                is_full_node,
+                                                             bool                use_upnp )
     {
         try
         {
-            TW::HDWallet wallet( mnemonics, "", true );
-            auto         derivation_path = TW::derivationPath( TWCoinTypeEthereum );
-            auto         private_key     = wallet.getKey( TWCoinTypeEthereum, derivation_path );
-
             auto instance = std::shared_ptr<GeniusNode>( new GeniusNode(
                 dev_config,
-                GeniusAccount::New( dev_config.TokenID, private_key, dev_config.BaseWritePath, is_full_node ),
+                GeniusAccount::NewFromMnemonic( dev_config.TokenID, mnemonic, dev_config.BaseWritePath, is_full_node ),
                 autodht,
                 isprocessor,
                 base_port,
