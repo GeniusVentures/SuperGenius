@@ -524,19 +524,26 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
         }
         if ( registry_after.value().validators().size() > 1 )
         {
+            auto *client_validator = sgns::ValidatorRegistry::FindValidator( registry_after.value(),
+                                                                             node_client->GetAddress() );
+            ASSERT_TRUE( client_validator );
+            EXPECT_GT( client_validator->weight(), 0 );
+        }
+        if ( registry_after.value().validators().size() > 2 )
+        {
             auto *peer1_validator = sgns::ValidatorRegistry::FindValidator( registry_after.value(),
                                                                             node_peer1->GetAddress() );
             ASSERT_TRUE( peer1_validator );
             EXPECT_GT( peer1_validator->weight(), 0 );
         }
-        if ( registry_after.value().validators().size() > 2 )
+        if ( registry_after.value().validators().size() > 3 )
         {
             auto *peer2_validator = sgns::ValidatorRegistry::FindValidator( registry_after.value(),
                                                                             node_peer2->GetAddress() );
             ASSERT_TRUE( peer2_validator );
             EXPECT_GT( peer2_validator->weight(), 0 );
         }
-        if ( registry_after.value().validators().size() > 3 )
+        if ( registry_after.value().validators().size() > 4 )
         {
             auto *peer3_validator = sgns::ValidatorRegistry::FindValidator( registry_after.value(),
                                                                             node_peer3->GetAddress() );

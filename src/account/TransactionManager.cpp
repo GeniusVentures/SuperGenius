@@ -3707,7 +3707,7 @@ namespace sgns
                 return false;
             }
             const auto &prev_subject = prev_cert_result.value().proposal().subject();
-            if ( !prev_subject.has_nonce() || !prev_subject.nonce().has_utxo_commitment() )
+            if ( !prev_subject.has_nonce() )
             {
                 return false;
             }
@@ -3720,17 +3720,20 @@ namespace sgns
                 return false;
             }
 
-            const auto &prev_commitment = prev_subject.nonce().utxo_commitment();
-            auto prev_post_root_result = base::Hash256::fromSpan(
-                gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( prev_commitment.post_utxo_root().data() ) ),
-                           prev_commitment.post_utxo_root().size() ) );
-            if ( prev_post_root_result.has_error() )
+            if ( prev_subject.nonce().has_utxo_commitment() )
             {
-                return false;
-            }
-            if ( prev_post_root_result.value() != pre_root )
-            {
-                return false;
+                const auto &prev_commitment = prev_subject.nonce().utxo_commitment();
+                auto prev_post_root_result = base::Hash256::fromSpan(
+                    gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( prev_commitment.post_utxo_root().data() ) ),
+                               prev_commitment.post_utxo_root().size() ) );
+                if ( prev_post_root_result.has_error() )
+                {
+                    return false;
+                }
+                if ( prev_post_root_result.value() != pre_root )
+                {
+                    return false;
+                }
             }
         }
 
@@ -4012,8 +4015,7 @@ namespace sgns
                 return std::nullopt;
             }
             const auto &previous_subject = previous_cert.value().proposal().subject();
-            if ( !previous_subject.has_nonce() || !previous_subject.nonce().has_utxo_commitment() ||
-                 previous_subject.account_id() != tx->GetSrcAddress() ||
+            if ( !previous_subject.has_nonce() || previous_subject.account_id() != tx->GetSrcAddress() ||
                  ( previous_subject.nonce().nonce() + 1 ) != tx->GetNonce() )
             {
                 TransactionManagerLogger()->warn( "[{} - full: {}] {}: Previous subject continuity mismatch tx={} prev={}",
@@ -4025,18 +4027,22 @@ namespace sgns
                 return std::nullopt;
             }
 
-            const auto &prev_commitment = previous_subject.nonce().utxo_commitment();
-            auto prev_post_root_result = base::Hash256::fromSpan(
-                gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( prev_commitment.post_utxo_root().data() ) ),
-                           prev_commitment.post_utxo_root().size() ) );
-            if ( prev_post_root_result.has_error() || prev_post_root_result.value() != pre_root )
+            if ( previous_subject.nonce().has_utxo_commitment() )
             {
-                TransactionManagerLogger()->warn( "[{} - full: {}] {}: Pre-root not anchored to prev certified post-root tx={}",
-                                                  account_m->GetAddress().substr( 0, 8 ),
-                                                  full_node_m,
-                                                  __func__,
-                                                  tx->GetHash() );
-                return std::nullopt;
+                const auto &prev_commitment = previous_subject.nonce().utxo_commitment();
+                auto prev_post_root_result = base::Hash256::fromSpan(
+                    gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( prev_commitment.post_utxo_root().data() ) ),
+                               prev_commitment.post_utxo_root().size() ) );
+                if ( prev_post_root_result.has_error() || prev_post_root_result.value() != pre_root )
+                {
+                    TransactionManagerLogger()->warn(
+                        "[{} - full: {}] {}: Pre-root not anchored to prev certified post-root tx={}",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        __func__,
+                        tx->GetHash() );
+                    return std::nullopt;
+                }
             }
         }
 

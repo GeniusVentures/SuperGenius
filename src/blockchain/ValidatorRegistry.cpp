@@ -441,12 +441,11 @@ namespace sgns
 
     outcome::result<ValidatorRegistry::Registry> ValidatorRegistry::LoadRegistry() const
     {
-
         {
             std::shared_lock<std::shared_mutex> lock( cache_mutex_ );
             if ( cached_registry_ )
             {
-                logger_->debug( "{}: returning cached registry", __func__ );
+                logger_->trace( "{}: returning cached registry", __func__ );
                 return cached_registry_.value();
             }
         }
@@ -1071,13 +1070,14 @@ namespace sgns
         const std::unordered_map<std::string, bool> &registered_votes,
         const std::unordered_map<std::string, bool> &unregistered_votes ) const
     {
-        logger_->debug( "{}: building registry update proposal_id={} epoch={} current_validators={} registered_votes={} unregistered_votes={}",
-                        __func__,
-                        certificate.proposal_id().substr( 0, 8 ),
-                        current_registry.epoch(),
-                        current_registry.validators_size(),
-                        registered_votes.size(),
-                        unregistered_votes.size() );
+        logger_->debug(
+            "{}: building registry update proposal_id={} epoch={} current_validators={} registered_votes={} unregistered_votes={}",
+            __func__,
+            certificate.proposal_id().substr( 0, 8 ),
+            current_registry.epoch(),
+            current_registry.validators_size(),
+            registered_votes.size(),
+            unregistered_votes.size() );
         if ( !unregistered_votes.empty() )
         {
             std::vector<std::string> unregistered_ids;
@@ -1087,9 +1087,7 @@ namespace sgns
                 unregistered_ids.push_back( pair.first.substr( 0, 8 ) );
             }
             std::sort( unregistered_ids.begin(), unregistered_ids.end() );
-            logger_->debug( "{}: unregistered voter ids (prefixes)={}",
-                            __func__,
-                            fmt::join( unregistered_ids, "," ) );
+            logger_->debug( "{}: unregistered voter ids (prefixes)={}", __func__, fmt::join( unregistered_ids, "," ) );
         }
 
         Registry next = current_registry;
