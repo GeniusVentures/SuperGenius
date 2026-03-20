@@ -40,6 +40,24 @@ namespace sgns
             return utxo_params_;
         }
 
+        /**
+         * @brief       Returns if transaction supports UTXOs
+         * @return      True if supported, false otherwise
+         */
+        bool HasUTXOParameters() const override
+        {
+            return true;
+        }
+
+        /**
+         * @brief       Returns the UTXOs
+         * @return      If exists, returns the UTXOs of the transaction
+         */
+        std::optional<UTXOTxParameters> GetUTXOParametersOpt() const override
+        {
+            return utxo_params_;
+        }
+
         std::string GetDevAddress() const
         {
             return dev_addr_;

@@ -1,23 +1,26 @@
 #include "GeniusAccount.hpp"
 
-#include <limits>
+#include <fstream>
+#include <random>
+
 #include <nil/crypto3/algebra/marshalling.hpp>
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
 #include <nil/crypto3/pubkey/algorithm/verify.hpp>
 #include <openssl/rand.h>
-#include <random>
-#include "WalletCore/Hash.h"
+#include <WalletCore/Hash.h>
+#include <WalletCore/PrivateKey.h>
+#include <ipfs_pubsub/gossip_pubsub.hpp>
+
 #include "base/hexutil.hpp"
-#include "local_secure_storage/ISecureStorage.hpp"
+#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
+#include "local_secure_storage/SecureStorage.hpp"
 #include "outcome/outcome.hpp"
-#include "singleton/CComponentFactory.hpp"
-#include "WalletCore/PrivateKey.h"
-#include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "account/AccountMessenger.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
-#include "local_secure_storage/SecureStorage.hpp"
 #include "primitives/cid/cid.hpp"
+
+constexpr std::string_view SECURE_STORAGE_PREFIX = "SGNS";
 
 namespace
 {
@@ -46,22 +49,58 @@ namespace
         return boost::filesystem::canonical( boost::filesystem::absolute( base_path ) ) / FILE_NAME;
     }
 
-    // Helper to create storage and key generators from key_seed
-    outcome::result<
-        std::pair<std::shared_ptr<ISecureStorage>, std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>>
-    CreateStorageAndKeys( nil::crypto3::multiprecision::uint256_t key_seed )
+    outcome::result<std::shared_ptr<ISecureStorage>> MigrateSecureStorage( const boost::filesystem::path &base_path )
     {
-        constexpr std::string_view PREFIX = "SGNS";
+        JSONSecureStorage json_storage( base_path.generic_string() );
+        auto              old_json = json_storage.LoadJSON();
 
-        ethereum::EthereumKeyGenerator eth_key( key_seed );
-        auto                           pub_key = eth_key.GetEntirePubValue();
-        OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( pub_key ) );
+        if ( old_json.has_error() )
+        {
+            if ( old_json.error() == std::errc::no_such_file_or_directory )
+            {
+                genius_account_logger()->debug( "There were no legacy JSON storage file to migrate from" );
+                return std::errc::no_such_file_or_directory;
+            }
+            genius_account_logger()->error( "Could not load legacy JSON storage at {}: {}",
+                                            base_path.generic_string(),
+                                            old_json.error().message() );
+            return std::errc::bad_file_descriptor;
+        }
 
-        auto storage = std::make_shared<SecureStorageImpl>( std::string( PREFIX ) +
-                                                            libp2p::multi::detail::encodeBase58( vec ) );
+        auto maybe_field = old_json.value().FindMember( "GeniusAccount" );
+        if ( maybe_field == old_json.value().MemberEnd() || !maybe_field->value.IsObject() )
+        {
+            genius_account_logger()->error( "Failed to find GeniusAccount member in old JSON storage" );
+            return std::errc::bad_message;
+        }
 
-        return std::make_pair( std::move( storage ),
-                               std::make_pair( KeyGenerator::ElGamal( std::move( key_seed ) ), eth_key ) );
+        auto maybe_key = maybe_field->value.FindMember( "sgns_key" );
+        if ( maybe_key == maybe_field->value.MemberEnd() || !maybe_key->value.IsString() )
+        {
+            genius_account_logger()->error( "Failed to find GeniusAccount public key in old JSON storage" );
+            return std::errc::bad_message;
+        }
+
+        // Create storage and keys
+        nil::crypto3::multiprecision::uint256_t key_seed( maybe_key->value.GetString() );
+        ethereum::EthereumKeyGenerator          eth_key( key_seed );
+        auto                                    pub_key = eth_key.GetEntirePubValue();
+        OUTCOME_TRY( std::vector<uint8_t> pub_key_vec, base::unhex( pub_key ) );
+
+        auto secure_storage = std::make_shared<SecureStorageImpl>( std::string( SECURE_STORAGE_PREFIX ) +
+                                                                   libp2p::multi::detail::encodeBase58( pub_key_vec ) );
+
+        auto          path = SetupStoragePath( base_path );
+        std::ofstream file( path.c_str() );
+        file << pub_key << std::endl;
+        file.close();
+
+        rj::Document new_doc;
+        new_doc.CopyFrom( maybe_field->value, new_doc.GetAllocator() );
+        OUTCOME_TRY( secure_storage->SaveJSON( std::move( new_doc ) ) );
+        genius_account_logger()->debug( "Successfully migrated JSON secure storage" );
+
+        return secure_storage;
     }
 }
 
@@ -98,6 +137,7 @@ namespace sgns
 
         genius_account_logger()->info(
             "Could not load Genius address from storage, attempting to generate from ethereum private key" );
+
         auto response = GenerateGeniusAddress( eth_private_key, base_path );
         if ( response.has_error() )
         {
@@ -110,7 +150,7 @@ namespace sgns
     }
 
     std::shared_ptr<GeniusAccount> GeniusAccount::New( TokenID                        token_id,
-                                                       const Credentials             &credentials,
+                                                       const TW::PrivateKey          &private_key,
                                                        const boost::filesystem::path &base_path,
                                                        bool                           full_node )
     {
@@ -121,20 +161,15 @@ namespace sgns
         }
 
         genius_account_logger()->info(
-            "Could not load Genius address from storage, attempting to generate from credentials" );
-        auto response = GenerateGeniusAddress( credentials, base_path );
+            "Could not load Genius address from storage, attempting to generate from ethereum private key" );
+        auto response = GenerateGeniusAddress( private_key, base_path );
         if ( response.has_error() )
         {
-            genius_account_logger()->error( "Failed to generate Genius address from credentials" );
+            genius_account_logger()->error( "Failed to generate Genius address from private key" );
             return nullptr;
         }
 
-        genius_account_logger()->debug( "Generated a Genius address from credentials" );
-        // Save credentials to storage
-        auto &[storage, addresses] = response.value();
-        storage->Save( "email", credentials.email );
-        storage->Save( "password", credentials.password );
-
+        genius_account_logger()->debug( "Generated a Genius address from private key" );
         return CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
     }
 
@@ -142,56 +177,49 @@ namespace sgns
                                                        const boost::filesystem::path &base_path,
                                                        bool                           full_node )
     {
-        static std::string_view SUFFIX = "@gnus.ai";
-        static std::mt19937_64  eng( ( std::random_device() )() );
-
         if ( auto response = LoadGeniusAccount( base_path ); response.has_value() )
         {
             genius_account_logger()->debug( "Loaded existing Genius address" );
             return CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
         }
 
-        genius_account_logger()->info(
+        genius_account_logger()->error(
             "Could not find existing Genius address, generating one with random credentials" );
 
-        std::uniform_int_distribution<uint64_t> dist( 0, std::numeric_limits<uint64_t>::max() );
-        uint64_t                                num   = dist( eng );
-        std::string                             email = base::hex_lower(
-            gsl::span<const uint8_t>( reinterpret_cast<uint8_t *>( &num ), sizeof( num ) ) );
-        email.append( SUFFIX );
-
-        num                  = dist( eng );
-        std::string password = base::hex_lower(
-            gsl::span<const uint8_t>( reinterpret_cast<uint8_t *>( &num ), sizeof( num ) ) );
-
-        return New( token_id, { std::move( email ), std::move( password ) }, base_path, full_node );
+        return nullptr;
     }
 
     outcome::result<GeniusAccount::StorageWithAddress> GeniusAccount::LoadGeniusAccount(
         const boost::filesystem::path &base_path )
     {
-        constexpr std::string_view PREFIX = "SGNS";
-
         auto file_path = SetupStoragePath( base_path );
         genius_account_logger()->info( "Secure storage ID path: {}", file_path.string() );
 
-        std::ifstream file( file_path.string() );
-        if ( !file.is_open() )
+        std::shared_ptr<ISecureStorage> storage;
+        std::ifstream                   file( file_path.string() );
+        std::string                     public_key;
+        bool                            loaded_from_storage = false;
+
+        if ( file.is_open() )
         {
-            genius_account_logger()->debug( "Secure storage ID file does not exist" );
-            return std::errc::no_such_file_or_directory;
+            file >> public_key;
+            genius_account_logger()->info( "Loaded public key from file: {} (length: {})",
+                                           public_key.substr( 0, 16 ) + "...",
+                                           public_key.length() );
+
+            OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( public_key ) );
+
+            storage = std::make_shared<SecureStorageImpl>( std::string( SECURE_STORAGE_PREFIX ) +
+                                                           libp2p::multi::detail::encodeBase58( vec ) );
+
+            file.close();
+            loaded_from_storage = true;
         }
-
-        std::string public_key;
-        file >> public_key;
-        genius_account_logger()->info( "Loaded public key from file: {} (length: {})",
-                                       public_key.substr( 0, 16 ) + "...",
-                                       public_key.length() );
-
-        OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( public_key ) );
-
-        auto storage = std::make_shared<SecureStorageImpl>( std::string( PREFIX ) +
-                                                            libp2p::multi::detail::encodeBase58( vec ) );
+        else
+        {
+            genius_account_logger()->debug( "Secure storage ID file does not exist, will try migration" );
+            OUTCOME_TRY( storage, MigrateSecureStorage( base_path ) );
+        }
 
         auto load_res = storage->Load( "sgns_key" );
         if ( !load_res )
@@ -203,33 +231,21 @@ namespace sgns
         auto key_seed = nil::crypto3::multiprecision::uint256_t( load_res.value() );
         genius_account_logger()->info( "Successfully loaded key_seed from storage" );
 
-        // Validate loaded key_seed matches stored public key
-        if ( ethereum::EthereumKeyGenerator( key_seed ).GetEntirePubValue() != public_key )
+        if ( loaded_from_storage )
         {
-            genius_account_logger()->error( "Validation failed: key_seed does not match stored public key" );
-            return std::errc::bad_message;
+            // Validate loaded key_seed matches stored public key
+            if ( ethereum::EthereumKeyGenerator( key_seed ).GetEntirePubValue() != public_key )
+            {
+                genius_account_logger()->error( "Validation failed: key_seed does not match stored public key" );
+                return std::errc::bad_message;
+            }
+            genius_account_logger()->info( "Validation successful: key_seed matches stored public key" );
         }
 
-        genius_account_logger()->info( "Validation successful: key_seed matches stored public key" );
-        return CreateStorageAndKeys( key_seed );
-    }
+        ethereum::EthereumKeyGenerator eth_key( key_seed );
 
-    outcome::result<GeniusAccount::StorageWithAddress> GeniusAccount::GenerateGeniusAddress(
-        const Credentials             &credentials,
-        const boost::filesystem::path &base_path )
-    {
-        genius_account_logger()->trace( "Key seed from credentials" );
-
-        if ( credentials.email.empty() || credentials.password.empty() )
-        {
-            return std::errc::invalid_argument;
-        }
-
-        std::string s      = credentials.email + credentials.password;
-        auto        hashed = TW::Hash::sha256( s );
-        auto        hexed  = base::hex_lower( hashed );
-
-        return GenerateGeniusAddress( hexed.data(), base_path );
+        return std::make_pair( std::move( storage ),
+                               std::make_pair( KeyGenerator::ElGamal( std::move( key_seed ) ), std::move( eth_key ) ) );
     }
 
     outcome::result<GeniusAccount::StorageWithAddress> GeniusAccount::GenerateGeniusAddress(
@@ -240,11 +256,29 @@ namespace sgns
 
         if ( eth_private_key == nullptr )
         {
-            return outcome::failure( std::errc::invalid_argument );
+            genius_account_logger()->error( "No ethereum address to generate from" );
+            return std::errc::invalid_argument;
         }
 
-        OUTCOME_TRY( auto as_vec, base::unhex( eth_private_key ) );
-        auto signed_secret = TW::PrivateKey( as_vec ).sign(
+        auto private_key_vec = base::unhex( eth_private_key );
+        if ( private_key_vec.has_error() )
+        {
+            genius_account_logger()->error( "Could not extract private key from hexadecimal" );
+            return std::errc::invalid_argument;
+        }
+
+        TW::PrivateKey tw_private_key( private_key_vec.value() );
+
+        return GenerateGeniusAddress( tw_private_key, base_path );
+    }
+
+    outcome::result<GeniusAccount::StorageWithAddress> GeniusAccount::GenerateGeniusAddress(
+        const TW::PrivateKey          &private_key,
+        const boost::filesystem::path &base_path )
+    {
+        genius_account_logger()->trace( "Key seed from TW private key" );
+
+        auto signed_secret = private_key.sign(
             TW::Data( ELGAMAL_PUBKEY_PREDEFINED.cbegin(), ELGAMAL_PUBKEY_PREDEFINED.cend() ),
             TWCurveSECP256k1 );
 
@@ -257,7 +291,12 @@ namespace sgns
         auto key_seed = nil::crypto3::multiprecision::uint256_t( TW::Hash::sha256( signed_secret ) );
 
         // Create storage and keys
-        OUTCOME_TRY( auto result, CreateStorageAndKeys( key_seed ) );
+        ethereum::EthereumKeyGenerator eth_key( key_seed );
+        auto                           pub_key = eth_key.GetEntirePubValue();
+        OUTCOME_TRY( std::vector<uint8_t> pub_key_vec, base::unhex( pub_key ) );
+
+        auto storage = std::make_shared<SecureStorageImpl>( std::string( SECURE_STORAGE_PREFIX ) +
+                                                            libp2p::multi::detail::encodeBase58( pub_key_vec ) );
 
         // Save public key to file
         auto file_path = SetupStoragePath( base_path );
@@ -269,11 +308,10 @@ namespace sgns
             return outcome::failure( std::errc::bad_file_descriptor );
         }
 
-        auto &[storage, addresses] = result;
-        auto &[elgamal, eth_key]   = addresses;
+        auto elgamal = KeyGenerator::ElGamal( std::move( key_seed ) );
         out_file << eth_key.GetEntirePubValue() << std::endl;
 
-        return result;
+        return std::make_pair( std::move( storage ), std::make_pair( std::move( elgamal ), std::move( eth_key ) ) );
     }
 
     bool GeniusAccount::InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub )
@@ -982,7 +1020,8 @@ namespace sgns
             }
             catch ( const std::exception & )
             {
-                genius_account_logger()->error( "Failed to parse nonce for {}: ", address.substr( 0, 8 ),
+                genius_account_logger()->error( "Failed to parse nonce for {}: ",
+                                                address.substr( 0, 8 ),
                                                 val_buf.toString() );
             }
         }

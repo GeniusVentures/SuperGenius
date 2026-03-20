@@ -89,7 +89,10 @@ namespace sgns
         dag_copy.clear_signature();
         auto                 size = dag_copy.ByteSizeLong();
         std::vector<uint8_t> serialized( size );
-        dag_copy.SerializeToArray( serialized.data(), size );
+        if ( !dag_copy.SerializeToArray( serialized.data(), size ) )
+        {
+            std::cerr << "Failed to serialize DAG struct\n";
+        }
 
         return GeniusAccount::VerifySignature( dag_st.source_addr(), str_signature, serialized ) && CheckHash();
     }

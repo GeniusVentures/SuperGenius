@@ -5,11 +5,11 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 
-#include <mutex>
 #include <stdexcept>
 #include <thread>
 #include <memory>
 #include <exception>
+#include <random>
 
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
@@ -24,6 +24,8 @@
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 #include <libp2p/protocol/common/asio/asio_scheduler.hpp>
+#include <WalletCore/HDWallet.h>
+#include <WalletCore/Coin.h>
 
 #include "base/sgns_version.hpp"
 #include "account/TokenAmount.hpp"
@@ -170,29 +172,41 @@ namespace sgns
         return instance;
     }
 
-    std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st               &dev_config,
-                                                 const GeniusAccount::Credentials &credentials,
-                                                 bool                              autodht,
-                                                 bool                              isprocessor,
-                                                 uint16_t                          base_port,
-                                                 bool                              is_full_node,
-                                                 bool                              use_upnp )
+    std::shared_ptr<GeniusNode> GeniusNode::NewWithMnemonics( const DevConfig_st &dev_config,
+                                                              const char         *mnemonics,
+                                                              bool                autodht,
+                                                              bool                isprocessor,
+                                                              uint16_t            base_port,
+                                                              bool                is_full_node,
+                                                              bool                use_upnp )
     {
-        auto instance = std::shared_ptr<GeniusNode>( new GeniusNode(
-            dev_config,
-            GeniusAccount::New( dev_config.TokenID, credentials, dev_config.BaseWritePath, is_full_node ),
-            autodht,
-            isprocessor,
-            base_port,
-            is_full_node,
-            use_upnp ) );
-
-        if ( instance )
+        try
         {
-            instance->BeginDBInitialization();
-        }
+            TW::HDWallet wallet( mnemonics, "", true );
+            auto         derivation_path = TW::derivationPath( TWCoinTypeEthereum );
+            auto         private_key     = wallet.getKey( TWCoinTypeEthereum, derivation_path );
 
-        return instance;
+            auto instance = std::shared_ptr<GeniusNode>( new GeniusNode(
+                dev_config,
+                GeniusAccount::New( dev_config.TokenID, private_key, dev_config.BaseWritePath, is_full_node ),
+                autodht,
+                isprocessor,
+                base_port,
+                is_full_node,
+                use_upnp ) );
+
+            if ( instance )
+            {
+                instance->BeginDBInitialization();
+            }
+
+            return instance;
+        }
+        catch ( const std::invalid_argument &err )
+        {
+            std::cerr << "Failed to generate address from mnemonic: " << err.what() << '\n';
+        }
+        return nullptr;
     }
 
     GeniusNode::GeniusNode( const DevConfig_st            &dev_config,
@@ -365,7 +379,8 @@ namespace sgns
                                     strong->node_logger_->error( "Error starting blockchain: {}",
                                                                  result.error().message() );
                                     strong->node_logger_->info( "Scheduling blockchain retry after failure" );
-                                    strong->account_->RequestHeads({std::string(ValidatorRegistry::ValidatorTopic())});
+                                    strong->account_->RequestHeads(
+                                        { std::string( blockchain::ValidatorRegistry::ValidatorTopic() ) } );
                                     strong->ScheduleBlockchainRetry();
                                     return;
                                 }
@@ -387,21 +402,23 @@ namespace sgns
                                 }
 
                                 // Move transaction initialization off the AccountMessenger worker thread.
-                                boost::asio::post( *strong->io_, [weak_self]()
-                                {
-                                    if ( auto strong = weak_self.lock() )
+                                boost::asio::post(
+                                    *strong->io_,
+                                    [weak_self]()
                                     {
-                                        auto current_state = strong->state_.load();
-                                        if ( current_state != NodeState::INITIALIZING_BLOCKCHAIN )
+                                        if ( auto strong = weak_self.lock() )
                                         {
-                                            strong->node_logger_->debug(
-                                                "Skipping transaction initialization, unexpected state: {}",
-                                                NodeStateToString( current_state ) );
-                                            return;
+                                            auto current_state = strong->state_.load();
+                                            if ( current_state != NodeState::INITIALIZING_BLOCKCHAIN )
+                                            {
+                                                strong->node_logger_->debug(
+                                                    "Skipping transaction initialization, unexpected state: {}",
+                                                    NodeStateToString( current_state ) );
+                                                return;
+                                            }
+                                            strong->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
                                         }
-                                        strong->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
-                                    }
-                                } );
+                                    } );
                             }
                         } );
                 }
@@ -1119,6 +1136,7 @@ namespace sgns
                                                                               const std::string &transaction_hash,
                                                                               const std::string &chainid,
                                                                               TokenID            tokenid,
+                                                                              std::string        destination,
                                                                               std::chrono::milliseconds timeout )
     {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
@@ -1127,9 +1145,13 @@ namespace sgns
             return outcome::failure( boost::system::error_code{} );
         }
         auto start_time = std::chrono::steady_clock::now();
+        if ( destination.empty() )
+        {
+            destination = account_->GetAddress();
+        }
 
         OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid ) );
+        OUTCOME_TRY( auto &&tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid, destination ) );
 
         auto mint_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
 

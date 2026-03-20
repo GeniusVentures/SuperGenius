@@ -69,7 +69,10 @@ namespace sgns
         tx_struct.set_original_escrow_hash( original_escrow_hash_ );
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
-        tx_struct.SerializeToArray( serialized_proto.data(), static_cast<int>( size ) );
+        if ( !tx_struct.SerializeToArray( serialized_proto.data(), static_cast<int>( size ) ) )
+        {
+            std::cerr << "Failed to serialize transaction\n";
+        }
         return serialized_proto;
     }
 
@@ -79,7 +82,7 @@ namespace sgns
         SGTransaction::EscrowReleaseTx tx_struct;
         if ( !tx_struct.ParseFromArray( data.data(), static_cast<int>( data.size() ) ) )
         {
-            std::cerr << "Failed to parse EscrowReleaseTx from array." << std::endl;
+            std::cerr << "Failed to parse EscrowReleaseTx from array.\n";
             return nullptr;
         }
         std::vector<InputUTXOInfo> inputs;
@@ -91,7 +94,7 @@ namespace sgns
             auto          maybe_hash = base::Hash256::fromReadableString( input_proto.tx_id_hash() );
             if ( !maybe_hash )
             {
-                std::cerr << "Invalid hash in input" << std::endl;
+                std::cerr << "Invalid hash in input\n";
                 return nullptr;
             }
             curr.txid_hash_  = maybe_hash.value();
@@ -119,6 +122,16 @@ namespace sgns
     }
 
     UTXOTxParameters EscrowReleaseTransaction::GetUTXOParameters() const
+    {
+        return utxo_params_;
+    }
+
+    bool EscrowReleaseTransaction::HasUTXOParameters() const
+    {
+        return true;
+    }
+
+    std::optional<UTXOTxParameters> EscrowReleaseTransaction::GetUTXOParametersOpt() const
     {
         return utxo_params_;
     }

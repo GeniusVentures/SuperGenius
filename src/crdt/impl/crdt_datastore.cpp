@@ -1480,7 +1480,7 @@ namespace sgns::crdt
 
         for ( const auto &link : node->getLinks() )
         {
-            PrintDAGRec( link.get().getCID(), aDepth + 1, aSet );
+            BOOST_OUTCOME_TRY( PrintDAGRec( link.get().getCID(), aDepth + 1, aSet ) );
         }
 
         return outcome::success();

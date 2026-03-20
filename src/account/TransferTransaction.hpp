@@ -44,6 +44,18 @@ namespace sgns
         std::vector<OutputDestInfo> GetDstInfos() const;
         std::vector<InputUTXOInfo>  GetInputInfos() const;
 
+        /**
+         * @brief       Returns if transaction supports UTXOs
+         * @return      True if supported, false otherwise
+         */
+        bool                        HasUTXOParameters() const override;
+
+        /**
+         * @brief       Returns the UTXOs
+         * @return      If exists, returns the UTXOs of the transaction
+         */
+        std::optional<UTXOTxParameters> GetUTXOParametersOpt() const override;
+
         std::string GetTransactionSpecificPath() const override
         {
             return GetType();

@@ -66,17 +66,17 @@ namespace sgns
                                                 bool                is_full_node = false,
                                                 bool                use_upnp     = true );
 
-        static std::shared_ptr<GeniusNode> New( const DevConfig_st               &dev_config,
-                                                const GeniusAccount::Credentials &credentials,
-                                                bool                              autodht      = true,
-                                                bool                              isprocessor  = true,
-                                                uint16_t                          base_port    = 40001,
-                                                bool                              is_full_node = false,
-                                                bool                              use_upnp     = true );
+        static std::shared_ptr<GeniusNode> NewWithMnemonics( const DevConfig_st &dev_config,
+                                                             const char         *mnemonics,
+                                                             bool                autodht      = true,
+                                                             bool                isprocessor  = true,
+                                                             uint16_t            base_port    = 40001,
+                                                             bool                is_full_node = false,
+                                                             bool                use_upnp     = true );
 
         ~GeniusNode() override;
 
-        enum class NodeState: uint8_t
+        enum class NodeState : uint8_t
         {
             CREATING = 0,
             MIGRATING_DATABASE,
@@ -91,7 +91,7 @@ namespace sgns
         /**
          * @brief      GeniusNode Error class
          */
-        enum class Error: uint8_t
+        enum class Error : uint8_t
         {
             INSUFFICIENT_FUNDS       = 1,  ///< Insufficient funds for a transaction
             DATABASE_WRITE_ERROR     = 2,  ///< Error writing data into the database
@@ -145,7 +145,8 @@ namespace sgns
             const std::string        &transaction_hash,
             const std::string        &chainid,
             TokenID                   tokenid,
-            std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_MINT ) );
+            std::string               destination = "",
+            std::chrono::milliseconds timeout     = std::chrono::milliseconds( TIMEOUT_MINT ) );
 
         void AddPeer( const std::string &peer );
         void RefreshUPNP( uint16_t pubsubport );

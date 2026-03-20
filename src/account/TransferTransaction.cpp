@@ -6,7 +6,6 @@
  */
 #include "TransferTransaction.hpp"
 
-#include "crypto/hasher/hasher_impl.hpp"
 #include "base/blob.hpp"
 
 namespace sgns
@@ -53,7 +52,10 @@ namespace sgns
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
 
-        tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
+        if ( !tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() ) )
+        {
+            std::cerr << "Failed to serialize transaction\n";
+        }
         return serialized_proto;
     }
 
@@ -62,7 +64,7 @@ namespace sgns
         SGTransaction::TransferTx tx_struct;
         if ( !tx_struct.ParseFromArray( data.data(), data.size() ) )
         {
-            std::cerr << "Failed to parse TransferTx from array." << std::endl;
+            std::cerr << "Failed to parse TransferTx from array.\n";
         }
         std::vector<InputUTXOInfo>   inputs;
         SGTransaction::UTXOTxParams *utxo_proto_params = tx_struct.mutable_utxo_params();
@@ -98,6 +100,16 @@ namespace sgns
     std::vector<InputUTXOInfo> TransferTransaction::GetInputInfos() const
     {
         return input_tx_;
+    }
+
+    bool TransferTransaction::HasUTXOParameters() const
+    {
+        return true;
+    }
+
+    std::optional<UTXOTxParameters> TransferTransaction::GetUTXOParametersOpt() const
+    {
+        return UTXOTxParameters{ input_tx_, outputs_ };
     }
 
     std::unordered_set<std::string> TransferTransaction::GetTopics() const

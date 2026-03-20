@@ -170,11 +170,7 @@ TEST_F( TransactionSyncTest, TransactionSimpleTransfer )
     auto balance_2_before = node_proc2->GetBalance();
 
     // Mint tokens with timeout
-    auto mint_result = node_proc1->MintTokens( 10000000000,
-                                               "",
-                                               "",
-                                               sgns::TokenID::FromBytes( { 0x00 } ),
-                                               std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    auto mint_result = node_proc1->MintTokens( 10000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
     auto [mint_tx_id, mint_duration] = mint_result.value();
@@ -247,11 +243,7 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
 
     for ( auto amount : mint_amounts )
     {
-        auto mint_result = node_proc1->MintTokens( amount,
-                                                   "",
-                                                   "",
-                                                   sgns::TokenID::FromBytes( { 0x00 } ),
-                                                   std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+        auto mint_result = node_proc1->MintTokens( amount, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
         ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction of " << amount << " failed or timed out";
 
         auto [tx_id, duration] = mint_result.value();
@@ -259,18 +251,10 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
     }
 
     // Mint tokens on node_proc2
-    auto mint_result1 = node_proc2->MintTokens( 10000000000,
-                                                "",
-                                                "",
-                                                sgns::TokenID::FromBytes( { 0x00 } ),
-                                                std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    auto mint_result1 = node_proc2->MintTokens( 10000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
     ASSERT_TRUE( mint_result1.has_value() ) << "Mint transaction failed or timed out";
 
-    auto mint_result2 = node_proc2->MintTokens( 20000000000,
-                                                "",
-                                                "",
-                                                sgns::TokenID::FromBytes( { 0x00 } ),
-                                                std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    auto mint_result2 = node_proc2->MintTokens( 20000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
     ASSERT_TRUE( mint_result2.has_value() ) << "Mint transaction failed or timed out";
 
     // Verify balances after minting
@@ -439,17 +423,9 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
         "full_node not synched" );
 
     // Mint tokens with timeout
-    auto mint_result = node_proc1->MintTokens( 10000000000,
-                                               "",
-                                               "",
-                                               TokenID::FromBytes( { 0x00 } ),
-                                               std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    auto mint_result = node_proc1->MintTokens( 10000000000, "", "", TokenID::FromBytes( { 0x00 } ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
-    mint_result = node_proc1->MintTokens( 10000000000,
-                                          "",
-                                          "",
-                                          TokenID::FromBytes( { 0x00 } ),
-                                          std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    mint_result = node_proc1->MintTokens( 10000000000, "", "", TokenID::FromBytes( { 0x00 } ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
     auto [mint_tx_id, mint_duration] = mint_result.value();

@@ -100,6 +100,14 @@ message MintTx
     bytes token_id = 3;
     uint64 amount = 4; // 
 }
+message MintTxV2
+{
+    DAGStruct dag_struct = 1;//
+    bytes chain_id = 2;
+    bytes token_id = 3;
+    uint64 amount = 4; //
+    UTXOTxParams utxo_params = 5;
+}
 message EscrowTx
 {
     DAGStruct dag_struct = 1;// 

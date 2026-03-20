@@ -20,14 +20,16 @@ target_link_libraries(sgns_genius_account
     logger
     crdt_globaldb
     ipfs-pubsub
+    TrustWalletCore
     PRIVATE
+    hasher
+    json_secure_storage
     secure_storage
     component_factory
     SGAccountCommProto
     SGTransactionProto
     ${WIN_API_LIBRARY}
     ${USER_ENV_LIBRARY}
-    TrustWalletCore
     wallet_core_rs
     TrezorCrypto
     protobuf::libprotobuf
@@ -54,6 +56,7 @@ add_library(genius_node
     IGeniusTransactions.cpp
     TransferTransaction.cpp
     MintTransaction.cpp
+    MintTransactionV2.cpp
     ProcessingTransaction.cpp
     EscrowTransaction.cpp
     EscrowReleaseTransaction.cpp
@@ -63,8 +66,7 @@ add_library(genius_node
     Migration0_2_0To1_0_0.cpp
     Migration1_0_0To3_4_0.cpp
     Migration3_4_0To3_5_0.cpp
-    Migration3_5_0To3_5_1.cpp
-    Migration3_5_1To3_6_0.cpp
+    Migration3_5_0To3_6_0.cpp
     GeniusNode.cpp
 )
 
@@ -82,8 +84,8 @@ target_link_libraries(genius_node
     sgns_genius_account  # Link to the GeniusAccount library
     blockchain_genesis
 	ProcessingBase
+    rlp
     PRIVATE
-    json_secure_storage
     secure_storage
     component_factory
     block_header_repository
@@ -116,6 +118,8 @@ target_link_libraries(genius_node
     transfer_proof
     processing_proof
 )
+
+add_dependencies(genius_node rlp)
 
 set_target_properties(genius_node PROPERTIES PUBLIC_HEADER "GeniusNode.hpp")
 if(MSVC)

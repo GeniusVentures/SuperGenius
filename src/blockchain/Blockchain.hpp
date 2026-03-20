@@ -29,7 +29,7 @@ namespace sgns
 {
     class ValidatorRegistry;
 
-    class Migration3_5_1To3_6_0;
+    class Migration3_5_0To3_6_0;
 
     class Blockchain : public std::enable_shared_from_this<Blockchain>
     {
@@ -132,7 +132,7 @@ namespace sgns
         const std::string    &BestHash( const std::string &a, const std::string &b ) const;
 
     protected:
-        friend class Migration3_5_1To3_6_0;
+        friend class Migration3_5_0To3_6_0;
 
         static outcome::result<void> MigrateCids( const std::shared_ptr<crdt::GlobalDB> &old_db,
                                                   const std::shared_ptr<crdt::GlobalDB> &new_db );
@@ -165,12 +165,13 @@ namespace sgns
         bool ShouldReplaceAccountCreation( const AccountCreationBlock &existing,
                                            const AccountCreationBlock &candidate ) const;
 
-        void GenesisReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair &new_data, const std::string &cid );
-        void AccountCreationReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair &new_data,
-                                              const std::string                            &cid );
+        outcome::result<void> GenesisReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair &new_data,
+                                                       const std::string                            &cid );
+        outcome::result<void> AccountCreationReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair &new_data,
+                                                               const std::string                            &cid );
         outcome::result<void> InformBlockchainResult( outcome::result<void> result ) const;
-        void                  InformGenesisResult( outcome::result<std::string> result );
-        void                  InformAccountCreationResponse( outcome::result<std::string> creation_result );
+        outcome::result<void> InformGenesisResult( outcome::result<std::string> result );
+        outcome::result<void> InformAccountCreationResponse( outcome::result<std::string> creation_result );
         void                  WatchCIDDownload( const std::string &cid, Error error_on_failure, uint64_t timeout_ms );
         outcome::result<void> EnsureValidatorRegistry() const;
 

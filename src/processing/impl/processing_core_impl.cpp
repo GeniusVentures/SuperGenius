@@ -57,13 +57,16 @@ namespace sgns::processing
             libp2p::injector::makeKademliaInjector( libp2p::injector::useKademliaConfig( kademlia_config ) ) );
         auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
 
-        task.ParseFromArray( queryTasks.value().data(), queryTasks.value().size() );
+        if ( !task.ParseFromArray( queryTasks.value().data(), queryTasks.value().size() ) )
+        {
+            return std::errc::bad_message;
+        }
         //Parse main json data
         OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( task.json_data() ) );
         m_currentProcessingManager = procmgr; // Store for progress tracking
         //Parse subtask json
-        auto                              subtaskjson = nlohmann::json::parse( subTask.json_data() );
-        sgns::ModelNode                 model;
+        auto            subtaskjson = nlohmann::json::parse( subTask.json_data() );
+        sgns::ModelNode model;
         sgns::from_json( subtaskjson, model );
         std::vector<std::vector<uint8_t>> chunkhashes;
         auto                              tempResult = procmgr->Process( ioc, chunkhashes, model );
@@ -93,10 +96,11 @@ namespace sgns::processing
 
     float ProcessingCoreImpl::GetProgress() const
     {
-        if (m_currentProcessingManager) {
+        if ( m_currentProcessingManager )
+        {
             return m_currentProcessingManager->GetProgress();
         }
         return 0.0f;
     }
-    
+
 }

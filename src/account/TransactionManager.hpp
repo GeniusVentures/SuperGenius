@@ -120,7 +120,8 @@ namespace sgns
         outcome::result<std::string> MintFunds( uint64_t    amount,
                                                 std::string transaction_hash,
                                                 std::string chainid,
-                                                TokenID     tokenid );
+                                                TokenID     tokenid,
+                                                std::string destination = "" );
         outcome::result<std::pair<std::string, EscrowDataPair>> HoldEscrow( uint64_t           amount,
                                                                             const std::string &dev_addr,
                                                                             uint64_t           peers_cut,
@@ -339,6 +340,8 @@ namespace sgns
                 { "transfer",
                   { &TransactionManager::ParseTransferTransaction, &TransactionManager::RevertTransferTransaction } },
                 { "mint", { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
+                { "mint-v2",
+                  { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
                 { "escrow-hold",
                   { &TransactionManager::ParseEscrowTransaction, &TransactionManager::RevertEscrowTransaction } },
                 { "escrow-release",

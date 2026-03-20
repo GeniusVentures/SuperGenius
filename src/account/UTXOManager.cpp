@@ -155,7 +155,7 @@ namespace sgns
     }
 
     //TODO - Remove the GeniusUTXO from parameters, instead add the necessary fields or IGeniusTransactions
-    bool UTXOManager::PutUTXO( GeniusUTXO new_utxo, const std::string &address )
+    outcome::result<bool> UTXOManager::PutUTXO( GeniusUTXO new_utxo, const std::string &address )
     {
         // If not a full node and trying to store UTXOs for other addresses, reject
         if ( !is_full_node_ && address != address_ )
@@ -176,11 +176,11 @@ namespace sgns
         utxo_outpoints_[outpoint] = UTXOEntry{ UTXOState::UTXO_READY, new_utxo };
         address_outpoints_[address].push_back( outpoint );
 
-        StoreUTXOs( address );
+        BOOST_OUTCOME_TRY( StoreUTXOs( address ) );
         return true;
     }
 
-    void UTXOManager::DeleteUTXO( const base::Hash256 &utxo_id, uint32_t output_idx, const std::string &address )
+    outcome::result<void> UTXOManager::DeleteUTXO( const base::Hash256 &utxo_id, uint32_t output_idx, const std::string &address )
     {
         // If not a full node and trying to delete UTXOs for other addresses, reject
         if ( !is_full_node_ && address != address_ )
@@ -203,12 +203,15 @@ namespace sgns
                 reserved_outpoints_.erase( outpoint );
                 utxo_outpoints_.erase( outpoint );
                 outpoints.erase( outpoint_it );
-                StoreUTXOs( address );
+                BOOST_OUTCOME_TRY( StoreUTXOs( address ) );
             }
         }
+
+        return outcome::success();
     }
 
-    bool UTXOManager::ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos, const std::string &address )
+    outcome::result<bool> UTXOManager::ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos,
+                                                     const std::string                &address )
     {
         bool             consumed = true;
         std::unique_lock lock( utxos_mutex_ );
@@ -242,7 +245,7 @@ namespace sgns
             consumed = consumed && utxo_found;
         }
 
-        StoreUTXOs( address );
+        BOOST_OUTCOME_TRY( StoreUTXOs( address ) );
 
         return consumed;
     }
