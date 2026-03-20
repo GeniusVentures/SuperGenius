@@ -132,6 +132,10 @@ namespace sgns::crdt
                         root_cid.toString().value(),
                         reinterpret_cast<size_t>( this ) );
 
+        logger_->info( "GRAPHSYNC_REQUEST: Fetching CID {} from peer {} (gap resolution data transfer)",
+                       root_cid.toString().value(),
+                       peer.toBase58() );
+
         return subscription;
     }
 

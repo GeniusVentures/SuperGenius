@@ -272,6 +272,10 @@ namespace sgns::crdt
         for ( auto &topic : broadcastTopicsCopy )
         {
             pubSub_->PublishBuffered( topic, serialized_proto );
+            m_logger->info( "PUBSUB_BROADCAST: Publishing {} bytes of data to topic {} (will deliver transaction "
+                            "data via CRDT to waiting nodes)",
+                            serialized_proto.size(),
+                            topic );
             if ( m_logger->level() <= spdlog::level::trace )
             {
                 m_logger->trace( "CIDs broadcasted by {} to topic {}, at this {}",

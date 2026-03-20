@@ -1815,6 +1815,14 @@ namespace sgns
         uint64_t expected_next_nonce = confirmed_nonce + 1;
         uint64_t proposed_nonce      = account_m->GetProposedNonce();
 
+        m_logger->debug( "[{} - full: {}] NONCE_CHECK: Full node confirmed nonce = {}, expected next = {}, "
+                         "proposed/local next = {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         confirmed_nonce,
+                         expected_next_nonce,
+                         proposed_nonce );
+
         if ( proposed_nonce == expected_next_nonce )
         {
             //Either my old txs are outdated or
@@ -1854,6 +1862,14 @@ namespace sgns
                              expected_next_nonce,
                              nonce_gap );
 
+            m_logger->info( "[{} - full: {}] Gap details: waiting for nonce {} from full node (confirmed at {}). "
+                            "Local has transactions up to {}.",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            expected_next_nonce,
+                            confirmed_nonce,
+                            proposed_nonce );
+
             // If we're behind at all, we need to catch up - even a gap of 1 means
             // there's transaction data in CRDT that we don't have, and we cannot
             // safely propose new transactions until we're caught up
@@ -1874,10 +1890,13 @@ namespace sgns
             auto elapsed = std::chrono::duration_cast<std::chrono::seconds>( now - last_head_request_time_.value() );
             if ( elapsed.count() < 30 )
             {
-                m_logger->trace( "[{} - full: {}] Skipping head request - too soon since last request ({}s ago)",
+                int seconds_remaining = 30 - elapsed.count();
+                m_logger->debug( "[{} - full: {}] GAP_RESOLUTION: Head request throttled - only {}s since last request "
+                                 "(30s min). Will retry in ~{}s.",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
-                                 elapsed.count() );
+                                 elapsed.count(),
+                                 seconds_remaining );
                 return;
             }
         }
@@ -1885,27 +1904,26 @@ namespace sgns
         auto topics_result = globaldb_m->GetMonitoredTopics();
         if ( !topics_result.has_value() )
         {
-            m_logger->warn( "[{} - full: {}] Could not get monitored topics for head request",
+            m_logger->warn( "[{} - full: {}] GAP_RESOLUTION: Could not get monitored topics for head request - "
+                            "cannot resolve gap",
                             account_m->GetAddress().substr( 0, 8 ),
                             full_node_m );
             return;
         }
-        m_logger->info( "[{} - full: {}] Requesting heads for {} topics",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        topics_result.value().size() );
 
         if ( account_m->RequestHeads( topics_result.value() ) )
         {
             last_head_request_time_ = now;
-            m_logger->debug( "[{} - full: {}] Periodic sync head request sent for {} topics",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             topics_result.value().size() );
+            m_logger->info( "[{} - full: {}] GAP_RESOLUTION: Head request sent for {} topics to fetch missing "
+                            "transaction data",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            topics_result.value().size() );
         }
         else
         {
-            m_logger->warn( "[{} - full: {}] Failed to request heads",
+            m_logger->warn( "[{} - full: {}] GAP_RESOLUTION: Failed to request heads from full node - gap cannot "
+                            "be resolved",
                             account_m->GetAddress().substr( 0, 8 ),
                             full_node_m );
         }
@@ -2695,6 +2713,12 @@ namespace sgns
                 account_m->SetLocalConfirmedNonce( nonce );
                 outgoing_tx_processed_m[key]   = TrackedTx{ new_tx, TransactionStatus::CONFIRMED, nonce };
                 outgoing_nonce_to_key_m[nonce] = key; // Add to nonce index
+
+                m_logger->info( "[{} - full: {}] GAP_RESOLUTION: Own transaction nonce {} received from CRDT "
+                                "(gossiped back from full node) - gap potentially closed",
+                                account_m->GetAddress().substr( 0, 8 ),
+                                full_node_m,
+                                nonce );
             }
         }
         else
