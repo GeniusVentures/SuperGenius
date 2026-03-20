@@ -111,11 +111,11 @@ namespace sgns
         std::vector<std::vector<uint8_t>> GetInTransactions() const;
 
         outcome::result<std::string> TransferFunds( uint64_t amount, const std::string &destination, TokenID token_id );
-        outcome::result<std::string> MintFunds( uint64_t           amount,
-                                                std::string        transaction_hash,
-                                                std::string        chainid,
-                                                TokenID            tokenid,
-                                                const std::string &destination );
+        outcome::result<std::string> MintFunds( uint64_t    amount,
+                                                std::string transaction_hash,
+                                                std::string chainid,
+                                                TokenID     tokenid,
+                                                std::string destination = "" );
         outcome::result<std::pair<std::string, EscrowDataPair>> HoldEscrow( uint64_t           amount,
                                                                             const std::string &dev_addr,
                                                                             uint64_t           peers_cut,

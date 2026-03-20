@@ -479,11 +479,15 @@ namespace sgns
                                                                 std::string transaction_hash,
                                                                 std::string chainid,
                                                                 TokenID     tokenid,
-                                                                const std::string &destination )
+                                                                std::string destination )
     {
         if ( GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
+        }
+        if ( destination.empty() )
+        {
+            destination = account_m->GetAddress();
         }
         auto mint_transaction = std::make_shared<MintTransactionV2>(
             MintTransactionV2::New( amount,
@@ -1257,8 +1261,9 @@ namespace sgns
             return std::errc::invalid_argument;
         }
 
-        auto       hash = ( base::Hash256::fromReadableString( mint_tx->GetHash() ) ).value();
-        BOOST_OUTCOME_TRY( utxo_manager_.PutUTXO( GeniusUTXO( hash, 0, mint_tx->GetAmount(), mint_tx->GetTokenID() ), mint_tx->GetSrcAddress() ) );
+        auto hash = ( base::Hash256::fromReadableString( mint_tx->GetHash() ) ).value();
+        BOOST_OUTCOME_TRY( utxo_manager_.PutUTXO( GeniusUTXO( hash, 0, mint_tx->GetAmount(), mint_tx->GetTokenID() ),
+                                                  mint_tx->GetSrcAddress() ) );
         m_logger->info( "[{} - full: {}] Created tokens, amount {} balance {}",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,

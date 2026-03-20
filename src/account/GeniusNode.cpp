@@ -1131,7 +1131,7 @@ namespace sgns
                                                                               const std::string &transaction_hash,
                                                                               const std::string &chainid,
                                                                               TokenID            tokenid,
-                                                                              const std::string &destination,
+                                                                              std::string        destination,
                                                                               std::chrono::milliseconds timeout )
     {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
@@ -1139,11 +1139,10 @@ namespace sgns
             node_logger_->error( "{}: Transaction manager not ready", __func__ );
             return outcome::failure( boost::system::error_code{} );
         }
-        auto        start_time = std::chrono::steady_clock::now();
-        std::string mint_dest  = destination;
-        if ( mint_dest.empty() )
+        auto start_time = std::chrono::steady_clock::now();
+        if ( destination.empty() )
         {
-            mint_dest = account_->GetAddress();
+            destination = account_->GetAddress();
         }
 
         OUTCOME_TRY( auto &&manager, GetTransactionManager() );
@@ -1162,15 +1161,6 @@ namespace sgns
 
         node_logger_->debug( "Mint transaction {} completed in {} ms", tx_id, duration );
         return std::make_pair( tx_id, duration );
-    }
-
-    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::MintTokens( uint64_t           amount,
-                                                                              const std::string &transaction_hash,
-                                                                              const std::string &chainid,
-                                                                              TokenID            tokenid,
-                                                                              std::chrono::milliseconds timeout )
-    {
-        return MintTokens( amount, transaction_hash, chainid, std::move( tokenid ), account_->GetAddress(), timeout );
     }
 
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::TransferFunds( uint64_t                  amount,

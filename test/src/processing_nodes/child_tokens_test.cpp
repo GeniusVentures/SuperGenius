@@ -17,7 +17,6 @@
 #include <boost/multiprecision/cpp_dec_float.hpp>
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 
-
 using namespace sgns::test;
 using boost::multiprecision::cpp_dec_float_50;
 
@@ -182,19 +181,11 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     }
 
     // Ensure enough balance with +1 change
-    auto mintRes51 = node51->MintTokens( totalMint51 + 1,
-                                         "",
-                                         "",
-                                         sgns::TokenID::FromBytes( { 0x51 } ),
-                                         std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    auto mintRes51 = node51->MintTokens( totalMint51 + 1, "", "", sgns::TokenID::FromBytes( { 0x51 } ) );
     ASSERT_TRUE( mintRes51.has_value() ) << "Grouped mint failed on token51";
     std::cout << "Minted total " << ( totalMint51 + 1 ) << " of token51 on node51\n";
 
-    auto mintRes52 = node52->MintTokens( totalMint52 + 1,
-                                         "",
-                                         "",
-                                         sgns::TokenID::FromBytes( { 0x52 } ),
-                                         std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    auto mintRes52 = node52->MintTokens( totalMint52 + 1, "", "", sgns::TokenID::FromBytes( { 0x52 } ) );
     ASSERT_TRUE( mintRes52.has_value() ) << "Grouped mint failed on token52";
     std::cout << "Minted total " << ( totalMint52 + 1 ) << " of token52 on node52\n";
 
@@ -284,11 +275,7 @@ TEST_P( GeniusNodeMintMainTest, MintMainBalance )
     auto        parsedInitialChild = node->ParseTokens( initialChildStr, p.TokenID );
     ASSERT_TRUE( parsedInitialChild.has_value() );
 
-    auto res = node->MintTokens( p.mintMain,
-                                 "",
-                                 "",
-                                 p.TokenID,
-                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    auto res = node->MintTokens( p.mintMain, "", "", p.TokenID );
     ASSERT_TRUE( res.has_value() );
 
     auto finalFmtRes = node->FormatTokens( node->GetBalance(), p.TokenID );
@@ -333,9 +320,7 @@ inline std::ostream &operator<<( std::ostream &os, MintChildCase_s const &c )
 class GeniusNodeMintChildTest : public ::testing::TestWithParam<MintChildCase_s>
 {
 protected:
-    static void SetUpTestSuite()
-    {
-    }
+    static void SetUpTestSuite() {}
 };
 
 TEST_P( GeniusNodeMintChildTest, MintChildBalance )
@@ -364,11 +349,7 @@ TEST_P( GeniusNodeMintChildTest, MintChildBalance )
     auto parsedMint = node->ParseTokens( p.mintChild, p.TokenID );
     ASSERT_TRUE( parsedMint.has_value() );
 
-    auto res = node->MintTokens( parsedMint.value(),
-                                 "",
-                                 "",
-                                 p.TokenID,
-                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    auto res = node->MintTokens( parsedMint.value(), "", "", p.TokenID );
     ASSERT_TRUE( res.has_value() );
 
     auto finalFmtRes = node->FormatTokens( node->GetBalance(), p.TokenID );
@@ -445,11 +426,7 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
 
     for ( const auto &tm : mints )
     {
-        auto res = node->MintTokens( tm.amount,
-                                     "",
-                                     "",
-                                     tm.tokenId,
-                                     std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+        auto res = node->MintTokens( tm.amount, "", "", tm.tokenId );
         ASSERT_TRUE( res.has_value() ); // << "MintTokens failed for token=" << tm.tokenId << " amount=" << tm.amount;
 
         expectedTotals[tm.tokenId] += tm.amount;
@@ -504,14 +481,10 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
         std::chrono::milliseconds( 30000 ),
         "node_proc2 not synched" );
 
-    auto mintResMain = node_main->MintTokens( 1000,
-                                              "",
-                                              "",
-                                              sgns::TokenID::FromBytes( { 0x00 } ),
-                                              std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    auto mintResMain = node_main->MintTokens( 1000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
     ASSERT_TRUE( mintResMain.has_value() ) << "Mint failed on node_main";
 
-    std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
+    std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
     std::string json_data = R"(
 {
   "name": "posenet-inference",

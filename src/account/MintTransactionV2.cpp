@@ -51,7 +51,10 @@ namespace sgns
 
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
-        tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
+        if ( !tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() ) )
+        {
+            std::cerr << "Failed to Serialize MintTxV2 to array" << std::endl;
+        }
         return serialized_proto;
     }
 
@@ -108,8 +111,10 @@ namespace sgns
             }
         }
 
-        return std::make_shared<MintTransactionV2>( MintTransactionV2(
-            { std::move( inputs ), std::move( outputs ) }, chainid, tokenid, tx_struct.dag_struct() ) );
+        return std::make_shared<MintTransactionV2>( MintTransactionV2( { std::move( inputs ), std::move( outputs ) },
+                                                                       chainid,
+                                                                       tokenid,
+                                                                       tx_struct.dag_struct() ) );
     }
 
     uint64_t MintTransactionV2::GetAmount() const
@@ -177,8 +182,10 @@ namespace sgns
         }
 
         std::vector<OutputDestInfo> mint_outputs{ { new_amount, mint_destination, token_id } };
-        MintTransactionV2            instance(
-            { std::move( mint_inputs ), std::move( mint_outputs ) }, std::move( chain_id ), std::move( token_id ), std::move( dag ) );
+        MintTransactionV2           instance( { std::move( mint_inputs ), std::move( mint_outputs ) },
+                                    std::move( chain_id ),
+                                    std::move( token_id ),
+                                    std::move( dag ) );
         instance.FillHash();
         return instance;
     }
