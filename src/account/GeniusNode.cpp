@@ -228,16 +228,6 @@ namespace sgns
                             bool                           use_upnp ) :
         write_base_path_( dev_config.BaseWritePath ),
         account_( std::move( account ) ),
-        utxo_manager_(
-            is_full_node,
-            account_->GetAddress(),
-            [this]( const std::vector<uint8_t> data ) { return this->account_->Sign( data ); },
-            []( const std::string &address, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
-            {
-                return GeniusAccount::VerifySignature( address,
-                                                       std::string( signature.begin(), signature.end() ),
-                                                       data );
-            } ),
         io_( std::make_shared<boost::asio::io_context>() ),
         autodht_( autodht ),
         isprocessor_( isprocessor ),
@@ -442,7 +432,6 @@ namespace sgns
             {
                 transaction_manager_ = TransactionManager::New( tx_globaldb_,
                                                                 io_,
-                                                                utxo_manager_,
                                                                 account_,
                                                                 std::make_shared<crypto::HasherImpl>(),
                                                                 is_full_node_ );
@@ -1014,7 +1003,7 @@ namespace sgns
             return outcome::failure( Error::PROCESS_COST_ERROR );
         }
 
-        if ( utxo_manager_.GetBalance() < funds )
+        if ( account_->GetUTXOManager().GetBalance() < funds )
         {
             return outcome::failure( Error::INSUFFICIENT_FUNDS );
         }
@@ -1367,22 +1356,22 @@ namespace sgns
 
     uint64_t GeniusNode::GetBalance()
     {
-        return utxo_manager_.GetBalance();
+        return account_->GetUTXOManager().GetBalance();
     }
 
     uint64_t GeniusNode::GetBalance( const TokenID token_id )
     {
-        return utxo_manager_.GetBalance( token_id );
+        return account_->GetUTXOManager().GetBalance( token_id );
     }
 
     uint64_t GeniusNode::GetBalance( const std::string &address )
     {
-        return utxo_manager_.GetBalance( address );
+        return account_->GetUTXOManager().GetBalance( address );
     }
 
     uint64_t GeniusNode::GetBalance( const TokenID token_id, const std::string &address )
     {
-        return utxo_manager_.GetBalance( token_id, address );
+        return account_->GetUTXOManager().GetBalance( token_id, address );
     }
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )

@@ -155,7 +155,7 @@ namespace sgns
 
         UTXOManager *GetUTXOManagerFromNode( sgns::GeniusNode &node )
         {
-            return &node.utxo_manager_;
+            return &node.account_->GetUTXOManager();
         }
 
         void SendPair( sgns::GeniusNode &node, std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof )

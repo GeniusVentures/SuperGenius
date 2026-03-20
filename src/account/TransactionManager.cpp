@@ -34,7 +34,6 @@ namespace sgns
 {
     std::shared_ptr<TransactionManager> TransactionManager::New( std::shared_ptr<crdt::GlobalDB>          processing_db,
                                                                  std::shared_ptr<boost::asio::io_context> ctx,
-                                                                 UTXOManager                             &utxo_manager,
                                                                  std::shared_ptr<GeniusAccount>           account,
                                                                  std::shared_ptr<crypto::Hasher>          hasher,
                                                                  bool                                     full_node,
@@ -43,7 +42,6 @@ namespace sgns
     {
         auto instance = std::shared_ptr<TransactionManager>( new TransactionManager( std::move( processing_db ),
                                                                                      std::move( ctx ),
-                                                                                     utxo_manager,
                                                                                      std::move( account ),
                                                                                      std::move( hasher ),
                                                                                      full_node,
@@ -107,7 +105,7 @@ namespace sgns
                 if ( auto strong = weak_ptr.lock() )
                 {
                     std::vector<std::string> results;
-                    auto                     utxos = strong->utxo_manager_.GetUTXOs( address );
+                    auto                     utxos = strong->account_m->GetUTXOManager().GetUTXOs( address );
                     results.reserve( utxos.size() );
 
                     for ( const auto &utxo : utxos )
@@ -134,7 +132,6 @@ namespace sgns
 
     TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                                             std::shared_ptr<boost::asio::io_context> ctx,
-                                            UTXOManager                             &utxo_manager,
                                             std::shared_ptr<GeniusAccount>           account,
                                             std::shared_ptr<crypto::Hasher>          hasher,
                                             bool                                     full_node,
@@ -143,7 +140,6 @@ namespace sgns
         globaldb_m( std::move( processing_db ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
-        utxo_manager_( utxo_manager ),
         hasher_m( std::move( hasher ) ),
         full_node_m( full_node ),
         state_m( State::CREATING ),
@@ -224,7 +220,7 @@ namespace sgns
         auto now                  = std::chrono::steady_clock::now();
         auto time_since_last_loop = std::chrono::duration_cast<std::chrono::milliseconds>( now - last_loop_time_ )
                                         .count();
-        last_loop_time_ = now;
+        last_loop_time_           = now;
 
         std::vector<std::string> elements_to_delete;
         {
@@ -442,7 +438,7 @@ namespace sgns
     void TransactionManager::PrintAccountInfo() const
     {
         std::cout << "Account Address: " << account_m->GetAddress() << std::endl;
-        std::cout << "Balance: " << std::to_string( utxo_manager_.GetBalance() ) << std::endl;
+        std::cout << "Balance: " << std::to_string( account_m->GetUTXOManager().GetBalance() ) << std::endl;
         std::cout << "Token Type: " << account_m->GetToken() << std::endl;
         std::cout << "Nonce: " << account_m->GetNonce() << std::endl;
     }
@@ -460,7 +456,7 @@ namespace sgns
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        BOOST_OUTCOME_TRY( auto params, utxo_manager_.CreateTxParameter( amount, destination, token_id ) );
+        BOOST_OUTCOME_TRY( auto params, account_m->GetUTXOManager().CreateTxParameter( amount, destination, token_id ) );
         auto [inputs, outputs] = params;
 
         auto transfer_transaction = std::make_shared<TransferTransaction>(
@@ -468,7 +464,7 @@ namespace sgns
 
         transfer_transaction->MakeSignature( *account_m );
 
-        utxo_manager_.ReserveUTXOs( inputs );
+        account_m->GetUTXOManager().ReserveUTXOs( inputs );
 
         EnqueueTransaction( std::make_pair( transfer_transaction, std::nullopt ) );
 
@@ -518,11 +514,11 @@ namespace sgns
         auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
 
         BOOST_OUTCOME_TRY( auto params,
-                     utxo_manager_.CreateTxParameter( amount,
+                     account_m->GetUTXOManager().CreateTxParameter( amount,
                                                       "0x" + hash_data.toReadableString(),
-                                                      TokenID::FromBytes( { 0x00 } ) ) );
+                                                                    TokenID::FromBytes( { 0x00 } ) ) );
         auto [inputs, outputs] = params;
-        utxo_manager_.ReserveUTXOs( inputs );
+        account_m->GetUTXOManager().ReserveUTXOs( inputs );
 
         auto escrow_transaction = std::make_shared<EscrowTransaction>(
             EscrowTransaction::New( params, amount, dev_addr, peers_cut, FillDAGStruct() ) );
@@ -1206,7 +1202,7 @@ namespace sgns
         {
             auto       hash = ( base::Hash256::fromReadableString( transfer_tx->GetHash() ) ).value();
             GeniusUTXO new_utxo( hash, i, dest_infos[i].encrypted_amount, dest_infos[i].token_id );
-            BOOST_OUTCOME_TRY( utxo_manager_.PutUTXO( new_utxo, dest_infos[i].dest_address ) );
+            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().PutUTXO( new_utxo, dest_infos[i].dest_address ) );
 
             m_logger->debug( "[{} - full: {}] Notify {} of transfer of {} to it",
                              account_m->GetAddress().substr( 0, 8 ),
@@ -1226,7 +1222,7 @@ namespace sgns
                              full_node_m,
                              input.output_idx_ );
         }
-        BOOST_OUTCOME_TRY( utxo_manager_.ConsumeUTXOs( transfer_tx->GetInputInfos(), transfer_tx->GetSrcAddress() ) );
+        BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( transfer_tx->GetInputInfos(), transfer_tx->GetSrcAddress() ) );
         return outcome::success();
     }
 
@@ -1262,13 +1258,13 @@ namespace sgns
         }
 
         auto hash = ( base::Hash256::fromReadableString( mint_tx->GetHash() ) ).value();
-        BOOST_OUTCOME_TRY( utxo_manager_.PutUTXO( GeniusUTXO( hash, 0, mint_tx->GetAmount(), mint_tx->GetTokenID() ),
+        BOOST_OUTCOME_TRY( account_m->GetUTXOManager().PutUTXO( GeniusUTXO( hash, 0, mint_tx->GetAmount(), mint_tx->GetTokenID() ),
                                                   mint_tx->GetSrcAddress() ) );
         m_logger->info( "[{} - full: {}] Created tokens, amount {} balance {}",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
                         std::to_string( mint_tx->GetAmount() ),
-                        std::to_string( utxo_manager_.GetBalance() ) );
+                        std::to_string( account_m->GetUTXOManager().GetBalance() ) );
 
         return outcome::success();
     }
@@ -1288,10 +1284,10 @@ namespace sgns
                 if ( outputs.size() > 1 )
                 {
                     GeniusUTXO new_utxo( hash, 1, outputs[1].encrypted_amount, outputs[1].token_id );
-                    BOOST_OUTCOME_TRY( utxo_manager_.PutUTXO( new_utxo, outputs[1].dest_address ) );
+                    BOOST_OUTCOME_TRY( account_m->GetUTXOManager().PutUTXO( new_utxo, outputs[1].dest_address ) );
                 }
                 BOOST_OUTCOME_TRY(
-                    utxo_manager_.ConsumeUTXOs( escrow_tx->GetUTXOParameters().first, escrow_tx->GetSrcAddress() ) );
+                    account_m->GetUTXOManager().ConsumeUTXOs( escrow_tx->GetUTXOParameters().first, escrow_tx->GetSrcAddress() ) );
             }
         }
 
@@ -1329,7 +1325,7 @@ namespace sgns
         for ( const auto &dest_info : dest_infos )
         {
             auto hash = ( base::Hash256::fromReadableString( transfer_tx->GetHash() ) ).value();
-            BOOST_OUTCOME_TRY( utxo_manager_.DeleteUTXO( hash, dest_info.dest_address ) );
+            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().DeleteUTXO( hash, dest_info.dest_address ) );
 
             m_logger->debug( "[{} - full: {}] Notify {} of deletion of {} to it",
                              account_m->GetAddress().substr( 0, 8 ),
@@ -1362,7 +1358,7 @@ namespace sgns
                 BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
             }
         }
-        utxo_manager_.RollbackUTXOs( transfer_tx->GetInputInfos() );
+        account_m->GetUTXOManager().RollbackUTXOs( transfer_tx->GetInputInfos() );
 
         return outcome::success();
     }
@@ -1399,13 +1395,13 @@ namespace sgns
         }
 
         auto hash = ( base::Hash256::fromReadableString( mint_tx->GetHash() ) ).value();
-        BOOST_OUTCOME_TRY( utxo_manager_.DeleteUTXO( hash, mint_tx->GetSrcAddress() ) );
+        BOOST_OUTCOME_TRY( account_m->GetUTXOManager().DeleteUTXO( hash, mint_tx->GetSrcAddress() ) );
         m_logger->info( "[{} - full: {}] Deleted {} tokens, from tx {}, final balance {}",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
                         mint_tx->GetAmount(),
                         mint_tx->GetHash(),
-                        std::to_string( utxo_manager_.GetBalance() ) );
+                        std::to_string( account_m->GetUTXOManager().GetBalance() ) );
 
         return outcome::success();
     }
@@ -1422,7 +1418,7 @@ namespace sgns
                 auto hash = ( base::Hash256::fromReadableString( escrow_tx->GetHash() ) ).value();
                 if ( outputs.size() > 1 )
                 {
-                    BOOST_OUTCOME_TRY( utxo_manager_.DeleteUTXO( hash, outputs[1].dest_address ) );
+                    BOOST_OUTCOME_TRY( account_m->GetUTXOManager().DeleteUTXO( hash, outputs[1].dest_address ) );
                 }
                 for ( auto &input : inputs )
                 {
@@ -1436,7 +1432,7 @@ namespace sgns
                         BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
                     }
                 }
-                utxo_manager_.RollbackUTXOs( inputs );
+                account_m->GetUTXOManager().RollbackUTXOs( inputs );
             }
         }
 
@@ -1643,7 +1639,7 @@ namespace sgns
         }
         m_logger->debug( "[{} - full: {}] Initializing UTXOs", account_m->GetAddress().substr( 0, 8 ), full_node_m );
 
-        auto utxo_result = utxo_manager_.LoadUTXOs( globaldb_m->GetDataStore() );
+        auto utxo_result = account_m->GetUTXOManager().LoadUTXOs( globaldb_m->GetDataStore() );
         if ( utxo_result.has_error() )
         {
             m_logger->error( "[{} - full: {}] Failed to load UTXOs from storage",
@@ -1686,7 +1682,7 @@ namespace sgns
             return;
         }
 
-        auto utxo_map = utxo_manager_.GetAllUTXOs();
+        auto utxo_map = account_m->GetUTXOManager().GetAllUTXOs();
 
         if ( has_local_utxos )
         {

@@ -1,16 +1,14 @@
+// Keep these include files here to prevent errors within crypto3's headers
+#include <nil/crypto3/algebra/marshalling.hpp>
+#include <nil/crypto3/pubkey/algorithm/sign.hpp>
+#include <nil/crypto3/pubkey/algorithm/verify.hpp>
+
 #include "GeniusAccount.hpp"
 
 #include <TrustWalletCore/TWCoinType.h>
 #include <TrustWalletCore/TWDerivation.h>
 #include <WalletCore/Coin.h>
 #include <WalletCore/HDWallet.h>
-#include <fstream>
-#include <random>
-
-#include <nil/crypto3/algebra/marshalling.hpp>
-#include <nil/crypto3/pubkey/algorithm/sign.hpp>
-#include <nil/crypto3/pubkey/algorithm/verify.hpp>
-#include <openssl/rand.h>
 #include <WalletCore/Hash.h>
 #include <WalletCore/PrivateKey.h>
 #include <ipfs_pubsub/gossip_pubsub.hpp>
@@ -120,8 +118,10 @@ namespace sgns
         auto [elgamal_address, eth_address] = std::move( addresses );
 
         auto instance = std::shared_ptr<GeniusAccount>(
-            new GeniusAccount( token_id, std::move( storage ), full_node ) );
-        instance->eth_keypair_     = std::make_shared<ethereum::EthereumKeyGenerator>( std::move( eth_address ) );
+            new GeniusAccount( std::make_shared<ethereum::EthereumKeyGenerator>( std::move( eth_address ) ),
+                               token_id,
+                               std::move( storage ),
+                               full_node ) );
         instance->elgamal_address_ = std::make_shared<KeyGenerator::ElGamal>( std::move( elgamal_address ) );
 
         return instance;
@@ -537,10 +537,24 @@ namespace sgns
         genius_account_logger()->debug( "Cleared database dependency handlers" );
     }
 
-    GeniusAccount::GeniusAccount( TokenID token_id, std::shared_ptr<ISecureStorage> storage, bool full_node ) :
+    GeniusAccount::GeniusAccount( std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair,
+                                  TokenID                                         token_id,
+                                  std::shared_ptr<ISecureStorage>                 storage,
+                                  bool                                            full_node ) :
+        eth_keypair_( std::move( eth_keypair ) ),
         token( token_id ),
-        storage_( std::move( storage ) ),
         is_full_node_( full_node ),
+        storage_( std::move( storage ) ),
+        utxo_manager_(
+            is_full_node_,
+            GetAddress(),
+            [this]( const std::vector<uint8_t> &data ) { return this->Sign( data ); },
+            []( const std::string &address, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
+            {
+                return GeniusAccount::VerifySignature( address,
+                                                       std::string( signature.begin(), signature.end() ),
+                                                       data );
+            } ),
         nonce_request_in_progress_( false ),
         cached_nonce_timestamp_( std::chrono::steady_clock::time_point{} )
     {

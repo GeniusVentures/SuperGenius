@@ -30,6 +30,7 @@
 #include "account/TokenID.hpp"
 #include "local_secure_storage/ISecureStorage.hpp"
 #include "outcome/outcome.hpp"
+#include "UTXOManager.hpp"
 
 #include <unordered_set>
 
@@ -255,6 +256,16 @@ namespace sgns
         static outcome::result<StorageWithAddress> GenerateGeniusAddress( const TW::PrivateKey          &private_key,
                                                                           const boost::filesystem::path &base_path );
 
+        const UTXOManager &GetUTXOManager() const
+        {
+            return utxo_manager_;
+        }
+
+        UTXOManager &GetUTXOManager()
+        {
+            return utxo_manager_;
+        }
+
     protected:
         friend class Blockchain;
         friend class TransactionManager;
@@ -293,6 +304,7 @@ namespace sgns
         std::set<uint64_t>                              pending_nonces_;   ///< Reserved but not confirmed nonces
         std::optional<uint64_t>                         local_confirmed_nonce_; ///< Highest locally confirmed nonce
         std::shared_ptr<AccountMessenger>               messenger_;             ///< Messenger instance
+        UTXOManager                                     utxo_manager_;
 
         // Nonce request tracking
         mutable std::mutex              nonce_request_mutex_; ///< Mutex for nonce request tracking
@@ -327,6 +339,9 @@ namespace sgns
          * @param[in]   storage Secure storage instance.
          * @param[in]   full_node Whether this account is a full node.
          */
-        GeniusAccount( TokenID token_id, std::shared_ptr<ISecureStorage> storage, bool full_node );
+        GeniusAccount( std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair,
+                       TokenID                                         token_id,
+                       std::shared_ptr<ISecureStorage>                 storage,
+                       bool                                            full_node );
     };
 }

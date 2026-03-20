@@ -28,8 +28,6 @@
 #include "base/buffer.hpp"
 #include "crypto/hasher.hpp"
 
-#include "proof/proto/SGProof.pb.h"
-
 #include "processing/proto/SGProcessing.pb.h"
 #include "outcome/outcome.hpp"
 
@@ -93,7 +91,6 @@ namespace sgns
         static std::shared_ptr<TransactionManager> New(
             std::shared_ptr<crdt::GlobalDB>          processing_db,
             std::shared_ptr<boost::asio::io_context> ctx,
-            UTXOManager                             &utxo_manager,
             std::shared_ptr<GeniusAccount>           account,
             std::shared_ptr<crypto::Hasher>          hasher,
             bool                                     full_node           = false,
@@ -199,7 +196,6 @@ namespace sgns
 
         TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                             std::shared_ptr<boost::asio::io_context> ctx,
-                            UTXOManager                             &utxo_manager,
                             std::shared_ptr<GeniusAccount>           account,
                             std::shared_ptr<crypto::Hasher>          hasher,
                             bool                                     full_node,
@@ -251,7 +247,6 @@ namespace sgns
 
         std::shared_ptr<boost::asio::io_context> ctx_m;
         std::shared_ptr<GeniusAccount>           account_m;
-        UTXOManager                             &utxo_manager_;
         std::shared_ptr<crypto::Hasher>          hasher_m;
         bool                                     full_node_m;
         std::string                              full_node_topic_m; ///< formatted full-node topic
