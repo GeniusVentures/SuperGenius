@@ -70,7 +70,7 @@ namespace sgns
         return balance;
     }
 
-    bool UTXOManager::PutUTXO( GeniusUTXO new_utxo, const std::string &address )
+    outcome::result<bool> UTXOManager::PutUTXO( GeniusUTXO new_utxo, const std::string &address )
     {
         // If not a full node and trying to store UTXOs for other addresses, reject
         if ( !is_full_node_ && address != address_ )
@@ -109,12 +109,12 @@ namespace sgns
         if ( is_new )
         {
             utxo_list.emplace_back( UTXOState::UTXO_READY, std::move( new_utxo ) );
-            StoreUTXOs( address );
+            BOOST_OUTCOME_TRY( StoreUTXOs( address ) );
         }
         return is_new;
     }
 
-    void UTXOManager::DeleteUTXO( const base::Hash256 &utxo_id, const std::string &address )
+    outcome::result<void> UTXOManager::DeleteUTXO( const base::Hash256 &utxo_id, const std::string &address )
     {
         // If not a full node and trying to delete UTXOs for other addresses, reject
         if ( !is_full_node_ && address != address_ )
@@ -140,12 +140,15 @@ namespace sgns
             }
             if ( deleted )
             {
-                StoreUTXOs( address );
+                BOOST_OUTCOME_TRY( StoreUTXOs( address ) );
             }
         }
+
+        return outcome::success();
     }
 
-    bool UTXOManager::ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos, const std::string &address )
+    outcome::result<bool> UTXOManager::ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos,
+                                                     const std::string                &address )
     {
         bool             consumed = true;
         std::unique_lock lock( utxos_mutex_ );
@@ -181,7 +184,7 @@ namespace sgns
             consumed = consumed && utxo_found;
         }
 
-        StoreUTXOs( address );
+        BOOST_OUTCOME_TRY( StoreUTXOs( address ) );
 
         return consumed;
     }

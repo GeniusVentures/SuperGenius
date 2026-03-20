@@ -48,29 +48,17 @@ namespace sgns::blockchain {
   }
 
   base::Buffer NumberToBuffer(primitives::BlockNumber n) {
-    // TODO(Harrm) Figure out why exactly it is this way in substrate
-    //BOOST_ASSERT((n & 0xffffffff00000000) == 0);
     SGBlocks::BlockID blockID;
 
     blockID.set_block_number(n);
     size_t               size = blockID.ByteSizeLong();
     std::vector<uint8_t> serialized_proto( size );
 
-    blockID.SerializeToArray( serialized_proto.data(), static_cast<int>(serialized_proto.size()) );
-    return base::Buffer{serialized_proto};
-    /**base::Buffer retval;
-
-    //Little endian
-    for ( std::size_t i = 0; i < sizeof(primitives::BlockNumber); ++i )
-    {
-        retval.putUint8(static_cast<uint8_t>((n >> (i * 8)) & 0xffu))  ;
+    if (!blockID.SerializeToArray( serialized_proto.data(), static_cast<int>(serialized_proto.size()))) {
+        std::cerr << "Failed to serialize blockID into array.\n";
     }
-    return retval;*/
-
-    //return {uint8_t(n >> 24u),
-    //        uint8_t((n >> 16u) & 0xffu),
-    //        uint8_t((n >> 8u) & 0xffu),
-    //        uint8_t(n & 0xffu)};
+    
+    return base::Buffer{serialized_proto};
   }
 
   base::Buffer numberAndHashToLookupKey(primitives::BlockNumber number,
@@ -90,20 +78,10 @@ namespace sgns::blockchain {
 
     if ( !blockID.ParseFromArray( key.toVector().data(), static_cast<int>(key.toVector().size()) ) )
     {
-        std::cerr << "Failed to parse BlockID from array." << std::endl;
+        std::cerr << "Failed to parse BlockID from array.\n";
     }
 
     return blockID.block_number();
-    /*primitives::BlockNumber retval = 0;
-
-    //Little endian
-    for ( std::size_t i = 0; i < key.size(); ++i )
-    {
-        retval += (key[i] << (i * 8));
-    }
-    return retval;*/
-    //return (uint64_t(key[0]) << 24u) | (uint64_t(key[1]) << 16u)
-    //       | (uint64_t(key[2]) << 8u) | uint64_t(key[3]);
   }
 
   base::Buffer prependPrefix(const base::Buffer &key,

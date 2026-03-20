@@ -10,11 +10,6 @@ include_directories(
 
 target_include_directories(account_handling PRIVATE ${GSL_INCLUDE_DIR} ${TrustWalletCore_INCLUDE_DIR})
 target_link_libraries(account_handling PRIVATE
-#    ipfs-lite-cpp::ipfs_datastore_rocksdb
-#    ipfs-lite-cpp::buffer
-#    ipfs-lite-cpp::ipld_node
-#    ipfs-lite-cpp::ipfs_merkledag_service
-#    ipfs-lite-cpp::graphsync
     genius_node
     blockchain_common
     block_header_repository
@@ -34,7 +29,6 @@ target_link_libraries(account_handling PRIVATE
     Boost::Boost.DI
     Boost::program_options
     ipfs-bitswap-cpp
-    ipfs-pubsub
     rapidjson
     ${WIN_CRYPT_LIBRARY}
 )

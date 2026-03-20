@@ -4,6 +4,7 @@
 
 #include "blockchain/impl/common.hpp"
 #include "blockchain/impl/storage_util.hpp"
+#include "outcome/outcome.hpp"
 #include "storage/database_error.hpp"
 #include "blockchain/impl/proto/SGBlocks.pb.h"
 #include "storage/predefined_keys.hpp"
@@ -118,8 +119,9 @@ namespace sgns::blockchain
         // the rest of the fields have default value
 
         OUTCOME_TRY( ( auto &&, genesis_block_hash ), block_storage->putBlock( genesis_block ) );
-        BOOST_OUTCOME_TRYV2( auto &&,
-                             db->Put( { storage::GetGenesisBlockHashLookupKey() }, Buffer{ genesis_block_hash }, { "topic" } ) );
+        BOOST_OUTCOME_TRYV2(
+            auto &&,
+            db->Put( { storage::GetGenesisBlockHashLookupKey() }, Buffer{ genesis_block_hash }, { "topic" } ) );
         BOOST_OUTCOME_TRYV2( auto &&, block_storage->setLastFinalizedBlockHash( genesis_block_hash ) );
 
         on_genesis_created( genesis_block );
@@ -190,21 +192,14 @@ namespace sgns::blockchain
             to_insert.receipt       = block_data.receipt ? block_data.receipt : existing_data.receipt;
         }
 
-        //OUTCOME_TRY((auto &&, encoded_block_data), scale::encode(to_insert));
         auto encoded_block_data = GetSerializedBlockData( to_insert );
         OUTCOME_TRY( ( auto &&, id_string ), idToStringKey( *db_, block_number ) );
         //TODO - For now one block data per block header. Revisit this
-        BOOST_OUTCOME_TRYV2(
-            auto &&,
-            db_->Put( { header_repo_->GetHeaderPath() + id_string + "/tx/0" },
+        BOOST_OUTCOME_TRYV2( auto &&,
+                             db_->Put( { header_repo_->GetHeaderPath() + id_string + "/tx/0" },
                                        Buffer{ encoded_block_data },
                                        { "topic" } ) );
 
-        //BOOST_OUTCOME_TRYV2(auto &&, putWithPrefix(*db_,
-        //                          Prefix::BLOCK_DATA,
-        //                          block_number,
-        //                          block_data.hash,
-        //                          Buffer{encoded_block_data}));
         return outcome::success();
     }
 
@@ -213,9 +208,7 @@ namespace sgns::blockchain
         // TODO(xDimon): Need to implement mechanism for wipe out orphan blocks
         //  (in side-chains whom rejected by finalization)
         //  for avoid leaks of storage space
-        auto block_hash = hasher_->blake2b_256( header_repo_->GetHeaderSerializedData( block.header ) );
-        //auto block_in_storage_res =
-        //    getWithPrefix(*db_, Prefix::HEADER, block_hash);
+        auto block_hash           = hasher_->blake2b_256( header_repo_->GetHeaderSerializedData( block.header ) );
         auto block_in_storage_res = header_repo_->getBlockHeader( block_hash );
         if ( block_in_storage_res.has_value() )
         {
@@ -252,7 +245,7 @@ namespace sgns::blockchain
         block_data.hash          = hash;
         block_data.justification = j;
 
-        BOOST_OUTCOME_TRYV2( auto &&, putBlockData( block_number, block_data ) );
+        BOOST_OUTCOME_TRY( putBlockData( block_number, block_data ) );
         return outcome::success();
     }
 
@@ -268,7 +261,8 @@ namespace sgns::blockchain
         OUTCOME_TRY( ( auto &&, key ), idToBufferKey( *db_, number ) );
 
         //TODO - For now one block data per block header. Revisit this
-        OUTCOME_TRY(db_->Remove( { header_repo_->GetHeaderPath() + std::string( key.toString() ) + "/tx/0" }, { "topic" } ) );
+        OUTCOME_TRY(
+            db_->Remove( { header_repo_->GetHeaderPath() + std::string( key.toString() ) + "/tx/0" }, { "topic" } ) );
         return outcome::success();
     }
 
@@ -322,9 +316,13 @@ namespace sgns::blockchain
         size_t               size = hash_proto.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
 
-        hash_proto.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
-        BOOST_OUTCOME_TRYV2(
-            auto &&,
+        if ( !hash_proto.SerializeToArray( serialized_proto.data(), serialized_proto.size() ) )
+        {
+            logger_->error( "Failed to serialize hash into array" );
+            return std::errc::bad_message;
+        }
+
+        BOOST_OUTCOME_TRY(
             db_->Put( { storage::GetLastFinalizedBlockHashLookupKey() }, Buffer{ serialized_proto }, { "topic" } ) );
 
         return outcome::success();
@@ -363,7 +361,10 @@ namespace sgns::blockchain
         size_t               size = data_proto.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
 
-        data_proto.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
+        if ( !data_proto.SerializeToArray( serialized_proto.data(), serialized_proto.size() ) )
+        {
+            logger_->error( "Failed to serialize block data" );
+        }
 
         return serialized_proto;
     }
@@ -375,8 +376,9 @@ namespace sgns::blockchain
         SGBlocks::BlockPayloadData data_proto;
         if ( !data_proto.ParseFromArray( serialized_data.data(), serialized_data.size() ) )
         {
-            std::cerr << "Failed to parse BlockPayloadData from array." << std::endl;
+            logger_->error( "Failed to parse BlockPayloadData from array" );
         }
+
         primitives::BlockHeader header;
         header.parent_hash     = ( base::Hash256::fromReadableString( data_proto.header().parent_hash() ) ).value();
         header.number          = data_proto.header().block_number();
