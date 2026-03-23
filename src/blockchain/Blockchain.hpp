@@ -114,14 +114,14 @@ namespace sgns
         outcome::result<ConsensusManager::Subject> CreateConsensusNonceSubject( const std::string &account_id,
                                                                                 uint64_t           nonce,
                                                                                 const std::string &tx_hash,
-                                                                                const UTXOTransitionCommitment *utxo_commitment = nullptr,
-                                                                                const UTXOWitness              *utxo_witness = nullptr );
+                                                                                const UTXOTransitionCommitment &utxo_commitment,
+                                                                                const UTXOWitness              &utxo_witness );
 
         outcome::result<ConsensusManager::Proposal> CreateConsensusProposal( const std::string &account_id,
                                                                              uint64_t           nonce,
                                                                              const std::string &tx_hash,
-                                                                             const UTXOTransitionCommitment *utxo_commitment = nullptr,
-                                                                             const UTXOWitness              *utxo_witness = nullptr );
+                                                                             const UTXOTransitionCommitment &utxo_commitment,
+                                                                             const UTXOWitness              &utxo_witness );
 
         outcome::result<void> SubmitProposal( const ConsensusManager::Proposal &proposal );
 

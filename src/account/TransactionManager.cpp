@@ -54,82 +54,28 @@ namespace sgns
             }
 
             outputs.clear();
-            if ( tx->GetType() == "transfer" )
+            if ( !tx->HasUTXOParameters() )
             {
-                auto transfer_tx = std::dynamic_pointer_cast<const TransferTransaction>( tx );
-                if ( !transfer_tx )
-                {
-                    return false;
-                }
-                const auto &dst_infos = transfer_tx->GetDstInfos();
-                outputs.reserve( dst_infos.size() );
-                for ( std::uint32_t i = 0; i < dst_infos.size(); ++i )
-                {
-                    outputs.emplace_back( tx_hash.value(),
-                                          i,
-                                          dst_infos[i].encrypted_amount,
-                                          dst_infos[i].token_id,
-                                          dst_infos[i].dest_address );
-                }
-                return true;
+                return false;
             }
 
-            if ( tx->GetType() == "mint" )
+            auto params_opt = tx->GetUTXOParametersOpt();
+            if ( !params_opt.has_value() )
             {
-                auto mint_tx = std::dynamic_pointer_cast<const MintTransaction>( tx );
-                if ( !mint_tx )
-                {
-                    return false;
-                }
+                return false;
+            }
+
+            const auto &dst_infos = params_opt->second;
+            outputs.reserve( dst_infos.size() );
+            for ( std::uint32_t i = 0; i < dst_infos.size(); ++i )
+            {
                 outputs.emplace_back( tx_hash.value(),
-                                      0,
-                                      mint_tx->GetAmount(),
-                                      mint_tx->GetTokenID(),
-                                      mint_tx->GetSrcAddress() );
-                return true;
+                                      i,
+                                      dst_infos[i].encrypted_amount,
+                                      dst_infos[i].token_id,
+                                      dst_infos[i].dest_address );
             }
-
-            if ( tx->GetType() == "escrow-hold" )
-            {
-                auto escrow_tx = std::dynamic_pointer_cast<const EscrowTransaction>( tx );
-                if ( !escrow_tx )
-                {
-                    return false;
-                }
-                const auto &dst_infos = escrow_tx->GetUTXOParameters().second;
-                outputs.reserve( dst_infos.size() );
-                for ( std::uint32_t i = 0; i < dst_infos.size(); ++i )
-                {
-                    outputs.emplace_back( tx_hash.value(),
-                                          i,
-                                          dst_infos[i].encrypted_amount,
-                                          dst_infos[i].token_id,
-                                          dst_infos[i].dest_address );
-                }
-                return true;
-            }
-
-            if ( tx->GetType() == "escrow-release" )
-            {
-                auto escrow_release_tx = std::dynamic_pointer_cast<const EscrowReleaseTransaction>( tx );
-                if ( !escrow_release_tx )
-                {
-                    return false;
-                }
-                const auto &dst_infos = escrow_release_tx->GetUTXOParameters().second;
-                outputs.reserve( dst_infos.size() );
-                for ( std::uint32_t i = 0; i < dst_infos.size(); ++i )
-                {
-                    outputs.emplace_back( tx_hash.value(),
-                                          i,
-                                          dst_infos[i].encrypted_amount,
-                                          dst_infos[i].token_id,
-                                          dst_infos[i].dest_address );
-                }
-                return true;
-            }
-
-            return false;
+            return true;
         }
     } // namespace
 
@@ -982,12 +928,10 @@ namespace sgns
         {
             std::optional<UTXOTransitionCommitment> utxo_commitment = BuildUTXOTransitionCommitment( transaction );
             std::optional<UTXOWitness>              utxo_witness    = BuildUTXOWitness( transaction );
-            const bool is_utxo_tx = transaction->GetType() == "transfer" || transaction->GetType() == "escrow-hold" ||
-                                    transaction->GetType() == "escrow-release";
-            if ( is_utxo_tx && ( !utxo_commitment.has_value() || !utxo_witness.has_value() ) )
+            if ( !utxo_commitment.has_value() || !utxo_witness.has_value() )
             {
-                TransactionManagerLogger()->error(
-                    "[{} - full: {}] {}: Missing UTXO commitment/witness for tx={} type={}",
+                TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing required UTXO data for tx={} type={} "
+                                                   "(commitment_required=true, witness_required=true)",
                     account_m->GetAddress().substr( 0, 8 ),
                     full_node_m,
                     __func__,
@@ -999,8 +943,8 @@ namespace sgns
                          blockchain_->CreateConsensusProposal( transaction->GetSrcAddress(),
                                                                transaction->GetNonce(),
                                                                transaction->GetHash(),
-                                                               utxo_commitment ? &utxo_commitment.value() : nullptr,
-                                                               utxo_witness ? &utxo_witness.value() : nullptr ) );
+                                                               utxo_commitment.value(),
+                                                               utxo_witness.value() ) );
             OUTCOME_TRY( blockchain_->SubmitProposal( proposal ) );
 
             OUTCOME_TRY( ChangeTransactionState( transaction, TransactionStatus::SENDING ) );
@@ -3343,10 +3287,7 @@ namespace sgns
                                                tx->GetHash() );
             return false;
         }
-        //TODO - Deal with checking the Mint
-        //TODO - Make all transactions have UTXOs maybe.
-        const bool is_utxo_type = tx->GetType() == "transfer" || tx->GetType() == "escrow-hold" ||
-                                  tx->GetType() == "escrow-release";
+        const bool is_utxo_type = tx->HasUTXOParameters();
         if ( !( skip_utxo_state_validation && is_utxo_type ) && !CheckTransactionTypeRules( tx ) )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Type rules failed tx={}",
@@ -3613,71 +3554,19 @@ namespace sgns
             return false;
         }
 
-        if ( tx->GetType() == "transfer" )
+        if ( tx->HasUTXOParameters() )
         {
-            auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
-            if ( !transfer_tx )
+            auto params_opt = tx->GetUTXOParametersOpt();
+            if ( !params_opt.has_value() )
             {
-                TransactionManagerLogger()->error( "[{} - full: {}] {}: Failed to cast transfer tx",
+                TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing UTXO parameters for tx={}",
                                                    account_m->GetAddress().substr( 0, 8 ),
                                                    full_node_m,
-                                                   __func__ );
+                                                   __func__,
+                                                   tx->GetHash() );
                 return false;
             }
-            return ValidateUTXOParametersForConsensus(
-                UTXOTxParameters{ transfer_tx->GetInputInfos(), transfer_tx->GetDstInfos() },
-                transfer_tx->GetSrcAddress() );
-        }
-
-        if ( tx->GetType() == "escrow-hold" )
-        {
-            auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( tx );
-            if ( !escrow_tx )
-            {
-                TransactionManagerLogger()->error( "[{} - full: {}] {}: Failed to cast escrow-hold tx",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   __func__ );
-                return false;
-            }
-            return ValidateUTXOParametersForConsensus( escrow_tx->GetUTXOParameters(), escrow_tx->GetSrcAddress() );
-        }
-
-        if ( tx->GetType() == "escrow-release" )
-        {
-            auto escrow_release_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
-            if ( !escrow_release_tx )
-            {
-                TransactionManagerLogger()->error( "[{} - full: {}] {}: Failed to cast escrow-release tx",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   __func__ );
-                return false;
-            }
-            return ValidateUTXOParametersForConsensus( escrow_release_tx->GetUTXOParameters(),
-                                                       escrow_release_tx->GetSrcAddress() );
-        }
-
-        if ( tx->GetType() == "mint" )
-        {
-            auto mint_tx = std::dynamic_pointer_cast<MintTransaction>( tx );
-            if ( !mint_tx )
-            {
-                TransactionManagerLogger()->error( "[{} - full: {}] {}: Failed to cast mint tx",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   __func__ );
-                return false;
-            }
-            if ( mint_tx->GetAmount() == 0 )
-            {
-                TransactionManagerLogger()->error( "[{} - full: {}] {}: Mint amount is zero",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   __func__ );
-                return false;
-            }
-            return true;
+            return ValidateUTXOParametersForConsensus( params_opt.value(), tx->GetSrcAddress() );
         }
 
         return true;
@@ -3696,44 +3585,11 @@ namespace sgns
             return true;
         }
 
-        std::vector<InputUTXOInfo> inputs;
-        if ( tx->GetType() == "transfer" )
-        {
-            auto transfer_tx = std::dynamic_pointer_cast<const TransferTransaction>( tx );
-            if ( !transfer_tx )
-            {
-                return false;
-            }
-            inputs = transfer_tx->GetInputInfos();
-        }
-        else if ( tx->GetType() == "escrow-hold" )
-        {
-            auto escrow_tx = std::dynamic_pointer_cast<const EscrowTransaction>( tx );
-            if ( !escrow_tx )
-            {
-                return false;
-            }
-            inputs = escrow_tx->GetUTXOParameters().first;
-        }
-        else if ( tx->GetType() == "escrow-release" )
-        {
-            auto escrow_release_tx = std::dynamic_pointer_cast<const EscrowReleaseTransaction>( tx );
-            if ( !escrow_release_tx )
-            {
-                return false;
-            }
-            inputs = escrow_release_tx->GetUTXOParameters().first;
-        }
-        else
-        {
-            return true;
-        }
-
-        if ( inputs.empty() )
+        if ( !subject.nonce().has_utxo_commitment() )
         {
             return false;
         }
-        if ( !subject.nonce().has_utxo_commitment() || !subject.nonce().has_utxo_witness() )
+        if ( !subject.nonce().has_utxo_witness() )
         {
             return false;
         }
@@ -3773,7 +3629,7 @@ namespace sgns
                 return false;
             }
             const auto &prev_subject = prev_cert_result.value().proposal().subject();
-            if ( !prev_subject.has_nonce() )
+            if ( !prev_subject.has_nonce() || !prev_subject.nonce().has_utxo_commitment() )
             {
                 return false;
             }
@@ -3786,21 +3642,35 @@ namespace sgns
                 return false;
             }
 
-            if ( prev_subject.nonce().has_utxo_commitment() )
+            const auto &prev_commitment       = prev_subject.nonce().utxo_commitment();
+            auto        prev_post_root_result = base::Hash256::fromSpan( gsl::span(
+                reinterpret_cast<uint8_t *>( const_cast<char *>( prev_commitment.post_utxo_root().data() ) ),
+                prev_commitment.post_utxo_root().size() ) );
+            if ( prev_post_root_result.has_error() )
             {
-                const auto &prev_commitment       = prev_subject.nonce().utxo_commitment();
-                auto        prev_post_root_result = base::Hash256::fromSpan( gsl::span(
-                    reinterpret_cast<uint8_t *>( const_cast<char *>( prev_commitment.post_utxo_root().data() ) ),
-                    prev_commitment.post_utxo_root().size() ) );
-                if ( prev_post_root_result.has_error() )
-                {
-                    return false;
-                }
-                if ( prev_post_root_result.value() != pre_root )
-                {
-                    return false;
-                }
+                return false;
             }
+            if ( prev_post_root_result.value() != pre_root )
+            {
+                return false;
+            }
+        }
+
+        if ( !tx->HasUTXOParameters() )
+        {
+            return false;
+        }
+
+        auto params_opt = tx->GetUTXOParametersOpt();
+        if ( !params_opt.has_value() )
+        {
+            return false;
+        }
+
+        const auto &inputs = params_opt->first;
+        if ( inputs.empty() )
+        {
+            return false;
         }
 
         std::unordered_map<std::string, const ConsumedInputProof *> proofs;
@@ -3820,35 +3690,7 @@ namespace sgns
             }
         }
 
-        std::vector<OutputDestInfo> outputs;
-        if ( tx->GetType() == "transfer" )
-        {
-            auto transfer_tx = std::dynamic_pointer_cast<const TransferTransaction>( tx );
-            if ( !transfer_tx )
-            {
-                return false;
-            }
-            outputs = transfer_tx->GetDstInfos();
-        }
-        else if ( tx->GetType() == "escrow-hold" )
-        {
-            auto escrow_tx = std::dynamic_pointer_cast<const EscrowTransaction>( tx );
-            if ( !escrow_tx )
-            {
-                return false;
-            }
-            outputs = escrow_tx->GetUTXOParameters().second;
-        }
-        else if ( tx->GetType() == "escrow-release" )
-        {
-            auto escrow_release_tx = std::dynamic_pointer_cast<const EscrowReleaseTransaction>( tx );
-            if ( !escrow_release_tx )
-            {
-                return false;
-            }
-            outputs = escrow_release_tx->GetUTXOParameters().second;
-        }
-
+        const auto &outputs = params_opt->second;
         if ( outputs.empty() )
         {
             return false;
@@ -4094,7 +3936,18 @@ namespace sgns
                 return std::nullopt;
             }
 
-            if ( previous_subject.nonce().has_utxo_commitment() )
+            if ( !previous_subject.nonce().has_utxo_commitment() )
+            {
+                TransactionManagerLogger()->warn(
+                    "[{} - full: {}] {}: Previous subject missing mandatory UTXO commitment tx={} prev={}",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    __func__,
+                    tx->GetHash(),
+                    previous_hash );
+                return std::nullopt;
+            }
+
             {
                 const auto &prev_commitment       = previous_subject.nonce().utxo_commitment();
                 auto        prev_post_root_result = base::Hash256::fromSpan( gsl::span(
@@ -4142,43 +3995,17 @@ namespace sgns
             return std::nullopt;
         }
 
-        std::vector<InputUTXOInfo> inputs;
-        if ( tx->GetType() == "transfer" )
-        {
-            auto transfer_tx = std::dynamic_pointer_cast<const TransferTransaction>( tx );
-            if ( !transfer_tx )
-            {
-                return std::nullopt;
-            }
-            inputs = transfer_tx->GetInputInfos();
-        }
-        else if ( tx->GetType() == "escrow-hold" )
-        {
-            auto escrow_tx = std::dynamic_pointer_cast<const EscrowTransaction>( tx );
-            if ( !escrow_tx )
-            {
-                return std::nullopt;
-            }
-            inputs = escrow_tx->GetUTXOParameters().first;
-        }
-        else if ( tx->GetType() == "escrow-release" )
-        {
-            auto escrow_release_tx = std::dynamic_pointer_cast<const EscrowReleaseTransaction>( tx );
-            if ( !escrow_release_tx )
-            {
-                return std::nullopt;
-            }
-            inputs = escrow_release_tx->GetUTXOParameters().first;
-        }
-        else
+        if ( !tx->HasUTXOParameters() )
         {
             return std::nullopt;
         }
 
-        if ( inputs.empty() )
+        auto params_opt = tx->GetUTXOParametersOpt();
+        if ( !params_opt.has_value() )
         {
             return std::nullopt;
         }
+        const auto &inputs = params_opt->first;
 
         struct SnapshotLeaf
         {
@@ -4349,91 +4176,30 @@ namespace sgns
             return false;
         }
 
-        if ( tx->GetType() == "transfer" )
+        if ( !tx->HasUTXOParameters() )
         {
-            auto transfer_tx = std::dynamic_pointer_cast<const TransferTransaction>( tx );
-            if ( !transfer_tx )
-            {
-                return false;
-            }
-            remove_inputs( transfer_tx->GetInputInfos() );
-            const auto &outputs = transfer_tx->GetDstInfos();
-            for ( std::uint32_t i = 0; i < outputs.size(); ++i )
-            {
-                if ( outputs[i].dest_address == tx->GetSrcAddress() )
-                {
-                    snapshot.emplace_back( tx_hash.value(),
-                                           i,
-                                           outputs[i].encrypted_amount,
-                                           outputs[i].token_id,
-                                           tx->GetSrcAddress() );
-                }
-            }
-            return true;
+            return false;
         }
 
-        if ( tx->GetType() == "mint" )
+        auto params_opt = tx->GetUTXOParametersOpt();
+        if ( !params_opt.has_value() )
         {
-            auto mint_tx = std::dynamic_pointer_cast<const MintTransaction>( tx );
-            if ( !mint_tx )
-            {
-                return false;
-            }
-            snapshot.emplace_back( tx_hash.value(),
-                                   0,
-                                   mint_tx->GetAmount(),
-                                   mint_tx->GetTokenID(),
-                                   tx->GetSrcAddress() );
-            return true;
+            return false;
         }
-
-        if ( tx->GetType() == "escrow-hold" )
+        const auto &[inputs, outputs] = params_opt.value();
+        remove_inputs( inputs );
+        for ( std::uint32_t i = 0; i < outputs.size(); ++i )
         {
-            auto escrow_tx = std::dynamic_pointer_cast<const EscrowTransaction>( tx );
-            if ( !escrow_tx )
+            if ( outputs[i].dest_address == tx->GetSrcAddress() )
             {
-                return false;
+                snapshot.emplace_back( tx_hash.value(),
+                                       i,
+                                       outputs[i].encrypted_amount,
+                                       outputs[i].token_id,
+                                       tx->GetSrcAddress() );
             }
-            auto [inputs, outputs] = escrow_tx->GetUTXOParameters();
-            remove_inputs( inputs );
-            for ( std::uint32_t i = 0; i < outputs.size(); ++i )
-            {
-                if ( outputs[i].dest_address == tx->GetSrcAddress() )
-                {
-                    snapshot.emplace_back( tx_hash.value(),
-                                           i,
-                                           outputs[i].encrypted_amount,
-                                           outputs[i].token_id,
-                                           tx->GetSrcAddress() );
-                }
-            }
-            return true;
         }
-
-        if ( tx->GetType() == "escrow-release" )
-        {
-            auto escrow_release_tx = std::dynamic_pointer_cast<const EscrowReleaseTransaction>( tx );
-            if ( !escrow_release_tx )
-            {
-                return false;
-            }
-            auto [inputs, outputs] = escrow_release_tx->GetUTXOParameters();
-            remove_inputs( inputs );
-            for ( std::uint32_t i = 0; i < outputs.size(); ++i )
-            {
-                if ( outputs[i].dest_address == tx->GetSrcAddress() )
-                {
-                    snapshot.emplace_back( tx_hash.value(),
-                                           i,
-                                           outputs[i].encrypted_amount,
-                                           outputs[i].token_id,
-                                           tx->GetSrcAddress() );
-                }
-            }
-            return true;
-        }
-
-        return false;
+        return true;
     }
 
     void TransactionManager::SetNonceWindow( uint64_t window )

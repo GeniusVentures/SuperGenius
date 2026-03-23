@@ -74,6 +74,24 @@ namespace
         EXPECT_TRUE( manager );
         return manager;
     }
+
+    sgns::UTXOTransitionCommitment MakeTestCommitment()
+    {
+        sgns::UTXOTransitionCommitment commitment;
+        commitment.set_pre_utxo_root( std::string( 32, '\x01' ) );
+        commitment.set_post_utxo_root( std::string( 32, '\x02' ) );
+        commitment.set_utxo_count_before( 1 );
+        commitment.set_utxo_count_after( 1 );
+        commitment.set_account_state_version( 0 );
+        commitment.set_produced_outputs_root( std::string( 32, '\x04' ) );
+        return commitment;
+    }
+
+    sgns::UTXOWitness MakeTestWitness()
+    {
+        sgns::UTXOWitness witness;
+        return witness;
+    }
 }
 
 namespace sgns::test
@@ -97,7 +115,8 @@ namespace sgns::test
         auto manager = MakeManager( registry, db_, pubs_, account );
 
         std::string tx_hash        = "0x010203";
-        auto        subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(), 1, tx_hash );
+        auto        subject_result =
+            ConsensusManager::CreateNonceSubject( account->GetAddress(), 1, tx_hash, MakeTestCommitment(), MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
 
         auto proposal_result = manager->CreateProposal( subject_result.value(),
@@ -129,7 +148,8 @@ namespace sgns::test
         auto manager = MakeManager( registry, db_, pubs_, account );
 
         std::string tx_hash        = "0x010203";
-        auto        subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(), 7, tx_hash );
+        auto        subject_result =
+            ConsensusManager::CreateNonceSubject( account->GetAddress(), 7, tx_hash, MakeTestCommitment(), MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
 
         auto proposal_result = manager->CreateProposal( subject_result.value(),
@@ -237,7 +257,8 @@ namespace sgns::test
         auto registry = MakeRegistry( db_, account );
         auto manager  = MakeManager( registry, db_, pubs_, account );
 
-        auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(), 2, "0x0a0b0c" );
+        auto subject_result = ConsensusManager::CreateNonceSubject(
+            account->GetAddress(), 2, "0x0a0b0c", MakeTestCommitment(), MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
 
         auto proposal_result = manager->CreateProposal( subject_result.value(),
@@ -296,7 +317,8 @@ namespace sgns::test
         auto registry = MakeRegistry( db_, account );
         auto manager  = MakeManager( registry, db_, pubs_, account );
 
-        auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(), 3, "0x111213" );
+        auto subject_result = ConsensusManager::CreateNonceSubject(
+            account->GetAddress(), 3, "0x111213", MakeTestCommitment(), MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
 
         auto proposal_result = manager->CreateProposal( subject_result.value(),
@@ -346,7 +368,8 @@ namespace sgns::test
         auto registry = MakeRegistry( db_, account );
         auto manager  = MakeManager( registry, db_, pubs_, account );
 
-        auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(), 4, "0x222324" );
+        auto subject_result = ConsensusManager::CreateNonceSubject(
+            account->GetAddress(), 4, "0x222324", MakeTestCommitment(), MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
 
         auto proposal_result = manager->CreateProposal( subject_result.value(),
@@ -387,7 +410,8 @@ namespace sgns::test
         auto registry = MakeRegistry( db_, account );
         auto manager  = MakeManager( registry, db_, pubs_, account );
 
-        auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(), 5, "0x333435" );
+        auto subject_result = ConsensusManager::CreateNonceSubject(
+            account->GetAddress(), 5, "0x333435", MakeTestCommitment(), MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
 
         auto proposal_result = manager->CreateProposal( subject_result.value(),
@@ -421,7 +445,8 @@ namespace sgns::test
         auto manager  = MakeManager( registry, db_, pubs_, account );
 
         std::string tx_hash = "0x444546";
-        auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(), 6, tx_hash );
+        auto subject_result =
+            ConsensusManager::CreateNonceSubject( account->GetAddress(), 6, tx_hash, MakeTestCommitment(), MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
 
         auto proposal_result = manager->CreateProposal( subject_result.value(),
@@ -471,7 +496,8 @@ namespace sgns::test
         auto registry = MakeRegistry( db_, account );
         auto manager  = MakeManager( registry, db_, pubs_, account );
 
-        auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(), 11, "0xabc123" );
+        auto subject_result = ConsensusManager::CreateNonceSubject(
+            account->GetAddress(), 11, "0xabc123", MakeTestCommitment(), MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
         auto subject = subject_result.value();
 
@@ -504,8 +530,8 @@ namespace sgns::test
             account->GetAddress(),
             1,
             "0xdeadbeef",
-            &commitment,
-            &witness );
+            commitment,
+            witness );
         ASSERT_TRUE( subject_result.has_value() );
         auto subject = subject_result.value();
 

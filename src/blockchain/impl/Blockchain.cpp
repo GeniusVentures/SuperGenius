@@ -1557,8 +1557,8 @@ namespace sgns
     outcome::result<ConsensusManager::Subject> Blockchain::CreateConsensusNonceSubject( const std::string &account_id,
                                                                                         uint64_t           nonce,
                                                                                         const std::string &tx_hash,
-                                                                                        const UTXOTransitionCommitment *utxo_commitment,
-                                                                                        const UTXOWitness              *utxo_witness )
+                                                                                        const UTXOTransitionCommitment &utxo_commitment,
+                                                                                        const UTXOWitness              &utxo_witness )
     {
         return consensus_manager_->CreateNonceSubject( account_id, nonce, tx_hash, utxo_commitment, utxo_witness );
     }
@@ -1566,8 +1566,8 @@ namespace sgns
     outcome::result<ConsensusManager::Proposal> Blockchain::CreateConsensusProposal( const std::string &account_id,
                                                                                      uint64_t           nonce,
                                                                                      const std::string &tx_hash,
-                                                                                     const UTXOTransitionCommitment *utxo_commitment,
-                                                                                     const UTXOWitness              *utxo_witness )
+                                                                                     const UTXOTransitionCommitment &utxo_commitment,
+                                                                                     const UTXOWitness              &utxo_witness )
     {
         OUTCOME_TRY( auto &&nonce_subject,
                      CreateConsensusNonceSubject( account_id, nonce, tx_hash, utxo_commitment, utxo_witness ) );
