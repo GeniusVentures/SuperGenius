@@ -81,12 +81,11 @@ target_link_libraries(genius_node
     crdt_globaldb
     processing_service
     gnus_upnp
-    sgns_genius_account  # Link to the GeniusAccount library
+    sgns_genius_account
     blockchain_genesis
 	ProcessingBase
     evmrelay
     PRIVATE
-    secure_storage
     component_factory
     block_header_repository
     block_storage
@@ -108,9 +107,6 @@ target_link_libraries(genius_node
     AsyncIOManager
     ${WIN_API_LIBRARY}
     ${USER_ENV_LIBRARY}
-    TrustWalletCore
-    wallet_core_rs
-    TrezorCrypto
     protobuf::libprotobuf
     rapidjson
     coinprices

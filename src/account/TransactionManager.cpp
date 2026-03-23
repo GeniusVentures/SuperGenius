@@ -98,24 +98,6 @@ namespace sgns
                 } );
         }
 
-        instance->account_m->SetGetUTXOsMethod(
-            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                const std::string &address ) -> outcome::result<std::vector<std::string>>
-            {
-                if ( auto strong = weak_ptr.lock() )
-                {
-                    std::vector<std::string> results;
-                    auto                     utxos = strong->account_m->GetUTXOManager().GetUTXOs( address );
-                    results.reserve( utxos.size() );
-
-                    for ( const auto &utxo : utxos )
-                    {
-                        results.push_back( utxo.GetTxID().toReadableString() );
-                    }
-                    return results;
-                }
-                return outcome::failure( std::errc::owner_dead );
-            } );
         instance->account_m->SetGetTransactionCIDMethod(
             [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
                 const std::string &tx_hash ) -> outcome::result<std::string>
@@ -165,7 +147,7 @@ namespace sgns
         {
             return; // idempotent
         }
-        // Notify condition variable to wake up waiting thread
+
         cv_.notify_all();
     }
 
@@ -209,7 +191,6 @@ namespace sgns
         boost::asio::post( *ctx_m, [self = shared_from_this()]() { self->TickOnce(); } );
     }
 
-    // One “tick”: do work, then schedule the next tick via weak capture
     void TransactionManager::TickOnce()
     {
         if ( stopped_.load() )
@@ -222,18 +203,15 @@ namespace sgns
                                         .count();
         last_loop_time_           = now;
 
-        std::vector<std::string> elements_to_delete;
+        std::vector<std::string>                            elements_to_delete;
+        std::vector<crdt::CRDTCallbackManager::NewDataPair> elements_to_process;
         {
-            std::lock_guard queue_lock( deleted_data_queue_mutex_ );
+            std::lock_guard lock( cv_mutex_ );
             while ( !deleted_data_queue_.empty() )
             {
                 elements_to_delete.push_back( std::move( deleted_data_queue_.front() ) );
                 deleted_data_queue_.pop();
             }
-        }
-        std::vector<crdt::CRDTCallbackManager::NewDataPair> elements_to_process;
-        {
-            std::lock_guard queue_lock( new_data_queue_mutex_ );
             while ( !new_data_queue_.empty() )
             {
                 elements_to_process.push_back( std::move( new_data_queue_.front() ) );
@@ -293,7 +271,6 @@ namespace sgns
                 auto send_result = SendTransactionItem( tx_queue_m.front() );
                 if ( send_result.has_error() )
                 {
-                    // Immediately switch to SYNCING so no new transactions are created while we roll back.
                     ChangeState( State::SYNCING );
 
                     m_logger->error( "[{} - full: {}] Error in SendTransactionItem: {}",
@@ -310,18 +287,14 @@ namespace sgns
                         break;
                     }
 
-                    // Check if error was due to network timeout - if so, keep transaction in queue for retry
-                    // when full node becomes available
                     if ( send_result.error() == boost::system::errc::make_error_code( boost::system::errc::timed_out ) )
                     {
                         m_logger->info( "[{} - full: {}] Network timeout - keeping transaction in queue for retry",
                                         account_m->GetAddress().substr( 0, 8 ),
                                         full_node_m );
-                        // Don't pop - transaction stays in queue for retry when we return to READY
                     }
                     else
                     {
-                        // Other errors (like invalid_argument from nonce mismatch) - remove from queue
                         tx_queue_m.pop_front();
                     }
                     break;
@@ -349,8 +322,6 @@ namespace sgns
                              full_node_m );
         }
 
-        // Periodic sync - request heads every 10 minutes to stay synchronized across devices/instances
-        // Use 30 second interval until we get first response, then switch to 10 minutes
         bool should_sync = false;
         if ( !received_first_periodic_sync_response_.load() )
         {
@@ -398,25 +369,11 @@ namespace sgns
             }
         }
 
-        // Wait with condition variable instead of timer
-        // Wait with condition variable - wake up on notification OR timeout
         std::unique_lock lock( cv_mutex_ );
         cv_.wait_for( lock,
                       std::chrono::milliseconds( 300 ),
-                      [this]
-                      {
-                          bool new_data     = false;
-                          bool deleted_data = false;
-                          {
-                              std::lock_guard new_data_queue_lock( new_data_queue_mutex_ );
-                              new_data = !new_data_queue_.empty();
-                          }
-                          {
-                              std::lock_guard delete_data_queue_lock( deleted_data_queue_mutex_ );
-                              deleted_data = !deleted_data_queue_.empty();
-                          }
-                          return stopped_.load() || new_data || deleted_data;
-                      } );
+                      [this] { return stopped_.load() || !new_data_queue_.empty() || !deleted_data_queue_.empty(); } );
+        lock.unlock();
 
         // Schedule next tick if not stopped
         if ( !stopped_.load() )
@@ -1222,7 +1179,8 @@ namespace sgns
                              full_node_m,
                              input.output_idx_ );
         }
-        BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( transfer_tx->GetInputInfos(), transfer_tx->GetSrcAddress() ) );
+        BOOST_OUTCOME_TRY(
+            account_m->GetUTXOManager().ConsumeUTXOs( transfer_tx->GetInputInfos(), transfer_tx->GetSrcAddress() ) );
         return outcome::success();
     }
 
@@ -1258,8 +1216,9 @@ namespace sgns
         }
 
         auto hash = ( base::Hash256::fromReadableString( mint_tx->GetHash() ) ).value();
-        BOOST_OUTCOME_TRY( account_m->GetUTXOManager().PutUTXO( GeniusUTXO( hash, 0, mint_tx->GetAmount(), mint_tx->GetTokenID() ),
-                                                  mint_tx->GetSrcAddress() ) );
+        BOOST_OUTCOME_TRY(
+            account_m->GetUTXOManager().PutUTXO( GeniusUTXO( hash, 0, mint_tx->GetAmount(), mint_tx->GetTokenID() ),
+                                                 mint_tx->GetSrcAddress() ) );
         m_logger->info( "[{} - full: {}] Created tokens, amount {} balance {}",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
@@ -1286,8 +1245,8 @@ namespace sgns
                     GeniusUTXO new_utxo( hash, 1, outputs[1].encrypted_amount, outputs[1].token_id );
                     BOOST_OUTCOME_TRY( account_m->GetUTXOManager().PutUTXO( new_utxo, outputs[1].dest_address ) );
                 }
-                BOOST_OUTCOME_TRY(
-                    account_m->GetUTXOManager().ConsumeUTXOs( escrow_tx->GetUTXOParameters().first, escrow_tx->GetSrcAddress() ) );
+                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( escrow_tx->GetUTXOParameters().first,
+                                                                             escrow_tx->GetSrcAddress() ) );
             }
         }
 
@@ -2886,38 +2845,38 @@ namespace sgns
         }
 
         auto key = new_data.first;
+
+        std::size_t queue_size = 0;
         {
-            std::lock_guard queue_lock( new_data_queue_mutex_ );
+            std::lock_guard lock( cv_mutex_ );
             new_data_queue_.push( std::move( new_data ) );
+            queue_size = new_data_queue_.size();
         }
+
+        cv_.notify_one();
 
         m_logger->debug( "[{} - full: {}] CRDT new data queued, {} - (queue size: {})",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          key,
-                         new_data_queue_.size() );
-
-        // Notify the condition variable to wake up the main loop
-        cv_.notify_one();
+                         queue_size );
     }
 
     void TransactionManager::DeleteElementCallback( std::string deleted_key )
     {
-        std::shared_ptr<IGeniusTransactions> new_tx;
-
+        std::size_t queue_size = 0;
         {
-            std::lock_guard queue_lock( deleted_data_queue_mutex_ );
+            std::lock_guard lock( cv_mutex_ );
             deleted_data_queue_.push( deleted_key );
+            queue_size = deleted_data_queue_.size();
         }
+        cv_.notify_one();
 
         m_logger->debug( "[{} - full: {}] CRDT deleted key queued, {} - (queue size: {})",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          deleted_key,
-                         deleted_data_queue_.size() );
-
-        // Notify the condition variable to wake up the main loop
-        cv_.notify_one();
+                         queue_size );
     }
 
     void TransactionManager::RegisterStateChangeCallback( StateChangeCallback callback )

@@ -117,9 +117,9 @@ namespace sgns
                                                                             const std::string &dev_addr,
                                                                             uint64_t           peers_cut,
                                                                             const std::string &job_id );
-        outcome::result<std::string>                            PayEscrow( const std::string                       &escrow_path,
-                                                                           const SGProcessing::TaskResult          &task_result,
-                                                                           std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
+        outcome::result<std::string> PayEscrow( const std::string                       &escrow_path,
+                                                const SGProcessing::TaskResult          &task_result,
+                                                std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
 
         // Wait for an incoming transaction to be processed with a timeout
         TransactionStatus WaitForTransactionIncoming( const std::string        &txId,
@@ -292,8 +292,6 @@ namespace sgns
         std::condition_variable                            cv_;
         std::queue<crdt::CRDTCallbackManager::NewDataPair> new_data_queue_;
         std::queue<std::string>                            deleted_data_queue_;
-        std::mutex                                         new_data_queue_mutex_;     // Separate mutex for the queue
-        std::mutex                                         deleted_data_queue_mutex_; // Separate mutex for the queue
 
         std::chrono::steady_clock::time_point last_loop_time_;
 
