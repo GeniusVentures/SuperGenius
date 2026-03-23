@@ -21,10 +21,10 @@ namespace sgns
     {
     }
 
-    std::vector<uint8_t> MintTransactionV2::SerializeByteVector()
+    std::vector<uint8_t> MintTransactionV2::SerializeByteVector( const SGTransaction::DAGStruct &dag ) const
     {
         SGTransaction::MintTxV2 tx_struct;
-        tx_struct.mutable_dag_struct()->CopyFrom( this->dag_st );
+        tx_struct.mutable_dag_struct()->CopyFrom( dag );
         tx_struct.set_chain_id( chain_id_ );
 
         auto *utxo_proto_params = tx_struct.mutable_utxo_params();

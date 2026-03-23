@@ -21,6 +21,7 @@ namespace sgns
     class MintTransactionV2 final : public IGeniusTransactions
     {
     public:
+        using IGeniusTransactions::SerializeByteVector;
         /**
          * @brief      Destroy the Mint Transaction V 2 object
          */
@@ -52,7 +53,7 @@ namespace sgns
          * @brief       Serializes the transaction
          * @return      The serialized byte vector
          */
-        std::vector<uint8_t> SerializeByteVector() override;
+        std::vector<uint8_t> SerializeByteVector( const SGTransaction::DAGStruct &dag ) const override;
 
         /**
          * @brief       Get the amount of the mint

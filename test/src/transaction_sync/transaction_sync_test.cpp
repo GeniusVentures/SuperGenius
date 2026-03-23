@@ -547,11 +547,7 @@ TEST_F( TransactionSyncTest, InvalidPreviousHashTest )
         "node_proc2 not synched" );
 
     // Mint tokens to ensure sufficient balance
-    auto mint_result = node_proc1->MintTokens( 20000000000,
-                                               "",
-                                               "",
-                                               TokenID::FromBytes( { 0x00 } ),
-                                               std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    auto mint_result = node_proc1->MintTokens( 20000000000, "", "", TokenID::FromBytes( { 0x00 } ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
     // Create and send a valid first transfer using the normal flow
@@ -575,7 +571,7 @@ TEST_F( TransactionSyncTest, InvalidPreviousHashTest )
                                     node_proc2->GetAddress() );
     ASSERT_TRUE( tx_pair2.has_value() );
 
-    auto [tx2, proof2] = tx_pair2.value();
+    auto [tx2, proof2]   = tx_pair2.value();
     std::string bad_prev = tx1_id;
     if ( !bad_prev.empty() )
     {
