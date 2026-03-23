@@ -182,9 +182,15 @@ namespace sgns
     {
         try
         {
+            auto account = GeniusAccount::NewFromMnemonic( dev_config.TokenID, mnemonic, dev_config.BaseWritePath, is_full_node );
+
+            if (account == nullptr) {
+                return nullptr;
+            }
+
             auto instance = std::shared_ptr<GeniusNode>( new GeniusNode(
                 dev_config,
-                GeniusAccount::NewFromMnemonic( dev_config.TokenID, mnemonic, dev_config.BaseWritePath, is_full_node ),
+                std::move(account),
                 autodht,
                 isprocessor,
                 base_port,
