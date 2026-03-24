@@ -591,7 +591,7 @@ namespace sgns
             MintTransactionV2::New( amount,
                                     std::move( chainid ),
                                     std::move( tokenid ),
-                                    FillDAGStruct(),
+                                    FillDAGStruct( std::move( transaction_hash ) ),
                                     std::move( mint_inputs ),
                                     destination ) );
 

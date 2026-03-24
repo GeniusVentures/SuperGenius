@@ -1951,8 +1951,8 @@ namespace sgns
     outcome::result<ConsensusManager::Subject> ConsensusManager::CreateNonceSubject( const std::string &account_id,
                                                                                      uint64_t           nonce,
                                                                                      const std::string &tx_hash,
-                                                                                     const UTXOTransitionCommitment &utxo_commitment,
-                                                                                     const UTXOWitness              &utxo_witness )
+                                                                                     const std::optional<UTXOTransitionCommitment> &utxo_commitment,
+                                                                                     const std::optional<UTXOWitness>              &utxo_witness )
     {
         ConsensusManagerLogger()->trace( "{}: called account_id={} nonce={}", __func__, account_id, nonce );
         Subject subject;
@@ -1961,8 +1961,14 @@ namespace sgns
         auto *payload = subject.mutable_nonce();
         payload->set_nonce( nonce );
         payload->set_tx_hash( tx_hash.data(), tx_hash.size() );
-        *payload->mutable_utxo_commitment() = utxo_commitment;
-        *payload->mutable_utxo_witness()    = utxo_witness;
+        if ( utxo_commitment.has_value() )
+        {
+            *payload->mutable_utxo_commitment() = utxo_commitment.value();
+        }
+        if ( utxo_witness.has_value() )
+        {
+            *payload->mutable_utxo_witness() = utxo_witness.value();
+        }
 
         auto subject_id = ComputeSubjectId( subject );
         if ( subject_id.has_error() )
@@ -2052,8 +2058,15 @@ namespace sgns
         switch ( subject.type() )
         {
             case SubjectType::SUBJECT_NONCE:
-                return subject.has_nonce() && !subject.nonce().tx_hash().empty() &&
-                       subject.nonce().has_utxo_commitment() && subject.nonce().has_utxo_witness();
+                if ( !subject.has_nonce() || subject.nonce().tx_hash().empty() )
+                {
+                    return false;
+                }
+                if ( subject.nonce().has_utxo_commitment() != subject.nonce().has_utxo_witness() )
+                {
+                    return false;
+                }
+                return true;
             case SubjectType::SUBJECT_TASK_RESULT:
                 return subject.has_task_result() && !subject.task_result().task_result_hash().empty();
             case SubjectType::SUBJECT_UNSPECIFIED:
