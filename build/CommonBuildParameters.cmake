@@ -417,6 +417,9 @@ include_directories(
 include_directories(
     ${PROJECT_ROOT}/app
 )
+include_directories(
+    ${PROJECT_ROOT}/rlp
+)
 
 ADD_DEFINITIONS(-D_HAS_AUTO_PTR_ETC=1)
 
