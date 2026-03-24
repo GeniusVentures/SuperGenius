@@ -34,6 +34,8 @@ namespace sgns
 
         TokenID GetTokenID() const;
 
+        std::string GetChainId() const override;
+
         std::string GetTransactionSpecificPath() const override
         {
             return GetType();

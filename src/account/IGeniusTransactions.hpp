@@ -30,6 +30,8 @@ namespace sgns
     class IGeniusTransactions
     {
     public:
+        static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius_chain";
+
         /**
          * @brief   Alias for the de-serializer method type to be implemented in derived classes
          */
@@ -80,6 +82,15 @@ namespace sgns
         virtual std::optional<UTXOTxParameters> GetUTXOParametersOpt() const
         {
             return std::nullopt;
+        }
+
+        /**
+         * @brief       Returns the source chain id for input validation routing
+         * @return      The source chain id
+         */
+        virtual std::string GetChainId() const
+        {
+            return std::string( GENIUS_CHAIN_ID );
         }
 
         virtual std::string GetTransactionSpecificPath() const = 0;

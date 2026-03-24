@@ -64,6 +64,11 @@ namespace sgns
         return token_id;
     }
 
+    std::string MintTransaction::GetChainId() const
+    {
+        return chain_id;
+    }
+
     MintTransaction MintTransaction::New( uint64_t                 new_amount,
                                           std::string              chain_id,
                                           TokenID                  token_id,

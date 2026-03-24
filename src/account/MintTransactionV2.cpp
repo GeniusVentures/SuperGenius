@@ -135,6 +135,11 @@ namespace sgns
         return utxo_params_.second.front().token_id;
     }
 
+    std::string MintTransactionV2::GetChainId() const
+    {
+        return chain_id_;
+    }
+
     UTXOTxParameters MintTransactionV2::GetUTXOParameters() const
     {
         return utxo_params_;

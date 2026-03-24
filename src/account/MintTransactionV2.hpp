@@ -68,6 +68,12 @@ namespace sgns
         TokenID GetTokenID() const;
 
         /**
+         * @brief       Get source chain identifier for bridge mint validation routing
+         * @return      Source chain id
+         */
+        std::string GetChainId() const override;
+
+        /**
          * @brief       Returns the UTXOs
          * @return      The UTXOs of the MintV2 transaction
          */
