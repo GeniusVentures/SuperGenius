@@ -28,6 +28,8 @@
 #include <ProofSystem/EthereumKeyGenerator.hpp>
 
 #include "account/TokenID.hpp"
+#include "account/GeniusUTXO.hpp"
+#include "account/UTXOStructs.hpp"
 #include "local_secure_storage/ISecureStorage.hpp"
 #include "outcome/outcome.hpp"
 
@@ -152,6 +154,13 @@ namespace sgns
          * @return      the signature as a vector of bytes
          */
         std::vector<uint8_t> Sign( const std::vector<uint8_t> &data ) const;
+
+        /**
+         * @brief       Build signed transaction inputs from UTXOs
+         * @param[in]   utxos UTXOs to turn into transaction inputs
+         * @return      Signed input descriptors
+         */
+        std::vector<InputUTXOInfo> CreateInputsFromUTXOs( const std::vector<GeniusUTXO> &utxos ) const;
 
         /**
          * @brief       Set the local confirmed nonce for a peer

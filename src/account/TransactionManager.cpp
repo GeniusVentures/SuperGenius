@@ -571,11 +571,28 @@ namespace sgns
         {
             destination = account_m->GetAddress();
         }
+
+        auto source_hash = base::Hash256::fromReadableString( transaction_hash );
+        if ( source_hash.has_error() )
+        {
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: Invalid source transaction hash for mint: {}",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               __func__,
+                                               transaction_hash );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        std::vector<GeniusUTXO> source_utxos;
+        source_utxos.emplace_back( source_hash.value(), 0, amount, tokenid, account_m->GetAddress() );
+        auto mint_inputs = account_m->CreateInputsFromUTXOs( source_utxos );
+
         auto mint_transaction = std::make_shared<MintTransactionV2>(
             MintTransactionV2::New( amount,
                                     std::move( chainid ),
                                     std::move( tokenid ),
-                                    FillDAGStruct( std::move( transaction_hash ) ),
+                                    FillDAGStruct(),
+                                    std::move( mint_inputs ),
                                     destination ) );
 
         mint_transaction->MakeSignature( *account_m );

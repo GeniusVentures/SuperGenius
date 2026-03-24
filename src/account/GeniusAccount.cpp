@@ -598,6 +598,23 @@ namespace sgns
         return signed_vector;
     }
 
+    std::vector<InputUTXOInfo> GeniusAccount::CreateInputsFromUTXOs( const std::vector<GeniusUTXO> &utxos ) const
+    {
+        std::vector<InputUTXOInfo> inputs;
+        inputs.reserve( utxos.size() );
+
+        for ( const auto &utxo : utxos )
+        {
+            InputUTXOInfo input;
+            input.txid_hash_  = utxo.GetTxID();
+            input.output_idx_ = utxo.GetOutputIdx();
+            input.signature_  = Sign( input.SerializeForSigning() );
+            inputs.emplace_back( std::move( input ) );
+        }
+
+        return inputs;
+    }
+
     void GeniusAccount::SetPeerConfirmedNonce( uint64_t nonce, const std::string &address )
     {
         std::unique_lock lock( nonce_mutex_ );

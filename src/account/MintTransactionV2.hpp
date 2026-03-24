@@ -40,6 +40,7 @@ namespace sgns
          * @param[in]   chain_id The chain ID from where the mint came from
          * @param[in]   token_id The token ID
          * @param[in]   dag The DAG structure with the common transaction data
+         * @param[in]   mint_inputs Explicit input references for the source-chain burn(s)
          * @param[in]   mint_destination The destination of the Mint
          * @return      A @ref MintTransactionV2
          */
@@ -47,6 +48,7 @@ namespace sgns
                                       std::string              chain_id,
                                       TokenID                  token_id,
                                       SGTransaction::DAGStruct dag,
+                                      std::vector<InputUTXOInfo> mint_inputs,
                                       std::string              mint_destination );
 
         /**
