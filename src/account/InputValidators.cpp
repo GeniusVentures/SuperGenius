@@ -268,12 +268,40 @@ namespace sgns
                                                      const std::shared_ptr<Blockchain>          &blockchain ) const
     {
         (void)subject;
-        (void)tx;
         (void)pre_root;
         (void)blockchain;
-        // Placeholder: external proof verification (burn receipt/header finality/replay protection)
-        // will live here. For now we only assert explicit input/output presence.
-        return !params.first.empty() && !params.second.empty();
+        if ( !tx || params.first.empty() || params.second.empty() )
+        {
+            return false;
+        }
+
+        // Feed the public-chain verification with the explicit input hash.
+        // If we had to fallback to an empty Hash256 input, use uncle_hash as external source reference.
+        std::string source_reference;
+        const auto &input_tx_hash = params.first.front().txid_hash_;
+        if ( input_tx_hash != base::Hash256{} )
+        {
+            source_reference = input_tx_hash.toReadableString();
+        }
+        else
+        {
+            source_reference = tx->GetUncleHash();
+        }
+
+        if ( source_reference.empty() )
+        {
+            return false;
+        }
+
+        return VerifyPublicChainSmartContract( tx, source_reference );
+    }
+
+    bool PublicChainInputValidator::VerifyPublicChainSmartContract( const std::shared_ptr<IGeniusTransactions> &tx,
+                                                                    const std::string &source_reference ) const
+    {
+        (void)tx;
+        (void)source_reference;
+        // Placeholder for real burn/finality/contract validation.
+        return true;
     }
 } // namespace sgns
-

@@ -30,6 +30,8 @@ namespace sgns
                                       const UTXOTxParameters                     &params,
                                       const base::Hash256                        &pre_root,
                                       const std::shared_ptr<Blockchain>          &blockchain ) const = 0;
+
+        virtual bool RequiresConsensusUTXOData() const = 0;
     };
 
     class GeniusInputValidator final : public IInputValidator
@@ -44,6 +46,11 @@ namespace sgns
                               const UTXOTxParameters                     &params,
                               const base::Hash256                        &pre_root,
                               const std::shared_ptr<Blockchain>          &blockchain ) const override;
+
+        bool RequiresConsensusUTXOData() const override
+        {
+            return true;
+        }
     };
 
     class PublicChainInputValidator final : public IInputValidator
@@ -58,6 +65,14 @@ namespace sgns
                               const UTXOTxParameters                     &params,
                               const base::Hash256                        &pre_root,
                               const std::shared_ptr<Blockchain>          &blockchain ) const override;
+
+        bool RequiresConsensusUTXOData() const override
+        {
+            return false;
+        }
+
+    private:
+        bool VerifyPublicChainSmartContract( const std::shared_ptr<IGeniusTransactions> &tx,
+                                             const std::string                           &source_reference ) const;
     };
 } // namespace sgns
-

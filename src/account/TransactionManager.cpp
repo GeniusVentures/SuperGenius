@@ -573,18 +573,23 @@ namespace sgns
         }
 
         auto source_hash = base::Hash256::fromReadableString( transaction_hash );
+        base::Hash256 source_input_hash;
         if ( source_hash.has_error() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Invalid source transaction hash for mint: {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               transaction_hash );
-            return outcome::failure( std::errc::invalid_argument );
+            TransactionManagerLogger()->warn(
+                "[{} - full: {}] {}: Source hash parse inconsistency for mint tx_ref={}, using empty input hash and uncle_hash fallback",
+                account_m->GetAddress().substr( 0, 8 ),
+                full_node_m,
+                __func__,
+                transaction_hash );
+        }
+        else
+        {
+            source_input_hash = source_hash.value();
         }
 
         std::vector<GeniusUTXO> source_utxos;
-        source_utxos.emplace_back( source_hash.value(), 0, amount, tokenid, account_m->GetAddress() );
+        source_utxos.emplace_back( source_input_hash, 0, amount, tokenid, account_m->GetAddress() );
         auto mint_inputs = account_m->CreateInputsFromUTXOs( source_utxos );
 
         auto mint_transaction = std::make_shared<MintTransactionV2>(
@@ -967,25 +972,37 @@ namespace sgns
 
         for ( auto &transaction : transactions_sent )
         {
-            std::optional<UTXOTransitionCommitment> utxo_commitment = BuildUTXOTransitionCommitment( transaction );
-            std::optional<UTXOWitness>              utxo_witness    = BuildUTXOWitness( transaction );
-            if ( !utxo_commitment.has_value() || !utxo_witness.has_value() )
+            const auto  chain_id           = GetValidationChainId( transaction );
+            const auto &validator          = GetInputValidator( chain_id );
+            const bool  utxo_data_required = validator.RequiresConsensusUTXOData();
+
+            std::optional<UTXOTransitionCommitment> utxo_commitment;
+            std::optional<UTXOWitness>              utxo_witness;
+
+            if ( utxo_data_required )
             {
-                TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing required UTXO data for tx={} type={} "
-                                                   "(commitment_required=true, witness_required=true)",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   __func__,
-                                                   transaction->GetHash(),
-                                                   transaction->GetType() );
-                return outcome::failure( std::errc::invalid_argument );
+                utxo_commitment = BuildUTXOTransitionCommitment( transaction );
+                utxo_witness    = BuildUTXOWitness( transaction );
+                if ( !utxo_commitment.has_value() || !utxo_witness.has_value() )
+                {
+                    TransactionManagerLogger()->error(
+                        "[{} - full: {}] {}: Missing required UTXO data for tx={} type={} "
+                        "(commitment_required=true, witness_required=true)",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        __func__,
+                        transaction->GetHash(),
+                        transaction->GetType() );
+                    return outcome::failure( std::errc::invalid_argument );
+                }
             }
+
             OUTCOME_TRY( auto &&proposal,
                          blockchain_->CreateConsensusProposal( transaction->GetSrcAddress(),
                                                                transaction->GetNonce(),
                                                                transaction->GetHash(),
-                                                               utxo_commitment.value(),
-                                                               utxo_witness.value() ) );
+                                                               utxo_commitment,
+                                                               utxo_witness ) );
             OUTCOME_TRY( blockchain_->SubmitProposal( proposal ) );
 
             OUTCOME_TRY( ChangeTransactionState( transaction, TransactionStatus::SENDING ) );
@@ -3608,8 +3625,8 @@ namespace sgns
                                                    tx->GetHash() );
                 return false;
             }
-            const auto         chain_id  = GetValidationChainId( tx );
-            const auto        &validator = GetInputValidator( chain_id );
+            const auto  chain_id  = GetValidationChainId( tx );
+            const auto &validator = GetInputValidator( chain_id );
             return validator.ValidateUTXOParameters( params_opt.value(), tx->GetSrcAddress(), utxo_manager_ );
         }
 
@@ -3625,6 +3642,45 @@ namespace sgns
         }
 
         if ( !subject.has_nonce() )
+        {
+            return true;
+        }
+
+        const auto  chain_id  = GetValidationChainId( tx );
+        const auto &validator = GetInputValidator( chain_id );
+
+        // For nonce > 0, anchor pre-state root in the certified per-account chain.
+        const ConsensusSubject *prev_subject_ptr = nullptr;
+        if ( tx->GetNonce() > 0 )
+        {
+            const auto prev_hash = tx->GetPreviousHash();
+            if ( prev_hash.empty() )
+            {
+                return false;
+            }
+
+            auto prev_cert_result = blockchain_->GetCertificateBySubjectHash( prev_hash );
+            if ( prev_cert_result.has_error() )
+            {
+                return false;
+            }
+            const auto &prev_subject = prev_cert_result.value().proposal().subject();
+            if ( !prev_subject.has_nonce() )
+            {
+                return false;
+            }
+            if ( prev_subject.account_id() != tx->GetSrcAddress() )
+            {
+                return false;
+            }
+            if ( prev_subject.nonce().nonce() + 1 != tx->GetNonce() )
+            {
+                return false;
+            }
+            prev_subject_ptr = &prev_subject;
+        }
+
+        if ( !validator.RequiresConsensusUTXOData() )
         {
             return true;
         }
@@ -3658,35 +3714,13 @@ namespace sgns
         }
         const auto pre_root = pre_root_result.value();
 
-        // For nonce > 0, anchor pre-state root in the certified per-account chain.
         if ( tx->GetNonce() > 0 )
         {
-            const auto prev_hash = tx->GetPreviousHash();
-            if ( prev_hash.empty() )
+            if ( !prev_subject_ptr || !prev_subject_ptr->nonce().has_utxo_commitment() )
             {
                 return false;
             }
-
-            auto prev_cert_result = blockchain_->GetCertificateBySubjectHash( prev_hash );
-            if ( prev_cert_result.has_error() )
-            {
-                return false;
-            }
-            const auto &prev_subject = prev_cert_result.value().proposal().subject();
-            if ( !prev_subject.has_nonce() || !prev_subject.nonce().has_utxo_commitment() )
-            {
-                return false;
-            }
-            if ( prev_subject.account_id() != tx->GetSrcAddress() )
-            {
-                return false;
-            }
-            if ( prev_subject.nonce().nonce() + 1 != tx->GetNonce() )
-            {
-                return false;
-            }
-
-            const auto &prev_commitment       = prev_subject.nonce().utxo_commitment();
+            const auto &prev_commitment       = prev_subject_ptr->nonce().utxo_commitment();
             auto        prev_post_root_result = base::Hash256::fromSpan(
                 gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( prev_commitment.post_utxo_root().data() ) ),
                            prev_commitment.post_utxo_root().size() ) );
@@ -3710,9 +3744,6 @@ namespace sgns
         {
             return false;
         }
-
-        const auto         chain_id  = GetValidationChainId( tx );
-        const auto        &validator = GetInputValidator( chain_id );
         return validator.ValidateWitness( subject, tx, params_opt.value(), pre_root, blockchain_ );
     }
 
