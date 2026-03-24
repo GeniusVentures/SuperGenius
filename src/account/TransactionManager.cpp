@@ -571,6 +571,11 @@ namespace sgns
         {
             destination = account_m->GetAddress();
         }
+        if ( chainid.empty() )
+        {
+            // MintV2 represents bridge/public-chain input. Empty chain id must not fall back to Genius validation.
+            chainid = "public";
+        }
 
         auto source_hash = base::Hash256::fromReadableString( transaction_hash );
         base::Hash256 source_input_hash;
@@ -815,6 +820,10 @@ namespace sgns
         const auto chain_id = tx->GetChainId();
         if ( chain_id.empty() )
         {
+            if ( tx->GetType() == "mint-v2" )
+            {
+                return "public";
+            }
             return std::string( GENIUS_CHAIN_ID );
         }
         return chain_id;
@@ -979,21 +988,35 @@ namespace sgns
             std::optional<UTXOTransitionCommitment> utxo_commitment;
             std::optional<UTXOWitness>              utxo_witness;
 
-            if ( utxo_data_required )
+            if ( transaction->HasUTXOParameters() )
             {
                 utxo_commitment = BuildUTXOTransitionCommitment( transaction );
-                utxo_witness    = BuildUTXOWitness( transaction );
-                if ( !utxo_commitment.has_value() || !utxo_witness.has_value() )
+                if ( !utxo_commitment.has_value() )
                 {
                     TransactionManagerLogger()->error(
-                        "[{} - full: {}] {}: Missing required UTXO data for tx={} type={} "
-                        "(commitment_required=true, witness_required=true)",
+                        "[{} - full: {}] {}: Missing required UTXO commitment for tx={} type={}",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
                         __func__,
                         transaction->GetHash(),
                         transaction->GetType() );
                     return outcome::failure( std::errc::invalid_argument );
+                }
+
+                if ( utxo_data_required )
+                {
+                    utxo_witness = BuildUTXOWitness( transaction );
+                    if ( !utxo_witness.has_value() )
+                    {
+                        TransactionManagerLogger()->error(
+                            "[{} - full: {}] {}: Missing required UTXO witness for tx={} type={}",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            __func__,
+                            transaction->GetHash(),
+                            transaction->GetType() );
+                        return outcome::failure( std::errc::invalid_argument );
+                    }
                 }
             }
 
@@ -3680,16 +3703,12 @@ namespace sgns
             prev_subject_ptr = &prev_subject;
         }
 
-        if ( !validator.RequiresConsensusUTXOData() )
+        if ( !tx->HasUTXOParameters() )
         {
             return true;
         }
 
         if ( !subject.nonce().has_utxo_commitment() )
-        {
-            return false;
-        }
-        if ( !subject.nonce().has_utxo_witness() )
         {
             return false;
         }
@@ -3734,7 +3753,7 @@ namespace sgns
             }
         }
 
-        if ( !tx->HasUTXOParameters() )
+        if ( validator.RequiresConsensusUTXOData() && !subject.nonce().has_utxo_witness() )
         {
             return false;
         }

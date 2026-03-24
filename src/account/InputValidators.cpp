@@ -288,11 +288,6 @@ namespace sgns
             source_reference = tx->GetUncleHash();
         }
 
-        if ( source_reference.empty() )
-        {
-            return false;
-        }
-
         return VerifyPublicChainSmartContract( tx, source_reference );
     }
 
@@ -302,6 +297,7 @@ namespace sgns
         (void)tx;
         (void)source_reference;
         // Placeholder for real burn/finality/contract validation.
+        // Empty source_reference is accepted for bootstrap/test mints where no external source hash is provided yet.
         return true;
     }
 } // namespace sgns

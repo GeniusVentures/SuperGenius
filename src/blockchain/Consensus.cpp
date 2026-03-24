@@ -2062,7 +2062,9 @@ namespace sgns
                 {
                     return false;
                 }
-                if ( subject.nonce().has_utxo_commitment() != subject.nonce().has_utxo_witness() )
+                // Allow commitment-only subjects (public-chain flow). Witness remains optional.
+                // But a witness without a commitment is always invalid.
+                if ( subject.nonce().has_utxo_witness() && !subject.nonce().has_utxo_commitment() )
                 {
                     return false;
                 }
