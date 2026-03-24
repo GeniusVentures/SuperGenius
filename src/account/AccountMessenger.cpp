@@ -1227,10 +1227,11 @@ namespace sgns
             resp.set_has_nonce( true );
             resp.set_known_nonce( local_nonce );
 
-            logger_->debug( "[{}] Sending back the nonce {} to {} with req_id {}",
+            logger_->debug( "[{}] Sending back the nonce {} to {} (len={}) with req_id {}",
                             address_.substr( 0, 8 ),
                             local_nonce,
                             req.requester_address().substr( 0, 8 ),
+                            req.requester_address().size(),
                             resp.request_id() );
         }
 

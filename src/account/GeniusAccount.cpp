@@ -509,11 +509,20 @@ namespace sgns
     void GeniusAccount::SetPeerConfirmedNonce( uint64_t nonce, std::string address )
     {
         std::lock_guard lock( nonce_mutex_ );
-        auto            current_confirmed_nonce = confirmed_nonces_[address];
+        auto            it                      = confirmed_nonces_.find( address );
+        bool            address_entry_exists    = it != confirmed_nonces_.end();
+        auto            current_confirmed_nonce = address_entry_exists ? it->second : 0;
         genius_account_logger()->debug( "Setting the max value between {} and {} as a confirmed nonce for address {}",
                                         current_confirmed_nonce,
                                         nonce,
                                         address.substr( 0, 8 ) );
+        if ( !address_entry_exists )
+        {
+            genius_account_logger()->info( "Creating new confirmed nonce entry for address {} (len={}) with nonce {}",
+                                           address.substr( 0, 8 ),
+                                           address.size(),
+                                           nonce );
+        }
         auto updated_nonce         = std::max( nonce, current_confirmed_nonce );
         confirmed_nonces_[address] = updated_nonce;
 
@@ -614,6 +623,26 @@ namespace sgns
         if ( auto it = nonces_copy.find( address ); it != nonces_copy.end() )
         {
             return it->second;
+        }
+
+        genius_account_logger()->warn( "Confirmed nonce not found for address {} (len={}). Known entries: {}",
+                                       address.substr( 0, 8 ),
+                                       address.size(),
+                                       nonces_copy.size() );
+
+        size_t sample_count = 0;
+        for ( const auto &[known_address, known_nonce] : nonces_copy )
+        {
+            if ( sample_count >= 3 )
+            {
+                break;
+            }
+            genius_account_logger()->debug( "Known nonce entry sample {}: {} (len={}) -> {}",
+                                            sample_count,
+                                            known_address.substr( 0, 8 ),
+                                            known_address.size(),
+                                            known_nonce );
+            ++sample_count;
         }
 
         return outcome::failure( std::errc::invalid_argument );

@@ -2779,6 +2779,13 @@ namespace sgns
 
                 const auto nonce = new_tx->dag_st.nonce();
                 account_m->SetPeerConfirmedNonce( nonce, new_tx->dag_st.source_addr() );
+                m_logger->info( "[{} - full: {}] NONCE_UPDATE: Confirmed nonce {} for source {} (len={}) from incoming tx {}",
+                                account_m->GetAddress().substr( 0, 8 ),
+                                full_node_m,
+                                nonce,
+                                new_tx->dag_st.source_addr().substr( 0, 8 ),
+                                new_tx->dag_st.source_addr().size(),
+                                key );
                 incoming_tx_processed_m[key] = TrackedTx{ new_tx, TransactionStatus::CONFIRMED, nonce };
             }
         }
