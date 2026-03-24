@@ -3673,7 +3673,7 @@ namespace sgns
         const auto &validator = GetInputValidator( chain_id );
 
         // For nonce > 0, anchor pre-state root in the certified per-account chain.
-        const ConsensusSubject *prev_subject_ptr = nullptr;
+        std::optional<ConsensusSubject> prev_subject;
         if ( tx->GetNonce() > 0 )
         {
             const auto prev_hash = tx->GetPreviousHash();
@@ -3687,20 +3687,20 @@ namespace sgns
             {
                 return false;
             }
-            const auto &prev_subject = prev_cert_result.value().proposal().subject();
-            if ( !prev_subject.has_nonce() )
+            const auto &prev_subject_ref = prev_cert_result.value().proposal().subject();
+            if ( !prev_subject_ref.has_nonce() )
             {
                 return false;
             }
-            if ( prev_subject.account_id() != tx->GetSrcAddress() )
+            if ( prev_subject_ref.account_id() != tx->GetSrcAddress() )
             {
                 return false;
             }
-            if ( prev_subject.nonce().nonce() + 1 != tx->GetNonce() )
+            if ( prev_subject_ref.nonce().nonce() + 1 != tx->GetNonce() )
             {
                 return false;
             }
-            prev_subject_ptr = &prev_subject;
+            prev_subject = prev_subject_ref;
         }
 
         if ( !tx->HasUTXOParameters() )
@@ -3735,11 +3735,11 @@ namespace sgns
 
         if ( tx->GetNonce() > 0 )
         {
-            if ( !prev_subject_ptr || !prev_subject_ptr->nonce().has_utxo_commitment() )
+            if ( !prev_subject.has_value() || !prev_subject->nonce().has_utxo_commitment() )
             {
                 return false;
             }
-            const auto &prev_commitment       = prev_subject_ptr->nonce().utxo_commitment();
+            const auto &prev_commitment       = prev_subject->nonce().utxo_commitment();
             auto        prev_post_root_result = base::Hash256::fromSpan(
                 gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( prev_commitment.post_utxo_root().data() ) ),
                            prev_commitment.post_utxo_root().size() ) );
