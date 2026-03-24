@@ -1851,6 +1851,7 @@ namespace sgns
             }
 
             (void)CheckTransactionValidity( nonces_to_check );
+            BroadcastLocalHeadsForAheadGap();
         }
         else if ( proposed_nonce < expected_next_nonce )
         {
@@ -1927,6 +1928,57 @@ namespace sgns
                             account_m->GetAddress().substr( 0, 8 ),
                             full_node_m );
         }
+    }
+
+    void TransactionManager::BroadcastLocalHeadsForAheadGap()
+    {
+        // Only non-full nodes need to push local history to peers when ahead.
+        if ( full_node_m )
+        {
+            return;
+        }
+
+        auto now = std::chrono::steady_clock::now();
+        if ( last_head_broadcast_time_.has_value() )
+        {
+            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>( now - last_head_broadcast_time_.value() );
+            if ( elapsed.count() < 30 )
+            {
+                m_logger->debug( "[{} - full: {}] GAP_RESOLUTION: Local head rebroadcast throttled ({}s since last, "
+                                 "30s min)",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 elapsed.count() );
+                return;
+            }
+        }
+
+        auto topics_result = globaldb_m->GetMonitoredTopics();
+        if ( !topics_result.has_value() )
+        {
+            m_logger->warn( "[{} - full: {}] GAP_RESOLUTION: Unable to rebroadcast local heads - monitored topics "
+                            "unavailable",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m );
+            return;
+        }
+
+        auto broadcast_result = globaldb_m->RequestHeadBroadcast( topics_result.value() );
+        if ( broadcast_result.has_error() )
+        {
+            m_logger->warn( "[{} - full: {}] GAP_RESOLUTION: Local head rebroadcast failed: {}",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            broadcast_result.error().message() );
+            return;
+        }
+
+        last_head_broadcast_time_ = now;
+        m_logger->info( "[{} - full: {}] GAP_RESOLUTION: Re-broadcasted local heads for {} topics to help full node "
+                        "catch up",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        topics_result.value().size() );
     }
 
     outcome::result<bool> TransactionManager::CheckTransactionValidity( const std::set<uint64_t> &nonces_to_check )
