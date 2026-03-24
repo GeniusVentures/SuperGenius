@@ -1,5 +1,9 @@
 #include "GeniusAccount.hpp"
 
+#include <TrustWalletCore/TWCoinType.h>
+#include <TrustWalletCore/TWDerivation.h>
+#include <WalletCore/Coin.h>
+#include <WalletCore/HDWallet.h>
 #include <fstream>
 #include <random>
 
@@ -149,10 +153,10 @@ namespace sgns
         return CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
     }
 
-    std::shared_ptr<GeniusAccount> GeniusAccount::New( TokenID                        token_id,
-                                                       const TW::PrivateKey          &private_key,
-                                                       const boost::filesystem::path &base_path,
-                                                       bool                           full_node )
+    std::shared_ptr<GeniusAccount> GeniusAccount::NewFromMnemonic( TokenID                        token_id,
+                                                                   const std::string             &mnemonic,
+                                                                   const boost::filesystem::path &base_path,
+                                                                   bool                           full_node )
     {
         if ( auto response = LoadGeniusAccount( base_path ); response.has_value() )
         {
@@ -161,16 +165,34 @@ namespace sgns
         }
 
         genius_account_logger()->info(
-            "Could not load Genius address from storage, attempting to generate from ethereum private key" );
-        auto response = GenerateGeniusAddress( private_key, base_path );
-        if ( response.has_error() )
+            "Could not load Genius address from storage, attempting to generate from mnemonic" );
+
+        try
         {
-            genius_account_logger()->error( "Failed to generate Genius address from private key" );
-            return nullptr;
+            TW::HDWallet   wallet( mnemonic, "", true );
+            auto           derivation_path = TW::derivationPath( TWCoinTypeEthereum );
+            TW::PrivateKey private_key     = wallet.getKey( TWCoinTypeEthereum, derivation_path );
+
+            auto response = GenerateGeniusAddress( private_key, base_path );
+            if ( response.has_error() )
+            {
+                genius_account_logger()->error( "Failed to generate Genius address from private key" );
+                return nullptr;
+            }
+
+            genius_account_logger()->debug( "Generated a Genius address from private key" );
+            auto account = CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
+
+            account->storage_->Save( "mnemonic", wallet.getMnemonic() );
+
+            return account;
+        }
+        catch ( const std::invalid_argument & )
+        {
+            genius_account_logger()->error( "Tried to create private key from invalid mnemonic" );
         }
 
-        genius_account_logger()->debug( "Generated a Genius address from private key" );
-        return CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
+        return nullptr;
     }
 
     std::shared_ptr<GeniusAccount> GeniusAccount::New( TokenID                        token_id,
@@ -184,9 +206,11 @@ namespace sgns
         }
 
         genius_account_logger()->error(
-            "Could not find existing Genius address, generating one with random credentials" );
+            "Could not find existing Genius address, generating one from a random mnemonic" );
 
-        return nullptr;
+        TW::HDWallet wallet( 128, "" );
+
+        return GeniusAccount::NewFromMnemonic( token_id, wallet.getMnemonic(), base_path, full_node );
     }
 
     outcome::result<GeniusAccount::StorageWithAddress> GeniusAccount::LoadGeniusAccount(

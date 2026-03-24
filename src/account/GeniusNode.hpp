@@ -66,13 +66,13 @@ namespace sgns
                                                 bool                is_full_node = false,
                                                 bool                use_upnp     = true );
 
-        static std::shared_ptr<GeniusNode> NewWithMnemonics( const DevConfig_st &dev_config,
-                                                             const char         *mnemonics,
-                                                             bool                autodht      = true,
-                                                             bool                isprocessor  = true,
-                                                             uint16_t            base_port    = 40001,
-                                                             bool                is_full_node = false,
-                                                             bool                use_upnp     = true );
+        static std::shared_ptr<GeniusNode> NewFromMnemonic( const DevConfig_st &dev_config,
+                                                            const std::string  &mnemonic,
+                                                            bool                autodht      = true,
+                                                            bool                isprocessor  = true,
+                                                            uint16_t            base_port    = 40001,
+                                                            bool                is_full_node = false,
+                                                            bool                use_upnp     = true );
 
         ~GeniusNode() override;
 

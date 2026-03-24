@@ -77,10 +77,10 @@ namespace sgns
                                                    const boost::filesystem::path &base_path,
                                                    bool                           full_node = false );
 
-        static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
-                                                   const TW::PrivateKey          &private_key,
-                                                   const boost::filesystem::path &base_path,
-                                                   bool                           full_node = false );
+        static std::shared_ptr<GeniusAccount> NewFromMnemonic( TokenID                        token_id,
+                                                               const std::string             &mnemonic,
+                                                               const boost::filesystem::path &base_path,
+                                                               bool                           full_node = false );
 
         /**
          * @brief       Factory constructor of new GeniusAccount
