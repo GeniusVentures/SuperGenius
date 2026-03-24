@@ -24,6 +24,7 @@
 #include "account/proto/SGTransaction.pb.h"
 #include "account/IGeniusTransactions.hpp"
 #include "account/GeniusAccount.hpp"
+#include "account/InputValidators.hpp"
 #include "base/logger.hpp"
 #include "base/buffer.hpp"
 #include "crypto/hasher.hpp"
@@ -393,11 +394,18 @@ namespace sgns
                                           const std::shared_ptr<IGeniusTransactions> &tx ) const;
         bool ValidateUTXOParametersForConsensus( const UTXOTxParameters &params, const std::string &address ) const;
         void SetNonceWindow( uint64_t window );
-
         outcome::result<void> ChangeTransactionState( const std::shared_ptr<IGeniusTransactions> &tx,
                                                       TransactionStatus                           new_status );
 
         bool IsGoingToOverwrite( const std::string &key ) const;
+
+    private:
+        static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";
+
+        std::string               GetValidationChainId( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        const IInputValidator    &GetInputValidator( const std::string &chain_id ) const;
+        GeniusInputValidator      genius_input_validator_;
+        PublicChainInputValidator public_chain_input_validator_;
     };
 }
 

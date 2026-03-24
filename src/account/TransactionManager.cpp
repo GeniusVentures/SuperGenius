@@ -784,6 +784,30 @@ namespace sgns
         return it->second;
     }
 
+    std::string TransactionManager::GetValidationChainId( const std::shared_ptr<IGeniusTransactions> &tx ) const
+    {
+        if ( !tx )
+        {
+            return std::string( GENIUS_CHAIN_ID );
+        }
+        const auto chain_id = tx->GetChainId();
+        if ( chain_id.empty() )
+        {
+            return std::string( GENIUS_CHAIN_ID );
+        }
+        return chain_id;
+    }
+
+    const IInputValidator &TransactionManager::GetInputValidator( const std::string &chain_id ) const
+    {
+        if ( chain_id.empty() || chain_id == GENIUS_CHAIN_ID )
+        {
+            return genius_input_validator_;
+        }
+
+        return public_chain_input_validator_;
+    }
+
     void TransactionManager::RecordOutgoingTxHash( uint64_t nonce, const std::string &hash )
     {
         std::lock_guard lock( outgoing_tx_hash_mutex_ );
@@ -932,11 +956,11 @@ namespace sgns
             {
                 TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing required UTXO data for tx={} type={} "
                                                    "(commitment_required=true, witness_required=true)",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    __func__,
-                    transaction->GetHash(),
-                    transaction->GetType() );
+                                                   account_m->GetAddress().substr( 0, 8 ),
+                                                   full_node_m,
+                                                   __func__,
+                                                   transaction->GetHash(),
+                                                   transaction->GetType() );
                 return outcome::failure( std::errc::invalid_argument );
             }
             OUTCOME_TRY( auto &&proposal,
@@ -3287,6 +3311,7 @@ namespace sgns
                                                tx->GetHash() );
             return false;
         }
+        //TODO - Deal with checking the Mint
         const bool is_utxo_type = tx->HasUTXOParameters();
         if ( !( skip_utxo_state_validation && is_utxo_type ) && !CheckTransactionTypeRules( tx ) )
         {
@@ -3566,7 +3591,9 @@ namespace sgns
                                                    tx->GetHash() );
                 return false;
             }
-            return ValidateUTXOParametersForConsensus( params_opt.value(), tx->GetSrcAddress() );
+            const auto         chain_id  = GetValidationChainId( tx );
+            const auto        &validator = GetInputValidator( chain_id );
+            return validator.ValidateUTXOParameters( params_opt.value(), tx->GetSrcAddress(), utxo_manager_ );
         }
 
         return true;
@@ -3643,9 +3670,9 @@ namespace sgns
             }
 
             const auto &prev_commitment       = prev_subject.nonce().utxo_commitment();
-            auto        prev_post_root_result = base::Hash256::fromSpan( gsl::span(
-                reinterpret_cast<uint8_t *>( const_cast<char *>( prev_commitment.post_utxo_root().data() ) ),
-                prev_commitment.post_utxo_root().size() ) );
+            auto        prev_post_root_result = base::Hash256::fromSpan(
+                gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( prev_commitment.post_utxo_root().data() ) ),
+                           prev_commitment.post_utxo_root().size() ) );
             if ( prev_post_root_result.has_error() )
             {
                 return false;
@@ -3667,209 +3694,9 @@ namespace sgns
             return false;
         }
 
-        const auto &inputs = params_opt->first;
-        if ( inputs.empty() )
-        {
-            return false;
-        }
-
-        std::unordered_map<std::string, const ConsumedInputProof *> proofs;
-        proofs.reserve( subject.nonce().utxo_witness().consumed_inputs_size() );
-        for ( const auto &proof : subject.nonce().utxo_witness().consumed_inputs() )
-        {
-            auto hash_result = base::Hash256::fromSpan(
-                gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( proof.tx_id_hash().data() ) ),
-                           proof.tx_id_hash().size() ) );
-            if ( hash_result.has_error() )
-            {
-                return false;
-            }
-            if ( !proofs.emplace( OutPointKey( hash_result.value(), proof.output_index() ), &proof ).second )
-            {
-                return false;
-            }
-        }
-
-        const auto &outputs = params_opt->second;
-        if ( outputs.empty() )
-        {
-            return false;
-        }
-
-        const auto add_amount = []( std::unordered_map<std::string, uint64_t> &bucket,
-                                    const std::string                         &token_key,
-                                    uint64_t                                   amount ) -> bool
-        {
-            auto &total = bucket[token_key];
-            if ( amount > std::numeric_limits<uint64_t>::max() - total )
-            {
-                return false;
-            }
-            total += amount;
-            return true;
-        };
-
-        std::unordered_set<std::string>           seen_inputs;
-        std::unordered_map<std::string, uint64_t> input_amounts_by_token;
-        std::unordered_map<std::string, uint64_t> output_amounts_by_token;
-        seen_inputs.reserve( inputs.size() );
-        input_amounts_by_token.reserve( inputs.size() );
-        output_amounts_by_token.reserve( outputs.size() );
-
-        for ( const auto &input : inputs )
-        {
-            if ( !GeniusAccount::VerifySignature(
-                     tx->GetSrcAddress(),
-                     std::string_view( reinterpret_cast<const char *>( input.signature_.data() ),
-                                       input.signature_.size() ),
-                     input.SerializeForSigning() ) )
-            {
-                return false;
-            }
-
-            auto proof_it = proofs.find( OutPointKey( input.txid_hash_, input.output_idx_ ) );
-            if ( proof_it == proofs.end() )
-            {
-                return false;
-            }
-
-            const auto outpoint_key = OutPointKey( input.txid_hash_, input.output_idx_ );
-            if ( !seen_inputs.insert( outpoint_key ).second )
-            {
-                return false;
-            }
-            const auto &proof = *proof_it->second;
-
-            const auto &payload = proof.leaf_payload();
-            if ( payload.size() < 32 + 4 + 4 + 32 + 8 )
-            {
-                return false;
-            }
-
-            auto payload_hash_result = base::Hash256::fromSpan(
-                gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( payload.data() ) ), 32 ) );
-            if ( payload_hash_result.has_error() || payload_hash_result.value() != input.txid_hash_ )
-            {
-                return false;
-            }
-            const auto payload_output_idx = ReadUInt32BE( reinterpret_cast<const uint8_t *>( payload.data() ) + 32 );
-            if ( payload_output_idx != input.output_idx_ )
-            {
-                return false;
-            }
-            const auto owner_len = ReadUInt32BE( reinterpret_cast<const uint8_t *>( payload.data() ) + 36 );
-            if ( payload.size() < 40 + owner_len + 32 + 8 )
-            {
-                return false;
-            }
-            const std::string payload_owner( payload.data() + 40, payload.data() + 40 + owner_len );
-            if ( payload_owner != tx->GetSrcAddress() )
-            {
-                return false;
-            }
-            const size_t      token_offset  = 40 + owner_len;
-            const size_t      amount_offset = token_offset + 32;
-            const std::string token_key( payload.data() + token_offset, payload.data() + amount_offset );
-            const uint64_t    input_amount = ReadUInt64BE( reinterpret_cast<const uint8_t *>( payload.data() ) +
-                                                        amount_offset );
-            if ( !add_amount( input_amounts_by_token, token_key, input_amount ) )
-            {
-                return false;
-            }
-
-            std::vector<uint8_t> payload_vec( payload.begin(), payload.end() );
-            auto                 current_hash = HashLeaf( payload_vec );
-            for ( const auto &step : proof.branch() )
-            {
-                auto sibling_hash_result = base::Hash256::fromSpan(
-                    gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( step.sibling_hash().data() ) ),
-                               step.sibling_hash().size() ) );
-                if ( sibling_hash_result.has_error() )
-                {
-                    return false;
-                }
-
-                if ( step.is_left_sibling() )
-                {
-                    current_hash = HashNode( sibling_hash_result.value(), current_hash );
-                }
-                else
-                {
-                    current_hash = HashNode( current_hash, sibling_hash_result.value() );
-                }
-            }
-
-            if ( current_hash != pre_root )
-            {
-                return false;
-            }
-
-            auto producer_cert_result = blockchain_->GetCertificateBySubjectHash( input.txid_hash_.toReadableString() );
-            if ( producer_cert_result.has_error() )
-            {
-                return false;
-            }
-            const auto &producer_subject = producer_cert_result.value().proposal().subject();
-            if ( !producer_subject.has_nonce() || !producer_subject.nonce().has_utxo_commitment() )
-            {
-                return false;
-            }
-            const auto &producer_commitment = producer_subject.nonce().utxo_commitment();
-            if ( producer_commitment.produced_outputs_root().size() != base::Hash256::size() )
-            {
-                return false;
-            }
-            auto produced_root_result = base::Hash256::fromSpan( gsl::span(
-                reinterpret_cast<uint8_t *>( const_cast<char *>( producer_commitment.produced_outputs_root().data() ) ),
-                producer_commitment.produced_outputs_root().size() ) );
-            if ( produced_root_result.has_error() )
-            {
-                return false;
-            }
-
-            auto produced_hash = HashLeaf( payload_vec );
-            for ( const auto &step : proof.produced_branch() )
-            {
-                auto sibling_hash_result = base::Hash256::fromSpan(
-                    gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( step.sibling_hash().data() ) ),
-                               step.sibling_hash().size() ) );
-                if ( sibling_hash_result.has_error() )
-                {
-                    return false;
-                }
-
-                if ( step.is_left_sibling() )
-                {
-                    produced_hash = HashNode( sibling_hash_result.value(), produced_hash );
-                }
-                else
-                {
-                    produced_hash = HashNode( produced_hash, sibling_hash_result.value() );
-                }
-            }
-
-            if ( produced_hash != produced_root_result.value() )
-            {
-                return false;
-            }
-        }
-
-        for ( const auto &output : outputs )
-        {
-            const auto       &token_bytes = output.token_id.bytes();
-            const std::string token_key( reinterpret_cast<const char *>( token_bytes.data() ), token_bytes.size() );
-            if ( !add_amount( output_amounts_by_token, token_key, output.encrypted_amount ) )
-            {
-                return false;
-            }
-        }
-
-        if ( input_amounts_by_token != output_amounts_by_token )
-        {
-            return false;
-        }
-
-        return true;
+        const auto         chain_id  = GetValidationChainId( tx );
+        const auto        &validator = GetInputValidator( chain_id );
+        return validator.ValidateWitness( subject, tx, params_opt.value(), pre_root, blockchain_ );
     }
 
     std::optional<UTXOTransitionCommitment> TransactionManager::BuildUTXOTransitionCommitment(

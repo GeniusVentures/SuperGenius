@@ -60,6 +60,7 @@ add_library(genius_node
     ProcessingTransaction.cpp
     EscrowTransaction.cpp
     EscrowReleaseTransaction.cpp
+    InputValidators.cpp
     TransactionManager.cpp
     TokenAmount.cpp
     MigrationManager.cpp
