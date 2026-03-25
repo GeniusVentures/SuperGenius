@@ -548,7 +548,6 @@ namespace sgns
             TransferTransaction::New( inputs, outputs, FillDAGStruct() ) );
 
         transfer_transaction->MakeSignature( *account_m );
-        RecordOutgoingTxHash( transfer_transaction->GetNonce(), transfer_transaction->GetHash() );
 
         utxo_manager_.ReserveUTXOs( inputs, transfer_transaction->GetHash() );
 
@@ -606,7 +605,6 @@ namespace sgns
                                     destination ) );
 
         mint_transaction->MakeSignature( *account_m );
-        RecordOutgoingTxHash( mint_transaction->GetNonce(), mint_transaction->GetHash() );
 
         // Store the transaction ID before moving the transaction
         auto txId = mint_transaction->GetHash();
@@ -636,7 +634,6 @@ namespace sgns
             EscrowTransaction::New( params, amount, dev_addr, peers_cut, FillDAGStruct() ) );
 
         escrow_transaction->MakeSignature( *account_m );
-        RecordOutgoingTxHash( escrow_transaction->GetNonce(), escrow_transaction->GetHash() );
         utxo_manager_.ReserveUTXOs( inputs, escrow_transaction->GetHash() );
 
         // Get the transaction ID for tracking
@@ -723,7 +720,8 @@ namespace sgns
             TransferTransaction::New( std::vector{ escrow_utxo_input }, payout_peers, FillDAGStruct() ) );
 
         transfer_transaction->MakeSignature( *account_m );
-        RecordOutgoingTxHash( transfer_transaction->GetNonce(), transfer_transaction->GetHash() );
+        auto escrow_release_dag = FillDAGStruct();
+        escrow_release_dag.set_previous_hash( transfer_transaction->GetHash() );
 
         auto escrow_release_tx = std::make_shared<EscrowReleaseTransaction>(
             EscrowReleaseTransaction::New( escrow_tx->GetUTXOParameters(),
@@ -731,10 +729,9 @@ namespace sgns
                                            escrow_tx->GetDevAddress(),
                                            escrow_tx->dag_st.source_addr(),
                                            escrow_tx->GetHash(),
-                                           FillDAGStruct() ) );
+                                           escrow_release_dag ) );
 
         escrow_release_tx->MakeSignature( *account_m );
-        RecordOutgoingTxHash( escrow_release_tx->GetNonce(), escrow_release_tx->GetHash() );
 
         TransactionBatch tx_batch;
 
@@ -802,13 +799,29 @@ namespace sgns
         {
             return "";
         }
-        std::lock_guard lock( outgoing_tx_hash_mutex_ );
-        auto            it = outgoing_tx_hash_by_nonce_.find( nonce - 1 );
-        if ( it == outgoing_tx_hash_by_nonce_.end() )
+
+        std::shared_lock tx_lock( tx_mutex_m );
+        for ( const auto &[_, tracked] : tx_processed_m )
         {
-            return "";
+            if ( !tracked.tx )
+            {
+                continue;
+            }
+            if ( tracked.tx->GetSrcAddress() != account_m->GetAddress() )
+            {
+                continue;
+            }
+            if ( tracked.cached_nonce != ( nonce - 1 ) )
+            {
+                continue;
+            }
+            if ( tracked.status == TransactionStatus::FAILED || tracked.status == TransactionStatus::INVALID )
+            {
+                continue;
+            }
+            return tracked.tx->GetHash();
         }
-        return it->second;
+        return "";
     }
 
     std::string TransactionManager::GetValidationChainId( const std::shared_ptr<IGeniusTransactions> &tx ) const
@@ -837,35 +850,6 @@ namespace sgns
         }
 
         return public_chain_input_validator_;
-    }
-
-    void TransactionManager::RecordOutgoingTxHash( uint64_t nonce, const std::string &hash )
-    {
-        std::lock_guard lock( outgoing_tx_hash_mutex_ );
-        outgoing_tx_hash_by_nonce_[nonce] = hash;
-
-        if ( nonce_window_m == 0 )
-        {
-            return;
-        }
-        const uint64_t min_nonce = ( nonce > ( nonce_window_m + 1 ) ) ? ( nonce - ( nonce_window_m + 1 ) ) : 0;
-        for ( auto it = outgoing_tx_hash_by_nonce_.begin(); it != outgoing_tx_hash_by_nonce_.end(); )
-        {
-            if ( it->first < min_nonce )
-            {
-                it = outgoing_tx_hash_by_nonce_.erase( it );
-            }
-            else
-            {
-                ++it;
-            }
-        }
-    }
-
-    void TransactionManager::RemoveOutgoingTxHash( uint64_t nonce )
-    {
-        std::lock_guard lock( outgoing_tx_hash_mutex_ );
-        outgoing_tx_hash_by_nonce_.erase( nonce );
     }
 
     outcome::result<void> TransactionManager::SendTransactionItem( TransactionItem &item )
@@ -4298,10 +4282,6 @@ namespace sgns
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::FAILED, tx->GetNonce() };
                 account_m->ReleaseNonce( tx->GetNonce() );
-                if ( tx->GetSrcAddress() == account_m->GetAddress() )
-                {
-                    RemoveOutgoingTxHash( tx->GetNonce() );
-                }
 
                 TransactionManagerLogger()->debug( "[{} - full: {}] {}: Set status of FAILED to transaction {}",
                                                    account_m->GetAddress().substr( 0, 8 ),
