@@ -63,7 +63,7 @@ namespace sgns
             uint32_t penalty_threshold_               = 10;
             uint32_t penalty_cap_                     = 100;
             uint32_t blacklist_bump_                  = 10;
-            uint32_t missed_epoch_threshold_          = 5;
+            uint32_t missed_epoch_threshold_          = 500;
             uint32_t inactivity_decrement_            = 1;
             uint64_t total_weight_cap_multiplier_     = 4;
             uint64_t certificate_timestamp_window_ms_ = 300000;

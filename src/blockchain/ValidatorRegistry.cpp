@@ -445,7 +445,6 @@ namespace sgns
             std::shared_lock<std::shared_mutex> lock( cache_mutex_ );
             if ( cached_registry_ )
             {
-                logger_->trace( "{}: returning cached registry", __func__ );
                 return cached_registry_.value();
             }
         }
@@ -1185,6 +1184,13 @@ namespace sgns
             const bool approve = ( it != unregistered_votes.end() ) ? it->second : true;
             entry->set_penalty_score( approve ? 0 : 1 );
             entry->set_missed_epochs( 0 );
+            logger_->debug( "{}: added validator id={} weight={} approve={} penalty={} status={}",
+                            __func__,
+                            validator_id.substr( 0, 8 ),
+                            entry->weight(),
+                            approve,
+                            entry->penalty_score(),
+                            static_cast<int>( entry->status() ) );
             ++added;
         }
     }
@@ -1203,6 +1209,9 @@ namespace sgns
             const bool     approve = vote_it->second;
             uint32_t       penalty = static_cast<uint32_t>( entry.penalty_score() );
             const uint32_t cap     = weight_config_.penalty_cap_;
+            const uint64_t old_weight  = entry.weight();
+            const uint32_t old_penalty = penalty;
+            const auto     old_status  = entry.status();
             entry.set_missed_epochs( 0 );
 
             if ( approve )
@@ -1270,6 +1279,17 @@ namespace sgns
                 }
                 entry.set_penalty_score( penalty );
             }
+
+            logger_->debug( "{}: vote effect id={} approve={} weight {}->{} penalty {}->{} status {}->{}",
+                            __func__,
+                            entry.validator_id().substr( 0, 8 ),
+                            approve,
+                            old_weight,
+                            entry.weight(),
+                            old_penalty,
+                            entry.penalty_score(),
+                            static_cast<int>( old_status ),
+                            static_cast<int>( entry.status() ) );
         }
     }
 
@@ -1298,12 +1318,20 @@ namespace sgns
                 const uint32_t dec = weight_config_.inactivity_decrement_;
                 if ( dec > 0 && entry.weight() > 0 )
                 {
+                    const uint64_t old_weight = entry.weight();
                     const uint64_t new_weight = ( entry.weight() > dec ) ? ( entry.weight() - dec ) : 0;
                     entry.set_weight( new_weight );
                     if ( new_weight == 0 )
                     {
                         entry.set_status( Status::SUSPENDED );
                     }
+                    logger_->debug( "{}: inactivity decay id={} missed={} weight {}->{} status={}",
+                                    __func__,
+                                    entry.validator_id().substr( 0, 8 ),
+                                    missed,
+                                    old_weight,
+                                    new_weight,
+                                    static_cast<int>( entry.status() ) );
                 }
             }
         }
@@ -1326,6 +1354,8 @@ namespace sgns
             return;
         }
 
+        logger_->debug( "{}: applying total weight cap total_active={} cap={}", __func__, total_active, weight_cap );
+
         uint64_t            scaled_sum = 0;
         std::vector<size_t> active_indices;
         active_indices.reserve( entries.size() );
@@ -1335,10 +1365,16 @@ namespace sgns
             {
                 continue;
             }
+            const uint64_t old_weight = entries[i].weight();
             const uint64_t scaled = ( entries[i].weight() * weight_cap ) / total_active;
             entries[i].set_weight( scaled );
             scaled_sum += scaled;
             active_indices.push_back( i );
+            logger_->debug( "{}: cap scale id={} weight {}->{}",
+                            __func__,
+                            entries[i].validator_id().substr( 0, 8 ),
+                            old_weight,
+                            scaled );
         }
 
         uint64_t remainder = ( scaled_sum <= weight_cap ) ? ( weight_cap - scaled_sum ) : 0;
@@ -1363,6 +1399,14 @@ namespace sgns
             entries[active_indices[idx]].set_weight( entries[active_indices[idx]].weight() + 1 );
             remainder -= 1;
             idx        = ( idx + 1 ) % active_indices.size();
+        }
+
+        for ( const auto active_idx : active_indices )
+        {
+            logger_->debug( "{}: cap final id={} weight={}",
+                            __func__,
+                            entries[active_idx].validator_id().substr( 0, 8 ),
+                            entries[active_idx].weight() );
         }
     }
 
