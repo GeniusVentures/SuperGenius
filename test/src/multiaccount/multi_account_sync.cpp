@@ -130,6 +130,8 @@ protected:
         removeWithRetry( binaryPath + "/node_multi_account_0/" );
         removeWithRetry( binaryPath + "/node_multi_account_1/" );
         removeWithRetry( binaryPath + "/node_multi_account_2/" );
+        removeWithRetry( binaryPath + "/node_multi_account_3/" );
+        removeWithRetry( binaryPath + "/node_multi_account_4/" );
     }
 
     void TearDown() override
@@ -561,7 +563,10 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
     epoch_before = registry_state.value().epoch();
     cid_before   = registry->GetRegistryCid();
 
-    auto transfer1 = node_client->TransferFunds( 75, node_peer1->GetAddress(), TokenID::FromBytes( { 0x00 } ) );
+    auto transfer1 = node_client->TransferFunds( 75,
+                                                       node_peer1->GetAddress(),
+                                                       TokenID::FromBytes( { 0x00 } ),
+                                                       std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( transfer1.has_value() ) << "Transfer 1 failed on node_client";
     fmt::println( "Transfer 1 succeeded" );
     assert_registry_updated( epoch_before, cid_before );
@@ -570,7 +575,10 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
     epoch_before = registry_state.value().epoch();
     cid_before   = registry->GetRegistryCid();
 
-    auto transfer2 = node_client->TransferFunds( 40, node_peer2->GetAddress(), TokenID::FromBytes( { 0x00 } ) );
+    auto transfer2 = node_client->TransferFunds( 40,
+                                                       node_peer2->GetAddress(),
+                                                       TokenID::FromBytes( { 0x00 } ),
+                                                       std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( transfer2.has_value() ) << "Transfer 2 failed on node_client";
     fmt::println( "Transfer 2 succeeded" );
     assert_registry_updated( epoch_before, cid_before );
@@ -579,7 +587,10 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
     epoch_before = registry_state.value().epoch();
     cid_before   = registry->GetRegistryCid();
 
-    auto transfer3 = node_client->TransferFunds( 10, node_peer3->GetAddress(), TokenID::FromBytes( { 0x00 } ) );
+    auto transfer3 = node_client->TransferFunds( 10,
+                                                       node_peer3->GetAddress(),
+                                                       TokenID::FromBytes( { 0x00 } ),
+                                                       std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( transfer3.has_value() ) << "Transfer 3 failed on node_client";
 
     fmt::println( "Transfer 3 succeeded" );
