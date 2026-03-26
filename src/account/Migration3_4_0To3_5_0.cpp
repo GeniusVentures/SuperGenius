@@ -110,6 +110,9 @@ namespace sgns
         account_->ConfigureMessengerHandlers( db_3_5_0_ );
 
         db_3_5_0_->Start();
+        db_3_5_0_->SetBroadcastEnabled( false );
+        logger_->info( "Broadcast suppression enabled for migration target DB" );
+
         //init blockchain
         if ( !blockchain_ )
         {
@@ -419,13 +422,7 @@ namespace sgns
 
         logger_->debug( "Initializing legacy {} DB at path {}", FromVersion(), full_path );
 
-        auto maybe_db_3_4_0 = crdt::GlobalDB::New( ioContext_,
-                                                   full_path,
-                                                   pubSub_,
-                                                   crdt::CrdtOptions::DefaultOptions(),
-                                                   graphsync_,
-                                                   scheduler_,
-                                                   generator_ );
+        auto maybe_db_3_4_0 = crdt::GlobalDB::NewMigrationSource( ioContext_, full_path );
 
         if ( !maybe_db_3_4_0.has_value() )
         {

@@ -165,6 +165,9 @@ namespace sgns::crdt
                 m_logger->error( "Failed to decode broadcast payload" );
                 break;
             }
+            m_logger->info( "CID_BROADCAST_RX: from_peer={}, cid_count={}",
+                            peerId.toBase58(),
+                            cids.value().size() );
             auto                                     addresses = bmsg.peer().addrs();
             std::vector<libp2p::multi::Multiaddress> addrvector;
             for ( auto &addr : addresses )
@@ -272,6 +275,10 @@ namespace sgns::crdt
         for ( auto &topic : broadcastTopicsCopy )
         {
             pubSub_->PublishBuffered( topic, serialized_proto );
+            m_logger->info( "PUBSUB_BROADCAST: Publishing {} bytes of data to topic {} (will deliver transaction "
+                            "data via CRDT to waiting nodes)",
+                            serialized_proto.size(),
+                            topic );
             if ( m_logger->level() <= spdlog::level::trace )
             {
                 m_logger->trace( "CIDs broadcasted by {} to topic {}, at this {}",
@@ -469,6 +476,10 @@ namespace sgns::crdt
                                  peer_id.toBase58() );
             }
             dagSyncer_->AddRoute( cid, peer_id, addr_vector );
+            m_logger->info( "CID_ROUTE_ADDED: cid={}, peer={}, addr_count={}",
+                            cid.toString().value(),
+                            peer_id.toBase58(),
+                            addr_vector.size() );
         }
         return new_content;
     }

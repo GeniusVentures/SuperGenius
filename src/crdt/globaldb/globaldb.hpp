@@ -49,6 +49,21 @@ namespace sgns::crdt
             std::shared_ptr<RocksDB>                                              datastore = nullptr );
 
         /**
+         * @brief       Factory method that opens an existing database in read-only migration-source mode.
+         *              No PubSub, GraphSync, or DAGSyncer instances are created — only the
+         *              underlying RocksDB and a CRDT query layer are initialised.
+         *              Use this for legacy databases that only need to be read during migration.
+         * @param[in]   context      The io context.
+         * @param[in]   databasePath Local path of the existing database.
+         * @param[in]   datastore    Optional pre-opened RocksDB; opened from databasePath when nullptr.
+         * @return      A GlobalDB that supports Get / QueryKeyValues / KeyToString / GetDataStore.
+         */
+        static outcome::result<std::shared_ptr<GlobalDB>> NewMigrationSource(
+            std::shared_ptr<boost::asio::io_context> context,
+            std::string                              databasePath,
+            std::shared_ptr<RocksDB>                 datastore = nullptr );
+
+        /**
          * @brief      Destructor or GlobalDB
          */
         ~GlobalDB();
@@ -159,6 +174,12 @@ namespace sgns::crdt
         outcome::result<void> RequestHeadBroadcast( const std::set<std::string> &topics );
 
         /**
+         * @brief       Enable or disable outgoing CRDT head broadcasts.
+         * @param[in]   enabled True to allow broadcasts, false to suppress them.
+         */
+        void SetBroadcastEnabled( bool enabled );
+
+        /**
          * @brief       Get the topics that are being listened to
          * @return      A set of the monitored topic names 
          */
@@ -180,6 +201,8 @@ namespace sgns::crdt
                                     std::shared_ptr<libp2p::protocol::Scheduler>               scheduler,
                                     std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
                                     std::shared_ptr<RocksDB> datastore = nullptr );
+
+        outcome::result<void> InitMigrationSource( std::shared_ptr<RocksDB> datastore = nullptr );
 
         void scheduleBootstrap( std::shared_ptr<boost::asio::io_context> io_context,
                                 std::shared_ptr<libp2p::Host>            host );

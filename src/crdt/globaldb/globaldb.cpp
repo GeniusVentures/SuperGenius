@@ -68,6 +68,117 @@ namespace sgns::crdt
     using GossipPubSub       = ipfs_pubsub::GossipPubSub;
     using GraphsyncImpl      = ipfs_lite::ipfs::graphsync::GraphsyncImpl;
 
+    namespace
+    {
+        // -----------------------------------------------------------------------
+        // NullBroadcaster — no-op Broadcaster for migration-source (read-only) mode.
+        // -----------------------------------------------------------------------
+        class NullBroadcaster : public Broadcaster
+        {
+        public:
+            outcome::result<void> Broadcast( const base::Buffer &,
+                                             std::string,
+                                             boost::optional<libp2p::peer::PeerInfo> ) override
+            {
+                return outcome::success();
+            }
+
+            outcome::result<base::Buffer> Next() override
+            {
+                return outcome::failure( boost::system::error_code{} );
+            }
+
+            bool HasTopic( const std::string & ) override
+            {
+                return false;
+            }
+        };
+
+        // -----------------------------------------------------------------------
+        // NullDagSyncer — no-op DAGSyncer for migration-source (read-only) mode.
+        // -----------------------------------------------------------------------
+        class NullDagSyncer : public DAGSyncer
+        {
+            using IPLDNode = ipfs_lite::ipld::IPLDNode;
+            using Leaf     = ipfs_lite::ipfs::merkledag::Leaf;
+
+        public:
+            outcome::result<bool> HasBlock( const CID & ) const override
+            {
+                return false;
+            }
+
+            outcome::result<void> addNode( std::shared_ptr<const IPLDNode> ) override
+            {
+                return outcome::success();
+            }
+
+            outcome::result<std::shared_ptr<IPLDNode>> getNode( const CID & ) const override
+            {
+                return outcome::failure( boost::system::error_code{} );
+            }
+
+            outcome::result<void> removeNode( const CID & ) override
+            {
+                return outcome::success();
+            }
+
+            outcome::result<size_t> select( gsl::span<const uint8_t>,
+                                            gsl::span<const uint8_t>,
+                                            std::function<bool( std::shared_ptr<const IPLDNode> )> ) const override
+            {
+                return 0;
+            }
+
+            outcome::result<std::shared_ptr<Leaf>> fetchGraph( const CID & ) const override
+            {
+                return outcome::failure( boost::system::error_code{} );
+            }
+
+            outcome::result<std::shared_ptr<Leaf>> fetchGraphOnDepth( const CID &, uint64_t ) const override
+            {
+                return outcome::failure( boost::system::error_code{} );
+            }
+
+            outcome::result<std::shared_ptr<IPLDNode>> GetNodeWithoutRequest( const CID & ) const override
+            {
+                return outcome::failure( boost::system::error_code{} );
+            }
+
+            std::pair<LinkInfoSet, LinkInfoSet> TraverseCIDsLinks( IPLDNode &,
+                                                                   std::string,
+                                                                   LinkInfoSet ) const override
+            {
+                return {};
+            }
+
+            outcome::result<void> markResolved( const CID & ) override
+            {
+                return outcome::success();
+            }
+
+            outcome::result<bool> isResolved( const CID & ) const override
+            {
+                return false;
+            }
+
+            void InitCIDBlock( const CID & ) override {}
+
+            bool IsCIDInCache( const CID & ) const override
+            {
+                return false;
+            }
+
+            outcome::result<void> DeleteCIDBlock( const CID & ) override
+            {
+                return outcome::success();
+            }
+
+            void Stop() override {}
+        };
+
+    } // anonymous namespace
+
     outcome::result<std::shared_ptr<GlobalDB>> GlobalDB::New(
         std::shared_ptr<boost::asio::io_context>                              context,
         std::string                                                           databasePath,
@@ -92,6 +203,76 @@ namespace sgns::crdt
                                                  std::move( generator ),
                                                  std::move( datastore ) ) );
         return new_instance;
+    }
+
+    outcome::result<std::shared_ptr<GlobalDB>> GlobalDB::NewMigrationSource(
+        std::shared_ptr<boost::asio::io_context> context,
+        std::string                              databasePath,
+        std::shared_ptr<RocksDB>                 datastore )
+    {
+        if ( !context )
+        {
+            return outcome::failure( Error::INVALID_PARAMETERS );
+        }
+        // pubsub is not needed for a migration-source DB; pass nullptr
+        auto new_instance = std::shared_ptr<GlobalDB>(
+            new GlobalDB( std::move( context ), std::move( databasePath ), nullptr ) );
+
+        BOOST_OUTCOME_TRYV2( auto &&, new_instance->InitMigrationSource( std::move( datastore ) ) );
+        return new_instance;
+    }
+
+    outcome::result<void> GlobalDB::InitMigrationSource( std::shared_ptr<RocksDB> datastore )
+    {
+        std::shared_ptr<RocksDB> dataStore = std::move( datastore );
+        if ( dataStore == nullptr )
+        {
+            auto databasePathAbsolute = boost::filesystem::absolute( m_databasePath ).string();
+
+            m_logger->info( "Opening migration-source database " + databasePathAbsolute );
+            RocksDB::Options options;
+            options.create_if_missing = false; // legacy DB must already exist
+            try
+            {
+                auto dataStoreResult = RocksDB::create( databasePathAbsolute, options );
+                if ( !dataStoreResult.has_value() )
+                {
+                    m_logger->error( "Unable to open migration-source database: {}",
+                                     dataStoreResult.error().message() );
+                    return outcome::failure( boost::system::error_code{} );
+                }
+                dataStore = std::move( dataStoreResult.value() );
+            }
+            catch ( std::exception &e )
+            {
+                m_logger->error( "Unable to open migration-source database: {}", e.what() );
+                return Error::ROCKSDB_IO;
+            }
+        }
+        m_datastore = std::move( dataStore );
+
+        auto ipfsDBResult = IpfsRocksDb::create( m_datastore->getDB() );
+        if ( ipfsDBResult.has_error() )
+        {
+            m_logger->error( "Unable to create IPFS datastore for migration-source database" );
+            return Error::IPFS_DB_NOT_CREATED;
+        }
+
+        auto nullDagSyncer  = std::make_shared<NullDagSyncer>();
+        auto nullBroadcaster = std::make_shared<NullBroadcaster>();
+
+        m_crdtDatastore = CrdtDatastore::New( m_datastore,
+                                              HierarchicalKey( "crdt" ),
+                                              nullDagSyncer,
+                                              nullBroadcaster,
+                                              CrdtOptions::DefaultOptions() );
+        if ( m_crdtDatastore == nullptr )
+        {
+            m_logger->error( "Unable to create CRDT datastore for migration-source database" );
+            return Error::CRDT_DATASTORE_NOT_CREATED;
+        }
+
+        return outcome::success();
     }
 
     GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>         context,
@@ -418,6 +599,18 @@ namespace sgns::crdt
         return m_crdtDatastore->BroadcastHeadsForTopics( topics );
     }
 
+    void GlobalDB::SetBroadcastEnabled( bool enabled )
+    {
+        if ( !m_crdtDatastore )
+        {
+            m_logger->warn( "SetBroadcastEnabled: CRDT datastore not initialized" );
+            return;
+        }
+
+        m_crdtDatastore->SetBroadcastEnabled( enabled );
+        m_logger->info( "SetBroadcastEnabled: {}", enabled ? "enabled" : "disabled" );
+    }
+
     outcome::result<std::set<std::string>> GlobalDB::GetMonitoredTopics() const
     {
         if ( !m_crdtDatastore )
@@ -425,7 +618,7 @@ namespace sgns::crdt
             m_logger->error( "{}: CRDT datastore not initialized", __func__ );
             return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
         }
-        m_logger->debug( "{}: Forwarding request for {} topics", __func__ );
+        m_logger->debug( "{}: Forwarding request", __func__ );
         return m_crdtDatastore->GetTopicNames();
     }
 }

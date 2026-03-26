@@ -393,11 +393,11 @@ namespace sgns
         // Debug mode
         node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::debug );
         auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::debug );
-        auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::err );
+    auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::debug );
         auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
-        auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
+    auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::debug );
         auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
-        auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::err );
+    auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::debug );
         auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
         auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::debug );
         auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::err );
@@ -413,14 +413,14 @@ namespace sgns
         auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
         auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
-        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
-        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::debug );
+        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::debug );
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
         auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::trace );
         auto loggerValidator        = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::debug );
         auto loggerProcMgr          = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
         auto loggerProcessor        = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
-        auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
+        auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::debug );
         auto loggerCoinPrices       = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
         //AsyncIOManager Loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
@@ -528,7 +528,7 @@ namespace sgns
                 config );
             auto pubs = pubsub_->Start( pubsubport_, {}, old_lanip, {} );
             pubs.wait();
-            node_logger_->info( "PubSub started at address: {}", pubsub_->GetLocalAddress() );
+            node_logger_->info( "PubSub started at address: {}", pubsub_->GetInterfaceAddress() );
 
             if ( !is_full_node )
             {
@@ -1188,9 +1188,12 @@ namespace sgns
                         }
                         if ( strong->GetTransactionManagerState() != TransactionManager::State::READY )
                         {
-                            strong->node_logger_->info( "[{}]{}: Transactions are not ready",
-                                                        strong->account_->GetAddress().substr( 0, 8 ),
-                                                        __func__ );
+                            strong->node_logger_->info(
+                                "[{}]{}: Transactions are not ready (state: {}), skipping escrow payout for task {}",
+                                strong->account_->GetAddress().substr( 0, 8 ),
+                                __func__,
+                                TransactionManager::StateToString( strong->GetTransactionManagerState() ),
+                                task_id );
                             break;
                         }
                         strong->node_logger_->info( "[{}]{}: Transactions READY",

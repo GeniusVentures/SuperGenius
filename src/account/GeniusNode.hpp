@@ -382,7 +382,7 @@ sinks:
 groups:
     - name: SuperGeniusNode
       sink: file
-      level: error
+      level: trace
       children:
         - name: libp2p
         - name: Gossip

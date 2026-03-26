@@ -179,6 +179,10 @@ namespace sgns
         envelope.mutable_head_request()->CopyFrom( signed_req );
 
         logger_->debug( "[{}] Sending HeadRequest for {} topics", address_.substr( 0, 8 ), topics.size() );
+        logger_->info( "[{}] GAP_RESOLUTION: Head request broadcast for {} topics - full node will gossip "
+                       "transaction data",
+                       address_.substr( 0, 8 ),
+                       topics.size() );
 
         return SendAccountMessage( envelope, { requests_topic_ } );
     }
@@ -607,6 +611,20 @@ namespace sgns
                         resp.responder_address().substr( 0, 8 ),
                         resp.blocks_size(),
                         resp.request_id() );
+
+        if ( resp.blocks_size() > 0 )
+        {
+            logger_->info( "[{}] GAP_RESOLUTION: Full node sent {} blocks in response to head request - "
+                           "transactions available for CRDT delivery",
+                           address_.substr( 0, 8 ),
+                           resp.blocks_size() );
+        }
+        else
+        {
+            logger_->debug( "[{}] GAP_RESOLUTION: Full node sent empty block response - no transactions "
+                            "available yet",
+                            address_.substr( 0, 8 ) );
+        }
 
         // Verify signature
         std::string serialized;
@@ -1209,10 +1227,17 @@ namespace sgns
             resp.set_has_nonce( true );
             resp.set_known_nonce( local_nonce );
 
-            logger_->debug( "[{}] Sending back the nonce {} to {} with req_id {}",
+            logger_->info( "[{}] NONCE_REPLY_SOURCE: requester={}, req_id={}, looked_up_confirmed_nonce={}",
+                           address_.substr( 0, 8 ),
+                           req.requester_address().substr( 0, 8 ),
+                           req.request_id(),
+                           local_nonce );
+
+            logger_->debug( "[{}] Sending back the nonce {} to {} (len={}) with req_id {}",
                             address_.substr( 0, 8 ),
                             local_nonce,
                             req.requester_address().substr( 0, 8 ),
+                            req.requester_address().size(),
                             resp.request_id() );
         }
 
@@ -1259,6 +1284,21 @@ namespace sgns
                         resp.has_nonce(),
                         resp.known_nonce(),
                         resp.request_id() );
+
+        if ( resp.has_nonce() )
+        {
+            logger_->info( "[{}] GAP_RESOLUTION: Full node reports confirmed nonce = {} (next expected for local: "
+                           "{})",
+                           address_.substr( 0, 8 ),
+                           resp.known_nonce(),
+                           resp.known_nonce() + 1 );
+        }
+        else
+        {
+            logger_->info( "[{}] GAP_RESOLUTION: Full node has no confirmed nonce for us yet (account not yet "
+                           "created on full node)",
+                           address_.substr( 0, 8 ) );
+        }
 
         std::string serialized;
         if ( !resp.SerializeToString( &serialized ) )

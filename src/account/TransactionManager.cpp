@@ -809,7 +809,35 @@ namespace sgns
             }
         }
 
+        m_logger->info( "[{} - full: {}] SEND_TX_COMMIT_PREP: tx_count={}, nonce_count={}, topic_count={}",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        transaction_batch.size(),
+                        nonces_set.size(),
+                        topicSet.size() );
+        for ( const auto &[tx, _] : transaction_batch )
+        {
+            m_logger->debug( "[{} - full: {}] SEND_TX_COMMIT_PREP: key={}, nonce={}, hash={}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             GetTransactionPath( *tx ),
+                             tx->dag_st.nonce(),
+                             tx->dag_st.data_hash() );
+        }
+        for ( const auto &topic : topicSet )
+        {
+            m_logger->debug( "[{} - full: {}] SEND_TX_COMMIT_PREP: topic={}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             topic );
+        }
+
         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( topicSet ) );
+
+        m_logger->info( "[{} - full: {}] SEND_TX_COMMIT_DONE: published tx batch with {} nonces",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        nonces_set.size() );
 
         return nonces_set;
     }
@@ -1649,7 +1677,7 @@ namespace sgns
         do
         {
             std::shared_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
-            m_logger->trace( "[{} - full: {}] Searching for transaction {}",
+            m_logger->debug( "[{} - full: {}] Searching for transaction {}",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              txId );
@@ -1659,7 +1687,7 @@ namespace sgns
                 if ( tracked.tx && tracked.tx->dag_st.data_hash() == txId )
                 {
                     retval = tracked.status;
-                    m_logger->trace( "[{} - full: {}] Transaction status is {}",
+                    m_logger->debug( "[{} - full: {}] Transaction status is {}",
                                      account_m->GetAddress().substr( 0, 8 ),
                                      full_node_m,
                                      static_cast<int>( retval ) );
@@ -1669,7 +1697,7 @@ namespace sgns
             }
             if ( !found )
             {
-                m_logger->trace( "[{} - full: {}] Transaction untracked",
+                m_logger->debug( "[{} - full: {}] Transaction untracked",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m );
                 retval = TransactionStatus::FAILED;
@@ -1678,7 +1706,7 @@ namespace sgns
             if ( retval == TransactionStatus::INVALID || retval == TransactionStatus::CONFIRMED ||
                  retval == TransactionStatus::FAILED )
             {
-                m_logger->trace( "[{} - full: {}] Transaction has finalized state {}",
+                m_logger->debug( "[{} - full: {}] Transaction has finalized state {}",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
                                  static_cast<int>( retval ) );
@@ -1815,6 +1843,14 @@ namespace sgns
         uint64_t expected_next_nonce = confirmed_nonce + 1;
         uint64_t proposed_nonce      = account_m->GetProposedNonce();
 
+        m_logger->debug( "[{} - full: {}] NONCE_CHECK: Full node confirmed nonce = {}, expected next = {}, "
+                         "proposed/local next = {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         confirmed_nonce,
+                         expected_next_nonce,
+                         proposed_nonce );
+
         if ( proposed_nonce == expected_next_nonce )
         {
             //Either my old txs are outdated or
@@ -1843,6 +1879,7 @@ namespace sgns
             }
 
             (void)CheckTransactionValidity( nonces_to_check );
+            BroadcastLocalHeadsForAheadGap();
         }
         else if ( proposed_nonce < expected_next_nonce )
         {
@@ -1853,6 +1890,14 @@ namespace sgns
                              proposed_nonce,
                              expected_next_nonce,
                              nonce_gap );
+
+            m_logger->info( "[{} - full: {}] Gap details: waiting for nonce {} from full node (confirmed at {}). "
+                            "Local has transactions up to {}.",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            expected_next_nonce,
+                            confirmed_nonce,
+                            proposed_nonce );
 
             // If we're behind at all, we need to catch up - even a gap of 1 means
             // there's transaction data in CRDT that we don't have, and we cannot
@@ -1874,7 +1919,61 @@ namespace sgns
             auto elapsed = std::chrono::duration_cast<std::chrono::seconds>( now - last_head_request_time_.value() );
             if ( elapsed.count() < 30 )
             {
-                m_logger->trace( "[{} - full: {}] Skipping head request - too soon since last request ({}s ago)",
+                int seconds_remaining = 30 - elapsed.count();
+                m_logger->debug( "[{} - full: {}] GAP_RESOLUTION: Head request throttled - only {}s since last request "
+                                 "(30s min). Will retry in ~{}s.",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 elapsed.count(),
+                                 seconds_remaining );
+                return;
+            }
+        }
+
+        auto topics_result = globaldb_m->GetMonitoredTopics();
+        if ( !topics_result.has_value() )
+        {
+            m_logger->warn( "[{} - full: {}] GAP_RESOLUTION: Could not get monitored topics for head request - "
+                            "cannot resolve gap",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m );
+            return;
+        }
+
+        if ( account_m->RequestHeads( topics_result.value() ) )
+        {
+            last_head_request_time_ = now;
+            m_logger->info( "[{} - full: {}] GAP_RESOLUTION: Head request sent for {} topics to fetch missing "
+                            "transaction data",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            topics_result.value().size() );
+        }
+        else
+        {
+            m_logger->warn( "[{} - full: {}] GAP_RESOLUTION: Failed to request heads from full node - gap cannot "
+                            "be resolved",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m );
+        }
+    }
+
+    void TransactionManager::BroadcastLocalHeadsForAheadGap()
+    {
+        // Only non-full nodes need to push local history to peers when ahead.
+        if ( full_node_m )
+        {
+            return;
+        }
+
+        auto now = std::chrono::steady_clock::now();
+        if ( last_head_broadcast_time_.has_value() )
+        {
+            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>( now - last_head_broadcast_time_.value() );
+            if ( elapsed.count() < 30 )
+            {
+                m_logger->debug( "[{} - full: {}] GAP_RESOLUTION: Local head rebroadcast throttled ({}s since last, "
+                                 "30s min)",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
                                  elapsed.count() );
@@ -1885,30 +1984,29 @@ namespace sgns
         auto topics_result = globaldb_m->GetMonitoredTopics();
         if ( !topics_result.has_value() )
         {
-            m_logger->warn( "[{} - full: {}] Could not get monitored topics for head request",
+            m_logger->warn( "[{} - full: {}] GAP_RESOLUTION: Unable to rebroadcast local heads - monitored topics "
+                            "unavailable",
                             account_m->GetAddress().substr( 0, 8 ),
                             full_node_m );
             return;
         }
-        m_logger->info( "[{} - full: {}] Requesting heads for {} topics",
+
+        auto broadcast_result = globaldb_m->RequestHeadBroadcast( topics_result.value() );
+        if ( broadcast_result.has_error() )
+        {
+            m_logger->warn( "[{} - full: {}] GAP_RESOLUTION: Local head rebroadcast failed: {}",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            broadcast_result.error().message() );
+            return;
+        }
+
+        last_head_broadcast_time_ = now;
+        m_logger->info( "[{} - full: {}] GAP_RESOLUTION: Re-broadcasted local heads for {} topics to help full node "
+                        "catch up",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
                         topics_result.value().size() );
-
-        if ( account_m->RequestHeads( topics_result.value() ) )
-        {
-            last_head_request_time_ = now;
-            m_logger->debug( "[{} - full: {}] Periodic sync head request sent for {} topics",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             topics_result.value().size() );
-        }
-        else
-        {
-            m_logger->warn( "[{} - full: {}] Failed to request heads",
-                            account_m->GetAddress().substr( 0, 8 ),
-                            full_node_m );
-        }
     }
 
     outcome::result<bool> TransactionManager::CheckTransactionValidity( const std::set<uint64_t> &nonces_to_check )
@@ -2203,6 +2301,15 @@ namespace sgns
                                              nonce );
                         }
                     }
+                }
+                else
+                {
+                    m_logger->debug(
+                        "[{} - full: {}] VERIFYING tx nonce {} not yet confirmed (network confirmed nonce: {}), waiting",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        nonce,
+                        confirmed_nonce );
                 }
             }
         }
@@ -2686,6 +2793,12 @@ namespace sgns
                 account_m->SetLocalConfirmedNonce( nonce );
                 outgoing_tx_processed_m[key]   = TrackedTx{ new_tx, TransactionStatus::CONFIRMED, nonce };
                 outgoing_nonce_to_key_m[nonce] = key; // Add to nonce index
+
+                m_logger->info( "[{} - full: {}] GAP_RESOLUTION: Own transaction nonce {} received from CRDT "
+                                "(gossiped back from full node) - gap potentially closed",
+                                account_m->GetAddress().substr( 0, 8 ),
+                                full_node_m,
+                                nonce );
             }
         }
         else
@@ -2746,6 +2859,13 @@ namespace sgns
 
                 const auto nonce = new_tx->dag_st.nonce();
                 account_m->SetPeerConfirmedNonce( nonce, new_tx->dag_st.source_addr() );
+                m_logger->info( "[{} - full: {}] NONCE_UPDATE: Confirmed nonce {} for source {} (len={}) from incoming tx {}",
+                                account_m->GetAddress().substr( 0, 8 ),
+                                full_node_m,
+                                nonce,
+                                new_tx->dag_st.source_addr().substr( 0, 8 ),
+                                new_tx->dag_st.source_addr().size(),
+                                key );
                 incoming_tx_processed_m[key] = TrackedTx{ new_tx, TransactionStatus::CONFIRMED, nonce };
             }
         }
