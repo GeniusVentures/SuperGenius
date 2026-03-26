@@ -1227,6 +1227,12 @@ namespace sgns
             resp.set_has_nonce( true );
             resp.set_known_nonce( local_nonce );
 
+            logger_->info( "[{}] NONCE_REPLY_SOURCE: requester={}, req_id={}, looked_up_confirmed_nonce={}",
+                           address_.substr( 0, 8 ),
+                           req.requester_address().substr( 0, 8 ),
+                           req.request_id(),
+                           local_nonce );
+
             logger_->debug( "[{}] Sending back the nonce {} to {} (len={}) with req_id {}",
                             address_.substr( 0, 8 ),
                             local_nonce,

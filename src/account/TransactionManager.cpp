@@ -809,7 +809,35 @@ namespace sgns
             }
         }
 
+        m_logger->info( "[{} - full: {}] SEND_TX_COMMIT_PREP: tx_count={}, nonce_count={}, topic_count={}",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        transaction_batch.size(),
+                        nonces_set.size(),
+                        topicSet.size() );
+        for ( const auto &[tx, _] : transaction_batch )
+        {
+            m_logger->debug( "[{} - full: {}] SEND_TX_COMMIT_PREP: key={}, nonce={}, hash={}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             GetTransactionPath( *tx ),
+                             tx->dag_st.nonce(),
+                             tx->dag_st.data_hash() );
+        }
+        for ( const auto &topic : topicSet )
+        {
+            m_logger->debug( "[{} - full: {}] SEND_TX_COMMIT_PREP: topic={}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             topic );
+        }
+
         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( topicSet ) );
+
+        m_logger->info( "[{} - full: {}] SEND_TX_COMMIT_DONE: published tx batch with {} nonces",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        nonces_set.size() );
 
         return nonces_set;
     }

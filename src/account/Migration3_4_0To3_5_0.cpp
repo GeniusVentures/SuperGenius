@@ -419,13 +419,7 @@ namespace sgns
 
         logger_->debug( "Initializing legacy {} DB at path {}", FromVersion(), full_path );
 
-        auto maybe_db_3_4_0 = crdt::GlobalDB::New( ioContext_,
-                                                   full_path,
-                                                   pubSub_,
-                                                   crdt::CrdtOptions::DefaultOptions(),
-                                                   graphsync_,
-                                                   scheduler_,
-                                                   generator_ );
+        auto maybe_db_3_4_0 = crdt::GlobalDB::NewMigrationSource( ioContext_, full_path );
 
         if ( !maybe_db_3_4_0.has_value() )
         {
