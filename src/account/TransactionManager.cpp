@@ -1879,7 +1879,7 @@ namespace sgns
             }
 
             (void)CheckTransactionValidity( nonces_to_check );
-            BroadcastLocalHeadsForAheadGap();
+            //BroadcastLocalHeadsForAheadGap();
         }
         else if ( proposed_nonce < expected_next_nonce )
         {
