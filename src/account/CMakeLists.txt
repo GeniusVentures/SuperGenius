@@ -70,8 +70,6 @@ add_library(genius_node
     GeniusNode.cpp
 )
 
-set_target_properties(genius_node PROPERTIES UNITY_BUILD ON)
-
 target_link_libraries(genius_node
     PUBLIC
     Boost::headers
