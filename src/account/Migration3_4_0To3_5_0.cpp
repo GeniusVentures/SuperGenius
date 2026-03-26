@@ -110,6 +110,9 @@ namespace sgns
         account_->ConfigureMessengerHandlers( db_3_5_0_ );
 
         db_3_5_0_->Start();
+        db_3_5_0_->SetBroadcastEnabled( false );
+        logger_->info( "Broadcast suppression enabled for migration target DB" );
+
         //init blockchain
         if ( !blockchain_ )
         {

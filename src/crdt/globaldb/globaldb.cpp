@@ -599,6 +599,18 @@ namespace sgns::crdt
         return m_crdtDatastore->BroadcastHeadsForTopics( topics );
     }
 
+    void GlobalDB::SetBroadcastEnabled( bool enabled )
+    {
+        if ( !m_crdtDatastore )
+        {
+            m_logger->warn( "SetBroadcastEnabled: CRDT datastore not initialized" );
+            return;
+        }
+
+        m_crdtDatastore->SetBroadcastEnabled( enabled );
+        m_logger->info( "SetBroadcastEnabled: {}", enabled ? "enabled" : "disabled" );
+    }
+
     outcome::result<std::set<std::string>> GlobalDB::GetMonitoredTopics() const
     {
         if ( !m_crdtDatastore )
