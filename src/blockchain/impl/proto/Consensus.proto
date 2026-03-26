@@ -10,6 +10,7 @@ message ConsensusSubject {
   oneof payload {
     NonceSubject nonce = 10;
     TaskResultSubject task_result = 11;
+    RegistryBatchSubject registry_batch = 12;
   }
 }
 
@@ -17,6 +18,7 @@ enum SubjectType {
   SUBJECT_UNSPECIFIED = 0;
   SUBJECT_NONCE = 1;
   SUBJECT_TASK_RESULT = 2;
+  SUBJECT_REGISTRY_BATCH = 3;
 }
 
 message UTXOTransitionCommitment {
@@ -56,6 +58,14 @@ message TaskResultSubject {
   string escrow_path = 1;
   bytes task_result_hash = 2;
   uint64 result_epoch = 3;
+}
+
+message RegistryBatchSubject {
+  string base_registry_cid = 1;
+  uint64 base_registry_epoch = 2;
+  uint64 target_registry_epoch = 3;
+  uint32 certificate_count = 4;
+  bytes batch_root = 5;
 }
 
 message ConsensusProposal {

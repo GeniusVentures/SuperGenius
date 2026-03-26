@@ -145,6 +145,12 @@ namespace sgns
                                                                               const std::string &escrow_path,
                                                                               const std::string &task_result_hash,
                                                                               uint64_t           result_epoch );
+        static outcome::result<Subject>              CreateRegistryBatchSubject( const std::string &account_id,
+                                                                                const std::string &base_registry_cid,
+                                                                                uint64_t           base_registry_epoch,
+                                                                                uint64_t           target_registry_epoch,
+                                                                                uint32_t           certificate_count,
+                                                                                const std::string &batch_root );
         static const std::string                    &BestHash( const std::string &a, const std::string &b );
         outcome::result<void>                        SubmitProposal( const Proposal &proposal, bool self_vote = true );
         outcome::result<void>                        SubmitVote( const Vote &vote, bool self_handle = true );

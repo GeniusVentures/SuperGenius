@@ -396,6 +396,14 @@ namespace sgns
             }
             return subject.task_result().task_result_hash();
         }
+        if ( subject.type() == SubjectType::SUBJECT_REGISTRY_BATCH )
+        {
+            if ( !subject.has_registry_batch() || subject.registry_batch().batch_root().empty() )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            return std::string( subject.registry_batch().batch_root() );
+        }
         return outcome::failure( std::errc::invalid_argument );
     }
 
@@ -1058,48 +1066,14 @@ namespace sgns
         crdt::GlobalDB::Buffer cert_value;
         cert_value.put( serialized );
 
-        auto update_result = registry_->CreateUpdateFromCertificate( certificate );
-        if ( update_result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: failed: registry update for hash {} error={}",
-                                             __func__,
-                                             GetPrintableSubjectHash( certificate.proposal().subject() ),
-                                             update_result.error().message() );
-            return outcome::failure( update_result.error() );
-        }
-
-        auto tx_result = registry_->BeginRegistryUpdateTransaction( update_result.value() );
-        if ( tx_result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: failed: begin registry update transaction for hash {} error={}",
-                                             __func__,
-                                             GetPrintableSubjectHash( certificate.proposal().subject() ),
-                                             tx_result.error().message() );
-            return outcome::failure( tx_result.error() );
-        }
-
-        ConsensusManagerLogger()->debug( "{}: Creating CRDT transaction for registry update for hash {}",
-                                         __func__,
-                                         GetPrintableSubjectHash( certificate.proposal().subject() ) );
-        auto tx       = tx_result.value();
-        auto cert_put = tx->Put( cert_key, cert_value );
+        auto cert_put = db_->Put( cert_key, cert_value, { consensus_datastore_topic_ } );
         if ( cert_put.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: failed: stage certificate put for hash {} error={}",
+            ConsensusManagerLogger()->error( "{}: failed: cert put for hash {} error={}",
                                              __func__,
                                              GetPrintableSubjectHash( certificate.proposal().subject() ),
                                              cert_put.error().message() );
             return outcome::failure( cert_put.error() );
-        }
-
-        auto commit_result = tx->Commit(
-            { consensus_datastore_topic_, std::string( ValidatorRegistry::ValidatorTopic() ) } );
-        if ( commit_result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: failed: transaction commit error={}",
-                                             __func__,
-                                             commit_result.error().message() );
-            return outcome::failure( commit_result.error() );
         }
 
         ConsensusManagerLogger()->debug( "{}: success submitting certificate for {} and proposal_id={}",
@@ -1497,6 +1471,8 @@ namespace sgns
         {
             return;
         }
+
+        registry_->OnFinalizedCertificate( certificate );
 
         CertificateSubjectHandler handler;
         {
@@ -2014,6 +1990,43 @@ namespace sgns
         return subject;
     }
 
+    outcome::result<ConsensusManager::Subject> ConsensusManager::CreateRegistryBatchSubject(
+        const std::string &account_id,
+        const std::string &base_registry_cid,
+        uint64_t           base_registry_epoch,
+        uint64_t           target_registry_epoch,
+        uint32_t           certificate_count,
+        const std::string &batch_root )
+    {
+        ConsensusManagerLogger()->trace( "{}: called account_id={} base_epoch={} target_epoch={} certificates={}",
+                                         __func__,
+                                         account_id.substr( 0, 8 ),
+                                         base_registry_epoch,
+                                         target_registry_epoch,
+                                         certificate_count );
+        Subject subject;
+        subject.set_type( SubjectType::SUBJECT_REGISTRY_BATCH );
+        subject.set_account_id( account_id );
+        auto *payload = subject.mutable_registry_batch();
+        payload->set_base_registry_cid( base_registry_cid );
+        payload->set_base_registry_epoch( base_registry_epoch );
+        payload->set_target_registry_epoch( target_registry_epoch );
+        payload->set_certificate_count( certificate_count );
+        payload->set_batch_root( batch_root.data(), batch_root.size() );
+
+        auto subject_id = ComputeSubjectId( subject );
+        if ( subject_id.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: failed: subject id error={}",
+                                             __func__,
+                                             subject_id.error().message() );
+            return outcome::failure( subject_id.error() );
+        }
+        subject.set_subject_id( subject_id.value() );
+        ConsensusManagerLogger()->debug( "{}: success subject_id={}", __func__, subject.subject_id() );
+        return subject;
+    }
+
     std::string ConsensusManager::CreateProposalId( const Proposal &proposal )
     {
         ConsensusManagerLogger()->trace( "{}: Creating proposal ID", __func__ );
@@ -2071,6 +2084,10 @@ namespace sgns
                 return true;
             case SubjectType::SUBJECT_TASK_RESULT:
                 return subject.has_task_result() && !subject.task_result().task_result_hash().empty();
+            case SubjectType::SUBJECT_REGISTRY_BATCH:
+                return subject.has_registry_batch() && !subject.registry_batch().base_registry_cid().empty() &&
+                       subject.registry_batch().target_registry_epoch() == subject.registry_batch().base_registry_epoch() + 1 &&
+                       subject.registry_batch().certificate_count() > 0 && !subject.registry_batch().batch_root().empty();
             case SubjectType::SUBJECT_UNSPECIFIED:
             default:
                 return false;
@@ -2140,7 +2157,8 @@ namespace sgns
             return false;
         }
 
-        if ( subject.type() != SubjectType::SUBJECT_NONCE && subject.type() != SubjectType::SUBJECT_TASK_RESULT )
+        if ( subject.type() != SubjectType::SUBJECT_NONCE && subject.type() != SubjectType::SUBJECT_TASK_RESULT &&
+             subject.type() != SubjectType::SUBJECT_REGISTRY_BATCH )
         {
             ConsensusManagerLogger()->error( "{}: Invalid Subject type {}",
                                              __func__,
@@ -2176,6 +2194,35 @@ namespace sgns
             if ( subject.task_result().task_result_hash().empty() )
             {
                 ConsensusManagerLogger()->error( "{}: subject task_result task_result_hash is empty", __func__ );
+                return false;
+            }
+        }
+
+        if ( subject.type() == SubjectType::SUBJECT_REGISTRY_BATCH )
+        {
+            if ( !subject.has_registry_batch() )
+            {
+                ConsensusManagerLogger()->error( "{}: subject missing registry_batch payload", __func__ );
+                return false;
+            }
+            if ( subject.registry_batch().base_registry_cid().empty() )
+            {
+                ConsensusManagerLogger()->error( "{}: subject registry_batch base_registry_cid is empty", __func__ );
+                return false;
+            }
+            if ( subject.registry_batch().target_registry_epoch() != subject.registry_batch().base_registry_epoch() + 1 )
+            {
+                ConsensusManagerLogger()->error( "{}: subject registry_batch target epoch mismatch", __func__ );
+                return false;
+            }
+            if ( subject.registry_batch().certificate_count() == 0 )
+            {
+                ConsensusManagerLogger()->error( "{}: subject registry_batch certificate_count is zero", __func__ );
+                return false;
+            }
+            if ( subject.registry_batch().batch_root().empty() )
+            {
+                ConsensusManagerLogger()->error( "{}: subject registry_batch batch_root is empty", __func__ );
                 return false;
             }
         }
