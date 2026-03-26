@@ -168,6 +168,12 @@ namespace sgns::crdt
         outcome::result<void> RequestHeadBroadcast( const std::set<std::string> &topics );
 
         /**
+         * @brief       Enable or disable outgoing CRDT head broadcasts.
+         * @param[in]   enabled True to allow broadcasts, false to suppress them.
+         */
+        void SetBroadcastEnabled( bool enabled );
+
+        /**
          * @brief       Get the topics that are being listened to
          * @return      A set of the monitored topic names 
          */

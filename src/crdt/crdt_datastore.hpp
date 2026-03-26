@@ -241,6 +241,18 @@ namespace sgns::crdt
          */
         outcome::result<void> BroadcastHeadsForTopics( const std::set<std::string> &topics );
 
+        /**
+         * @brief Enable or disable outgoing head broadcasts.
+         * @param[in] enabled True to allow broadcasts, false to suppress them.
+         */
+        void SetBroadcastEnabled( bool enabled );
+
+        /**
+         * @brief Query whether outgoing head broadcasts are enabled.
+         * @return true when broadcasts are enabled.
+         */
+        bool IsBroadcastEnabled() const;
+        
         std::unordered_set<std::string> GetTopicNames() const;
 
     protected:
@@ -458,6 +470,7 @@ namespace sgns::crdt
 
         std::map<CID, JobStatus> pending_jobs_;
         bool                     has_full_node_topic_;
+        std::atomic_bool         broadcast_enabled_{ true };
 
         void MarkJobPending( const CID &cid );
         void MarkJobFailed( const CID &cid );

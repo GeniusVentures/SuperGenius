@@ -77,12 +77,11 @@ namespace sgns::crdt
         auto new_instance = std::shared_ptr<GlobalDB>(
             new GlobalDB( std::move( context ), std::move( databasePath ), std::move( pubsub ) ) );
 
-        BOOST_OUTCOME_TRY(
-                             new_instance->Init( std::move( crdtOptions ),
-                                                 std::move( graphsyncnetwork ),
-                                                 std::move( scheduler ),
-                                                 std::move( generator ),
-                                                 std::move( datastore ) ) );
+        BOOST_OUTCOME_TRY( new_instance->Init( std::move( crdtOptions ),
+                                               std::move( graphsyncnetwork ),
+                                               std::move( scheduler ),
+                                               std::move( generator ),
+                                               std::move( datastore ) ) );
         return new_instance;
     }
 
@@ -411,6 +410,18 @@ namespace sgns::crdt
 
         m_logger->debug( "RequestHeadBroadcast: Forwarding request for {} topics", topics.size() );
         return m_crdtDatastore->BroadcastHeadsForTopics( topics );
+    }
+
+    void GlobalDB::SetBroadcastEnabled( bool enabled )
+    {
+        if ( !m_crdtDatastore )
+        {
+            m_logger->warn( "SetBroadcastEnabled: CRDT datastore not initialized" );
+            return;
+        }
+
+        m_crdtDatastore->SetBroadcastEnabled( enabled );
+        m_logger->info( "SetBroadcastEnabled: {}", enabled ? "enabled" : "disabled" );
     }
 
     outcome::result<std::unordered_set<std::string>> GlobalDB::GetMonitoredTopics() const

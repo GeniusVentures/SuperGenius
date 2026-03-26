@@ -944,6 +944,11 @@ namespace sgns::crdt
 
     void CrdtDatastore::RebroadcastHeads()
     {
+        if ( !broadcast_enabled_.load( std::memory_order_relaxed ) )
+        {
+            return;
+        }
+
         std::unordered_set<std::string> pending_topics;
         {
             std::lock_guard lock( pendingBroadcastMutex_ );
@@ -1018,6 +1023,12 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtDatastore::BroadcastHeadsForTopics( const std::set<std::string> &topics )
     {
+        if ( !broadcast_enabled_.load( std::memory_order_relaxed ) )
+        {
+            logger_->debug( "BroadcastHeadsForTopics: broadcast suppressed" );
+            return outcome::success();
+        }
+
         if ( topics.empty() )
         {
             logger_->debug( "BroadcastHeadsForTopics: No topics requested" );
@@ -1080,6 +1091,16 @@ namespace sgns::crdt
     outcome::result<CrdtDatastore::Buffer> CrdtDatastore::GetKey( const HierarchicalKey &aKey ) const
     {
         return set_->GetElement( aKey.GetKey() );
+    }
+
+    void CrdtDatastore::SetBroadcastEnabled( bool enabled )
+    {
+        broadcast_enabled_.store( enabled, std::memory_order_relaxed );
+    }
+
+    bool CrdtDatastore::IsBroadcastEnabled() const
+    {
+        return broadcast_enabled_.load( std::memory_order_relaxed );
     }
 
     std::string CrdtDatastore::GetKeysPrefix() const
@@ -1159,6 +1180,11 @@ namespace sgns::crdt
                                                     const std::string                      &topic,
                                                     boost::optional<libp2p::peer::PeerInfo> peerInfo )
     {
+        if ( !broadcast_enabled_.load( std::memory_order_relaxed ) )
+        {
+            return outcome::success();
+        }
+
         if ( !broadcaster_ )
         {
             logger_->error( "Broadcast: No broadcaster, Failed to broadcast" );
