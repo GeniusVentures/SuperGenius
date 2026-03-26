@@ -162,8 +162,8 @@ namespace sgns::blockchain
             while ( !current_cid.empty() )
             {
                 registry_chain.push_back( current_cid );
-                OUTCOME_TRY( auto &&cid, CID::fromString( current_cid ) );
-                OUTCOME_TRY( auto &&node, old_syncer->GetNodeFromMerkleDAG( cid ) );
+                BOOST_OUTCOME_TRY( auto cid, CID::fromString( current_cid ) );
+                BOOST_OUTCOME_TRY( auto node, old_syncer->GetNodeFromMerkleDAG( cid ) );
                 auto prev_result = ExtractPrevRegistryCid( *node );
                 nodes.push_back( std::move( node ) );
                 if ( prev_result.has_error() )
@@ -191,7 +191,7 @@ namespace sgns::blockchain
                 registry_cid_value.put( cid_string );
                 (void)new_store->put( registry_cid_key, std::move( registry_cid_value ) );
 
-                OUTCOME_TRY( new_crdt->AddDAGNode( node ) );
+                BOOST_OUTCOME_TRY( new_crdt->AddDAGNode( node ) );
             }
         }
         validator_registry_logger()->debug( "{}: Finished migrating validator registry: ", __func__ );

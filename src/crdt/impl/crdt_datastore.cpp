@@ -585,7 +585,7 @@ namespace sgns::crdt
     {
         logger_->debug( "{}: Creating the Root Job for CID {}", __func__, aRootCID.toString().value() );
         dagSyncer_->InitCIDBlock( aRootCID );
-        OUTCOME_TRY( auto &&root_node, dagSyncer_->getNode( aRootCID ) );
+        BOOST_OUTCOME_TRY( auto root_node, dagSyncer_->getNode( aRootCID ) );
 
         logger_->debug( "{}: Root Job created for CID {}", __func__, aRootCID.toString().value() );
 
@@ -699,7 +699,7 @@ namespace sgns::crdt
             }
 
             dagSyncer_->InitCIDBlock( cid );
-            OUTCOME_TRY( auto &&node, dagSyncer_->getNode( cid ) );
+            BOOST_OUTCOME_TRY( auto node, dagSyncer_->getNode( cid ) );
 
             RootCIDJob newRootJob;
 
@@ -749,9 +749,9 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtDatastore::MergeDataFromDelta( const CID &node_cid, const Delta &aDelta )
     {
-        OUTCOME_TRY( auto &&cid_string, node_cid.toString() );
+        BOOST_OUTCOME_TRY( auto cid_string, node_cid.toString() );
         logger_->debug( "{}: Merging node {} On CRDT", __func__, cid_string );
-        OUTCOME_TRY( set_->Merge( aDelta, cid_string ) );
+        BOOST_OUTCOME_TRY( set_->Merge( aDelta, cid_string ) );
         return outcome::success();
     }
 
@@ -759,7 +759,7 @@ namespace sgns::crdt
     {
         logger_->debug( "{}: Starting to process Root CID", __func__ );
 
-        OUTCOME_TRY( auto &&root_cid_string, job_to_process.root_node_->getCID().toString() );
+        BOOST_OUTCOME_TRY( auto root_cid_string, job_to_process.root_node_->getCID().toString() );
         logger_->debug( "{}: Processing Root CID job {}", __func__, root_cid_string );
 
         auto node_to_process = job_to_process.node_;
@@ -770,20 +770,20 @@ namespace sgns::crdt
             is_root         = true;
         }
 
-        OUTCOME_TRY( auto &&cid_string, node_to_process->getCID().toString() );
+        BOOST_OUTCOME_TRY( auto cid_string, node_to_process->getCID().toString() );
 
-        OUTCOME_TRY( auto &&delta, GetDeltaFromNode( *node_to_process, job_to_process.created_by_self_ ) );
+        BOOST_OUTCOME_TRY( auto delta, GetDeltaFromNode( *node_to_process, job_to_process.created_by_self_ ) );
 
         logger_->debug( "{}: Merging Deltas from {}", __func__, cid_string );
 
-        OUTCOME_TRY( MergeDataFromDelta( node_to_process->getCID(), delta ) );
+        BOOST_OUTCOME_TRY( MergeDataFromDelta( node_to_process->getCID(), delta ) );
 
         logger_->debug( "{}: Recording block on DAG Syncher {}", __func__, cid_string );
-        OUTCOME_TRY( dagSyncer_->addNode( node_to_process ) );
+        BOOST_OUTCOME_TRY( dagSyncer_->addNode( node_to_process ) );
 
         (void)dagSyncer_->DeleteCIDBlock( node_to_process->getCID() );
 
-        OUTCOME_TRY( auto &&links, GetLinksToFetch( job_to_process ) );
+        BOOST_OUTCOME_TRY( auto links, GetLinksToFetch( job_to_process ) );
         const bool should_fetch_links = !job_to_process.created_by_self_ && !links.empty();
 
         if ( links.empty() && !is_root )
@@ -799,7 +799,7 @@ namespace sgns::crdt
         else if ( should_fetch_links )
         {
             logger_->debug( "{}: Fetching {} links for Root job: {}", __func__, links.size(), root_cid_string );
-            OUTCOME_TRY( FetchNodes( job_to_process, links ) );
+            BOOST_OUTCOME_TRY( FetchNodes( job_to_process, links ) );
             logger_->debug( "{}: Nodes fetched for Root job: {}", __func__, root_cid_string );
         }
         else if ( is_root )
@@ -1150,8 +1150,8 @@ namespace sgns::crdt
     outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta>          &aDelta,
                                                  const std::unordered_set<std::string> &topics )
     {
-        OUTCOME_TRY( auto &&node, CreateDAGNode( aDelta, topics ) );
-        OUTCOME_TRY( auto &&newCID, AddDAGNode( node ) );
+        BOOST_OUTCOME_TRY( auto node, CreateDAGNode( aDelta, topics ) );
+        BOOST_OUTCOME_TRY( auto newCID, AddDAGNode( node ) );
         return newCID;
     }
 
@@ -1240,7 +1240,7 @@ namespace sgns::crdt
         const std::shared_ptr<Delta>          &aDelta,
         const std::unordered_set<std::string> &topics )
     {
-        OUTCOME_TRY( auto &&head_list, heads_->GetList( topics ) );
+        BOOST_OUTCOME_TRY( auto head_list, heads_->GetList( topics ) );
         auto [head_map, height] = head_list;
 
         height = height + 1; // This implies our minimum height is 1
@@ -1256,7 +1256,7 @@ namespace sgns::crdt
             }
         }
 
-        OUTCOME_TRY( auto &&node, CreateIPLDNode( headsWithTopics, aDelta, topics ) );
+        BOOST_OUTCOME_TRY( auto node, CreateIPLDNode( headsWithTopics, aDelta, topics ) );
 
         //Log expensive toString only if trace enabled
         if ( logger_->level() == spdlog::level::debug )

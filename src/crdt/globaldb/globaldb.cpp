@@ -77,7 +77,7 @@ namespace sgns::crdt
         auto new_instance = std::shared_ptr<GlobalDB>(
             new GlobalDB( std::move( context ), std::move( databasePath ), std::move( pubsub ) ) );
 
-        BOOST_OUTCOME_TRYV2( auto &&,
+        BOOST_OUTCOME_TRY(
                              new_instance->Init( std::move( crdtOptions ),
                                                  std::move( graphsyncnetwork ),
                                                  std::move( scheduler ),
@@ -262,7 +262,7 @@ namespace sgns::crdt
 
         for ( auto &data : data_vector )
         {
-            BOOST_OUTCOME_TRYV2( auto &&, batch.Put( std::get<0>( data ), std::get<1>( data ) ) );
+            BOOST_OUTCOME_TRY( batch.Put( std::get<0>( data ), std::get<1>( data ) ) );
         }
 
         return batch.Commit( topics );

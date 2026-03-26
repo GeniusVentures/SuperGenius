@@ -109,9 +109,9 @@ namespace sgns::blockchain {
       std::shared_ptr<network::ExtrinsicObserver> extrinsic_observer,
       std::shared_ptr<crypto::Hasher> hasher) {
     // retrieve the block's header: we need data from it
-    OUTCOME_TRY((auto &&, header), storage->getBlockHeader(last_finalized_block));
+    BOOST_OUTCOME_TRY( auto header, storage->getBlockHeader(last_finalized_block));
     // create meta structures from the retrieved header
-    OUTCOME_TRY((auto &&, hash_res), header_repo->getHashById(last_finalized_block));
+    BOOST_OUTCOME_TRY( auto hash_res, header_repo->getHashById(last_finalized_block));
 
     auto tree =
         std::make_shared<TreeNode>(hash_res, header.number, nullptr, true);
@@ -146,7 +146,7 @@ namespace sgns::blockchain {
     if (!parent) {
       return BlockTreeError::NO_PARENT;
     }
-    OUTCOME_TRY((auto &&, block_hash), storage_->putBlockHeader(header));
+    BOOST_OUTCOME_TRY( auto block_hash, storage_->putBlockHeader(header));
     // update local meta with the new block
     auto new_node =
         std::make_shared<TreeNode>(block_hash, header.number, parent);
@@ -169,7 +169,7 @@ namespace sgns::blockchain {
     if (!parent) {
       return BlockTreeError::NO_PARENT;
     }
-    OUTCOME_TRY((auto &&, block_hash), storage_->putBlock(block));
+    BOOST_OUTCOME_TRY( auto block_hash, storage_->putBlock(block));
     // update local meta with the new block
     auto new_node =
         std::make_shared<TreeNode>(block_hash, block.header.number, parent);
@@ -292,7 +292,7 @@ namespace sgns::blockchain {
 
     // the function returns the blocks in the chronological order, but we want a
     // reverted one in this case
-    OUTCOME_TRY((auto &&, chain), getChainByBlocks(finish_block_hash.value(), block));
+    BOOST_OUTCOME_TRY( auto chain, getChainByBlocks(finish_block_hash.value(), block));
     std::reverse(chain.begin(), chain.end());
     return chain;
   }
@@ -384,11 +384,11 @@ namespace sgns::blockchain {
   outcome::result<primitives::BlockInfo> BlockTreeImpl::getBestContaining(
       const primitives::BlockHash &target_hash,
       const boost::optional<primitives::BlockNumber> &max_number) const {
-    OUTCOME_TRY((auto &&, target_header), header_repo_->getBlockHeader(target_hash));
+    BOOST_OUTCOME_TRY( auto target_header, header_repo_->getBlockHeader(target_hash));
     if (max_number.has_value() && target_header.number > max_number.value()) {
       return Error::TARGET_IS_PAST_MAX;
     }
-    OUTCOME_TRY((auto &&, canon_hash),
+    BOOST_OUTCOME_TRY( auto canon_hash,
                 header_repo_->getHashByNumber(target_header.number));
     // if a max number is given we try to fetch the block at the
     // given depth, if it doesn't exist or `max_number` is not
@@ -397,13 +397,13 @@ namespace sgns::blockchain {
       if (max_number.has_value()) {
         auto header = header_repo_->getBlockHeader(max_number.value());
         if (header) {
-          OUTCOME_TRY((auto &&, hash),
+          BOOST_OUTCOME_TRY( auto hash,
                       header_repo_->getHashByNumber(header.value().number));
           return primitives::BlockInfo{header.value().number, hash};
         }
       }
     } else {
-      OUTCOME_TRY((auto &&, last_finalized),
+      BOOST_OUTCOME_TRY( auto last_finalized,
                   header_repo_->getNumberByHash(getLastFinalized().block_hash));
       if (last_finalized >= target_header.number) {
         return Error::BLOCK_ON_DEAD_END;
@@ -413,13 +413,13 @@ namespace sgns::blockchain {
       auto current_hash = leaf_hash;
       auto best_hash = current_hash;
       if (max_number.has_value()) {
-        OUTCOME_TRY((auto &&, hash), walkBackUntilLess(current_hash, max_number.value()));
+        BOOST_OUTCOME_TRY( auto hash, walkBackUntilLess(current_hash, max_number.value()));
         best_hash = hash;
         current_hash = hash;
       }
-      OUTCOME_TRY((auto &&, best_header), header_repo_->getBlockHeader(best_hash));
+      BOOST_OUTCOME_TRY( auto best_header, header_repo_->getBlockHeader(best_hash));
       while (true) {
-        OUTCOME_TRY((auto &&, current_header), header_repo_->getBlockHeader(current_hash));
+        BOOST_OUTCOME_TRY( auto current_header, header_repo_->getBlockHeader(current_hash));
         if (current_hash == target_hash) {
           return primitives::BlockInfo{best_header.number, best_hash};
         }
@@ -496,7 +496,7 @@ namespace sgns::blockchain {
       const primitives::BlockNumber &limit) const {
     auto current_hash = start;
     while (true) {
-      OUTCOME_TRY((auto &&, current_header), header_repo_->getBlockHeader(current_hash));
+      BOOST_OUTCOME_TRY( auto current_header, header_repo_->getBlockHeader(current_hash));
       if (current_header.number <= limit) {
         return current_hash;
       }
@@ -550,7 +550,7 @@ namespace sgns::blockchain {
               }
           }
 
-          BOOST_OUTCOME_TRYV2( auto &&, storage_->removeBlock( hash, number ) );
+          BOOST_OUTCOME_TRY( storage_->removeBlock( hash, number ) );
       }
 
       // trying to return back extrinsics to transaction pool

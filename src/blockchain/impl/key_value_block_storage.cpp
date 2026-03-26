@@ -79,9 +79,9 @@ namespace sgns::blockchain
         auto block_storage = std::make_shared<KeyValueBlockStorage>(
             KeyValueBlockStorage( std::move( db ), std::move( hasher ), std::move( header_repo ) ) );
 
-        OUTCOME_TRY( ( auto &&, last_finalized_block_hash ), block_storage->getLastFinalizedBlockHash() );
+        BOOST_OUTCOME_TRY( auto last_finalized_block_hash, block_storage->getLastFinalizedBlockHash() );
 
-        OUTCOME_TRY( ( auto &&, block_header ), block_storage->getBlockHeader( last_finalized_block_hash ) );
+        BOOST_OUTCOME_TRY( auto block_header, block_storage->getBlockHeader( last_finalized_block_hash ) );
 
         primitives::Block finalized_block;
         finalized_block.header = block_header;
@@ -101,15 +101,15 @@ namespace sgns::blockchain
         auto block_storage = std::make_shared<KeyValueBlockStorage>(
             KeyValueBlockStorage( db, std::move( hasher ), std::move( header_repo ) ) );
 
-        BOOST_OUTCOME_TRYV2( auto &&, block_storage->ensureGenesisNotExists() );
+        BOOST_OUTCOME_TRY( block_storage->ensureGenesisNotExists() );
 
         // state root type is Hash256, however for consistency with spec root hash
         // returns buffer. So we need this conversion
-        OUTCOME_TRY( ( auto &&, state_root_blob ), base::Hash256::fromSpan( state_root.toVector() ) );
+        BOOST_OUTCOME_TRY( auto state_root_blob, base::Hash256::fromSpan( state_root.toVector() ) );
 
         auto extrinsics_root_buf = trieRoot( {} );
         // same reason for conversion as few lines above
-        OUTCOME_TRY( ( auto &&, extrinsics_root ), base::Hash256::fromSpan( extrinsics_root_buf.toVector() ) );
+        BOOST_OUTCOME_TRY( auto extrinsics_root, base::Hash256::fromSpan( extrinsics_root_buf.toVector() ) );
 
         // genesis block initialization
         primitives::Block genesis_block;
@@ -118,11 +118,11 @@ namespace sgns::blockchain
         genesis_block.header.state_root      = state_root_blob;
         // the rest of the fields have default value
 
-        OUTCOME_TRY( ( auto &&, genesis_block_hash ), block_storage->putBlock( genesis_block ) );
+        BOOST_OUTCOME_TRY( auto genesis_block_hash, block_storage->putBlock( genesis_block ) );
         BOOST_OUTCOME_TRYV2(
             auto &&,
             db->Put( { storage::GetGenesisBlockHashLookupKey() }, Buffer{ genesis_block_hash }, { "topic" } ) );
-        BOOST_OUTCOME_TRYV2( auto &&, block_storage->setLastFinalizedBlockHash( genesis_block_hash ) );
+        BOOST_OUTCOME_TRY( block_storage->setLastFinalizedBlockHash( genesis_block_hash ) );
 
         on_genesis_created( genesis_block );
         return block_storage;
@@ -135,7 +135,7 @@ namespace sgns::blockchain
 
     outcome::result<primitives::BlockBody> KeyValueBlockStorage::getBlockBody( const primitives::BlockId &id ) const
     {
-        OUTCOME_TRY( ( auto &&, block_data ), getBlockData( id ) );
+        BOOST_OUTCOME_TRY( auto block_data, getBlockData( id ) );
         if ( block_data.body )
         {
             return block_data.body.value();
@@ -145,7 +145,7 @@ namespace sgns::blockchain
 
     outcome::result<primitives::BlockData> KeyValueBlockStorage::getBlockData( const primitives::BlockId &id ) const
     {
-        OUTCOME_TRY( ( auto &&, encoded_block_data ), GetRawBlock( id ) );
+        BOOST_OUTCOME_TRY( auto encoded_block_data, GetRawBlock( id ) );
 
         auto block_data = GetBlockDataFromSerialized( encoded_block_data.toVector() );
         return block_data;
@@ -154,7 +154,7 @@ namespace sgns::blockchain
     outcome::result<primitives::Justification> KeyValueBlockStorage::getJustification(
         const primitives::BlockId &block ) const
     {
-        OUTCOME_TRY( ( auto &&, block_data ), getBlockData( block ) );
+        BOOST_OUTCOME_TRY( auto block_data, getBlockData( block ) );
         if ( block_data.justification )
         {
             return block_data.justification.value();
@@ -193,9 +193,9 @@ namespace sgns::blockchain
         }
 
         auto encoded_block_data = GetSerializedBlockData( to_insert );
-        OUTCOME_TRY( ( auto &&, id_string ), idToStringKey( *db_, block_number ) );
+        BOOST_OUTCOME_TRY( auto id_string, idToStringKey( *db_, block_number ) );
         //TODO - For now one block data per block header. Revisit this
-        BOOST_OUTCOME_TRYV2( auto &&,
+        BOOST_OUTCOME_TRY(
                              db_->Put( { header_repo_->GetHeaderPath() + id_string + "/tx/0" },
                                        Buffer{ encoded_block_data },
                                        { "topic" } ) );
@@ -220,14 +220,14 @@ namespace sgns::blockchain
         }
 
         // insert our block's parts into the database-
-        BOOST_OUTCOME_TRYV2( auto &&, putBlockHeader( block.header ) );
+        BOOST_OUTCOME_TRY( putBlockHeader( block.header ) );
 
         primitives::BlockData block_data;
         block_data.hash   = block_hash;
         block_data.header = block.header;
         block_data.body   = block.body;
 
-        BOOST_OUTCOME_TRYV2( auto &&, putBlockData( block.header.number, block_data ) );
+        BOOST_OUTCOME_TRY( putBlockData( block.header.number, block_data ) );
         logger_->info( "Added block. Number: {}. Hash: {}. State root: {}",
                        block.header.number,
                        block_hash.toHex(),
@@ -258,10 +258,10 @@ namespace sgns::blockchain
             return header_rm_res;
         }
 
-        OUTCOME_TRY( ( auto &&, key ), idToBufferKey( *db_, number ) );
+        BOOST_OUTCOME_TRY( auto key, idToBufferKey( *db_, number ) );
 
         //TODO - For now one block data per block header. Revisit this
-        OUTCOME_TRY(
+        BOOST_OUTCOME_TRY(
             db_->Remove( { header_repo_->GetHeaderPath() + std::string( key.toString() ) + "/tx/0" }, { "topic" } ) );
         return outcome::success();
     }
@@ -401,10 +401,10 @@ namespace sgns::blockchain
 
     outcome::result<base::Buffer> KeyValueBlockStorage::GetRawBlock( const primitives::BlockId &id ) const
     {
-        OUTCOME_TRY( ( auto &&, key ), idToBufferKey( *db_, id ) );
+        BOOST_OUTCOME_TRY( auto key, idToBufferKey( *db_, id ) );
 
         //TODO - For now one block data per block header. Revisit this
-        OUTCOME_TRY( ( auto &&, encoded_block_data ),
+        BOOST_OUTCOME_TRY( auto encoded_block_data,
                      db_->Get( { header_repo_->GetHeaderPath() + std::string( key.toString() ) + "/tx/0" } ) );
 
         return encoded_block_data;

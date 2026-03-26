@@ -996,7 +996,7 @@ namespace sgns
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
+        BOOST_OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
 
         auto funds = GetProcessCost( procmgr );
         if ( funds <= 0 )
@@ -1058,8 +1058,8 @@ namespace sgns
             return outcome::failure( cut.error() );
         }
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( ( auto &&, result_pair ),
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto result_pair,
                      manager->HoldEscrow( funds, std::string( dev_config_.Addr ), cut.value(), uuidstring ) );
 
         auto [tx_id, escrow_data_pair] = result_pair;
@@ -1147,8 +1147,8 @@ namespace sgns
             destination = account_->GetAddress();
         }
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid, destination ) );
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid, destination ) );
 
         auto mint_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
 
@@ -1176,8 +1176,8 @@ namespace sgns
         }
         auto start_time = std::chrono::steady_clock::now();
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, destination, token_id ) );
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto tx_id, manager->TransferFunds( amount, destination, token_id ) );
 
         auto transfer_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
 
@@ -1203,8 +1203,8 @@ namespace sgns
             return outcome::failure( boost::system::error_code{} );
         }
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, destination, token_id ) );
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto tx_id, manager->TransferFunds( amount, destination, token_id ) );
 
         node_logger_->debug( "TransferFunds transaction {} sent", tx_id );
         return tx_id;
@@ -1219,8 +1219,8 @@ namespace sgns
             return outcome::failure( boost::system::error_code{} );
         }
         auto start_time = std::chrono::steady_clock::now();
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, dev_config_.Addr, token_id ) );
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto tx_id, manager->TransferFunds( amount, dev_config_.Addr, token_id ) );
 
         auto paydev_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
 
@@ -1249,8 +1249,8 @@ namespace sgns
         }
         auto start_time = std::chrono::steady_clock::now();
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->PayEscrow( escrow_path, taskresult, std::move( crdt_transaction ) ) );
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto tx_id, manager->PayEscrow( escrow_path, taskresult, std::move( crdt_transaction ) ) );
 
         auto payescrow_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
 

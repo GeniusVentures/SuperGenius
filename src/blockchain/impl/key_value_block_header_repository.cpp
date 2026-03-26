@@ -24,7 +24,7 @@ namespace sgns::blockchain
 
     outcome::result<BlockNumber> KeyValueBlockHeaderRepository::getNumberByHash( const Hash256 &hash ) const
     {
-        OUTCOME_TRY( ( auto &&, key ), idToBufferKey( *db_, hash ) );
+        BOOST_OUTCOME_TRY( auto key, idToBufferKey( *db_, hash ) );
 
         return BufferToNumber( key );
     }
@@ -32,7 +32,7 @@ namespace sgns::blockchain
     outcome::result<base::Hash256> KeyValueBlockHeaderRepository::getHashByNumber(
         const primitives::BlockNumber &number ) const
     {
-        OUTCOME_TRY( ( auto &&, header ), getBlockHeader( number ) );
+        BOOST_OUTCOME_TRY( auto header, getBlockHeader( number ) );
         auto serializedHeader = GetHeaderSerializedData( header );
 
         return hasher_->blake2b_256( serializedHeader );
@@ -40,7 +40,7 @@ namespace sgns::blockchain
 
     outcome::result<primitives::BlockHeader> KeyValueBlockHeaderRepository::getBlockHeader( const BlockId &id ) const
     {
-        OUTCOME_TRY( ( auto &&, header_string_val ), idToStringKey( *db_, id ) );
+        BOOST_OUTCOME_TRY( auto header_string_val, idToStringKey( *db_, id ) );
 
         auto header_res = db_->Get( { block_header_key_prefix + header_string_val } );
         if ( !header_res )
@@ -57,11 +57,11 @@ namespace sgns::blockchain
         auto encoded_header = GetHeaderSerializedData( header );
         auto header_hash    = hasher_->blake2b_256( encoded_header );
 
-        OUTCOME_TRY( ( auto &&, id_string ), idToStringKey( *db_, header.number ) );
+        BOOST_OUTCOME_TRY( auto id_string, idToStringKey( *db_, header.number ) );
         BOOST_OUTCOME_TRYV2(
             auto &&,
             db_->Put( { header_hash.toReadableString() }, NumberToBuffer( header.number ), { "topic" } ) );
-        BOOST_OUTCOME_TRYV2( auto &&,
+        BOOST_OUTCOME_TRY(
                              db_->Put( { block_header_key_prefix + id_string },
                                        base::Buffer{ std::move( encoded_header ) },
                                        { "topic" } ) );
@@ -71,8 +71,8 @@ namespace sgns::blockchain
 
     outcome::result<void> KeyValueBlockHeaderRepository::removeBlockHeader( const BlockId &id )
     {
-        OUTCOME_TRY( ( auto &&, header_string_val ), idToStringKey( *db_, id ) );
-        OUTCOME_TRY( db_->Remove( { block_header_key_prefix + header_string_val }, { "topic" } ) );
+        BOOST_OUTCOME_TRY( auto header_string_val, idToStringKey( *db_, id ) );
+        BOOST_OUTCOME_TRY( db_->Remove( { block_header_key_prefix + header_string_val }, { "topic" } ) );
         return outcome::success();
     }
 

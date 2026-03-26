@@ -460,7 +460,7 @@ namespace sgns
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        OUTCOME_TRY( auto &&params, utxo_manager_.CreateTxParameter( amount, destination, token_id ) );
+        BOOST_OUTCOME_TRY( auto params, utxo_manager_.CreateTxParameter( amount, destination, token_id ) );
         auto [inputs, outputs] = params;
 
         auto transfer_transaction = std::make_shared<TransferTransaction>(
@@ -517,7 +517,7 @@ namespace sgns
         }
         auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
 
-        OUTCOME_TRY( ( auto &&, params ),
+        BOOST_OUTCOME_TRY( auto params,
                      utxo_manager_.CreateTxParameter( amount,
                                                       "0x" + hash_data.toReadableString(),
                                                       TokenID::FromBytes( { 0x00 } ) ) );
@@ -564,17 +564,17 @@ namespace sgns
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          escrow_path );
-        OUTCOME_TRY( ( auto &&, transaction ), FetchTransaction( globaldb_m, escrow_path ) );
+        BOOST_OUTCOME_TRY( auto transaction, FetchTransaction( globaldb_m, escrow_path ) );
 
         std::shared_ptr<EscrowTransaction> escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( transaction );
         std::vector<std::string>           subtask_ids;
         std::vector<OutputDestInfo>        payout_peers;
 
-        OUTCOME_TRY( ( auto &&, escrow_amount_ptr ), TokenAmount::New( escrow_tx->GetAmount() ) );
+        BOOST_OUTCOME_TRY( auto escrow_amount_ptr, TokenAmount::New( escrow_tx->GetAmount() ) );
 
-        OUTCOME_TRY( ( auto &&, peers_cut_ptr ), TokenAmount::New( escrow_tx->GetPeersCut() ) );
+        BOOST_OUTCOME_TRY( auto peers_cut_ptr, TokenAmount::New( escrow_tx->GetPeersCut() ) );
 
-        OUTCOME_TRY( ( auto &&, peer_total ), escrow_amount_ptr->Multiply( *peers_cut_ptr ) );
+        BOOST_OUTCOME_TRY( auto peer_total, escrow_amount_ptr->Multiply( *peers_cut_ptr ) );
 
         const auto escrowTokenId = escrow_tx->GetUTXOParameters().second[0].token_id;
 
@@ -752,7 +752,7 @@ namespace sgns
                              tx_key.GetKey() );
 
             data_transaction.put( transaction->SerializeByteVector() );
-            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
+            BOOST_OUTCOME_TRY( crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
 
             if ( maybe_proof )
             {
@@ -766,7 +766,7 @@ namespace sgns
                                  proof_key.GetKey() );
 
                 proof_transaction.put( proof );
-                BOOST_OUTCOME_TRYV2( auto &&,
+                BOOST_OUTCOME_TRY(
                                      crdt_transaction->Put( std::move( proof_key ), std::move( proof_transaction ) ) );
             }
             nonces_set.insert( transaction->dag_st.nonce() );
@@ -781,7 +781,7 @@ namespace sgns
         }
         for ( auto &[tx, _] : transaction_batch )
         {
-            OUTCOME_TRY( ParseTransaction( tx ) );
+            BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
             topicSet.merge( tx->GetTopics() );
             std::unique_lock tx_lock( tx_mutex_m );
             const auto       key      = GetTransactionPath( *tx );
@@ -810,7 +810,7 @@ namespace sgns
             }
         }
 
-        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( topicSet ) );
+        BOOST_OUTCOME_TRY( crdt_transaction->Commit( topicSet ) );
 
         return nonces_set;
     }
@@ -991,7 +991,7 @@ namespace sgns
     outcome::result<std::shared_ptr<IGeniusTransactions>> TransactionManager::DeSerializeTransaction(
         std::string tx_data )
     {
-        OUTCOME_TRY( ( auto &&, dag ), IGeniusTransactions::DeSerializeDAGStruct( tx_data ) );
+        BOOST_OUTCOME_TRY( auto dag, IGeniusTransactions::DeSerializeDAGStruct( tx_data ) );
 
         auto it = IGeniusTransactions::GetDeSerializers().find( dag.type() );
         if ( it == IGeniusTransactions::GetDeSerializers().end() )
@@ -1033,7 +1033,7 @@ namespace sgns
         const std::shared_ptr<crdt::GlobalDB> &db,
         std::string_view                       transaction_key )
     {
-        OUTCOME_TRY( auto transaction_data, db->Get( { std::string( transaction_key ) } ) );
+        BOOST_OUTCOME_TRY( auto transaction_data, db->Get( { std::string( transaction_key ) } ) );
 
         return DeSerializeTransaction( transaction_data );
     }
@@ -1043,7 +1043,7 @@ namespace sgns
     {
         const auto &transaction_data_vector = tx_data.toVector();
 
-        OUTCOME_TRY( ( auto &&, dag ), IGeniusTransactions::DeSerializeDAGStruct( transaction_data_vector ) );
+        BOOST_OUTCOME_TRY( auto dag, IGeniusTransactions::DeSerializeDAGStruct( transaction_data_vector ) );
 
         auto it = IGeniusTransactions::GetDeSerializers().find( dag.type() );
         if ( it == IGeniusTransactions::GetDeSerializers().end() )
@@ -1060,7 +1060,7 @@ namespace sgns
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          proof_path );
-        OUTCOME_TRY( ( auto &&, proof_data ), globaldb_m->Get( { proof_path } ) );
+        BOOST_OUTCOME_TRY( auto proof_data, globaldb_m->Get( { proof_path } ) );
 
         auto proof_data_vector = proof_data.toVector();
 
@@ -1082,7 +1082,7 @@ namespace sgns
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              query_path );
-            OUTCOME_TRY( auto transaction_list, globaldb_m->QueryKeyValues( query_path ) );
+            BOOST_OUTCOME_TRY( auto transaction_list, globaldb_m->QueryKeyValues( query_path ) );
 
             m_logger->trace( "[{} - full: {}] Transaction list grabbed from CRDT with Size {}",
                              account_m->GetAddress().substr( 0, 8 ),
@@ -1359,7 +1359,7 @@ namespace sgns
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
                                  tx->GetType() );
-                OUTCOME_TRY( ParseTransaction( tx ) );
+                BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
             }
         }
         utxo_manager_.RollbackUTXOs( transfer_tx->GetInputInfos() );
@@ -1433,7 +1433,7 @@ namespace sgns
                                          account_m->GetAddress().substr( 0, 8 ),
                                          full_node_m,
                                          tx->GetType() );
-                        OUTCOME_TRY( ParseTransaction( tx ) );
+                        BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
                     }
                 }
                 utxo_manager_.RollbackUTXOs( inputs );
@@ -2110,14 +2110,14 @@ namespace sgns
                          full_node_m,
                          tx_key );
 
-        OUTCOME_TRY( crdt_transaction->Remove( { std::move( tx_key ) } ) );
+        BOOST_OUTCOME_TRY( crdt_transaction->Remove( { std::move( tx_key ) } ) );
 
         m_logger->debug( "[{} - full: {}] Removed key transaction on {}",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          tx_key );
 
-        OUTCOME_TRY( crdt_transaction->Commit( topics ) );
+        BOOST_OUTCOME_TRY( crdt_transaction->Commit( topics ) );
 
         m_logger->debug( "[{} - full: {}] Commited tx on {}",
                          account_m->GetAddress().substr( 0, 8 ),
@@ -2677,11 +2677,11 @@ namespace sgns
 
                 if ( it->second.tx )
                 {
-                    OUTCOME_TRY( RevertTransaction( it->second.tx ) );
+                    BOOST_OUTCOME_TRY( RevertTransaction( it->second.tx ) );
                     if ( delete_from_crdt )
                     {
                         auto topics = it->second.tx->GetTopics();
-                        OUTCOME_TRY( DeleteTransaction( transaction_key, topics ) );
+                        BOOST_OUTCOME_TRY( DeleteTransaction( transaction_key, topics ) );
                     }
                     account_m->RollBackPeerConfirmedNonce( it->second.tx->dag_st.nonce(),
                                                            it->second.tx->dag_st.source_addr() );
@@ -2715,7 +2715,7 @@ namespace sgns
                          full_node_m,
                          key );
 
-        OUTCOME_TRY( auto &&new_tx, DeSerializeTransaction( value ) );
+        BOOST_OUTCOME_TRY( auto new_tx, DeSerializeTransaction( value ) );
 
         m_logger->debug( "[{} - full: {}] Deserialized transaction {}",
                          account_m->GetAddress().substr( 0, 8 ),
@@ -2765,7 +2765,7 @@ namespace sgns
 
             const auto conflict_hash = conflicting_tx.value()->GetHash();
             tx_lock.unlock();
-            OUTCOME_TRY( RemoveTransactionFromProcessedMaps( GetTransactionPath( conflict_hash ), true ) );
+            BOOST_OUTCOME_TRY( RemoveTransactionFromProcessedMaps( GetTransactionPath( conflict_hash ), true ) );
             tx_lock.lock();
         }
 
@@ -2773,7 +2773,7 @@ namespace sgns
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          key );
-        OUTCOME_TRY( ParseTransaction( new_tx ) );
+        BOOST_OUTCOME_TRY( ParseTransaction( new_tx ) );
 
         const auto nonce = new_tx->dag_st.nonce();
 

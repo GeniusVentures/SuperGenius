@@ -255,9 +255,9 @@ namespace sgns
             }
             blockchain_logger()->debug( " Migrating CID: {}", cid_string );
 
-            OUTCOME_TRY( auto &&cid, CID::fromString( cid_string ) );
-            OUTCOME_TRY( auto &&node, old_syncer->GetNodeFromMerkleDAG( cid ) );
-            OUTCOME_TRY( new_crdt->AddDAGNode( node ) );
+            BOOST_OUTCOME_TRY( auto cid, CID::fromString( cid_string ) );
+            BOOST_OUTCOME_TRY( auto node, old_syncer->GetNodeFromMerkleDAG( cid ) );
+            BOOST_OUTCOME_TRY( new_crdt->AddDAGNode( node ) );
             return outcome::success();
         };
 
@@ -275,7 +275,7 @@ namespace sgns
             crdt::GlobalDB::Buffer genesis_cid_value;
             genesis_cid_value.putBuffer( genesis_cid.value() );
             (void)new_store->put( genesis_cid_key, std::move( genesis_cid_value ) );
-            OUTCOME_TRY( MigrateCIDToNewDB( std::string( genesis_cid.value().toString() ) ) );
+            BOOST_OUTCOME_TRY( MigrateCIDToNewDB( std::string( genesis_cid.value().toString() ) ) );
         }
 
         blockchain_logger()->debug( "{}: Getting the account creation CIDs from old database", __func__ );
@@ -289,7 +289,7 @@ namespace sgns
                 blockchain_logger()->debug( "{}: Account creation CID: {}", __func__, entry.second.toString() );
 
                 (void)new_store->put( entry.first, entry.second );
-                OUTCOME_TRY( MigrateCIDToNewDB( std::string( entry.second.toString() ) ) );
+                BOOST_OUTCOME_TRY( MigrateCIDToNewDB( std::string( entry.second.toString() ) ) );
             }
         }
         blockchain_logger()->debug( "{}: Finalized migrating the blockchain", __func__ );
@@ -368,11 +368,11 @@ namespace sgns
             }
             logger_->info( "[{}] Genesis block also found locally, verifying account creation block",
                            account_->GetAddress().substr( 0, 8 ) );
-            OUTCOME_TRY( OnGenesisBlockReceived( get_genesis_result.value() ) );
-            OUTCOME_TRY( InitGenesisCID() );
-            OUTCOME_TRY( EnsureValidatorRegistry() );
-            OUTCOME_TRY( OnAccountCreationBlockReceived( get_account_creation_result.value() ) );
-            OUTCOME_TRY( InitAccountCreationCID( account_->GetAddress() ) );
+            BOOST_OUTCOME_TRY( OnGenesisBlockReceived( get_genesis_result.value() ) );
+            BOOST_OUTCOME_TRY( InitGenesisCID() );
+            BOOST_OUTCOME_TRY( EnsureValidatorRegistry() );
+            BOOST_OUTCOME_TRY( OnAccountCreationBlockReceived( get_account_creation_result.value() ) );
+            BOOST_OUTCOME_TRY( InitAccountCreationCID( account_->GetAddress() ) );
 
             auto query_result = db_->QueryKeyValues( std::string( ACCOUNT_CREATION_KEY_PREFIX ) );
             if ( query_result.has_error() )
@@ -432,9 +432,9 @@ namespace sgns
         if ( !get_genesis_result.has_error() )
         {
             logger_->info( "[{}] Genesis block found locally, verifying", account_->GetAddress().substr( 0, 8 ) );
-            OUTCOME_TRY( OnGenesisBlockReceived( get_genesis_result.value() ) );
-            OUTCOME_TRY( InitGenesisCID() );
-            OUTCOME_TRY( EnsureValidatorRegistry() );
+            BOOST_OUTCOME_TRY( OnGenesisBlockReceived( get_genesis_result.value() ) );
+            BOOST_OUTCOME_TRY( InitGenesisCID() );
+            BOOST_OUTCOME_TRY( EnsureValidatorRegistry() );
 
             logger_->info( "[{}] Genesis block verification completed successfully",
                            account_->GetAddress().substr( 0, 8 ) );
