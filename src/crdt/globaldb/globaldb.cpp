@@ -618,7 +618,7 @@ namespace sgns::crdt
             m_logger->error( "{}: CRDT datastore not initialized", __func__ );
             return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
         }
-        m_logger->debug( "{}: Forwarding request for {} topics", __func__ );
+        m_logger->debug( "{}: Forwarding request", __func__ );
         return m_crdtDatastore->GetTopicNames();
     }
 }
