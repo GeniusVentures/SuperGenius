@@ -82,7 +82,6 @@ namespace sgns
             INITIALIZING_PROCESSING,
             INITIALIZING_BLOCKCHAIN,
             INITIALIZING_TRANSACTIONS,
-            INITIALIZING_DHT,
             READY,
         };
 
@@ -117,6 +116,8 @@ namespace sgns
         static constexpr uint64_t TIMEOUT_TRANSFER   = 30000;
         static constexpr uint64_t TIMEOUT_MINT       = 30000;
 #endif
+
+        outcome::result<void> SelectAccount( std::string_view public_address );
 
         outcome::result<std::string> ProcessImage( const std::string &jsondata );
 
@@ -363,11 +364,11 @@ namespace sgns
         std::map<std::string, PriceInfo>                   m_tokenPriceCache;
         const std::chrono::minutes                         m_cacheValidityDuration{ 1 };
         std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{};
-        static constexpr std::chrono::seconds              m_minApiCallInterval{ 5 };
+        static constexpr std::chrono::seconds              MIN_API_CALL_INTERVAL{ 5 };
 
         using IoWorkGuard = boost::asio::executor_work_guard<boost::asio::io_context::executor_type>;
-        static constexpr unsigned                                       DEFAULT_IO_THREADS = 4;
-        unsigned                                                        io_thread_count_{ DEFAULT_IO_THREADS };
+        static constexpr size_t                                         DEFAULT_IO_THREADS = 4;
+        size_t                                                          io_thread_count_{ DEFAULT_IO_THREADS };
         std::optional<IoWorkGuard>                                      io_work_guard_;
         std::vector<std::thread>                                        io_threads_;
         std::thread                                                     upnp_thread;
@@ -401,7 +402,7 @@ namespace sgns
 
         void TransactionStateChanged( TransactionManager::State old_state, TransactionManager::State new_state );
 
-        static constexpr std::string_view db_path_        = "bc-%d/";
+        static constexpr std::string_view DB_PATH         = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET        = 369;
         static constexpr std::uint16_t    TEST_NET        = 963;
         static constexpr std::size_t      MAX_NODES_COUNT = 1;

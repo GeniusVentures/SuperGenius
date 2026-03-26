@@ -27,6 +27,7 @@
 #include <WalletCore/HDWallet.h>
 #include <WalletCore/Coin.h>
 
+#include "account/GeniusAccount.hpp"
 #include "base/sgns_version.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
@@ -37,6 +38,7 @@
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "local_secure_storage/SecureStorage.hpp"
 #include "outcome/outcome.hpp"
+#include "blockchain/ValidatorRegistry.hpp"
 #include <Generators.hpp>
 
 namespace
@@ -72,8 +74,6 @@ namespace
                 return "INITIALIZING_BLOCKCHAIN";
             case State::INITIALIZING_TRANSACTIONS:
                 return "INITIALIZING_TRANSACTIONS";
-            case State::INITIALIZING_DHT:
-                return "INITIALIZING_DHT";
             case State::READY:
                 return "READY";
         }
@@ -235,7 +235,7 @@ namespace sgns
         dev_config_( dev_config ),
         processing_channel_topic_( std::string( PROCESSING_CHANNEL ) ),
         processing_grid_chanel_topic_( std::string( PROCESSING_GRID_CHANNEL ) ),
-        m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval ),
+        m_lastApiCall( std::chrono::system_clock::now() - MIN_API_CALL_INTERVAL ),
         scheduler_( std::make_shared<libp2p::basic::SchedulerImpl>(
             std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_ ),
             libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } ) ),
@@ -259,6 +259,18 @@ namespace sgns
             throw std::runtime_error( "Network initialization error" );
         }
         node_logger_->debug( "Account Address {}", account_->GetAddress() );
+
+        // Initializes the thread pool for IO context
+        io_threads_.reserve( io_thread_count_ );
+        for ( unsigned i = 0; i < io_thread_count_; ++i )
+        {
+            io_threads_.emplace_back( [ctx = io_]() { ctx->run(); } );
+        }
+
+        if ( use_upnp_ )
+        {
+            RefreshUPNP( pubsubport_ );
+        }
     }
 
     void GeniusNode::BeginDBInitialization()
@@ -339,30 +351,9 @@ namespace sgns
                     account_->GetAddress() );
 
                 processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
-                StateTransition( NodeState::INITIALIZING_DHT );
-                break;
-            }
-            case NodeState::INITIALIZING_DHT:
-            {
-                if ( use_upnp_ )
-                {
-                    RefreshUPNP( pubsubport_ );
-                }
-                io_work_guard_.emplace( io_->get_executor() );
-                unsigned desired_threads = io_thread_count_;
-                if ( desired_threads == 0 )
-                {
-                    desired_threads = GeniusNode::DEFAULT_IO_THREADS;
-                }
-                io_threads_.reserve( desired_threads );
-                for ( unsigned i = 0; i < desired_threads; ++i )
-                {
-                    io_threads_.emplace_back( [ctx = io_]() { ctx->run(); } );
-                }
                 StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
                 break;
             }
-
             case NodeState::INITIALIZING_BLOCKCHAIN:
             {
                 if ( !blockchain_ )
@@ -849,6 +840,7 @@ namespace sgns
         if ( pubsub_ )
         {
             pubsub_->Stop(); // Stop activities of OtherClass
+            node_logger_->debug("pubsub: {}", pubsub_.use_count());
         }
         if ( io_ )
         {
@@ -881,6 +873,7 @@ namespace sgns
             processing_callback_pool_.reset();
         }
         std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+        node_logger_->debug("pubsub2: {}", pubsub_.use_count());
         node_logger_->debug( "~GeniusNode FINISHED" );
     }
 
@@ -953,6 +946,7 @@ namespace sgns
         // Compute the SHA-256 hash of the input bytes
         std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
         SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
+
         // Provide CID
         auto key = libp2p::multi::ContentIdentifierCodec::encodeCIDV0( hash.data(), hash.size() );
         pubsub_->GetDHT()->Start();
@@ -987,6 +981,39 @@ namespace sgns
         // Generate UUID
         boost::uuids::uuid uuid = uuid_gen();
         return boost::uuids::to_string( uuid );
+    }
+
+    outcome::result<void> GeniusNode::SelectAccount( std::string_view public_address )
+    {
+        auto addresses = GeniusAccount::GetAvailableAccounts( write_base_path_ );
+
+        if ( std::find( addresses.cbegin(), addresses.cend(), public_address ) == addresses.cend() )
+        {
+            node_logger_->error( "Could not find requested address" );
+            return std::errc::address_not_available;
+        }
+
+        auto account = GeniusAccount::NewFromPublicKey( TokenID::FromBytes( { 0x00 } ),
+                                                        public_address,
+                                                        this->is_full_node_ );
+
+        if ( account == nullptr )
+        {
+            return std::errc::address_not_available;
+        }
+
+        this->transaction_manager_->Stop();
+        this->transaction_manager_.reset();
+
+        this->blockchain_->Stop();
+        this->blockchain_.reset();
+
+        this->account_.swap( account );
+        account.reset();
+
+        this->BeginDBInitialization();
+
+        return outcome::success();
     }
 
     outcome::result<std::string> GeniusNode::ProcessImage( const std::string &jsondata )
@@ -1520,7 +1547,7 @@ namespace sgns
         }
 
         // If we have tokens to fetch and we're not rate limited
-        if ( !tokensToFetch.empty() && ( currentTime - m_lastApiCall ) >= m_minApiCallInterval )
+        if ( !tokensToFetch.empty() && ( currentTime - m_lastApiCall ) >= MIN_API_CALL_INTERVAL )
         {
             sgns::CoinGeckoPriceRetriever retriever;
             auto                          newPricesResult = retriever.getCurrentPrices( tokensToFetch );

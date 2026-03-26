@@ -224,7 +224,7 @@ namespace sgns::crdt
 
         // Get peer_id - determine which branch to use first, then initialize
         boost::optional<libp2p::peer::PeerId> peer_id_opt;
-        
+
         if ( peerInfo )
         {
             peer_id_opt = peerInfo->id;
@@ -330,9 +330,9 @@ namespace sgns::crdt
         return topicsToBroadcast_.find( topic ) != topicsToBroadcast_.end();
     }
 
-    void PubSubBroadcasterExt::AddListenTopic( const std::string &topic )
+    void PubSubBroadcasterExt::AddListenTopic( std::string topic )
     {
-        auto            full_topic = topic + version::GetNetAndVersionAppendix();
+        auto            full_topic = std::move(topic) + version::GetNetAndVersionAppendix();
         std::lock_guard lock( listenTopicsMutex_ );
         if ( topicsToListen_.find( full_topic ) != topicsToListen_.end() )
         {

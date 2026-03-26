@@ -17,7 +17,6 @@
 #include <functional>
 #include <optional>
 #include <set>
-#include <storage/rocksdb/rocksdb.hpp>
 #include <string_view>
 
 #include <boost/multiprecision/cpp_int.hpp>
@@ -28,6 +27,7 @@
 #include <ProofSystem/EthereumKeyGenerator.hpp>
 
 #include "account/TokenID.hpp"
+#include "storage/rocksdb/rocksdb.hpp"
 #include "local_secure_storage/ISecureStorage.hpp"
 #include "outcome/outcome.hpp"
 #include "UTXOManager.hpp"
@@ -38,15 +38,6 @@ namespace sgns
 {
     using namespace boost::multiprecision;
 
-    namespace ipfs_pubsub
-    {
-        class GossipPubSub;
-    }
-
-    namespace crdt
-    {
-        class GlobalDB;
-    }
     class AccountMessenger;
     class TransactionManager;
 
@@ -55,12 +46,6 @@ namespace sgns
     public:
         using StorageWithAddress = std::pair<std::shared_ptr<ISecureStorage>,
                                              std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>;
-
-        struct Credentials
-        {
-            std::string email;
-            std::string password;
-        };
 
         static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;      ///< Predefined ElGamal public key
         static constexpr int64_t            NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
@@ -83,6 +68,10 @@ namespace sgns
                                                                const boost::filesystem::path &base_path,
                                                                bool                           full_node = false );
 
+        static std::shared_ptr<GeniusAccount> NewFromPublicKey( TokenID          token_id,
+                                                                std::string_view public_key,
+                                                                bool             full_node = false );
+
         /**
          * @brief       Factory constructor of new GeniusAccount
          * @param[in]   token_id Token ID of the account
@@ -90,6 +79,8 @@ namespace sgns
         static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
                                                    const boost::filesystem::path &base_path,
                                                    bool                           full_node = false );
+
+        static std::vector<std::string> GetAvailableAccounts( const boost::filesystem::path &base_path );
 
         /**
          * @brief       Initialize the messenger for the account
@@ -274,9 +265,6 @@ namespace sgns
         void ClearGetBlockChainCIDMethod();
         void SetHasBlockCidMethod( std::function<outcome::result<bool>( const std::string & )> method );
         void ClearHasBlockCidMethod();
-        void SetGetUTXOsMethod(
-            std::function<outcome::result<std::vector<std::string>>( const std::string & )> method );
-        void ClearGetUTXOsMethod();
         void SetGetValidatorWeightMethod(
             std::function<outcome::result<std::optional<uint64_t>>( const std::string & )> method );
         void ClearGetValidatorWeightMethod();
@@ -288,6 +276,8 @@ namespace sgns
         static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes
 
         static outcome::result<StorageWithAddress> LoadGeniusAccount( const boost::filesystem::path &base_path );
+
+        static outcome::result<StorageWithAddress> LoadGeniusAccount( std::string_view public_key );
 
         static std::shared_ptr<GeniusAccount> CreateInstanceFromResponse( TokenID            token_id,
                                                                           StorageWithAddress response_value,

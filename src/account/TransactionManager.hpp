@@ -102,8 +102,6 @@ namespace sgns
         void Start();
         void PrintAccountInfo() const;
 
-        const GeniusAccount &GetAccount() const;
-
         std::vector<std::vector<uint8_t>> GetOutTransactions() const;
         std::vector<std::vector<uint8_t>> GetInTransactions() const;
 

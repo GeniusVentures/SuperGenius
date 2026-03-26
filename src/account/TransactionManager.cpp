@@ -400,11 +400,6 @@ namespace sgns
         std::cout << "Nonce: " << account_m->GetNonce() << std::endl;
     }
 
-    const GeniusAccount &TransactionManager::GetAccount() const
-    {
-        return *account_m;
-    }
-
     outcome::result<std::string> TransactionManager::TransferFunds( uint64_t           amount,
                                                                     const std::string &destination,
                                                                     TokenID            token_id )
@@ -1193,19 +1188,19 @@ namespace sgns
             for ( std::uint32_t i = 0; i < outputs.size(); ++i )
             {
                 GeniusUTXO new_utxo( hash, i, outputs[i].encrypted_amount, outputs[i].token_id );
-                utxo_manager_.PutUTXO( new_utxo, outputs[i].dest_address );
+                account_m->GetUTXOManager().PutUTXO( new_utxo, outputs[i].dest_address );
             }
 
             if ( !inputs.empty() )
             {
-                utxo_manager_.ConsumeUTXOs( inputs, mint_tx_v2->GetSrcAddress() );
+                account_m->GetUTXOManager().ConsumeUTXOs( inputs, mint_tx_v2->GetSrcAddress() );
             }
 
             m_logger->info( "[{} - full: {}] Created tokens (mint-v2), amount {} balance {}",
                             account_m->GetAddress().substr( 0, 8 ),
                             full_node_m,
                             std::to_string( mint_tx_v2->GetAmount() ),
-                            std::to_string( utxo_manager_.GetBalance() ) );
+                            std::to_string( account_m->GetUTXOManager().GetBalance() ) );
             return outcome::success();
         }
 
@@ -1331,11 +1326,11 @@ namespace sgns
 
             for ( const auto &dest_info : outputs )
             {
-                utxo_manager_.DeleteUTXO( hash, dest_info.dest_address );
+                account_m->GetUTXOManager().DeleteUTXO( hash, dest_info.dest_address );
             }
             if ( !inputs.empty() )
             {
-                utxo_manager_.RollbackUTXOs( inputs );
+                account_m->GetUTXOManager().RollbackUTXOs( inputs );
             }
 
             m_logger->info( "[{} - full: {}] Deleted {} tokens (mint-v2), from tx {}, final balance {}",
@@ -1343,7 +1338,7 @@ namespace sgns
                             full_node_m,
                             mint_tx_v2->GetAmount(),
                             mint_tx_v2->GetHash(),
-                            std::to_string( utxo_manager_.GetBalance() ) );
+                            std::to_string( account_m->GetUTXOManager().GetBalance() ) );
             return outcome::success();
         }
 
