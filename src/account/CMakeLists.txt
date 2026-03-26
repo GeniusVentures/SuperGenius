@@ -15,7 +15,7 @@ add_library(sgns_genius_account
 target_link_libraries(sgns_genius_account
     PUBLIC
     Boost::headers
-    KeyGeneration
+    ProofSystem
     outcome
     logger
     crdt_globaldb
@@ -75,7 +75,7 @@ set_target_properties(genius_node PROPERTIES UNITY_BUILD ON)
 target_link_libraries(genius_node
     PUBLIC
     Boost::headers
-    KeyGeneration
+    ProofSystem
     outcome
     logger
     crdt_globaldb
@@ -84,7 +84,7 @@ target_link_libraries(genius_node
     sgns_genius_account  # Link to the GeniusAccount library
     blockchain_genesis
 	ProcessingBase
-    rlp
+    evmrelay
     PRIVATE
     secure_storage
     component_factory
@@ -121,7 +121,7 @@ target_link_libraries(genius_node
 
 add_dependencies(genius_node rlp)
 
-set_target_properties(genius_node PROPERTIES PUBLIC_HEADER "GeniusNode.hpp")
+#set_target_properties(genius_node PROPERTIES PU@)
 if(MSVC)
     target_compile_options(genius_node PUBLIC /constexpr:steps1500000)
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
@@ -131,4 +131,3 @@ endif()
 # Install both libraries
 supergenius_install(sgns_genius_account)
 supergenius_install(genius_node)
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/../../ProofSystem/include/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}" FILES_MATCHING PATTERN "*.h*")
